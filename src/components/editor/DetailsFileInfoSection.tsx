@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { DetailsSection } from "@/components/editor/DetailsSection";
 import { countCharacters, countWords, estimateReadingMinutes } from "@/lib/editor/documentStats";
 import { getFileTimestamps, type FileTimestamps } from "@/lib/fileSystem";
 import { useAppStore } from "@/store/useAppStore";
@@ -64,9 +65,7 @@ export function DetailsFileInfoSection({
     typeof value === "number" ? dateFormat.format(new Date(value)) : UNKNOWN_VALUE;
 
   return (
-    <section className="details-sidebar__section">
-      <h4 className="details-sidebar__section-title">{t("detailsPanel.fileInfo")}</h4>
-
+    <DetailsSection id="fileInfo" title={t("detailsPanel.fileInfo")}>
       <dl className="details-sidebar__facts">
         <div className="details-sidebar__fact">
           <dt>{t("detailsPanel.words")}</dt>
@@ -93,6 +92,6 @@ export function DetailsFileInfoSection({
           <dd>{formatTimestamp(timestamps?.modifiedMs)}</dd>
         </div>
       </dl>
-    </section>
+    </DetailsSection>
   );
 }

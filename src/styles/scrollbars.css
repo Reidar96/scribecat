@@ -1,0 +1,45 @@
+/* Global scrollbar styling. The OS/WebView default scrollbar (light, high-
+   contrast, differently rendered per platform) clashes with this app's dark,
+   glassy surfaces — see the screenshots in issue reports for the file tree,
+   the knowledge-base folder picker and the settings dialog. Rather than
+   restyling each scrollable region individually, every scrollbar in the app
+   reads from these two rules.
+
+   Firefox and the standards path read `scrollbar-*`; Chromium/WebView2 (the
+   engine Tauri uses on Windows and most Linux distros) reads the
+   `::-webkit-scrollbar` pseudo-elements instead and ignores `scrollbar-color`
+   wherever those are also set on the same element — both are defined so the
+   result matches regardless of engine. Values match the Zen-mode scrollbar
+   that already solved this locally (src/styles/zen-mode.css) before it
+   became a global rule. */
+* {
+  scrollbar-width: auto;
+  scrollbar-color: rgba(var(--chrome-rgb), 0.1) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  border-radius: 9999px;
+  background-color: rgba(var(--chrome-rgb), 0.1);
+  /* Transparent border + padding-box clip insets the visible thumb from the
+     track edges, so the wider hit area doesn't read as a solid, edge-to-edge
+     bar. */
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(var(--chrome-rgb), 0.2);
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}

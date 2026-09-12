@@ -113,7 +113,8 @@ body {
 }
 
 body.is-resizing-sidebar,
-body.is-resizing-chat {
+body.is-resizing-chat,
+body.is-resizing-details-panel {
   cursor: col-resize;
   user-select: none;
 }

@@ -314,11 +314,16 @@ export function FileTree({
       return;
     }
 
-    setSelectedKeys(new Set([key]));
     setActiveKey(key);
     setRangeFocusKey(null);
 
     if (node.kind === "folder") {
+      // A plain click toggles the folder — it is not a request to select it,
+      // so unlike the file branch below this does not touch selectedKeys.
+      // Selecting a folder is still possible (Ctrl/Shift-click above, right-
+      // click for the context menu below), it just does not happen as a side
+      // effect of every expand/collapse, or the folder would stay marked
+      // long after the click that opened it.
       // While a project-wide search is running, opening a collapsed folder that
       // carries hits unfolds its whole matching subtree at once — the badge only
       // says "something below matches", so one click has to get the user there
@@ -334,6 +339,7 @@ export function FileTree({
         toggleFolder(node.relativePath);
       }
     } else {
+      setSelectedKeys(new Set([key]));
       void onSelectFilePath(node.filePath);
     }
   };

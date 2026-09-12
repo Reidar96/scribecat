@@ -8,6 +8,7 @@ import {
   type Backlink,
   type BacklinkSource
 } from "@/lib/editor/documentLinks";
+import { DetailsSection } from "@/components/editor/DetailsSection";
 import { getFileLinkLabel } from "@/lib/editor/fileLinks";
 import { getRelativeDisplayPath, readMarkdownFile } from "@/lib/fileSystem";
 import { useAppStore } from "@/store/useAppStore";
@@ -93,11 +94,7 @@ export function DetailsLinksSection({
 
   return (
     <>
-      <section className="details-sidebar__section">
-        <h4 className="details-sidebar__section-title">
-          {t("detailsPanel.outgoing", { count: outgoingLinks.length })}
-        </h4>
-
+      <DetailsSection id="outgoingLinks" title={t("detailsPanel.outgoing", { count: outgoingLinks.length })}>
         {outgoingLinks.length === 0 ? (
           <p className="details-sidebar__empty">{t("detailsPanel.noOutgoing")}</p>
         ) : (
@@ -131,15 +128,16 @@ export function DetailsLinksSection({
             )}
           </ul>
         )}
-      </section>
+      </DetailsSection>
 
-      <section className="details-sidebar__section">
-        <h4 className="details-sidebar__section-title">
-          {backlinks === null
+      <DetailsSection
+        id="backlinks"
+        title={
+          backlinks === null
             ? t("detailsPanel.backlinksLoading")
-            : t("detailsPanel.backlinks", { count: backlinks.length })}
-        </h4>
-
+            : t("detailsPanel.backlinks", { count: backlinks.length })
+        }
+      >
         {backlinks === null ? null : backlinks.length === 0 ? (
           <p className="details-sidebar__empty">{t("detailsPanel.noBacklinks")}</p>
         ) : (
@@ -164,7 +162,7 @@ export function DetailsLinksSection({
             ))}
           </ul>
         )}
-      </section>
+      </DetailsSection>
     </>
   );
 }

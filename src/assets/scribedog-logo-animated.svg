@@ -36,16 +36,16 @@
        id="linearGradient19"><stop
          style="stop-color:#fefb0a;stop-opacity:1;"
          offset="0"
-         id="stop19" /><stop
+         id="stop19"><animate attributeName="offset" values="0;0.1;0.03;0.08;0" keyTimes="0;0.25;0.5;0.75;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1" dur="11s" begin="-2s" repeatCount="indefinite" /></stop><stop
          style="stop-color:#a9fc3c;stop-opacity:1;"
          offset="0.23823109"
-         id="stop21" /><stop
+         id="stop21"><animate attributeName="offset" values="0.238;0.4;0.16;0.34;0.2;0.238" keyTimes="0;0.2;0.4;0.6;0.8;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1" dur="13s" begin="-4s" repeatCount="indefinite" /></stop><stop
          style="stop-color:#07e6cb;stop-opacity:1;"
          offset="0.49786025"
-         id="stop22" /><stop
+         id="stop22"><animate attributeName="offset" values="0.498;0.46;0.68;0.5;0.62;0.498" keyTimes="0;0.2;0.4;0.6;0.8;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1" dur="15s" begin="-9s" repeatCount="indefinite" /></stop><stop
          style="stop-color:#fe68fe;stop-opacity:1;"
          offset="1"
-         id="stop20" /></linearGradient><linearGradient
+         id="stop20"><animate attributeName="offset" values="0.94;0.9;0.94" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="18s" begin="-6s" repeatCount="indefinite" /></stop></linearGradient><linearGradient
        id="dogGradient"
        x1="96"
        y1="128"
@@ -103,28 +103,28 @@
        x1="-299.25824"
        y1="-647.69366"
        x2="449.11935"
-       y2="-647.69366" /><linearGradient
+       y2="-647.69366"><animateTransform attributeName="gradientTransform" type="rotate" from="0 75 -647.7" to="360 75 -647.7" dur="24s" repeatCount="indefinite" /><animate attributeName="x1" values="-300;-170;-300" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="24s" begin="0s" repeatCount="indefinite" /><animate attributeName="x2" values="450;320;450" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="24s" begin="0s" repeatCount="indefinite" /></linearGradient><linearGradient
        xlink:href="#linearGradient19"
        id="linearGradient77"
        gradientUnits="userSpaceOnUse"
        x1="-300.15884"
        y1="-647.69458"
        x2="450.01993"
-       y2="-647.69458" /><linearGradient
+       y2="-647.69458"><animateTransform attributeName="gradientTransform" type="rotate" from="0 75 -647.7" to="360 75 -647.7" dur="24s" repeatCount="indefinite" /><animate attributeName="x1" values="-300;-170;-300" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="24s" begin="0s" repeatCount="indefinite" /><animate attributeName="x2" values="450;320;450" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="24s" begin="0s" repeatCount="indefinite" /></linearGradient><linearGradient
        xlink:href="#linearGradient19"
        id="linearGradient78"
        gradientUnits="userSpaceOnUse"
        x1="-299.25824"
        y1="-647.69366"
        x2="449.11935"
-       y2="-647.69366" /><linearGradient
+       y2="-647.69366"><animateTransform attributeName="gradientTransform" type="rotate" from="0 75 -647.7" to="360 75 -647.7" dur="24s" repeatCount="indefinite" /><animate attributeName="x1" values="-300;-170;-300" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="24s" begin="0s" repeatCount="indefinite" /><animate attributeName="x2" values="450;320;450" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="24s" begin="0s" repeatCount="indefinite" /></linearGradient><linearGradient
        xlink:href="#linearGradient19"
        id="linearGradient79"
        gradientUnits="userSpaceOnUse"
        x1="-300.15884"
        y1="-647.69458"
        x2="450.01993"
-       y2="-647.69458" /><radialGradient
+       y2="-647.69458"><animateTransform attributeName="gradientTransform" type="rotate" from="0 75 -647.7" to="360 75 -647.7" dur="24s" repeatCount="indefinite" /><animate attributeName="x1" values="-300;-170;-300" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="24s" begin="0s" repeatCount="indefinite" /><animate attributeName="x2" values="450;320;450" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" dur="24s" begin="0s" repeatCount="indefinite" /></linearGradient><radialGradient
        xlink:href="#linearGradient44"
        id="radialGradient76"
        cx="-359.19257"

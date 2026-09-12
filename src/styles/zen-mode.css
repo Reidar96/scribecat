@@ -65,30 +65,12 @@
   border-color: rgba(var(--overlay-rgb), 0.22);
 }
 
-/* Darken the scrollbar (the OS/WebView default dark-mode thumb reads too
-   light against the near-black Zen background) and inset it so its centre
-   lines up with the dirty dot above (.zen-dirty: right 1.15rem, 0.7rem wide
+/* The scrollbar itself now comes from the global rule in
+   src/styles/scrollbars.css; only the inset is Zen-specific, lining its
+   centre up with the dirty dot above (.zen-dirty: right 1.15rem, 0.7rem wide
    -> centre 1.5rem from the edge). */
 .workspace-grid--zen .editor-view__scroll {
-  scrollbar-color: rgba(var(--muted-rgb), 0.1) transparent;
   margin-right: 1.175rem;
-}
-
-.workspace-grid--zen .editor-view__scroll::-webkit-scrollbar {
-  width: 0.65rem;
-}
-
-.workspace-grid--zen .editor-view__scroll::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.workspace-grid--zen .editor-view__scroll::-webkit-scrollbar-thumb {
-  border-radius: 9999px;
-  background-color: rgba(var(--muted-rgb), 0.1);
-}
-
-.workspace-grid--zen .editor-view__scroll::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(var(--muted-rgb), 0.2);
 }
 
 /* Unsaved-changes indicator, mirroring the sidebar's dirty dot
@@ -132,7 +114,10 @@
   width: 2px;
   height: 100%;
   border-radius: 9999px;
-  background: rgba(var(--muted-rgb), 0.01);
+  /* Resting state, before hover/focus/drag — needs to read as "draggable" on
+     its own, especially in light theme, where the near-white surface left
+     this all but invisible. */
+  background: rgba(var(--muted-rgb), 0.06);
   transition: background-color 0.15s ease, width 0.15s ease;
 }
 

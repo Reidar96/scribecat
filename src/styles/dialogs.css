@@ -256,17 +256,6 @@
   text-transform: lowercase;
 }
 
-.accent-color-setting .ai-dialog__link {
-  flex-shrink: 0;
-  white-space: nowrap;
-}
-
-.accent-color-setting .ai-dialog__link:disabled {
-  opacity: 0.4;
-  text-decoration: none;
-  cursor: default;
-}
-
 .ai-dialog__model-field {
   display: flex;
   gap: 0.5rem;

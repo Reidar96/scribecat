@@ -18,9 +18,21 @@
   --surface-rgb: 255, 255, 255;
   --surface-raised-rgb: 248, 250, 252;
   --surface-strong-rgb: 255, 255, 255;
-  --surface-hover-rgb: 241, 245, 249;
-  --surface-active-rgb: 226, 232, 240;
-  --selection-rgb: 51, 65, 85;
+  /* One slate step darker than the previous 100/200 pair: near-white RGB
+     deltas read far weaker against a white page than the same delta reads
+     against the dark theme's near-black surface, so matching raw distance
+     left light-theme hover/active looking almost inert.
+
+     Hover/active/selection/chrome below are also tuned to the exact same
+     hue (215°, solving G = R + 5/12*(B-R) with B-R a multiple of 12) so the
+     "chrome" grays read as one temperature at a glance, not just close. */
+  --surface-hover-rgb: 228, 233, 240;
+  --surface-active-rgb: 201, 211, 225;
+  --selection-rgb: 69, 84, 105;
+  /* Scrollbar-thumb tone. Kept separate from --muted-rgb (text) so the thumb
+     can be neutralized independently of muted text color; see the dark
+     theme below, where the two diverge. */
+  --chrome-rgb: 100, 115, 136;
   --backdrop-rgb: 100, 116, 139;
   --body-bg-start: #f8fafc;
   --body-bg-end: #f2f4f7;
@@ -114,7 +126,11 @@
   --surface-strong-rgb: 18, 18, 20;
   --surface-hover-rgb: 34, 34, 36;
   --surface-active-rgb: 42, 42, 44;
-  --selection-rgb: 203, 213, 225;
+  /* Neutral, not the slate-400 blue-gray --muted-rgb uses for text: at
+     selection's low alphas over the near-black surfaces above, slate's tint
+     read noticeably cooler than the hover/active rows sitting next to it. */
+  --selection-rgb: 160, 160, 164;
+  --chrome-rgb: 160, 160, 164;
   --backdrop-rgb: 6, 8, 11;
   --body-bg-start: #111214;
   --body-bg-end: #090a0c;

@@ -10,9 +10,15 @@ import {
   resolveFontId,
   type AppFontId
 } from "@/lib/fonts";
+import { clampOutlineDepth, OUTLINE_DEPTH_MAX } from "@/lib/editor/documentOutline";
 
 export const SPELLCHECK_STORAGE_KEY = "scribedog-spellcheck-enabled";
 export const DETAILS_PANEL_STORAGE_KEY = "scribedog-details-panel-visible";
+export const OUTLINE_DEPTH_STORAGE_KEY = "scribedog-outline-max-depth";
+export const DETAILS_COLLAPSED_STORAGE_KEY = "scribedog-details-collapsed-sections";
+
+/** The details panel's sections, each of which can be folded away. */
+export type DetailsSectionId = "outline" | "fileInfo" | "outgoingLinks" | "backlinks";
 export const ZOOM_STORAGE_KEY = "scribedog-zoom-level";
 export const ZEN_WIDTH_STORAGE_KEY = "scribedog-zen-width";
 export const FONT_STORAGE_KEY = "scribedog-font-id";
@@ -107,6 +113,41 @@ function persistDetailsPanelVisible(visible: boolean): void {
   }
 }
 
+function getStoredOutlineMaxDepth(): number {
+  try {
+    const raw = window.localStorage.getItem(OUTLINE_DEPTH_STORAGE_KEY);
+    return raw === null ? OUTLINE_DEPTH_MAX : clampOutlineDepth(Number.parseInt(raw, 10));
+  } catch {
+    return OUTLINE_DEPTH_MAX;
+  }
+}
+
+function persistOutlineMaxDepth(depth: number): void {
+  try {
+    window.localStorage.setItem(OUTLINE_DEPTH_STORAGE_KEY, String(depth));
+  } catch {
+    // localStorage may be unavailable in some environments.
+  }
+}
+
+function getStoredCollapsedDetailsSections(): DetailsSectionId[] {
+  try {
+    const raw = window.localStorage.getItem(DETAILS_COLLAPSED_STORAGE_KEY);
+    const parsed: unknown = raw === null ? [] : JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((id): id is DetailsSectionId => typeof id === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistCollapsedDetailsSections(ids: DetailsSectionId[]): void {
+  try {
+    window.localStorage.setItem(DETAILS_COLLAPSED_STORAGE_KEY, JSON.stringify(ids));
+  } catch {
+    // localStorage may be unavailable in some environments.
+  }
+}
+
 function getStoredFontId(): AppFontId {
   try {
     return resolveFontId(window.localStorage.getItem(FONT_STORAGE_KEY));
@@ -155,6 +196,12 @@ type EditorSettingsState = {
   /** Details sidebar next to the document, toggled from the toolbar. */
   detailsPanelVisible: boolean;
   setDetailsPanelVisible: (visible: boolean) => void;
+  /** Deepest heading level the details panel's outline lists, 1..6. */
+  outlineMaxDepth: number;
+  setOutlineMaxDepth: (depth: number) => void;
+  /** Sections of the details panel the user folded away; app-wide like the panel itself. */
+  collapsedDetailsSections: DetailsSectionId[];
+  setDetailsSectionCollapsed: (id: DetailsSectionId, collapsed: boolean) => void;
   zoomLevel: number;
   setZoomLevel: (level: number) => void;
   zenWidth: number;
@@ -210,6 +257,21 @@ export const useEditorSettingsStore = create<EditorSettingsState>((set) => ({
   setDetailsPanelVisible: (visible: boolean) => {
     persistDetailsPanelVisible(visible);
     set({ detailsPanelVisible: visible });
+  },
+  outlineMaxDepth: getStoredOutlineMaxDepth(),
+  setOutlineMaxDepth: (depth: number) => {
+    const clamped = clampOutlineDepth(depth);
+    persistOutlineMaxDepth(clamped);
+    set({ outlineMaxDepth: clamped });
+  },
+  collapsedDetailsSections: getStoredCollapsedDetailsSections(),
+  setDetailsSectionCollapsed: (id: DetailsSectionId, collapsed: boolean) => {
+    set((state) => {
+      const without = state.collapsedDetailsSections.filter((current) => current !== id);
+      const next = collapsed ? [...without, id] : without;
+      persistCollapsedDetailsSections(next);
+      return { collapsedDetailsSections: next };
+    });
   },
   zoomLevel: getStoredZoomLevel(),
   setZoomLevel: (level: number) => {

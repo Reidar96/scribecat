@@ -12,6 +12,10 @@
 }
 
 .editor-view__surface {
+  position: relative;
+  /* Own stacking context: lets the outline-jump highlight below sit behind
+     the text at a negative z-index without dropping behind this surface. */
+  isolation: isolate;
   min-height: 100%;
   border-radius: 1rem;
   background: rgba(var(--surface-rgb),0.56);
@@ -33,6 +37,36 @@
 .editor-view__surface .pm-inactive-selection {
   background: rgba(var(--selection-rgb), 0.26);
   border-radius: 0.15rem;
+}
+
+/* A jump from the outline scrolls the heading to the top edge; the margin
+   keeps a little of the preceding section visible so the eye has context. */
+.editor-view__surface h1,
+.editor-view__surface h2,
+.editor-view__surface h3,
+.editor-view__surface h4,
+.editor-view__surface h5,
+.editor-view__surface h6 {
+  scroll-margin-top: 1.25rem;
+}
+
+/* Where an outline jump landed, cleared the instant the reader puts the caret
+   back in the editor themselves (src/lib/editor/outlineHighlight.ts). One
+   absolutely positioned box over the title's measured text — same background,
+   corners and accent bar as the active row in the details panel's outline
+   (see details-sidebar.css): the same "current" marker, relocated into the
+   text. The negative z-index puts it behind the title's glyphs but in front
+   of the surface's own tint (see the surface's isolation above). */
+.editor-view__surface .outline-jump-highlight {
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  /* Same tint as the file tree's --selected and the outline panel's active
+     row (file-tree.css, details-sidebar.css) — one moving-cursor color used
+     in all three places. */
+  background: rgba(var(--selection-rgb), 0.14);
+  border-radius: 0.4rem;
+  box-shadow: inset 3px 0 0 rgba(var(--accent-rgb), 0.85);
 }
 
 .editor-view__surface h1 {

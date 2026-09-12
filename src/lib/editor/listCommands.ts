@@ -1,15 +1,65 @@
-import { Fragment } from "@tiptap/pm/model";
+import { Fragment, type Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { TextSelection } from "@tiptap/pm/state";
 import type { EditorView } from "@tiptap/pm/view";
 
-// Moves the list item (bullet, numbered, or task) the cursor is currently in
-// one position up or down. ProseMirror has no built-in command for this, so
-// the affected range is manually replaced with the two sibling nodes swapped.
-// The cursor position is shifted by exactly the size of the node it passed,
-// so the selection stays inside the moved item.
-export function moveListItem(view: EditorView, direction: "up" | "down"): boolean {
+// Shared implementation behind moveListItem and moveLine: swaps the node(s)
+// at `depth` that the selection spans with the adjacent sibling in that
+// direction. Both callers just pick a different depth — a list item's own
+// depth for moveListItem, or 1 (direct children of the doc) for moveLine —
+// everything else about "find the sibling, swap the ranges, shift the
+// selection by the sibling's size" is identical.
+function moveSiblingsAtDepth(view: EditorView, direction: "up" | "down", depth: number): boolean {
   const { state } = view;
-  const { $from, from, to } = state.selection;
+  const { $from, $to, from, to } = state.selection;
+
+  if ($from.depth < depth || $to.depth < depth) {
+    return false;
+  }
+
+  const parentDepth = depth - 1;
+  const parent = $from.node(parentDepth);
+
+  if ($to.node(parentDepth) !== parent) {
+    return false;
+  }
+
+  const startIndex = $from.index(parentDepth);
+  const endIndex = $to.index(parentDepth);
+  const targetIndex = direction === "up" ? startIndex - 1 : endIndex + 1;
+
+  if (targetIndex < 0 || targetIndex >= parent.childCount) {
+    return false;
+  }
+
+  const rangeStart = $from.before(depth);
+  const rangeEnd = $to.after(depth);
+  const sibling = parent.child(targetIndex);
+
+  const selectedNodes: ProseMirrorNode[] = [];
+  for (let i = startIndex; i <= endIndex; i++) {
+    selectedNodes.push(parent.child(i));
+  }
+
+  const replacement =
+    direction === "up" ? Fragment.from([...selectedNodes, sibling]) : Fragment.from([sibling, ...selectedNodes]);
+  const newRangeStart = direction === "up" ? rangeStart - sibling.nodeSize : rangeStart;
+  const newRangeEnd = direction === "up" ? rangeEnd : rangeEnd + sibling.nodeSize;
+  const offset = direction === "up" ? -sibling.nodeSize : sibling.nodeSize;
+
+  const tr = state.tr.replaceWith(newRangeStart, newRangeEnd, replacement);
+  tr.setSelection(TextSelection.create(tr.doc, from + offset, to + offset));
+  tr.scrollIntoView();
+
+  view.dispatch(tr);
+  return true;
+}
+
+// Moves the list item (bullet, numbered, or task) the selection is currently
+// in — or the range of sibling items it spans — one position up or down.
+// ProseMirror has no built-in command for this, so the affected range is
+// manually replaced with the sibling nodes swapped.
+export function moveListItem(view: EditorView, direction: "up" | "down"): boolean {
+  const { $from } = view.state.selection;
 
   let listItemDepth = -1;
   for (let depth = $from.depth; depth > 0; depth--) {
@@ -24,34 +74,15 @@ export function moveListItem(view: EditorView, direction: "up" | "down"): boolea
     return false;
   }
 
-  const parentDepth = listItemDepth - 1;
-  const parent = $from.node(parentDepth);
-  const index = $from.index(parentDepth);
-  const targetIndex = direction === "up" ? index - 1 : index + 1;
+  return moveSiblingsAtDepth(view, direction, listItemDepth);
+}
 
-  if (targetIndex < 0 || targetIndex >= parent.childCount) {
-    return false;
-  }
-
-  const currentItem = parent.child(index);
-  const siblingItem = parent.child(targetIndex);
-  const itemStart = $from.before(listItemDepth);
-
-  const rangeStart = direction === "up" ? itemStart - siblingItem.nodeSize : itemStart;
-  const rangeEnd =
-    direction === "up"
-      ? itemStart + currentItem.nodeSize
-      : itemStart + currentItem.nodeSize + siblingItem.nodeSize;
-  const replacement =
-    direction === "up" ? Fragment.from([currentItem, siblingItem]) : Fragment.from([siblingItem, currentItem]);
-  const offset = direction === "up" ? -siblingItem.nodeSize : siblingItem.nodeSize;
-
-  const tr = state.tr.replaceWith(rangeStart, rangeEnd, replacement);
-  tr.setSelection(TextSelection.create(tr.doc, from + offset, to + offset));
-  tr.scrollIntoView();
-
-  view.dispatch(tr);
-  return true;
+// Moves the top-level block(s) (paragraph, heading, blockquote, code block,
+// etc.) the selection spans one position up or down, the same way VS Code's
+// Alt+Up/Down moves whole lines. This is the fallback for content that isn't
+// inside a list — moveListItem takes priority there.
+export function moveLine(view: EditorView, direction: "up" | "down"): boolean {
+  return moveSiblingsAtDepth(view, direction, 1);
 }
 
 // Toggles the checked state of the task item the cursor is currently in.

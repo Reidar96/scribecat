@@ -9,6 +9,7 @@ import { AiDiffWidget } from "@/lib/aiDiffWidget";
 import { AiStreamWidget } from "@/lib/aiStreamWidget";
 import { AiSuggestionWidget } from "@/lib/aiSuggestionWidget";
 import { InactiveSelection } from "@/lib/inactiveSelection";
+import { OutlineHighlight } from "@/lib/editor/outlineHighlight";
 import { SearchHighlight } from "@/lib/searchHighlight";
 import { VoiceInsertWidget } from "@/lib/voiceInsertWidget";
 
@@ -60,6 +61,7 @@ export function buildEditorExtensions(): Extensions {
     AiDiffWidget,
     AiSuggestionWidget,
     SearchHighlight,
+    OutlineHighlight,
     InactiveSelection
   ];
 }

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { AlertTriangle, Eye, EyeOff, Info, RefreshCw } from "lucide-react";
+import { AlertTriangle, Eye, EyeOff, Info, RefreshCw, RotateCcw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,7 @@ import {
   FONT_SIZE_PT_STEP,
   getFontScale
 } from "@/lib/fonts";
+import { OUTLINE_DEPTH_MAX, OUTLINE_DEPTH_MIN } from "@/lib/editor/documentOutline";
 import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
 import {
   AGENT_MAX_ITERATIONS_MAX,
@@ -344,6 +345,8 @@ export function SettingsDialog({
   const [activeTab, setActiveTab] = useState<SettingsTab>("general");
   const theme = useThemeStore((state) => state.theme);
   const setTheme = useThemeStore((state) => state.setTheme);
+  const outlineMaxDepth = useEditorSettingsStore((state) => state.outlineMaxDepth);
+  const setOutlineMaxDepth = useEditorSettingsStore((state) => state.setOutlineMaxDepth);
   const accentColor = useAccentColorStore((state) => state.accentColor);
   const setAccentColor = useAccentColorStore((state) => state.setAccentColor);
   const resetAccentColor = useAccentColorStore((state) => state.resetAccentColor);
@@ -650,14 +653,38 @@ export function SettingsDialog({
                     />
                     <button
                       type="button"
-                      className="ai-dialog__link"
+                      className="ai-dialog__model-refresh"
                       onClick={resetAccentColor}
                       disabled={accentColor.toLowerCase() === DEFAULT_ACCENT_COLOR}
+                      aria-label={t("settingsDialog.accentColorReset")}
+                      title={t("settingsDialog.accentColorReset")}
                     >
-                      {t("settingsDialog.accentColorReset")}
+                      <RotateCcw size={16} />
                     </button>
                   </div>
                   <span className="ai-dialog__model-hint">{t("settingsDialog.accentColorHint")}</span>
+                </label>
+
+                <label className="ai-dialog__field">
+                  <span>{t("settingsDialog.outlineDepth")}</span>
+                  <select
+                    value={outlineMaxDepth}
+                    onChange={(event) => setOutlineMaxDepth(Number.parseInt(event.target.value, 10))}
+                  >
+                    {Array.from(
+                      { length: OUTLINE_DEPTH_MAX - OUTLINE_DEPTH_MIN + 1 },
+                      (_, offset) => OUTLINE_DEPTH_MIN + offset
+                    ).map((level) => (
+                      <option key={level} value={level}>
+                        {level === OUTLINE_DEPTH_MAX
+                          ? t("settingsDialog.outlineDepthAll")
+                          : level === OUTLINE_DEPTH_MIN
+                            ? t("settingsDialog.outlineDepthTop")
+                            : t("settingsDialog.outlineDepthUpTo", { level })}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="ai-dialog__model-hint">{t("settingsDialog.outlineDepthHint")}</span>
                 </label>
 
                 {isWindowsPlatform() && (

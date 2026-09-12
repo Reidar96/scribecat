@@ -7,6 +7,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { EditorContent, type Editor as TipTapEditor, useEditor } from "@tiptap/react";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
 import { AiCheckDialog } from "@/components/AiCheckDialog";
 import { FindReplacePanel } from "@/components/FindReplacePanel";
 import { AiRewriteDialog } from "@/components/AiRewriteDialog";
@@ -17,6 +18,11 @@ import { Toolbar } from "@/components/Toolbar";
 import { FileLinkSuggestionPopover } from "@/components/editor/FileLinkSuggestionPopover";
 import { DetailsPanel } from "@/components/editor/DetailsPanel";
 import { StagedChangeBar } from "@/components/editor/StagedChangeBar";
+import {
+  DETAILS_PANEL_MAX_WIDTH,
+  DETAILS_PANEL_MIN_WIDTH,
+  useDetailsPanelWidth
+} from "@/hooks/useDetailsPanelWidth";
 import { useAiEditorActions } from "@/components/editor/useAiEditorActions";
 import { useEditorDictation } from "@/components/editor/useEditorDictation";
 import { useFileLinkSuggestion } from "@/components/editor/useFileLinkSuggestion";
@@ -38,6 +44,8 @@ import { normalizeImageSrc } from "@/lib/chat/imageAttachments";
 import { EditorFileContext } from "@/lib/editorFileContext";
 import { buildEditorExtensions } from "@/lib/editor/extensions";
 import { duplicatedImageSources } from "@/lib/editor/documentImages";
+import { hasHeading, type OutlineHeading } from "@/lib/editor/documentOutline";
+import { updateOutlineHighlight } from "@/lib/editor/outlineHighlight";
 import { isDuplicateInsertion, rewrittenAnchorRange } from "@/lib/editor/duplicateInsertion";
 import {
   buildFileLinkHref,
@@ -56,7 +64,7 @@ import {
   getImageFilesFromDataTransfer,
   getNonImageFilesFromDataTransfer
 } from "@/lib/editor/imageTransfer";
-import { moveListItem, toggleTaskItemChecked } from "@/lib/editor/listCommands";
+import { moveLine, moveListItem, toggleTaskItemChecked } from "@/lib/editor/listCommands";
 import { normalizeEscapedCheckboxes } from "@/lib/editor/markdownNormalize";
 import { normalizePastedSlice } from "@/lib/editor/pasteNormalize";
 import { getEditorMarkdown, getSelectionMarkdown } from "@/lib/editor/markdownStorage";
@@ -159,7 +167,16 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   const spellcheckEnabled = useEditorSettingsStore((state) => state.spellcheckEnabled);
   const detailsPanelVisible = useEditorSettingsStore((state) => state.detailsPanelVisible);
   const setDetailsPanelVisible = useEditorSettingsStore((state) => state.setDetailsPanelVisible);
+  const {
+    detailsPanelWidth,
+    isResizingDetailsPanel,
+    handleDetailsPanelResizeStart,
+    handleDetailsPanelResizeKeyDown
+  } = useDetailsPanelWidth();
   const [linkDialog, setLinkDialog] = useState<LinkDialogState | null>(null);
+  // Tab out of the document hands focus to the details panel's outline; the
+  // panel watches this counter the way the editor watches editorFocusRequestId.
+  const [outlineFocusRequestId, setOutlineFocusRequestId] = useState(0);
 
   // The vault's notes: what the link dialog and the "[[" picker offer, and what
   // a clicked link is resolved against. editorProps handlers are created once,
@@ -227,6 +244,45 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   // Opening the find panel must work regardless of where the focus currently
   // is (editor, toolbar, sidebar), so that shortcut is registered globally in
   // useGlobalShortcuts rather than in the ProseMirror keymap.
+
+  // The heading goes to the top of the viewport rather than "just visible":
+  // the point of a jump is to read the section, not to see its title at the
+  // bottom edge.
+  const jumpToHeading = (heading: OutlineHeading) => {
+    const currentEditor = editorRef.current;
+
+    if (!currentEditor || currentEditor.isDestroyed) {
+      return;
+    }
+
+    const { doc } = currentEditor.state;
+    const node = doc.nodeAt(heading.pos);
+
+    if (!node || node.type.name !== "heading") {
+      return;
+    }
+
+    // Deliberately does not call .focus(): stealing DOM focus into the editor
+    // would pull it out of the outline row, and arrow-key navigation there
+    // stops working after the very first jump. Escape / Shift+Tab remain the
+    // explicit way back into the document (see onRequestEditorFocus).
+    currentEditor.commands.setTextSelection(heading.pos + 1);
+    updateOutlineHighlight(currentEditor, heading.pos);
+
+    const element = currentEditor.view.nodeDOM(heading.pos);
+
+    if (element instanceof HTMLElement) {
+      element.scrollIntoView({ block: "start" });
+    }
+  };
+
+  const focusEditor = () => {
+    const currentEditor = editorRef.current;
+
+    if (currentEditor && !currentEditor.isDestroyed && currentEditor.isEditable) {
+      currentEditor.commands.focus();
+    }
+  };
 
   const handleLinkRequest = () => {
     const currentEditor = editorRef.current;
@@ -859,8 +915,11 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     extensions: buildEditorExtensions(),
     content: markdown,
     editable: true,
-    onCreate: ({ editor }) => {
-      editorRef.current = editor;
+    // editorRef is assigned during render (below), not here: under
+    // React.StrictMode useEditor creates a second instance and discards the
+    // first, and the first one's deferred onCreate would put the destroyed
+    // instance back into the ref until the next render.
+    onCreate: () => {
       lastSyncedMarkdownRef.current = markdown;
     },
     onUpdate: ({ editor }) => {
@@ -883,6 +942,12 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     },
     onBlur: () => {
       closeSuggestion();
+    },
+    // Real focus in the editor means the reader is looking at the caret, not
+    // hunting for a section anymore — whichever of the several ways back in
+    // they used (click, Escape, Shift+Tab).
+    onFocus: ({ editor: currentEditor }) => {
+      updateOutlineHighlight(currentEditor, null);
     },
     editorProps: {
       handleDrop: (view, event, _slice, moved) => {
@@ -974,22 +1039,42 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
           return true;
         }
 
-        if (event.key === "Tab" && event.shiftKey && !event.ctrlKey && !event.metaKey) {
-          // Inside a list, Shift+Tab decreases the indent (handled by the
-          // list extensions' keymap); only outside a list does it move focus
-          // to the sidebar.
+        if (event.key === "Tab" && !event.ctrlKey && !event.metaKey && !event.altKey) {
+          // Where Tab already means something (indent in lists and code, next
+          // cell in tables) it stays with the extensions' keymaps; only outside
+          // does it move focus: Shift+Tab to the sidebar, Tab to the details
+          // panel's outline. Sidebar, document, outline: one direction, left
+          // to right.
           const currentEditor = editorRef.current;
-          const inList =
+          const tabHasMeaning =
             currentEditor?.isActive("bulletList") ||
             currentEditor?.isActive("orderedList") ||
-            currentEditor?.isActive("taskList");
+            currentEditor?.isActive("taskList") ||
+            currentEditor?.isActive("table") ||
+            currentEditor?.isActive("codeBlock");
 
-          if (inList) {
+          if (tabHasMeaning) {
+            return false;
+          }
+
+          if (event.shiftKey) {
+            event.preventDefault();
+            onRequestSidebarFocus?.();
+            return true;
+          }
+
+          // With nothing to land on, Tab keeps today's behaviour rather than
+          // becoming a dead key. The panel is checked in the DOM, not the
+          // store: Zen mode and narrow windows hide it with CSS while it
+          // stays mounted, and a hidden button cannot take focus.
+          const panel = view.dom.closest(".editor-view")?.querySelector<HTMLElement>(".details-sidebar");
+
+          if (!panel || panel.offsetParent === null || !hasHeading(view.state.doc)) {
             return false;
           }
 
           event.preventDefault();
-          onRequestSidebarFocus?.();
+          setOutlineFocusRequestId((id) => id + 1);
           return true;
         }
 
@@ -1019,7 +1104,8 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         switch (action) {
           case "moveListItemUp":
           case "moveListItemDown": {
-            const moved = moveListItem(view, action === "moveListItemUp" ? "up" : "down");
+            const direction = action === "moveListItemUp" ? "up" : "down";
+            const moved = moveListItem(view, direction) || moveLine(view, direction);
 
             if (moved) {
               event.preventDefault();
@@ -1348,14 +1434,38 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
             </ScrollArea>
 
             {detailsPanelVisible ? (
-              <DetailsPanel
-                folderPath={folderPath}
-                filePath={filePath}
-                markdown={markdown}
-                vaultFilePaths={vaultFilePaths}
-                onRequestFileOpen={onRequestFileOpen}
-                onClose={() => setDetailsPanelVisible(false)}
-              />
+              <>
+                <div
+                  className={cn(
+                    "workspace-resizer",
+                    isResizingDetailsPanel && "workspace-resizer--active"
+                  )}
+                  role="separator"
+                  aria-orientation="vertical"
+                  aria-label={t("detailsPanel.resizeLabel")}
+                  aria-valuenow={detailsPanelWidth}
+                  aria-valuemin={DETAILS_PANEL_MIN_WIDTH}
+                  aria-valuemax={DETAILS_PANEL_MAX_WIDTH}
+                  tabIndex={0}
+                  onPointerDown={handleDetailsPanelResizeStart}
+                  onKeyDown={handleDetailsPanelResizeKeyDown}
+                >
+                  <span className="workspace-resizer__grip" aria-hidden="true" />
+                </div>
+                <DetailsPanel
+                  editor={editor}
+                  folderPath={folderPath}
+                  filePath={filePath}
+                  markdown={markdown}
+                  vaultFilePaths={vaultFilePaths}
+                  outlineFocusRequestId={outlineFocusRequestId}
+                  onJumpToHeading={jumpToHeading}
+                  onRequestEditorFocus={focusEditor}
+                  onRequestFileOpen={onRequestFileOpen}
+                  onClose={() => setDetailsPanelVisible(false)}
+                  width={detailsPanelWidth}
+                />
+              </>
             ) : null}
           </div>
         </div>

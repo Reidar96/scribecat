@@ -3,23 +3,29 @@
    (detail-panel.css), which is the document card itself. */
 
 /* Document area and details sidebar sit side by side; the document keeps the
-   scroll container it had before. */
+   scroll container it had before. No `gap` here: the resizer handle between
+   them (.workspace-resizer, shared with the main sidebar/chat resizers) is
+   the actual spacing for that boundary, same as .workspace-grid. */
 .editor-view__panes {
   display: flex;
   flex: 1;
   min-height: 0;
-  gap: 0.6rem;
 }
 
 .editor-view__panes > .editor-view__scroll {
   min-width: 0;
 }
 
+/* Outside the workspace grid, .workspace-resizer needs its own width. */
+.editor-view__panes > .workspace-resizer {
+  flex: 0 0 1.25rem;
+}
+
 .details-sidebar {
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  width: 15rem;
+  width: var(--details-panel-width, 15rem);
   min-height: 0;
   border: 1px solid rgba(var(--overlay-rgb),0.12);
   border-radius: 1rem;
@@ -60,6 +66,58 @@
   font-size: 0.75rem;
   font-weight: 600;
   color: rgba(var(--text-rgb),0.8);
+}
+
+/* Section heads fold their content away; the chevron mirrors the file tree's
+   folders so the two panels read the same. */
+.details-sidebar__section-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  width: 100%;
+  margin: 0 0 0 -0.2rem;
+  border: 0;
+  border-radius: 0.4rem;
+  background: transparent;
+  padding: 0.2rem 0.2rem;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.details-sidebar__section-toggle:hover {
+  background: rgba(var(--overlay-rgb),0.08);
+}
+
+.details-sidebar__section-toggle:focus-visible {
+  outline: 2px solid rgba(var(--accent-rgb),0.7);
+  outline-offset: -2px;
+}
+
+.details-sidebar__section-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 0.9rem;
+  color: rgba(var(--muted-rgb),0.9);
+}
+
+.details-sidebar__section-chevron svg {
+  width: 0.8rem;
+  height: 0.8rem;
+}
+
+.details-sidebar__section-label {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.details-sidebar__section[data-collapsed="true"] .details-sidebar__section-title {
+  margin-bottom: 0;
 }
 
 .details-sidebar__list {
@@ -124,6 +182,106 @@ button.details-sidebar__item:hover {
   color: rgba(var(--muted-rgb),0.9);
 }
 
+/* Outline: heading level becomes indentation, type size and weight (the way
+   the document itself shows it), and a guide line per indent stop so a
+   heading's parent chain can be followed by eye even where levels are
+   skipped. Rows sit flush (no gap) so the guide lines run through. */
+.details-sidebar__outline {
+  --outline-indent: 0.7rem;
+  --outline-inset: 0.4rem;
+  /* Label padding; the guide lines start here so each one sits under the
+     text edge of the level it belongs to. */
+  --outline-label-pad: 0.45rem;
+  gap: 0;
+}
+
+/* The row is only the hit area and carries the guide lines; the highlight
+   sits on the label so it hugs the text instead of running to the left edge.
+   No border and no gap between rows, so consecutive rows draw one continuous
+   line without overlapping (an overlap doubles the alpha into a visible dot). */
+.details-sidebar__outline-item {
+  --outline-level: 1;
+  position: relative;
+  padding: 0.1rem 0.4rem 0.1rem calc(var(--outline-inset) + (var(--outline-level) - 1) * var(--outline-indent));
+  border: 0;
+  border-radius: 0;
+}
+
+button.details-sidebar__outline-item:hover {
+  border-color: transparent;
+  background: transparent;
+}
+
+.details-sidebar__outline-item::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 calc(var(--outline-inset) + var(--outline-label-pad));
+  width: calc((var(--outline-level) - 1) * var(--outline-indent));
+  background: repeating-linear-gradient(
+    to right,
+    rgba(var(--overlay-rgb),0.04) 0 1px,
+    transparent 1px var(--outline-indent)
+  );
+  pointer-events: none;
+}
+
+.details-sidebar__outline-item .details-sidebar__item-label {
+  min-width: 0;
+  border-radius: 0.4rem;
+  padding: 0.25rem var(--outline-label-pad);
+}
+
+.details-sidebar__outline-item:hover .details-sidebar__item-label {
+  background: rgba(var(--overlay-rgb),0.08);
+}
+
+.details-sidebar__outline-item[data-level="1"] {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.details-sidebar__outline-item[data-level="2"] {
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.details-sidebar__outline-item[data-level="3"] {
+  font-size: 0.82rem;
+}
+
+.details-sidebar__outline-item[data-level="4"],
+.details-sidebar__outline-item[data-level="5"],
+.details-sidebar__outline-item[data-level="6"] {
+  font-size: 0.78rem;
+  color: rgba(var(--text-rgb),0.8);
+}
+
+.details-sidebar__outline-item[data-active="true"] {
+  color: inherit;
+}
+
+/* Arrow-key navigation jumps immediately (see DetailsOutlineSection), so the
+   focused row and the active section are the same row in practice — one
+   highlight, no separate ring. This section follows the reader's cursor or
+   scroll position and keeps repainting as they move, unlike the file tree's
+   --active (the open file, a deliberate, stable choice) — so it uses the
+   same tint as the tree's --selected (file-tree.css), its moving-cursor
+   counterpart, rather than --active's heavier one. */
+.details-sidebar__outline-item[data-active="true"] .details-sidebar__item-label,
+.details-sidebar__outline-item:focus-visible .details-sidebar__item-label {
+  background: rgba(var(--selection-rgb), 0.14);
+  box-shadow: inset 3px 0 0 rgba(var(--accent-rgb),0.85);
+}
+
+.details-sidebar__outline-item:focus-visible {
+  outline: none;
+}
+
+.details-sidebar__item-label--muted {
+  color: rgba(var(--muted-rgb),0.9);
+  font-style: italic;
+}
+
 /* File info: label left, value right, wrapping to its own line when the
    sidebar is too narrow for both. Rows share the link rows' font size and
    padding, so both halves of the panel read as one list. */
@@ -157,13 +315,17 @@ button.details-sidebar__item:hover {
 }
 
 /* Zen mode is deliberately free of side panels, and below the layout
-   breakpoint the document column needs the whole width. */
-.workspace-grid--zen .details-sidebar {
+   breakpoint the document column needs the whole width. The resizer handle
+   goes with the panel it drags — a lone handle with nothing to resize would
+   be confusing. */
+.workspace-grid--zen .details-sidebar,
+.workspace-grid--zen .editor-view__panes > .workspace-resizer {
   display: none;
 }
 
 @media (max-width: 920px) {
-  .details-sidebar {
+  .details-sidebar,
+  .editor-view__panes > .workspace-resizer {
     display: none;
   }
 }
