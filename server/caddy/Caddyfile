@@ -1,0 +1,20 @@
+# Caddy in front of ScribeDog Server: TLS termination only, nothing else.
+#
+# The whole request path is passed through unchanged. ScribeDog knows its own
+# SCRIBEDOG_BASE_PATH and answers under it (and 404s everywhere else), so the
+# proxy never has to strip or rewrite a prefix. If you route several instances
+# behind one host, use `handle` (keeps the path), never `handle_path` (strips it):
+#
+#   handle /anna* { reverse_proxy scribedog-anna:3000 }
+#   handle /bob*  { reverse_proxy scribedog-bob:3000 }
+
+{$SCRIBEDOG_SITE_ADDRESS:localhost} {
+	# "internal": Caddy's own local CA, works for localhost, LAN names and
+	# plain IPs. For a public domain set SCRIBEDOG_TLS to your e-mail address
+	# and Caddy obtains a Let's Encrypt certificate instead.
+	tls {$SCRIBEDOG_TLS:internal}
+
+	encode zstd gzip
+
+	reverse_proxy scribedog:3000
+}

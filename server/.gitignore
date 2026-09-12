@@ -1,0 +1,5 @@
+scribedog-data/
+.env
+test-results/
+playwright-report/
+caddy-root.crt

@@ -1,0 +1,14 @@
+node_modules
+dist
+scribedog-data
+test
+e2e
+test-results
+playwright.config.ts
+vitest.config.ts
+*.log
+.env
+.env.*
+!.env.example
+README.md
+caddy-root.crt
