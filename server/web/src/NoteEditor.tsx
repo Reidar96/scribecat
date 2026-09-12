@@ -60,7 +60,7 @@ export function NoteEditor({ noteKey, markdown, onChange, onSaveShortcut }: Note
 
   // Switching notes replaces the document rather than remounting the editor.
   // The first note arrived through the `content` option above, so the effect
-  // only ever acts on a *change* of note — running it on mount too would
+  // only ever acts on a *change* of note; running it on mount too would
   // reset the caret a moment after the user's first click.
   const loadedKeyRef = useRef<string>(noteKey);
 

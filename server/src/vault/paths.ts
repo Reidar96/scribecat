@@ -11,7 +11,7 @@ export class VaultPathError extends Error {}
  * The same rule set as `assertVaultPath` in the desktop app's
  * src/lib/chat/vaultStaging.ts, ported rather than imported: the server is its
  * own package and the desktop code is not (yet) a shared workspace package.
- * Keep the two in step — both are the security boundary between a
+ * Keep the two in step: both are the security boundary between a
  * client-supplied path and the filesystem.
  *
  * The desktop version additionally fences off `images/` for the agent; the

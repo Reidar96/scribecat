@@ -17,7 +17,7 @@ export type StaticSiteOptions = {
  * One image, any prefix: the web client is built once with a placeholder
  * baked into its asset URLs, and this substitutes the real base path when
  * index.html is served. The substitution runs once at startup, not per
- * request — the base path cannot change while the process runs.
+ * request, since the base path cannot change while the process runs.
  */
 export function renderIndexHtml(template: string, basePath: string): string {
   return template.split(BASE_PATH_PLACEHOLDER).join(basePath);

@@ -17,7 +17,7 @@ function scrypt(password: string, salt: Buffer, keyLength: number, options: Scry
 // prebuild for every architecture the image may run on (x64 and arm64 for a
 // Raspberry Pi), and for a single-secret login behind rate limiting it is an
 // accepted choice. The parameters follow the OWASP password storage cheat
-// sheet (N=2^16, r=8, p=2, ~64 MiB) — comfortably within a small box's RAM.
+// sheet (N=2^16, r=8, p=2, ~64 MiB), comfortably within a small box's RAM.
 const SCRYPT_LOG_N = 16;
 const SCRYPT_R = 8;
 const SCRYPT_P = 2;
