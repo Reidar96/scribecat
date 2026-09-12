@@ -3,6 +3,11 @@
 All notable changes to ScribeDog are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.11.0] - 2026-09-12
+
+### Highlights
+- Add a live outline to the details panel: jump to any heading with a click or the keyboard, tracks the section you're in as you type or scroll
+
 ## [0.10.1] - 2026-09-11
 
 ### Bug Fixes
