@@ -12,7 +12,7 @@ vi.mock("@tauri-apps/plugin-fs", () => ({
   writeTextFile: async () => undefined
 }));
 
-const { checkpointsToRevert, resolveRevertTargets } = await import("./checkpoints");
+const { anchorCheckpoints, checkpointsToRevert, resolveRevertTargets } = await import("./checkpoints");
 
 import type { Checkpoint } from "./checkpoints";
 
@@ -93,5 +93,41 @@ describe("resolveRevertTargets", () => {
     ]);
 
     expect(targets).toEqual([{ path: "Notiz.md", blobId: "alt" }]);
+  });
+});
+
+describe("anchorCheckpoints", () => {
+  const messages = [
+    { role: "user", content: "create a note" },
+    { role: "assistant", content: "" },
+    { role: "tool", content: "OK: staged" },
+    { role: "assistant", content: "Done." },
+    { role: "user", content: "and another" },
+    { role: "assistant", content: "Here you go." }
+  ];
+
+  const at = (id: string, messageIndex: number): Checkpoint => ({ ...checkpoint(id, messageIndex, [["a.md", null]]), messageIndex });
+
+  it("moves the button from a text-less tool step to the reply that closes the turn", () => {
+    const anchors = anchorCheckpoints([at("cp-1", 1)], "s1", messages);
+
+    expect([...anchors]).toEqual([[3, "cp-1"]]);
+  });
+
+  it("keeps a message that has text where it is", () => {
+    const anchors = anchorCheckpoints([at("cp-1", 5)], "s1", messages);
+
+    expect([...anchors]).toEqual([[5, "cp-1"]]);
+  });
+
+  it("keeps the older checkpoint when two land on the same message", () => {
+    const anchors = anchorCheckpoints([at("cp-1", 1), at("cp-2", 2)], "s1", messages);
+
+    expect([...anchors]).toEqual([[3, "cp-1"]]);
+  });
+
+  it("ignores other sessions and a turn without any rendered reply", () => {
+    expect(anchorCheckpoints([at("cp-1", 1)], "other", messages).size).toBe(0);
+    expect(anchorCheckpoints([at("cp-1", 6)], "s1", messages).size).toBe(0);
   });
 });

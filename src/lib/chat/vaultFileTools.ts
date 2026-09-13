@@ -42,6 +42,11 @@ const MAX_LISTED_FILES = 400;
 const MAX_SEARCH_RESULTS_DEFAULT = 50;
 const MAX_SEARCH_RESULTS_LIMIT = 200;
 const MAX_SEARCH_LINE_CHARS = 200;
+// How many notes search_files reads at once. Each read is a round trip on a
+// server vault, and one at a time made a search over a few hundred notes a
+// matter of seconds on a home network. Small enough that memory stays at a
+// handful of notes and a local folder does not fan out into a burst of reads.
+const SEARCH_READ_BATCH = 8;
 
 /**
  * Which chat turn the current tool calls belong to, so a staged entry can point
@@ -764,36 +769,39 @@ async function searchFiles(args: Record<string, unknown>): Promise<FileToolResul
 
   const hits: string[] = [];
   let searchedFiles = 0;
+  const candidates = [...context.filesByKey.values()].filter(
+    (file) => !glob || file.relativePath.toLowerCase().includes(glob)
+  );
 
-  for (const file of context.filesByKey.values()) {
-    if (hits.length >= limit) {
-      break;
-    }
+  // Read in batches, match in order: the hits keep the tree's order, which
+  // the model relies on when it narrows a query, and the reads overlap.
+  for (let at = 0; at < candidates.length && hits.length < limit; at += SEARCH_READ_BATCH) {
+    const batch = candidates.slice(at, at + SEARCH_READ_BATCH);
+    const contents = await Promise.all(batch.map((file) => effectiveContent(context, file.relativePath)));
 
-    if (glob && !file.relativePath.toLowerCase().includes(glob)) {
-      continue;
-    }
+    for (let position = 0; position < batch.length && hits.length < limit; position += 1) {
+      const file = batch[position];
+      const { content } = contents[position];
 
-    const { content } = await effectiveContent(context, file.relativePath);
-
-    if (content === null) {
-      continue;
-    }
-
-    searchedFiles += 1;
-
-    const lines = content.split(/\r?\n/);
-
-    for (let index = 0; index < lines.length && hits.length < limit; index += 1) {
-      if (!pattern.test(lines[index])) {
+      if (content === null) {
         continue;
       }
 
-      const line = lines[index].trim();
-      const shown =
-        line.length > MAX_SEARCH_LINE_CHARS ? `${line.slice(0, MAX_SEARCH_LINE_CHARS)}…` : line;
+      searchedFiles += 1;
 
-      hits.push(`${file.relativePath}:${index + 1}  ${shown}`);
+      const lines = content.split(/\r?\n/);
+
+      for (let index = 0; index < lines.length && hits.length < limit; index += 1) {
+        if (!pattern.test(lines[index])) {
+          continue;
+        }
+
+        const line = lines[index].trim();
+        const shown =
+          line.length > MAX_SEARCH_LINE_CHARS ? `${line.slice(0, MAX_SEARCH_LINE_CHARS)}…` : line;
+
+        hits.push(`${file.relativePath}:${index + 1}  ${shown}`);
+      }
     }
   }
 

@@ -7,6 +7,8 @@
 // preparation path (ragIndex.ts) go through here, so there is exactly one
 // answer to "what is included".
 
+import { platform } from "@/platform";
+
 import { getRelativeDisplayPath } from "@/lib/fileSystem";
 import { isFileIncluded, type RagFolderSelection } from "@/lib/ragConfig";
 import { useAppStore } from "@/store/useAppStore";
@@ -25,12 +27,17 @@ export type RagScope = {
  * requireEnabled is on by default: anything that reads notes for the AI needs
  * the vault's consent switch. Only the settings tab passes false, so it can
  * still report and delete what was stored while the feature is switched off.
+ *
+ * Null as well wherever the shell has no index (the browser). The consent
+ * switch lives in the vault's rag.json, so a vault that was prepared on the
+ * desktop arrives with it switched on; without this check the agent would be
+ * offered search tools that can only ever fail there.
  */
 export function currentScope({ requireEnabled = true }: { requireEnabled?: boolean } = {}): RagScope | null {
   const { folderPath, filePaths } = useAppStore.getState();
   const { config } = useRagSettingsStore.getState();
 
-  if (!folderPath || (requireEnabled && !config.enabled)) {
+  if (!folderPath || !platform.features.knowledgeIndex || (requireEnabled && !config.enabled)) {
     return null;
   }
 

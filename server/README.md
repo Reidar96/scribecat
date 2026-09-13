@@ -9,11 +9,12 @@ instance.
 > it covers the whole file side (the file tree, creating, renaming, moving and
 > deleting notes and folders, images, manual sort order, version history, live
 > updates when files change on disk), the account side (login, logout,
-> changing the password, brute-force protection) and the cloud AI providers
-> (rewrite, insert, grammar check), with the API keys stored encrypted on the
-> server. Not there yet: the chat agent and its vault tools, the knowledge
-> base, and local AI models. Features that only exist natively (local folders,
-> import from local files, export to a local folder, the image file picker,
+> changing the password, brute-force protection), the cloud AI providers
+> (rewrite, insert, grammar check, and the chat with its vault agent: staged
+> proposals, review, checkpoints and undo), with the API keys stored encrypted
+> on the server. Not there yet: the knowledge base (vault search index) and
+> local AI models. Features that only exist natively (local folders, import
+> from local files, export to a local folder, the image file picker,
 > dictation, the updater) are hidden.
 
 ## Quick start
@@ -146,6 +147,23 @@ provider hosts over https; anything else is refused, so this cannot become a
 way to reach something else on your network. If you use your own gateway in
 front of a provider, add its host to `SCRIBEDOG_LLM_ALLOWED_HOSTS`.
 
+**The chat agent works on the vault through the server.** Everything the
+desktop agent does, the web app does too: it reads and searches your notes,
+proposes new notes and edits, and every proposal waits for your review before
+it touches a file. The pieces it keeps between sessions live in the vault,
+next to the notes: open proposals in `.scribedog/staged-changes.json`,
+the checkpoints behind the undo button in `.scribedog/checkpoints/`, and the
+chat history in `.scribedog/chat-sessions.json`. So they follow the vault,
+not the browser: open the same server from another device and the pending
+proposals and the undo history are there. Each step of an agent run is one
+request through the server to the provider, and each note the agent reads is
+one request to the server, so a long run over many notes takes a little
+longer over Wi-Fi than on the desktop; it does not need anything else.
+
+The knowledge base (the vault search index with embeddings) is desktop only
+for now: its index lives in the desktop app's native process. The agent's
+own `search_files` and `read_file` tools do not need it.
+
 Local models (Ollama, Jan.ai, LM Studio) are not available in the browser yet.
 On a server "localhost" is the container, not your machine, and reaching a
 model on your own device from a web page is a separate piece of work.
@@ -157,9 +175,10 @@ model on your own device from a web page is a separate piece of work.
 - your notes, as ordinary `.md` files in whatever folders you like;
 - `images/` for pictures pasted or dropped into notes;
 - `.scribedog/` with the same sidecars the desktop app keeps (version
-  history, manual sort order, chat sessions), written by the web app through
-  the server, plus `.scribedog/server-data-version`, which says which layout
-  the folder is in (see Updating);
+  history, manual sort order, chat sessions, the agent's pending proposals
+  and checkpoints), written by the web app through the server, plus
+  `.scribedog/server-data-version`, which says which layout the folder is in
+  (see Updating);
 - `.scribedog/server/` with the server's own files: `auth.json` (the password
   hash), `session-secret` (signs session cookies) and `secrets.json` (the
   encrypted API keys). It is created on first start with mode `0600` and is
@@ -233,17 +252,24 @@ npm run typecheck
 npm run test:e2e  # browser test against a running instance, see below
 ```
 
-The browser test drives a real instance, usually the compose stack:
+The browser tests drive a real instance, usually the compose stack. The
+agent tests need the scripted model that `docker-compose.e2e.yml` adds to it
+(`e2e/mock-llm`, reachable to the server as `https://llm.e2e.internal` and to
+the tests on port 9081), so start the stack with both files:
 
 ```bash
+docker compose -f docker-compose.yml -f docker-compose.e2e.yml up -d --build
 npx playwright install chromium
 SCRIBEDOG_E2E_URL=https://localhost/ SCRIBEDOG_E2E_PASSWORD=... npm run test:e2e
 # or, with a base path:
 SCRIBEDOG_E2E_URL=https://localhost/anna/ SCRIBEDOG_E2E_PASSWORD=... npm run test:e2e
 ```
 
-It expects a note `Projects/Roadmap.md` in the vault (override with
-`SCRIBEDOG_E2E_NOTE`) and overwrites it.
+They expect a note `Projects/Roadmap.md` in the vault (override with
+`SCRIBEDOG_E2E_NOTE`) and overwrite it. `SCRIBEDOG_E2E_MOCK_URL` points them
+at the mock if its port differs. The e2e compose file is for tests only: it
+turns certificate checks off in the server container so it accepts the
+mock's certificate from Caddy's local CA.
 
 The Docker image is built from the repository root (`docker compose` in
 `server/` already uses `..` as the build context) because it needs both

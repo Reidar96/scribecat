@@ -125,6 +125,14 @@ describe("file API", () => {
     expect((await stat(path.join(context.vaultPath, "A", "B", "C"))).isDirectory()).toBe(true);
   });
 
+  // The frontend ensures a note's parent exists before writing it, and for a
+  // note at the top level that parent is the vault root: a no-op, like the
+  // desktop's mkdir on a folder that is already there.
+  it("accepts the root for a recursive mkdir and refuses it otherwise", async () => {
+    expect((await post("/api/fs/mkdir", { path: "", recursive: true })).statusCode).toBe(204);
+    expect((await post("/api/fs/mkdir", { path: "", recursive: false })).statusCode).toBe(400);
+  });
+
   it("renames and moves files and folders", async () => {
     expect((await post("/api/fs/rename", { from: "Notes/Idea.md", to: "Notes/Plan.md" })).statusCode).toBe(204);
     expect(await readFile(path.join(context.vaultPath, "Notes", "Plan.md"), "utf8")).toBe("# Idea\n");

@@ -1394,14 +1394,21 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       return;
     }
 
+    // The lock is toggled without TipTap's update event (the second argument):
+    // by default setEditable reports an "update", which onUpdate above turns
+    // into a document edit. Locking is not an edit, and reporting one here
+    // pushes whatever the editor holds at that moment into the store as the
+    // user's text. Applying a proposal is where that showed: the store had
+    // just been given the applied content, the editor still held the
+    // baseline, and the "edit" made the freshly written note dirty.
     if (!stagedChange) {
       setAiSuggestionOverride(currentEditor, null);
-      currentEditor.setEditable(true);
+      currentEditor.setEditable(true, false);
       setStagedPreviewStats(null);
       return;
     }
 
-    currentEditor.setEditable(false);
+    currentEditor.setEditable(false, false);
 
     // The review's own accept/discard buttons belong to the chat agent's
     // proposals, where they edit the document. A staged change is not a
@@ -1424,7 +1431,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       return () => {
         if (!currentEditor.isDestroyed) {
           setAiSuggestionOverride(currentEditor, null);
-          currentEditor.setEditable(true);
+          currentEditor.setEditable(true, false);
         }
       };
     }
@@ -1449,7 +1456,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       if (!currentEditor.isDestroyed) {
         setAiSuggestionOverride(currentEditor, null);
         clearAiSuggestions(currentEditor);
-        currentEditor.setEditable(true);
+        currentEditor.setEditable(true, false);
       }
     };
   }, [stagedChange, editor, markdown, stagedRelativePath]);

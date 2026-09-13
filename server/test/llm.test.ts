@@ -1,3 +1,5 @@
+import { request as httpRequest } from "node:http";
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { assertAllowedTarget, forwardableRequestHeaders, LlmTargetError } from "../src/llm/target.js";
@@ -195,6 +197,51 @@ describe("llm proxy route", () => {
     expect((init.headers as Record<string, string>).authorization).toBe(`Bearer ${secretRef("mistral")}`);
   });
 
+  // Over a real socket Node closes the request stream, "close" event included,
+  // as soon as the body has been read. A proxy that takes the request's
+  // "close" for the browser hanging up aborts its upstream call before it
+  // starts and never answers; inject() does not reproduce that timing, so
+  // this one listens.
+  it("answers a POST over a real connection", async () => {
+    fetchMock.mockResolvedValue(new Response('{"choices":[]}', { status: 200, headers: { "content-type": "application/json" } }));
+
+    const address = await context.app.listen({ port: 0, host: "127.0.0.1" });
+    const response = await postOverSocket(`${address}/api/llm/request`, {
+      cookie,
+      "content-type": "application/json",
+      "x-scribedog-llm-url": "https://api.openai.com/v1/chat/completions"
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toBe('{"choices":[]}');
+  });
+
+  it("aborts the provider call when the browser hangs up mid-stream", async () => {
+    // An upstream that never finishes: only the client going away can end it.
+    const upstream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode("data: one\n\n"));
+      }
+    });
+
+    fetchMock.mockResolvedValue(new Response(upstream, { status: 200, headers: { "content-type": "text/event-stream" } }));
+
+    const address = await context.app.listen({ port: 0, host: "127.0.0.1" });
+    const { hangUp, firstChunk } = openStreamOverSocket(`${address}/api/llm/request`, {
+      cookie,
+      "content-type": "application/json",
+      "x-scribedog-llm-url": "https://api.openai.com/v1/chat/completions"
+    });
+
+    expect(await firstChunk).toBe("data: one\n\n");
+
+    const [, init] = fetchMock.mock.calls[0] as [URL, RequestInit];
+
+    expect(init.signal?.aborted).toBe(false);
+    hangUp();
+    await vi.waitFor(() => expect(init.signal?.aborted).toBe(true));
+  });
+
   it("forwards a GET (the model list) without a body", async () => {
     fetchMock.mockResolvedValue(new Response('{"data":[]}', { status: 200, headers: { "content-type": "application/json" } }));
 
@@ -212,3 +259,35 @@ describe("llm proxy route", () => {
     expect(init.body).toBeUndefined();
   });
 });
+
+/** A POST with node:http, which the fetch stub above does not touch. */
+function postOverSocket(url: string, headers: Record<string, string>): Promise<{ status: number; body: string }> {
+  const payload = '{"model":"gpt-4o"}';
+
+  return new Promise((resolve, reject) => {
+    const request = httpRequest(url, { method: "POST", headers: { ...headers, "content-length": String(payload.length) } }, (response) => {
+      const chunks: Buffer[] = [];
+      response.on("data", (chunk: Buffer) => chunks.push(chunk));
+      response.on("end", () => resolve({ status: response.statusCode ?? 0, body: Buffer.concat(chunks).toString() }));
+    });
+
+    request.on("error", reject);
+    request.end(payload);
+  });
+}
+
+/** Opens a streaming POST and hands back the first chunk plus a way to drop the connection. */
+function openStreamOverSocket(url: string, headers: Record<string, string>): { firstChunk: Promise<string>; hangUp: () => void } {
+  const payload = '{"model":"gpt-4o","stream":true}';
+  const request = httpRequest(url, { method: "POST", headers: { ...headers, "content-length": String(payload.length) } });
+  const firstChunk = new Promise<string>((resolve, reject) => {
+    request.on("response", (response) => {
+      response.once("data", (chunk: Buffer) => resolve(chunk.toString()));
+    });
+    request.on("error", reject);
+  });
+
+  request.end(payload);
+
+  return { firstChunk, hangUp: () => request.destroy() };
+}

@@ -329,3 +329,40 @@ export async function pruneCheckpointsToSessions(
     await removeBlobs(folderPath, removed);
   });
 }
+
+/**
+ * Which rendered message each checkpoint's undo button belongs on.
+ *
+ * A checkpoint records the assistant message that proposed the batch. That
+ * message is usually nothing but the tool call: OpenAI-compatible models send
+ * no text alongside one, and the chat does not render a text-less turn (its
+ * tool status line stands for it). The button therefore goes on the next
+ * assistant message of the same session that has text, which is the reply
+ * closing the turn. Two checkpoints landing on the same message keep the
+ * older one: a revert takes back everything from that point on anyway.
+ */
+export function anchorCheckpoints(
+  checkpoints: readonly Checkpoint[],
+  sessionId: string | undefined,
+  messages: ReadonlyArray<{ role: string; content?: string }>
+): Map<number, string> {
+  const anchors = new Map<number, string>();
+
+  for (const checkpoint of checkpoints) {
+    if (checkpoint.sessionId !== sessionId || checkpoint.messageIndex < 0) {
+      continue;
+    }
+
+    let index = checkpoint.messageIndex;
+
+    while (index < messages.length && !(messages[index].role === "assistant" && messages[index].content)) {
+      index += 1;
+    }
+
+    if (index < messages.length && !anchors.has(index)) {
+      anchors.set(index, checkpoint.id);
+    }
+  }
+
+  return anchors;
+}

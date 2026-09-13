@@ -54,6 +54,7 @@ import {
 } from "@/lib/dragDrop/droppedSources";
 import { settleOpenDocumentProposals } from "@/lib/chat/agentTools";
 import type { PlanStep } from "@/lib/chat/agentPlan";
+import { anchorCheckpoints } from "@/lib/chat/checkpoints";
 import {
   stagedChangeKind,
   vaultPathKey,
@@ -948,21 +949,15 @@ export function ChatPanel({ canEditDocument, onAssistantSettingsRequest }: ChatP
   // dialog stay correct if the transcript grows underneath it.
   const [undoTarget, setUndoTarget] = useState<string | null>(null);
 
-  // The checkpoint that belongs to a given assistant message, if the batch it
-  // proposed was actually applied.
-  const checkpointByMessage = useMemo(() => {
-    const map = new Map<number, string>();
-
-    for (const checkpoint of checkpoints) {
-      if (checkpoint.sessionId === activeSession?.id && checkpoint.messageIndex >= 0) {
-        map.set(checkpoint.messageIndex, checkpoint.id);
-      }
-    }
-
-    return map;
-  }, [checkpoints, activeSession?.id]);
-
   const messages = activeSession?.messages ?? [];
+
+  // The checkpoint that belongs to a given assistant message, if the batch it
+  // proposed was actually applied. Anchored on the next message that is
+  // rendered, see anchorCheckpoints.
+  const checkpointByMessage = useMemo(
+    () => anchorCheckpoints(checkpoints, activeSession?.id, messages),
+    [checkpoints, activeSession?.id, messages]
+  );
   const isEmptyChat = messages.length === 0 && !isAnswering;
   const hiddenStatuses = useMemo(() => hiddenToolStatuses(messages, isAnswering), [messages, isAnswering]);
   const hasSessions = useChatStore((state) => state.sessions.length > 0);

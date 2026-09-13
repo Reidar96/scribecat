@@ -1,0 +1,19 @@
+# Caddyfile of the browser test stack (docker-compose.e2e.yml): the site from
+# caddy/Caddyfile, plus the scripted model as a second https site so the
+# ScribeDog server reaches it the way it reaches a real provider.
+
+{$SCRIBEDOG_SITE_ADDRESS:localhost} {
+	tls {$SCRIBEDOG_TLS:internal}
+
+	encode zstd gzip
+
+	reverse_proxy scribedog:3000
+}
+
+# The mock model (e2e/mock-llm). The name resolves to this Caddy inside the
+# compose network (a network alias), the certificate comes from the local CA.
+llm.e2e.internal {
+	tls internal
+
+	reverse_proxy mock-llm:8080
+}

@@ -97,10 +97,26 @@ export async function llmRoutes(app: FastifyInstance, options: LlmRoutesOptions)
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
       // A closed browser connection (the user pressed cancel) has to reach the
-      // provider too, or the request runs on and is billed for nothing.
-      const onClose = () => controller.abort();
+      // provider too, or the request runs on and is billed for nothing. The
+      // signal for that is the *response* closing before it was finished. The
+      // request stream is no use here: Node closes it, and emits its "close",
+      // as soon as the body has been read, which for a POST is before this
+      // handler even runs or a tick into it. Listening there would abort the
+      // upstream call the moment it starts and leave the browser waiting.
+      const onClose = () => {
+        if (!reply.raw.writableFinished) {
+          controller.abort();
+        }
+      };
+      // Undone when the answer is through, not when this handler returns:
+      // a streamed answer is still on its way then, and the hang-up it has
+      // to watch for comes later.
+      const settle = () => {
+        clearTimeout(timer);
+        reply.raw.off("close", onClose);
+      };
 
-      request.raw.on("close", onClose);
+      reply.raw.on("close", onClose);
 
       try {
         const response = await fetch(target, {
@@ -114,18 +130,22 @@ export async function llmRoutes(app: FastifyInstance, options: LlmRoutesOptions)
         reply.code(response.status).headers(forwardableResponseHeaders(response.headers));
 
         if (!response.body) {
-          return reply.send(await response.arrayBuffer().then((buffer) => Buffer.from(buffer)));
+          const buffer = Buffer.from(await response.arrayBuffer());
+
+          settle();
+
+          return reply.send(buffer);
         }
 
         const stream = Readable.fromWeb(response.body as Parameters<typeof Readable.fromWeb>[0]);
 
-        stream.on("close", () => clearTimeout(timer));
+        stream.on("close", settle);
 
         return reply.send(stream);
       } catch (error) {
-        clearTimeout(timer);
+        settle();
 
-        if (controller.signal.aborted && request.raw.destroyed) {
+        if (controller.signal.aborted && reply.raw.destroyed) {
           // The client hung up; there is nobody left to answer.
           return reply;
         }
@@ -136,8 +156,6 @@ export async function llmRoutes(app: FastifyInstance, options: LlmRoutesOptions)
           error: "upstream_unreachable",
           message: `The AI provider (${target.hostname}) could not be reached.`
         });
-      } finally {
-        request.raw.off("close", onClose);
       }
     }
   });

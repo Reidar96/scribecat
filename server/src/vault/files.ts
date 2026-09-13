@@ -247,7 +247,14 @@ export async function openVault(vaultPath: string): Promise<Vault> {
     },
 
     async mkdir(rawPath, recursive) {
-      const { relativePath, absolutePath } = await resolve(rawPath);
+      // The root is a valid target for a recursive mkdir, and a no-op: the
+      // frontend makes sure a note's parent folder exists before writing,
+      // and for a note at the top level that parent is the vault itself.
+      const { relativePath, absolutePath } = await resolve(rawPath, { allowRoot: recursive });
+
+      if (relativePath === "") {
+        return;
+      }
 
       try {
         await mkdir(absolutePath, { recursive });
