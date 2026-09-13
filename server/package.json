@@ -10,11 +10,8 @@
   },
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "dev:web": "vite --config vite.config.ts",
-    "build": "npm run build:web && npm run build:server",
-    "build:web": "vite build --config vite.config.ts",
-    "build:server": "tsc -p tsconfig.json",
-    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.web.json --noEmit",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "start": "node dist/server/index.js",
@@ -27,20 +24,9 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
-    "@tiptap/extension-task-item": "^3.28.0",
-    "@tiptap/extension-task-list": "^3.28.0",
-    "@tiptap/react": "^3.28.0",
-    "@tiptap/starter-kit": "^3.28.0",
     "@types/node": "^24.0.0",
-    "@types/react": "^19.2.17",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.4",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8",
-    "tiptap-markdown": "^0.9.0",
     "tsx": "^4.20.0",
     "typescript": "~5.8.3",
-    "vite": "^8.1.5",
     "vitest": "^4.1.10"
   }
 }

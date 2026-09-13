@@ -1,4 +1,5 @@
-import { dirname, join } from "@tauri-apps/api/path";
+import { platform } from "@/platform";
+import { dirname, join } from "@/platform/paths";
 
 import i18n from "@/i18n";
 import {
@@ -100,8 +101,13 @@ export const createFolderSlice: AppSlice<FolderSlice> = (set, get) => ({
         folderError: null
       });
 
-      setLastOpenedFolderPath(folderPath);
-      addRecentFolderPath(folderPath);
+      // The recent-folders list is a list of local folders; a server vault
+      // (the browser, later the desktop as remote client) has no place in it.
+      if (platform.features.localFolders) {
+        setLastOpenedFolderPath(folderPath);
+        addRecentFolderPath(folderPath);
+      }
+
       void watchMarkdownFolder(folderPath).catch(() => undefined);
 
       return true;

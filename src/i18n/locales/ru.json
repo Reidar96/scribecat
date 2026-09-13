@@ -45,7 +45,8 @@
     "emptyTitle": "Выберите файл Markdown слева",
     "emptyDescription": "После открытия папки здесь появятся её содержимое и область редактирования.",
     "pendingTargetOtherFolder": "другую папку",
-    "version": "v{{version}}"
+    "version": "v{{version}}",
+    "pendingTargetLogout": "выход"
   },
   "unsavedDialog": {
     "eyebrow": "Несохранённые изменения",
@@ -492,7 +493,8 @@
     "searchingFolder": "Поиск в папке …",
     "openFolderPrompt": "Откройте папку, чтобы увидеть все содержащиеся в ней файлы Markdown.",
     "noMarkdownFiles": "Файлы Markdown не найдены. Откройте папку с файлами `.md`.",
-    "dropImportHint": "Перетащите файлы или папки — они будут импортированы как заметки"
+    "dropImportHint": "Перетащите файлы или папки — они будут импортированы как заметки",
+    "logout": "Выйти"
   },
   "fileTree": {
     "treeLabel": "Дерево файлов",
@@ -944,5 +946,21 @@
     "labelTemplateHint": "{number} заменяется номером главы.",
     "includeChapterHeadings": "Создавать заголовки глав",
     "pageBreakBetweenChapters": "Начинать каждую главу с новой страницы"
+  },
+  "login": {
+    "title": "ScribeDog",
+    "lead": "Войдите с паролем этого сервера ScribeDog.",
+    "sessionExpired": "Сеанс истёк. Войдите снова, чтобы продолжить; несохранённые изменения сохраняются.",
+    "password": "Пароль",
+    "submit": "Войти",
+    "signingIn": "Вход …",
+    "wrongPassword": "Неверный пароль.",
+    "serverUnreachable": "Сервер недоступен.",
+    "failed": "Не удалось войти."
+  },
+  "platform": {
+    "notAvailable": "Эта функция недоступна в этой редакции ScribeDog.",
+    "serverNotYetAvailable": "Это действие пока недоступно в серверной редакции.",
+    "pathOutsideVault": "«{{path}}» находится вне хранилища."
   }
 }

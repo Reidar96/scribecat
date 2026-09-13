@@ -34,6 +34,13 @@ export type ServerConfig = {
   trustProxy: boolean;
   /** Hard cap for a session's lifetime, sliding expiration or not. */
   sessionMaxAgeDays: number;
+  /**
+   * Directory with the built web client (`npm run build:web` in the repo
+   * root). Defaults to `../dist-web` relative to the server package, which
+   * is where that build lands in a checkout and where the Docker image
+   * copies it to.
+   */
+  webDistDir: string;
 };
 
 export class ConfigError extends Error {}
@@ -115,6 +122,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
     initPassword: initPassword && initPassword.length > 0 ? initPassword : null,
     cookieSecure: parseBoolean(env.SCRIBEDOG_COOKIE_SECURE, true),
     trustProxy: parseBoolean(env.SCRIBEDOG_TRUST_PROXY, true),
+    webDistDir: path.resolve(env.SCRIBEDOG_WEB_DIST_DIR?.trim() || path.join(process.cwd(), "..", "dist-web")),
     sessionMaxAgeDays: Math.min(
       parseInteger(env.SCRIBEDOG_SESSION_MAX_AGE_DAYS, 60, "SCRIBEDOG_SESSION_MAX_AGE_DAYS"),
       60

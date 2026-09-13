@@ -10,7 +10,10 @@
 
 services:
   scribedog:
-    build: .
+    build:
+      # The image needs the shared frontend from the repository root, see Dockerfile.
+      context: ..
+      dockerfile: server/Dockerfile
     image: scribedog-server:0.1.0
     restart: unless-stopped
     # Must be able to read and write ./scribedog-data on the host. Match it to

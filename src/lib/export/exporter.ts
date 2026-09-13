@@ -1,5 +1,5 @@
-import { join } from "@tauri-apps/api/path";
-import { exists, mkdir, writeFile, writeTextFile } from "@tauri-apps/plugin-fs";
+import { join } from "@/platform/paths";
+import { requireLocalFs } from "@/platform";
 
 import { allowMarkdownFolderAccess, listMarkdownFiles, type MarkdownFileRecord } from "@/lib/fileSystem";
 import { buildFileTree, type FileTreeNode } from "@/lib/fileTree";
@@ -165,9 +165,9 @@ async function writeExportFile(
   rendered: { bytes?: Uint8Array; text?: string }
 ): Promise<void> {
   if (rendered.text !== undefined) {
-    await writeTextFile(targetPath, rendered.text);
+    await requireLocalFs().writeTextFile(targetPath, rendered.text);
   } else if (rendered.bytes) {
-    await writeFile(targetPath, rendered.bytes);
+    await requireLocalFs().writeFile(targetPath, rendered.bytes);
   }
 }
 
@@ -197,7 +197,7 @@ export async function exportSingleNote(input: SingleExportInput): Promise<Export
   const fileName = `${sanitizeExportName(baseName)}.${format}`;
   const targetPath = await join(targetDirectory, fileName);
 
-  if (await exists(targetPath)) {
+  if (await requireLocalFs().exists(targetPath)) {
     const { decision } = await onConflict(fileName);
 
     if (decision === "cancel") {
@@ -275,11 +275,11 @@ async function writeExportRecords(input: ExportRecordsInput): Promise<ExportOutc
       targetDirectoryPath = await join(targetDirectoryPath, sanitizeExportName(segment));
     }
 
-    await mkdir(targetDirectoryPath, { recursive: true });
+    await requireLocalFs().mkdir(targetDirectoryPath, { recursive: true });
 
     const targetPath = await join(targetDirectoryPath, targetFileName);
 
-    if (await exists(targetPath)) {
+    if (await requireLocalFs().exists(targetPath)) {
       let decision: ConflictDecision;
 
       if (blanketDecision) {
@@ -338,7 +338,7 @@ export async function exportFolderNotes(input: FolderExportInput): Promise<Expor
   const records = await listMarkdownFiles(sourceFolderPath);
   const exportRootPath = await join(targetDirectory, sanitizeExportName(folderName));
 
-  await mkdir(exportRootPath, { recursive: true });
+  await requireLocalFs().mkdir(exportRootPath, { recursive: true });
 
   const outcome = await writeExportRecords({
     records,
@@ -407,7 +407,7 @@ export async function exportMultipleNotes(input: MultipleExportInput): Promise<E
   const records = recordLists.flat();
   const exportRootPath = await join(targetDirectory, sanitizeExportName(folderName));
 
-  await mkdir(exportRootPath, { recursive: true });
+  await requireLocalFs().mkdir(exportRootPath, { recursive: true });
 
   const outcome = await writeExportRecords({
     records,
@@ -511,7 +511,7 @@ export async function exportMergedNotes(input: MergedExportInput): Promise<Expor
   const fileName = `${sanitizeExportName(baseName)}.${format}`;
   const targetPath = await join(targetDirectory, fileName);
 
-  if (await exists(targetPath)) {
+  if (await requireLocalFs().exists(targetPath)) {
     const { decision } = await onConflict(fileName);
 
     if (decision === "cancel") {

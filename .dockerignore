@@ -1,0 +1,36 @@
+# Build context for server/Dockerfile (docker compose in server/ builds with
+# context ".."). Allowlist: everything is excluded unless listed here, so the
+# Rust target directory, node_modules, private docs and local data never
+# reach the Docker daemon.
+*
+
+# Root package: the shared frontend, built for the browser in the image.
+!package.json
+!package-lock.json
+!index.html
+!vite.config.ts
+!tsconfig.json
+!tsconfig.node.json
+!THIRD_PARTY_LICENSES.md
+!public
+!src
+
+# The server package.
+!server
+server/node_modules
+server/dist
+server/scribedog-data
+server/test
+server/e2e
+server/test-results
+server/playwright-report
+server/playwright.config.ts
+server/vitest.config.ts
+server/.env
+server/.env.*
+!server/.env.example
+server/README.md
+server/caddy-root.crt
+
+# Tests do not belong in the image.
+**/*.test.ts

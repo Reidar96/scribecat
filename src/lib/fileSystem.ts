@@ -1,27 +1,21 @@
-import { dirname, join } from "@tauri-apps/api/path";
-import { invoke } from "@tauri-apps/api/core";
-import { open } from "@tauri-apps/plugin-dialog";
-
 import i18n from "@/i18n";
+import { getVaultStorage, platform } from "@/platform";
+import { dirname, join } from "@/platform/paths";
+import { exists, mkdir, readTextFile, remove, rename, stat, writeFile, writeTextFile } from "@/platform/vaultFs";
 import {
-  exists,
-  mkdir,
-  readDir,
-  readTextFile,
-  remove,
-  rename,
-  stat,
-  writeFile,
-  writeTextFile
-} from "@tauri-apps/plugin-fs";
+  getRelativeDisplayPath,
+  isPathInsideVault,
+  normalizeDisplayPath,
+  VAULT_META_DIR_NAME
+} from "@/lib/vaultPaths";
+import type { MarkdownFileRecord } from "@/platform/types";
+
+export { getRelativeDisplayPath, isPathInsideVault, VAULT_META_DIR_NAME };
+export type { MarkdownFileRecord };
 
 export const ABSOLUTE_URL_PATTERN = /^[a-z][a-z0-9+.-]*:/i;
 
-export const FOLDER_FILES_CHANGED_EVENT = "scribedog-folder-files-changed";
-
 const IMAGES_FOLDER_NAME = "images";
-
-export const VAULT_META_DIR_NAME = ".scribedog";
 
 const EXTENSION_BY_MIME_TYPE: Record<string, string> = {
   "image/png": "png",
@@ -50,92 +44,6 @@ export function guessImageMimeType(filePath: string): string {
 const LAST_FOLDER_PATH_STORAGE_KEY = "scribedog:lastFolderPath";
 const RECENT_FOLDER_PATHS_STORAGE_KEY = "scribedog:recentFolderPaths";
 export const RECENT_FOLDER_PATHS_MAX = 8;
-
-type DirectoryEntry = {
-  name: string;
-  isDirectory: boolean;
-  isFile: boolean;
-  isSymlink: boolean;
-};
-
-export type MarkdownFileRecord = {
-  filePath: string;
-  relativePath: string;
-  mtimeMs: number;
-};
-
-function isMarkdownFile(name: string): boolean {
-  return name.toLowerCase().endsWith(".md");
-}
-
-function normalizeDisplayPath(path: string): string {
-  return path.replace(/\\/g, "/").replace(/\/+$/, "");
-}
-
-/**
- * Whether an already-resolved absolute path still lies inside the vault.
- * Case-insensitive, because Windows paths are.
- */
-export function isPathInsideVault(rootPath: string, filePath: string): boolean {
-  const normalizedRootPath = normalizeDisplayPath(rootPath).toLowerCase();
-  const normalizedFilePath = normalizeDisplayPath(filePath).toLowerCase();
-
-  return normalizedFilePath.startsWith(`${normalizedRootPath}/`);
-}
-
-export function getRelativeDisplayPath(rootPath: string, filePath: string): string {
-  const normalizedRootPath = normalizeDisplayPath(rootPath);
-  const normalizedFilePath = normalizeDisplayPath(filePath);
-
-  if (normalizedFilePath === normalizedRootPath) {
-    return "";
-  }
-
-  if (normalizedFilePath.startsWith(`${normalizedRootPath}/`)) {
-    return normalizedFilePath.slice(normalizedRootPath.length + 1);
-  }
-
-  return normalizedFilePath;
-}
-
-async function collectMarkdownFiles(
-  rootPath: string,
-  currentPath: string,
-  accumulator: MarkdownFileRecord[]
-): Promise<void> {
-  let entries: DirectoryEntry[];
-
-  try {
-    entries = (await readDir(currentPath)) as DirectoryEntry[];
-  } catch {
-    return;
-  }
-
-  for (const entry of entries) {
-    const entryPath = await join(currentPath, entry.name);
-
-    if (entry.isDirectory && !entry.isSymlink) {
-      if (entry.name === VAULT_META_DIR_NAME) {
-        continue;
-      }
-
-      await collectMarkdownFiles(rootPath, entryPath, accumulator);
-      continue;
-    }
-
-    if ((entry.isFile || entry.isSymlink) && isMarkdownFile(entry.name)) {
-      const mtimeMs = await stat(entryPath)
-        .then((info) => info.mtime?.getTime() ?? 0)
-        .catch(() => 0);
-
-      accumulator.push({
-        filePath: entryPath,
-        relativePath: getRelativeDisplayPath(rootPath, entryPath),
-        mtimeMs
-      });
-    }
-  }
-}
 
 export type FileTimestamps = {
   /** Creation time; null where the platform does not report one. */
@@ -172,41 +80,27 @@ export async function getPathMtimeMs(path: string): Promise<number> {
 }
 
 export async function chooseMarkdownFolder(): Promise<string | null> {
-  const selectedFolder = await open({
-    directory: true,
-    recursive: true,
-    title: i18n.t("fileSystem.chooseFolderTitle")
-  });
+  if (!platform.dialogs) {
+    return null;
+  }
 
-  return typeof selectedFolder === "string" ? selectedFolder : null;
+  return platform.dialogs.chooseFolder({ title: i18n.t("fileSystem.chooseFolderTitle") });
 }
 
 export async function allowMarkdownFolderAccess(folderPath: string): Promise<void> {
-  await invoke("allow_folder_scope", { folderPath });
+  await platform.vault.allowFolderAccess(folderPath);
 }
 
-// The dialog plugin usually widens the fs scope for user-picked files by
-// itself; this explicit grant is the robust fallback for import sources
-// living outside the opened vault.
 export async function allowFileAccess(filePath: string): Promise<void> {
-  await invoke("allow_file_scope", { filePath });
+  await platform.vault.allowFileAccess(filePath);
 }
 
 export async function watchMarkdownFolder(folderPath: string): Promise<void> {
-  await invoke("watch_folder", { folderPath });
+  await platform.vault.watchFolder(folderPath);
 }
 
 export async function listMarkdownFiles(rootPath: string): Promise<MarkdownFileRecord[]> {
-  const accumulator: MarkdownFileRecord[] = [];
-
-  await collectMarkdownFiles(rootPath, rootPath, accumulator);
-
-  return accumulator.sort((left, right) =>
-    left.relativePath.localeCompare(right.relativePath, undefined, {
-      numeric: true,
-      sensitivity: "base"
-    })
-  );
+  return getVaultStorage().listMarkdownFiles(rootPath);
 }
 
 export async function readMarkdownFile(filePath: string): Promise<string> {
@@ -348,7 +242,7 @@ export function formatFolderLabel(folderPath: string | null): string {
     return i18n.t("fileSystem.noFolderOpen");
   }
 
-  return normalizeDisplayPath(folderPath);
+  return platform.vault.displayName(folderPath);
 }
 
 export function getFolderBasename(folderPath: string): string {

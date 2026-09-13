@@ -4,10 +4,15 @@ Run ScribeDog as a self-hosted web app: your notes live in a folder on the
 server, you edit them in the browser, and a single password protects the
 instance.
 
-> **Status: early.** This is the first stage of the server edition. It covers
-> login/logout, listing notes, opening a note, editing it in the TipTap editor
-> and saving it back. Creating, renaming and deleting notes, images, folders,
-> AI features and the rest of the desktop app are not there yet.
+> **Status: early.** The web app is the desktop app's own frontend, so it
+> looks and works the same, but the server behind it is still growing. Today
+> it covers login/logout, the file tree, opening a note, editing it and saving
+> it back. Creating, renaming, moving and deleting notes and folders, images,
+> version history and the chat agent are not wired up to the server yet; the
+> corresponding actions report that they are not available. The AI features
+> are not adapted for the browser yet either (an API key entered in the
+> settings is kept in memory for the tab only). Features that only exist
+> natively (local folders, import/export, dictation, the updater) are hidden.
 
 ## Quick start
 
@@ -59,6 +64,7 @@ run it without the bundled compose file):
 | `SCRIBEDOG_TRUST_PROXY` | `true` | Trust `X-Forwarded-*` headers from the reverse proxy. |
 | `SCRIBEDOG_SESSION_MAX_AGE_DAYS` | `60` | How long a session stays valid without activity (sliding, capped at 60). |
 | `SCRIBEDOG_LOG_LEVEL` | `info` | Pino log level. |
+| `SCRIBEDOG_WEB_DIST_DIR` | `../dist-web` | Directory with the built web client (see Development). The Docker image sets it. |
 
 ## Running under a path prefix
 
@@ -66,7 +72,8 @@ Set `SCRIBEDOG_BASE_PATH=/anna` and the app answers under
 `https://<host>/anna/` only. `https://<host>/` then returns 404 on purpose.
 Everything follows the prefix: the page, its assets, the API and the session
 cookie's `Path`, so two instances on the same host under different prefixes do
-not see each other's cookies.
+not see each other's cookies. `https://<host>/anna` (no trailing slash)
+redirects to `https://<host>/anna/`.
 
 The reverse proxy passes the path through unchanged; it must not strip the
 prefix. The bundled Caddyfile already does this. If you put your own nginx or
@@ -114,21 +121,28 @@ Sessions survive restarts and updates; nobody has to sign in again.
 
 ## Development
 
+The web client is the desktop app's frontend (`/src` in the repository
+root) built for the browser; the server only serves that build. So there are
+two packages involved:
+
 ```bash
+# repository root: build the web client into dist-web/
+npm install
+npm run build:web
+
+# server
 cd server
 npm install
-npm run build:web                        # the server serves web/ from dist/web
-SCRIBEDOG_VAULT_PATH=/path/to/notes \
-SCRIBEDOG_INIT_PASSWORD=devpassword \
-SCRIBEDOG_COOKIE_SECURE=false \
-npm run dev                              # http://localhost:3000
+SCRIBEDOG_VAULT_PATH=/path/to/notes SCRIBEDOG_INIT_PASSWORD=devpassword SCRIBEDOG_COOKIE_SECURE=false npm run dev                              # http://localhost:3000
 ```
 
-For UI work with hot reload run `npm run dev:web` in a second terminal
-(<http://localhost:5173>, API calls are proxied to port 3000).
+The server reads `index.html` once at startup, so restart it after a new
+`npm run build:web`. For UI work with hot reload run `npm run dev:web` in
+the repository root instead (<http://localhost:5173>, API calls are proxied to
+port 3000).
 
 ```bash
-npm test          # unit and API tests (vitest)
+npm test          # unit and API tests (vitest), in server/
 npm run typecheck
 npm run test:e2e  # browser test against a running instance, see below
 ```
@@ -144,6 +158,10 @@ SCRIBEDOG_E2E_URL=https://localhost/anna/ SCRIBEDOG_E2E_PASSWORD=... npm run tes
 
 It expects a note `Projects/Roadmap.md` in the vault (override with
 `SCRIBEDOG_E2E_NOTE`) and overwrites it.
+
+The Docker image is built from the repository root (`docker compose` in
+`server/` already uses `..` as the build context) because it needs both
+packages.
 
 ## API
 

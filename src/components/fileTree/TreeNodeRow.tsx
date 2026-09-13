@@ -15,6 +15,7 @@ import { FILE_LINK_DRAG_MIME } from "@/lib/editor/fileLinks";
 import { getNodeMtimeMs, type FileTreeFolderNode, type FileTreeNode } from "@/lib/fileTree";
 import type { SortMode } from "@/lib/vaultMeta";
 import { DROP_DIRECTORY_ATTRIBUTE, useImportDropStore } from "@/store/useImportDropStore";
+import { getVaultCapabilities } from "@/platform";
 import { useSearchStore } from "@/store/useSearchStore";
 
 import {
@@ -169,7 +170,7 @@ export function TreeNodeRow({
   // Reordering and moving inside the tree only works in manual sort mode; a
   // file can always be dragged, because dropping it into the editor inserts a
   // link to it (see lib/editor/fileLinks.ts).
-  const isReorderEnabled = sortMode === "manual";
+  const isReorderEnabled = sortMode === "manual" && getVaultCapabilities().move;
   const isDragEnabled = isReorderEnabled || node.kind === "file";
   const isDragSource = dragSourceKeys.includes(key);
   const isMultiSelected = selectedKeys.has(key);

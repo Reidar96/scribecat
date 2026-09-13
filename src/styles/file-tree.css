@@ -292,3 +292,12 @@
   text-decoration: line-through;
   color: rgba(var(--text-rgb), 0.5);
 }
+
+.file-tree-context-menu__item:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.file-tree-context-menu__item:disabled:hover {
+  background: transparent;
+}

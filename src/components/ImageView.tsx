@@ -1,8 +1,8 @@
 import { useContext, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { dirname, join } from "@tauri-apps/api/path";
-import { readFile } from "@tauri-apps/plugin-fs";
+import { dirname, join } from "@/platform/paths";
+import { readFile } from "@/platform/vaultFs";
 import { NodeViewWrapper, type ReactNodeViewProps } from "@tiptap/react";
 
 import { EditorFileContext } from "@/lib/editorFileContext";

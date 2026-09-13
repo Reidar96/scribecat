@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { join } from "@tauri-apps/api/path";
+import { join } from "@/platform/paths";
 
 import type { BatchEntry } from "@/components/FileTree";
 import { getRelativeDisplayPath } from "@/lib/fileSystem";

@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import {
   SETTINGS_GROUP_LABEL_KEY,
-  SETTINGS_NAV,
+  SETTINGS_NAV_VISIBLE,
   SETTINGS_TAB_LABEL_KEY,
   SETTINGS_TAB_ORDER,
   type SettingsTab
@@ -25,7 +25,7 @@ export function settingsPanelId(tab: SettingsTab): string {
 }
 
 /**
- * The navigation column: nine entries in three groups. A vertical tablist,
+ * The navigation column: the available entries in three groups. A vertical tablist,
  * so the arrow keys move between the entries and Tab leaves the column for
  * the content — the entry that is active is the only one in the tab order.
  */
@@ -74,7 +74,7 @@ export function SettingsNav({ activeTab, onSelect }: SettingsNavProps) {
       aria-label={t("settingsDialog.tabsAriaLabel")}
       onKeyDown={handleKeyDown}
     >
-      {SETTINGS_NAV.map(({ group, tabs }) => (
+      {SETTINGS_NAV_VISIBLE.map(({ group, tabs }) => (
         <div key={group} className="settings-nav__group" role="presentation">
           <span className="settings-nav__group-title" aria-hidden="true">
             {t(SETTINGS_GROUP_LABEL_KEY[group])}

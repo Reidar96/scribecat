@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 
-import { join } from "@tauri-apps/api/path";
+import { join } from "@/platform/paths";
 
 import { isDescendantRelativePath, type FileTreeNode } from "@/lib/fileTree";
 import type { MoveTreeEntryInput } from "@/store/useAppStore";

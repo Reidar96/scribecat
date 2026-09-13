@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { platform } from "@/platform";
 import { create } from "zustand";
 
 const AI_SETTINGS_STORAGE_KEY = "scribedog-ai-settings";
@@ -182,12 +182,12 @@ function persistNonSecretSettings(settings: AiSettings) {
 }
 
 function storeApiKeyForProvider(provider: AiProvider, apiKey: string) {
-  void invoke("store_api_key", { provider, apiKey });
+  void platform.credentials.storeApiKey(provider, apiKey).catch(() => undefined);
 }
 
 export async function loadApiKeyForProvider(provider: AiProvider): Promise<string> {
   try {
-    return await invoke<string>("get_api_key", { provider });
+    return await platform.credentials.getApiKey(provider);
   } catch {
     return "";
   }
@@ -198,7 +198,7 @@ async function loadStoredApiKey(storedSettings: AiSettings): Promise<string> {
   // credential store once, then strip it from localStorage.
   if (storedSettings.apiKey) {
     try {
-      await invoke("store_api_key", { provider: storedSettings.provider, apiKey: storedSettings.apiKey });
+      await platform.credentials.storeApiKey(storedSettings.provider, storedSettings.apiKey);
       const { apiKey, ...persistableSettings } = storedSettings;
       window.localStorage.setItem(AI_SETTINGS_STORAGE_KEY, JSON.stringify(persistableSettings));
     } catch {

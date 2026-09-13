@@ -1,5 +1,5 @@
-import { join } from "@tauri-apps/api/path";
-import { exists, mkdir, readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
+import { join } from "@/platform/paths";
+import { exists, mkdir, readTextFile, writeTextFile } from "@/platform/vaultFs";
 
 import type { AiChatMessage, AiChatRole, ChatUserAction, ToolCall } from "@/lib/aiClient";
 import { normalizePlan, type PlanStep } from "@/lib/chat/agentPlan";

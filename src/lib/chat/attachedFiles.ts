@@ -14,7 +14,7 @@
 // request right before it goes out. Persisting the content would write whole
 // documents into chat-sessions.json once per turn.
 
-import { readTextFile } from "@tauri-apps/plugin-fs";
+import { readTextFile } from "@/platform/vaultFs";
 
 import type { AiChatMessage } from "@/lib/aiClient";
 import { getRelativeDisplayPath } from "@/lib/fileSystem";

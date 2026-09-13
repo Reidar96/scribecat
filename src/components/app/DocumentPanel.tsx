@@ -8,6 +8,7 @@ import { FindReplacePanel } from "@/components/FindReplacePanel";
 import { VersionsPopover } from "@/components/VersionsPopover";
 import type { FileVersion } from "@/lib/fileVersions";
 import { cn } from "@/lib/utils";
+import { getVaultCapabilities, vaultCapabilityHint } from "@/platform";
 import { useSearchStore } from "@/store/useSearchStore";
 import { useVersioningSettingsStore } from "@/store/useVersioningSettingsStore";
 
@@ -97,6 +98,8 @@ export function DocumentPanel({
   onVersionRestoreRequest
 }: DocumentPanelProps) {
   const { t } = useTranslation();
+  const capabilities = getVaultCapabilities();
+  const capabilityHint = vaultCapabilityHint();
   const versioningEnabled = useVersioningSettingsStore((state) => state.versioningEnabled);
   const closeFindPanel = useSearchStore((state) => state.closePanel);
 
@@ -196,7 +199,7 @@ export function DocumentPanel({
                 </h2>
               ) : (
                 <>
-                  <h2>{selectedFileLabel}</h2>
+                  <h2 data-testid="note-title">{selectedFileLabel}</h2>
                   {isSelectedFolderNote ? (
                     <span
                       className="detail-panel__title-badge"
@@ -210,8 +213,13 @@ export function DocumentPanel({
                     type="button"
                     className="detail-panel__title-edit-button"
                     onClick={onStartTitleRename}
+                    disabled={!capabilities.rename}
                     aria-label={t(isSelectedFolderNote ? "app.renameFolder" : "app.renameFile")}
-                    title={t(isSelectedFolderNote ? "app.renameFolder" : "app.renameFile")}
+                    title={
+                      capabilities.rename
+                        ? t(isSelectedFolderNote ? "app.renameFolder" : "app.renameFile")
+                        : capabilityHint
+                    }
                   >
                     <Pencil size={14} />
                   </button>
@@ -249,6 +257,8 @@ export function DocumentPanel({
                   isSelectedFileMissing && "detail-panel__status--warning"
                 )}
                 aria-live="polite"
+                data-testid="status"
+                data-dirty={isDirty ? "true" : "false"}
               >
                 {isSaving
                   ? t("app.statusSaving")

@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { platform } from "@/platform";
 import { create } from "zustand";
 
 import { PROVIDER_DEFAULT_API_URL, supportsEmbeddings } from "@/lib/aiClient";
@@ -57,14 +57,14 @@ type RagEmbeddingState = {
 
 export async function loadEmbeddingApiKey(provider: AiProvider): Promise<string> {
   try {
-    return await invoke<string>("get_api_key", { provider: `${KEYRING_PREFIX}${provider}` });
+    return await platform.credentials.getApiKey(`${KEYRING_PREFIX}${provider}`);
   } catch {
     return "";
   }
 }
 
 function storeEmbeddingApiKey(provider: AiProvider, apiKey: string): void {
-  void invoke("store_api_key", { provider: `${KEYRING_PREFIX}${provider}`, apiKey });
+  void platform.credentials.storeApiKey(`${KEYRING_PREFIX}${provider}`, apiKey).catch(() => undefined);
 }
 
 function normalize(raw: Partial<RagEmbeddingSettings> | null): RagEmbeddingSettings {

@@ -240,7 +240,7 @@ function persist(state: ChatState): void {
     return;
   }
 
-  void writeSessions(state.loadedFolderPath, state.sessions);
+  void writeSessions(state.loadedFolderPath, state.sessions).catch(() => undefined);
 
   // Only once the FIFO cap can actually be biting: orderAndCapSessions drops
   // the oldest sessions on write, and their checkpoint blobs would otherwise

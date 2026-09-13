@@ -45,7 +45,8 @@
     "emptyTitle": "左側で Markdown ファイルを選択してください",
     "emptyDescription": "フォルダーを開くと、その内容と編集画面がここに表示されます。",
     "pendingTargetOtherFolder": "別のフォルダー",
-    "version": "v{{version}}"
+    "version": "v{{version}}",
+    "pendingTargetLogout": "サインアウト"
   },
   "unsavedDialog": {
     "eyebrow": "未保存の変更",
@@ -479,7 +480,8 @@
     "searchingFolder": "フォルダーを検索中…",
     "openFolderPrompt": "フォルダーを開くと、含まれるすべての Markdown ファイルが表示されます。",
     "noMarkdownFiles": "Markdown ファイルが見つかりません。`.md` ファイルを含むフォルダーを開いてください。",
-    "dropImportHint": "ファイルやフォルダーをドロップするとノートとしてインポートされます"
+    "dropImportHint": "ファイルやフォルダーをドロップするとノートとしてインポートされます",
+    "logout": "サインアウト"
   },
   "fileTree": {
     "treeLabel": "ファイルツリー",
@@ -929,5 +931,21 @@
     "labelTemplateHint": "{number} は章番号に置き換えられます。",
     "includeChapterHeadings": "章見出しを生成する",
     "pageBreakBetweenChapters": "各章を新しいページから始める"
+  },
+  "login": {
+    "title": "ScribeDog",
+    "lead": "この ScribeDog サーバーのパスワードでサインインしてください。",
+    "sessionExpired": "セッションの有効期限が切れました。続けるにはもう一度サインインしてください。未保存の変更は保持されます。",
+    "password": "パスワード",
+    "submit": "サインイン",
+    "signingIn": "サインイン中 …",
+    "wrongPassword": "パスワードが正しくありません。",
+    "serverUnreachable": "サーバーに接続できません。",
+    "failed": "サインインに失敗しました。"
+  },
+  "platform": {
+    "notAvailable": "この機能は、このエディションの ScribeDog では利用できません。",
+    "serverNotYetAvailable": "この操作は、サーバー版ではまだ利用できません。",
+    "pathOutsideVault": "「{{path}}」は保管庫の外にあります。"
   }
 }

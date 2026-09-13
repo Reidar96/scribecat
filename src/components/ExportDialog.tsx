@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { open as openFolderDialog } from "@tauri-apps/plugin-dialog";
+import { platform } from "@/platform";
 import { FolderOpen } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -199,14 +199,12 @@ export function ExportDialog({
   }, [isOpen, handleClose]);
 
   const chooseTargetDirectory = async () => {
-    const selected = await openFolderDialog({
-      directory: true,
-      recursive: true,
+    const selected = await platform.dialogs?.chooseFolder({
       defaultPath: targetDirectory ?? undefined,
       title: t("exportDialog.chooseFolderTitle")
     });
 
-    if (typeof selected === "string") {
+    if (selected) {
       setTargetDirectory(selected);
     }
   };
@@ -257,7 +255,7 @@ export function ExportDialog({
       });
 
       if (isManuscript && folderPath && !result.cancelled) {
-        void writeManuscriptSettings(folderPath, manuscriptOptions);
+        void writeManuscriptSettings(folderPath, manuscriptOptions).catch(() => undefined);
       }
 
       return result;
@@ -285,7 +283,7 @@ export function ExportDialog({
         });
 
         if (isManuscript && folderPath && !result.cancelled) {
-          void writeManuscriptSettings(folderPath, manuscriptOptions);
+          void writeManuscriptSettings(folderPath, manuscriptOptions).catch(() => undefined);
         }
 
         return result;

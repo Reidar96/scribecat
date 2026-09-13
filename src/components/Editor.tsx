@@ -1,9 +1,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { open } from "@tauri-apps/plugin-dialog";
-import { readFile } from "@tauri-apps/plugin-fs";
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { getVaultCapabilities, platform, requireLocalFs, vaultCapabilityHint } from "@/platform";
 import { EditorContent, type Editor as TipTapEditor, useEditor } from "@tiptap/react";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -480,6 +478,13 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       return;
     }
 
+    // Paste and drop cannot be disabled like a button; refuse up front with
+    // the same hint instead of failing per image.
+    if (!getVaultCapabilities().images) {
+      ai.setAiStatus({ kind: "error", message: vaultCapabilityHint() });
+      return;
+    }
+
     let pos = insertPos;
 
     for (const { fileName, mimeType, data } of payloads) {
@@ -524,7 +529,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     return {
       fileName: path.replace(/\\/g, "/").split("/").pop() ?? "image",
       mimeType: guessImageMimeType(path),
-      data: await readFile(path)
+      data: await requireLocalFs().readFile(path)
     };
   };
 
@@ -546,12 +551,14 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       return;
     }
 
-    let selection: string | string[] | null;
+    if (!platform.dialogs) {
+      return;
+    }
+
+    let paths: string[];
 
     try {
-      selection = await open({
-        multiple: true,
-        directory: false,
+      paths = await platform.dialogs.chooseFiles({
         defaultPath: folderPath ?? getLastOpenedFolderPath() ?? undefined,
         title: t("editor.imageDialogTitle"),
         filters: [
@@ -568,8 +575,6 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       });
       return;
     }
-
-    const paths = Array.isArray(selection) ? selection : selection ? [selection] : [];
 
     if (paths.length === 0) {
       return;
@@ -1086,7 +1091,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
           if (isFileLinkHref(rawHref)) {
             openFileLink(rawHref);
           } else {
-            void openUrl(anchor.href);
+            void platform.shell.openUrl(anchor.href);
           }
 
           return true;
@@ -1275,6 +1280,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
           "editor-view__surface prose dark:prose-invert max-w-none",
           paperSurface && PAPER_SURFACE_CLASS
         ),
+        "data-testid": "editor",
         spellcheck: String(spellcheckEnabled)
       }
     }

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { BookOpen, Download, FilePlus, Pencil, Printer, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { dirname, join } from "@tauri-apps/api/path";
+import { getVaultCapabilities, platform, vaultCapabilityHint } from "@/platform";
+import { dirname, join } from "@/platform/paths";
 
 import type { ExportMode } from "@/components/ExportDialog";
 import {
@@ -97,6 +98,8 @@ export function FileTree({
   onSelectionChange
 }: FileTreeProps) {
   const { t } = useTranslation();
+  const capabilities = getVaultCapabilities();
+  const capabilityHint = vaultCapabilityHint();
   const { expandedFolderPaths, toggleFolder, expandAncestorsOf, expandFolders } =
     useExpandedFolders(folderPath);
   const { contextMenu, setContextMenu } = useTreeContextMenu();
@@ -494,7 +497,7 @@ export function FileTree({
       onRequestEditorFocus?.();
     }
 
-    if (event.key === "F2") {
+    if (event.key === "F2" && capabilities.rename) {
       if (!activeKey) {
         return;
       }
@@ -627,7 +630,7 @@ export function FileTree({
         >
           {contextMenu.kind === "multiple" ? (
             <>
-              {(["standard", "manuscript"] as const).map((mode) => (
+              {platform.features.exportFiles ? (["standard", "manuscript"] as const).map((mode) => (
                 <button
                   key={mode}
                   type="button"
@@ -661,12 +664,14 @@ export function FileTree({
                   )}
                   {t(mode === "manuscript" ? "fileTree.exportManuscript" : "fileTree.export")}
                 </button>
-              ))}
+              )) : null}
 
               <button
                 type="button"
                 role="menuitem"
                 className="file-tree-context-menu__item file-tree-context-menu__item--danger"
+                disabled={!capabilities.delete}
+                title={capabilities.delete ? undefined : capabilityHint}
                 onClick={() => {
                   const entries = getTopLevelSelection(contextMenu.keys, flatNodes).map(
                     (node): BatchEntry => ({
@@ -696,6 +701,8 @@ export function FileTree({
                 type="button"
                 role="menuitem"
                 className="file-tree-context-menu__item"
+                disabled={!capabilities.create}
+                title={capabilities.create ? undefined : capabilityHint}
                 onClick={() => {
                   const targetDirectoryPromise =
                     contextMenu.kind === "folder"
@@ -714,6 +721,8 @@ export function FileTree({
                 type="button"
                 role="menuitem"
                 className="file-tree-context-menu__item"
+                disabled={!capabilities.rename}
+                title={capabilities.rename ? undefined : capabilityHint}
                 onClick={() => {
                   if (contextMenu.kind === "folder") {
                     startFolderRename(contextMenu.relativePath);
@@ -728,45 +737,49 @@ export function FileTree({
                 {t("fileTree.rename")}
               </button>
 
-              <button
-                type="button"
-                role="menuitem"
-                className="file-tree-context-menu__item"
-                onClick={() => {
-                  if (contextMenu.kind === "folder") {
-                    void join(folderPath, contextMenu.relativePath).then((path) =>
-                      onExportFolderRequest(path, "standard")
-                    );
-                  } else {
-                    onExportFileRequest(contextMenu.filePath, "standard");
-                  }
-
-                  setContextMenu(null);
-                }}
-              >
-                <Download aria-hidden="true" />
-                {t("fileTree.export")}
-              </button>
-
-              <button
-                type="button"
-                role="menuitem"
-                className="file-tree-context-menu__item"
-                onClick={() => {
-                  if (contextMenu.kind === "folder") {
-                    void join(folderPath, contextMenu.relativePath).then((path) =>
-                      onExportFolderRequest(path, "manuscript")
-                    );
-                  } else {
-                    onExportFileRequest(contextMenu.filePath, "manuscript");
-                  }
-
-                  setContextMenu(null);
-                }}
-              >
-                <BookOpen aria-hidden="true" />
-                {t("fileTree.exportManuscript")}
-              </button>
+              {platform.features.exportFiles ? (
+                <>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="file-tree-context-menu__item"
+                    onClick={() => {
+                      if (contextMenu.kind === "folder") {
+                        void join(folderPath, contextMenu.relativePath).then((path) =>
+                          onExportFolderRequest(path, "standard")
+                        );
+                      } else {
+                        onExportFileRequest(contextMenu.filePath, "standard");
+                      }
+    
+                      setContextMenu(null);
+                    }}
+                  >
+                    <Download aria-hidden="true" />
+                    {t("fileTree.export")}
+                  </button>
+    
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="file-tree-context-menu__item"
+                    onClick={() => {
+                      if (contextMenu.kind === "folder") {
+                        void join(folderPath, contextMenu.relativePath).then((path) =>
+                          onExportFolderRequest(path, "manuscript")
+                        );
+                      } else {
+                        onExportFileRequest(contextMenu.filePath, "manuscript");
+                      }
+    
+                      setContextMenu(null);
+                    }}
+                  >
+                    <BookOpen aria-hidden="true" />
+                    {t("fileTree.exportManuscript")}
+                  </button>
+                </>
+              ) : null}
 
               {contextMenu.kind === "file" ? (
                 <button
@@ -787,6 +800,8 @@ export function FileTree({
                 type="button"
                 role="menuitem"
                 className="file-tree-context-menu__item file-tree-context-menu__item--danger"
+                disabled={!capabilities.delete}
+                title={capabilities.delete ? undefined : capabilityHint}
                 onClick={() => {
                   if (contextMenu.kind === "folder") {
                     void join(folderPath, contextMenu.relativePath).then(onDeleteFolderRequest);

@@ -1,15 +1,18 @@
 import { useEffect, useState } from "react";
-import { check, type Update } from "@tauri-apps/plugin-updater";
 
 import { isWindowsPlatform } from "@/lib/platform";
+import { platform } from "@/platform";
+import type { AppUpdate } from "@/platform/types";
 import { useUpdateSettingsStore } from "@/store/useUpdateSettingsStore";
 
 export function useUpdateCheck() {
-  const [availableUpdate, setAvailableUpdate] = useState<Update | null>(null);
+  const [availableUpdate, setAvailableUpdate] = useState<AppUpdate | null>(null);
   const checkForUpdatesEnabled = useUpdateSettingsStore((state) => state.checkForUpdatesEnabled);
 
   useEffect(() => {
-    if (!checkForUpdatesEnabled || !isWindowsPlatform()) {
+    const updater = platform.updater;
+
+    if (!updater || !checkForUpdatesEnabled || !isWindowsPlatform()) {
       return;
     }
 
@@ -17,7 +20,7 @@ export function useUpdateCheck() {
 
     const checkForUpdates = async () => {
       try {
-        const update = await check();
+        const update = await updater.check();
 
         if (isActive && update) {
           setAvailableUpdate(update);

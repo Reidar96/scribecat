@@ -45,7 +45,8 @@
     "emptyTitle": "Seleziona un file Markdown a sinistra",
     "emptyDescription": "Una volta aperta una cartella, il suo contenuto e l'area di modifica verranno visualizzati qui.",
     "pendingTargetOtherFolder": "un'altra cartella",
-    "version": "v{{version}}"
+    "version": "v{{version}}",
+    "pendingTargetLogout": "la disconnessione"
   },
   "unsavedDialog": {
     "eyebrow": "Modifiche non salvate",
@@ -480,7 +481,8 @@
     "searchingFolder": "Ricerca nella cartella …",
     "openFolderPrompt": "Apri una cartella per vedere tutti i file Markdown che contiene.",
     "noMarkdownFiles": "Nessun file Markdown trovato. Apri una cartella contenente file `.md`.",
-    "dropImportHint": "Rilascia file o cartelle: vengono importati come note"
+    "dropImportHint": "Rilascia file o cartelle: vengono importati come note",
+    "logout": "Esci"
   },
   "fileTree": {
     "treeLabel": "Struttura dei file",
@@ -930,5 +932,21 @@
     "labelTemplateHint": "{number} viene sostituito con il numero del capitolo.",
     "includeChapterHeadings": "Genera i titoli dei capitoli",
     "pageBreakBetweenChapters": "Inizia ogni capitolo su una nuova pagina"
+  },
+  "login": {
+    "title": "ScribeDog",
+    "lead": "Accedi con la password di questo server ScribeDog.",
+    "sessionExpired": "La sessione è scaduta. Accedi di nuovo per continuare; le modifiche non salvate vengono conservate.",
+    "password": "Password",
+    "submit": "Accedi",
+    "signingIn": "Accesso in corso …",
+    "wrongPassword": "Password errata.",
+    "serverUnreachable": "Il server non è raggiungibile.",
+    "failed": "Accesso non riuscito."
+  },
+  "platform": {
+    "notAvailable": "Questa funzione non è disponibile in questa edizione di ScribeDog.",
+    "serverNotYetAvailable": "Questa azione non è ancora disponibile nell'edizione server.",
+    "pathOutsideVault": "\"{{path}}\" si trova fuori dal vault."
   }
 }

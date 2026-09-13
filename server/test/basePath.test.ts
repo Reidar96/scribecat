@@ -38,36 +38,55 @@ describe("normalizeBasePath", () => {
     expect(loadConfig({ SCRIBEDOG_BASE_PATH: "bob/" }).basePath).toBe("/bob");
     expect(loadConfig({}).basePath).toBe("");
   });
+
+  it("resolves the web build directory from the environment or next to the package", () => {
+    expect(loadConfig({ SCRIBEDOG_WEB_DIST_DIR: "/srv/scribedog/web" }).webDistDir).toBe(path.resolve("/srv/scribedog/web"));
+    expect(loadConfig({}).webDistDir).toBe(path.resolve(process.cwd(), "..", "dist-web"));
+  });
 });
 
 describe("renderIndexHtml", () => {
-  const template = `<script type="module" src="${BASE_PATH_PLACEHOLDER}/assets/index-abc.js"></script><meta name="scribedog-base-path" content="${BASE_PATH_PLACEHOLDER}">`;
+  const template = `<meta name="scribedog-base-path" content="${BASE_PATH_PLACEHOLDER}"><script type="module" src="./assets/index-abc.js"></script>`;
 
-  it("substitutes every placeholder with the prefix", () => {
+  it("substitutes the placeholder with the prefix and leaves relative asset URLs alone", () => {
     expect(renderIndexHtml(template, "/anna")).toBe(
-      '<script type="module" src="/anna/assets/index-abc.js"></script><meta name="scribedog-base-path" content="/anna">'
+      '<meta name="scribedog-base-path" content="/anna"><script type="module" src="./assets/index-abc.js"></script>'
     );
   });
 
   it("removes the placeholder for the root", () => {
     expect(renderIndexHtml(template, "")).toBe(
-      '<script type="module" src="/assets/index-abc.js"></script><meta name="scribedog-base-path" content="">'
+      '<meta name="scribedog-base-path" content=""><script type="module" src="./assets/index-abc.js"></script>'
     );
   });
+
+  it("replaces every occurrence", () => {
+    expect(renderIndexHtml(`${BASE_PATH_PLACEHOLDER}|${BASE_PATH_PLACEHOLDER}`, "/x")).toBe("/x|/x");
+  });
 });
+/**
+ * A stand-in for the real web build: the same three kinds of files the
+ * server has to treat differently (the templated page, hashed bundles under
+ * assets/, unhashed files next to the page).
+ */
+async function createWebDist(): Promise<string> {
+  const webDistDir = await mkdtemp(path.join(os.tmpdir(), "scribedog-web-dist-"));
+  await mkdir(path.join(webDistDir, "assets"), { recursive: true });
+  await writeFile(
+    path.join(webDistDir, "index.html"),
+    `<!doctype html><html><head><meta name="scribedog-base-path" content="${BASE_PATH_PLACEHOLDER}"><script type="module" src="./assets/app.js"></script></head><body></body></html>`
+  );
+  await writeFile(path.join(webDistDir, "assets", "app.js"), "console.log('app');\n");
+  await writeFile(path.join(webDistDir, "theme-boot.js"), "document.documentElement.classList.add('dark');\n");
+  return webDistDir;
+}
 
 describe("app under a base path", () => {
   let context: TestContext;
   let webDistDir: string;
 
   beforeEach(async () => {
-    webDistDir = await mkdtemp(path.join(os.tmpdir(), "scribedog-web-dist-"));
-    await mkdir(path.join(webDistDir, "assets"), { recursive: true });
-    await writeFile(
-      path.join(webDistDir, "index.html"),
-      `<!doctype html><html><head><meta name="scribedog-base-path" content="${BASE_PATH_PLACEHOLDER}"><script type="module" src="${BASE_PATH_PLACEHOLDER}/assets/app.js"></script></head><body></body></html>`
-    );
-    await writeFile(path.join(webDistDir, "assets", "app.js"), "console.log('app');\n");
+    webDistDir = await createWebDist();
     context = await createTestContext({ SCRIBEDOG_BASE_PATH: "/anna/" }, { webDistDir });
   });
 
@@ -83,18 +102,27 @@ describe("app under a base path", () => {
       404
     );
     expect((await context.app.inject({ method: "GET", url: "/assets/app.js" })).statusCode).toBe(404);
+    expect((await context.app.inject({ method: "GET", url: "/theme-boot.js" })).statusCode).toBe(404);
   });
 
   it("serves the templated index.html under the prefix", async () => {
-    for (const url of ["/anna", "/anna/"]) {
-      const response = await context.app.inject({ method: "GET", url });
+    const response = await context.app.inject({ method: "GET", url: "/anna/" });
 
-      expect(response.statusCode, url).toBe(200);
-      expect(response.headers["content-type"]).toMatch(/text\/html/);
-      expect(response.body).toContain('content="/anna"');
-      expect(response.body).toContain('src="/anna/assets/app.js"');
-      expect(response.body).not.toContain(BASE_PATH_PLACEHOLDER);
-    }
+    expect(response.statusCode).toBe(200);
+    expect(response.headers["content-type"]).toMatch(/text\/html/);
+    expect(response.headers["cache-control"]).toBe("no-cache");
+    expect(response.body).toContain('content="/anna"');
+    expect(response.body).toContain('src="./assets/app.js"');
+    expect(response.body).not.toContain(BASE_PATH_PLACEHOLDER);
+  });
+
+  it("redirects the prefix without a trailing slash to the page", async () => {
+    // The page references its assets relatively, so "/anna" would resolve
+    // them against "/" and load nothing.
+    const response = await context.app.inject({ method: "GET", url: "/anna" });
+
+    expect(response.statusCode).toBe(308);
+    expect(response.headers.location).toBe("/anna/");
   });
 
   it("serves assets under the prefix with long caching", async () => {
@@ -105,9 +133,23 @@ describe("app under a base path", () => {
     expect(response.body).toContain("console.log");
   });
 
-  it("does not let the static handler reach outside the assets directory", async () => {
+  it("serves unhashed files next to the page with revalidation", async () => {
+    const response = await context.app.inject({ method: "GET", url: "/anna/theme-boot.js" });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers["cache-control"]).toBe("no-cache");
+    expect(response.body).toContain("classList");
+  });
+
+  it("never serves the raw index.html template", async () => {
+    expect((await context.app.inject({ method: "GET", url: "/anna/index.html" })).statusCode).toBe(404);
+  });
+
+  it("does not let the static handler reach outside the build directory", async () => {
     expect((await context.app.inject({ method: "GET", url: "/anna/assets/../index.html" })).statusCode).not.toBe(200);
     expect((await context.app.inject({ method: "GET", url: "/anna/assets/..%2Findex.html" })).statusCode).not.toBe(200);
+    expect((await context.app.inject({ method: "GET", url: "/anna/../package.json" })).statusCode).not.toBe(200);
+    expect((await context.app.inject({ method: "GET", url: "/anna/..%2Fpackage.json" })).statusCode).not.toBe(200);
   });
 
   it("scopes the session cookie to the prefix and mounts the API under it", async () => {
@@ -133,13 +175,7 @@ describe("app at the root", () => {
   let webDistDir: string;
 
   beforeEach(async () => {
-    webDistDir = await mkdtemp(path.join(os.tmpdir(), "scribedog-web-dist-"));
-    await mkdir(path.join(webDistDir, "assets"), { recursive: true });
-    await writeFile(
-      path.join(webDistDir, "index.html"),
-      `<!doctype html><html><head><script type="module" src="${BASE_PATH_PLACEHOLDER}/assets/app.js"></script></head></html>`
-    );
-    await writeFile(path.join(webDistDir, "assets", "app.js"), "console.log('app');\n");
+    webDistDir = await createWebDist();
     context = await createTestContext({}, { webDistDir });
   });
 
@@ -151,9 +187,11 @@ describe("app at the root", () => {
   it("serves index.html and assets at the root", async () => {
     const index = await context.app.inject({ method: "GET", url: "/" });
     expect(index.statusCode).toBe(200);
-    expect(index.body).toContain('src="/assets/app.js"');
+    expect(index.body).toContain('content=""');
+    expect(index.body).toContain('src="./assets/app.js"');
 
     expect((await context.app.inject({ method: "GET", url: "/assets/app.js" })).statusCode).toBe(200);
+    expect((await context.app.inject({ method: "GET", url: "/theme-boot.js" })).statusCode).toBe(200);
     expect((await context.app.inject({ method: "GET", url: "/index.html" })).statusCode).toBe(404);
   });
 });

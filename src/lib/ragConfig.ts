@@ -9,8 +9,8 @@
 // user means by ticking a parent. That second point is also why the settings
 // tab's warning has to say so out loud.
 
-import { join } from "@tauri-apps/api/path";
-import { exists, mkdir, readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
+import { join } from "@/platform/paths";
+import { exists, mkdir, readTextFile, writeTextFile } from "@/platform/vaultFs";
 
 import { VAULT_META_DIR_NAME } from "@/lib/fileSystem";
 

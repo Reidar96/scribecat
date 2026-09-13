@@ -1,5 +1,5 @@
-import { join } from "@tauri-apps/api/path";
-import { exists, mkdir, readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
+import { join } from "@/platform/paths";
+import { platform, requireLocalFs } from "@/platform";
 
 import { getPortableStatus } from "@/lib/portable";
 import { hasPrimaryModifier, isShortcutBinding, type ShortcutBinding } from "@/lib/shortcuts/binding";
@@ -15,12 +15,17 @@ export type ShortcutOverrides = Partial<Record<ShortcutActionId, ShortcutBinding
 const FILE_NAME = "shortcuts.json";
 const FILE_VERSION = 1;
 
-// Used when the Tauri shell isn't there (plain `npm run dev`), so the dialog
-// stays usable for UI work. The packaged app never touches this.
+// Used when there is no local filesystem to keep the file in: the browser
+// (server edition), and the Tauri shell missing under plain `npm run dev`,
+// so the dialog stays usable for UI work. The packaged app never touches this.
 const FALLBACK_STORAGE_KEY = "scribedog.shortcuts";
 
 function hasTauriShell(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+}
+
+function usesLocalStorageFallback(): boolean {
+  return platform.localFs === null || !hasTauriShell();
 }
 
 // Not appConfigDir() directly: in portable mode this file belongs next to the
@@ -66,7 +71,7 @@ function serializeOverrides(overrides: ShortcutOverrides): string {
 }
 
 export async function readShortcutOverrides(): Promise<ShortcutOverrides> {
-  if (!hasTauriShell()) {
+  if (usesLocalStorageFallback()) {
     try {
       const raw = window.localStorage.getItem(FALLBACK_STORAGE_KEY);
 
@@ -79,11 +84,11 @@ export async function readShortcutOverrides(): Promise<ShortcutOverrides> {
   try {
     const filePath = await shortcutsFilePath();
 
-    if (!(await exists(filePath))) {
+    if (!(await requireLocalFs().exists(filePath))) {
       return {};
     }
 
-    return parseOverrides(await readTextFile(filePath));
+    return parseOverrides(await requireLocalFs().readTextFile(filePath));
   } catch {
     // A broken or unreadable file must not keep the app from starting; the
     // defaults are always a valid fallback.
@@ -94,12 +99,13 @@ export async function readShortcutOverrides(): Promise<ShortcutOverrides> {
 export async function writeShortcutOverrides(overrides: ShortcutOverrides): Promise<void> {
   const serialized = serializeOverrides(overrides);
 
-  if (!hasTauriShell()) {
+  if (usesLocalStorageFallback()) {
     window.localStorage.setItem(FALLBACK_STORAGE_KEY, serialized);
     return;
   }
 
   const dirPath = await shortcutsDirPath();
-  await mkdir(dirPath, { recursive: true });
-  await writeTextFile(await join(dirPath, FILE_NAME), serialized);
+  const localFs = requireLocalFs();
+  await localFs.mkdir(dirPath, { recursive: true });
+  await localFs.writeTextFile(await join(dirPath, FILE_NAME), serialized);
 }

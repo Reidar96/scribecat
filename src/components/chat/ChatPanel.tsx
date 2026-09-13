@@ -24,8 +24,8 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
-import { join } from "@tauri-apps/api/path";
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { platform } from "@/platform";
+import { join } from "@/platform/paths";
 
 import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
@@ -446,7 +446,7 @@ function AssistantMessage({
     }
 
     if (/^(?:https?|mailto):/i.test(rawHref)) {
-      void openUrl(rawHref);
+      void platform.shell.openUrl(rawHref);
     }
   };
 
@@ -1549,25 +1549,27 @@ export function ChatPanel({ canEditDocument, onAssistantSettingsRequest }: ChatP
 
         <div className="chat-panel__controls">
           <AssistantSelect onAssistantSettingsRequest={onAssistantSettingsRequest} />
-          <button
-            type="button"
-            className="voice-mic-button voice-mic-button--chat"
-            disabled={isTranscribing || voice.status === "starting"}
-            title={`${isRecording ? t("voice.micStop") : t("voice.micStart")} (${formatBinding(t, DICTATION_BINDING)})`}
-            aria-label={isRecording ? t("voice.micStop") : t("voice.micStart")}
-            onClick={() => {
-              setVoiceError(null);
-              voice.toggle();
-            }}
-          >
-            {isTranscribing ? (
-              <Loader2 className="voice-mic-button__icon voice-mic-button__icon--spinning" aria-hidden="true" />
-            ) : isRecording ? (
-              <Square className="voice-mic-button__icon" fill="currentColor" strokeWidth={0} aria-hidden="true" />
-            ) : (
-              <Mic className="voice-mic-button__icon" aria-hidden="true" />
-            )}
-          </button>
+          {platform.features.voiceInput ? (
+            <button
+              type="button"
+              className="voice-mic-button voice-mic-button--chat"
+              disabled={isTranscribing || voice.status === "starting"}
+              title={`${isRecording ? t("voice.micStop") : t("voice.micStart")} (${formatBinding(t, DICTATION_BINDING)})`}
+              aria-label={isRecording ? t("voice.micStop") : t("voice.micStart")}
+              onClick={() => {
+                setVoiceError(null);
+                voice.toggle();
+              }}
+            >
+              {isTranscribing ? (
+                <Loader2 className="voice-mic-button__icon voice-mic-button__icon--spinning" aria-hidden="true" />
+              ) : isRecording ? (
+                <Square className="voice-mic-button__icon" fill="currentColor" strokeWidth={0} aria-hidden="true" />
+              ) : (
+                <Mic className="voice-mic-button__icon" aria-hidden="true" />
+              )}
+            </button>
+          ) : null}
           {knowledgeBaseReady ? (
             <Toggle
               pressed={useKnowledgeBase}

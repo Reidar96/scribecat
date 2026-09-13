@@ -1,5 +1,5 @@
-import { join } from "@tauri-apps/api/path";
-import { exists, mkdir, readTextFile, remove, writeTextFile } from "@tauri-apps/plugin-fs";
+import { join } from "@/platform/paths";
+import { exists, mkdir, readTextFile, remove, writeTextFile } from "@/platform/vaultFs";
 
 import { VAULT_META_DIR_NAME } from "@/lib/fileSystem";
 

@@ -1,4 +1,4 @@
-import { join } from "@tauri-apps/api/path";
+import { join } from "@/platform/paths";
 
 import { getRelativeDisplayPath } from "@/lib/fileSystem";
 

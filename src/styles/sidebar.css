@@ -211,3 +211,12 @@
   gap: 0.6rem;
   min-width: 0;
 }
+
+/* Server edition: one vault, so the header shows its name without a menu. */
+.sidebar-panel__folder--static {
+  cursor: default;
+}
+
+.sidebar-panel__folder--static:hover {
+  background: transparent;
+}

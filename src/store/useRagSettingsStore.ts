@@ -48,7 +48,7 @@ export const useRagSettingsStore = create<RagSettingsState>((set, get) => {
     const { loadedFolderPath } = get();
 
     if (loadedFolderPath) {
-      void writeRagConfig(loadedFolderPath, config);
+      void writeRagConfig(loadedFolderPath, config).catch(() => undefined);
     }
   };
 

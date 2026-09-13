@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { join } from "@tauri-apps/api/path";
+import { join } from "@/platform/paths";
 
 import { getRelativeDisplayPath } from "@/lib/fileSystem";
 import type { FileTreeNode } from "@/lib/fileTree";

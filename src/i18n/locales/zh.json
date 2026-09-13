@@ -45,7 +45,8 @@
     "emptyTitle": "在左侧选择一个 Markdown 文件",
     "emptyDescription": "打开文件夹后，其内容和编辑界面将显示在此处。",
     "pendingTargetOtherFolder": "另一个文件夹",
-    "version": "v{{version}}"
+    "version": "v{{version}}",
+    "pendingTargetLogout": "退出登录"
   },
   "unsavedDialog": {
     "eyebrow": "未保存的更改",
@@ -479,7 +480,8 @@
     "searchingFolder": "正在搜索文件夹……",
     "openFolderPrompt": "打开一个文件夹以查看其中包含的所有 Markdown 文件。",
     "noMarkdownFiles": "未找到 Markdown 文件。请打开包含 `.md` 文件的文件夹。",
-    "dropImportHint": "拖入文件或文件夹，将作为笔记导入"
+    "dropImportHint": "拖入文件或文件夹，将作为笔记导入",
+    "logout": "退出登录"
   },
   "fileTree": {
     "treeLabel": "文件树",
@@ -929,5 +931,21 @@
     "labelTemplateHint": "{number} 会替换为章节编号。",
     "includeChapterHeadings": "生成章节标题",
     "pageBreakBetweenChapters": "每章另起一页"
+  },
+  "login": {
+    "title": "ScribeDog",
+    "lead": "使用此 ScribeDog 服务器的密码登录。",
+    "sessionExpired": "会话已过期。请重新登录以继续；未保存的更改会保留。",
+    "password": "密码",
+    "submit": "登录",
+    "signingIn": "正在登录 …",
+    "wrongPassword": "密码错误。",
+    "serverUnreachable": "无法连接到服务器。",
+    "failed": "登录失败。"
+  },
+  "platform": {
+    "notAvailable": "此功能在这个版本的 ScribeDog 中不可用。",
+    "serverNotYetAvailable": "此操作在服务器版中暂不可用。",
+    "pathOutsideVault": "“{{path}}”位于笔记库之外。"
   }
 }

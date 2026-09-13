@@ -1,3 +1,6 @@
+import { platform } from "@/platform";
+import type { PlatformFeatures } from "@/platform/types";
+
 export type SettingsTab =
   | "application"
   | "appearance"
@@ -22,7 +25,27 @@ export const SETTINGS_NAV: { group: SettingsGroup; tabs: SettingsTab[] }[] = [
   { group: "folder", tabs: ["versioning", "vault"] }
 ];
 
-export const SETTINGS_TAB_ORDER: SettingsTab[] = SETTINGS_NAV.flatMap((group) => group.tabs);
+/**
+ * Entries that stand on a capability the shell may not have. The knowledge
+ * base reads its index from disk, so the browser has no entry for it at all.
+ * Filtering here rather than in the navigation keeps the arrow keys from
+ * landing on an entry that is not on screen.
+ */
+const SETTINGS_TAB_FEATURE: Partial<Record<SettingsTab, keyof PlatformFeatures>> = {
+  rag: "knowledgeIndex"
+};
+
+export function isSettingsTabAvailable(tab: SettingsTab): boolean {
+  const feature = SETTINGS_TAB_FEATURE[tab];
+
+  return feature === undefined || platform.features[feature];
+}
+
+export const SETTINGS_NAV_VISIBLE: { group: SettingsGroup; tabs: SettingsTab[] }[] = SETTINGS_NAV.map(
+  ({ group, tabs }) => ({ group, tabs: tabs.filter(isSettingsTabAvailable) })
+).filter(({ tabs }) => tabs.length > 0);
+
+export const SETTINGS_TAB_ORDER: SettingsTab[] = SETTINGS_NAV_VISIBLE.flatMap((group) => group.tabs);
 
 /**
  * Tabs whose settings apply through their own store the moment they change.

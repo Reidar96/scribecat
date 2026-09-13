@@ -1,5 +1,5 @@
-import { dirname, join } from "@tauri-apps/api/path";
-import { readFile } from "@tauri-apps/plugin-fs";
+import { dirname, join } from "@/platform/paths";
+import { readFile } from "@/platform/vaultFs";
 
 import { ABSOLUTE_URL_PATTERN, guessImageMimeType } from "@/lib/fileSystem";
 

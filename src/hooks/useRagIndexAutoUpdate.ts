@@ -1,7 +1,6 @@
 import { useEffect } from "react";
-import { listen } from "@tauri-apps/api/event";
 
-import { FOLDER_FILES_CHANGED_EVENT } from "@/lib/fileSystem";
+import { platform } from "@/platform";
 import { useAppStore } from "@/store/useAppStore";
 import { useRagIndexStore } from "@/store/useRagIndexStore";
 import { isSemanticSearchConfigured } from "@/store/useRagEmbeddingStore";
@@ -66,10 +65,10 @@ export function useRagIndexAutoUpdate(): void {
     let unlisten: (() => void) | null = null;
 
     const registerListener = async () => {
-      const cleanup = await listen<string>(FOLDER_FILES_CHANGED_EVENT, (event) => {
+      const cleanup = await platform.vault.onFolderFilesChanged((changedFolderPath) => {
         const currentFolderPath = useAppStore.getState().folderPath;
 
-        if (!currentFolderPath || event.payload !== currentFolderPath) {
+        if (!currentFolderPath || changedFolderPath !== currentFolderPath) {
           return;
         }
 

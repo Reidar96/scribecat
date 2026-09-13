@@ -1,7 +1,7 @@
 import { useEffect } from "react";
-import { invoke } from "@tauri-apps/api/core";
 
 import { clearLastOpenedFolderPath, getLastOpenedFolderPath } from "@/lib/fileSystem";
+import { platform } from "@/platform";
 
 export function useStartupFolder(
   openFolderAtPath: (folderPath: string) => Promise<boolean>
@@ -10,8 +10,9 @@ export function useStartupFolder(
     let isActive = true;
 
     const loadStartupFolder = async () => {
-      const startupFolderPath = await invoke<string | null>("get_startup_folder_path");
-      const targetFolderPath = startupFolderPath ?? getLastOpenedFolderPath();
+      const startupFolderPath = await platform.vault.getStartupFolderPath();
+      const targetFolderPath =
+        startupFolderPath ?? (platform.features.localFolders ? getLastOpenedFolderPath() : null);
 
       if (!isActive || !targetFolderPath) {
         return;

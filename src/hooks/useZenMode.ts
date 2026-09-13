@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from "react";
-import { getCurrentWindow } from "@tauri-apps/api/window";
+
+import { platform } from "@/platform";
 
 type UseZenModeOptions = {
   // Guards entering Zen mode (e.g. only when a document is open). Leaving is
@@ -38,11 +39,10 @@ export function useZenMode({ canEnter }: UseZenModeOptions): UseZenModeResult {
 
     void (async () => {
       try {
-        const appWindow = getCurrentWindow();
-        wasFullscreenRef.current = await appWindow.isFullscreen();
+        wasFullscreenRef.current = await platform.window.isFullscreen();
 
         if (!wasFullscreenRef.current) {
-          await appWindow.setFullscreen(true);
+          await platform.window.setFullscreen(true);
         }
       } catch {
         // Outside the Tauri shell (plain `npm run dev`) the native window API
@@ -62,7 +62,7 @@ export function useZenMode({ canEnter }: UseZenModeOptions): UseZenModeResult {
     void (async () => {
       try {
         if (!wasFullscreenRef.current) {
-          await getCurrentWindow().setFullscreen(false);
+          await platform.window.setFullscreen(false);
         }
       } catch {
         // Nothing to restore outside the Tauri shell.

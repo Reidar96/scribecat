@@ -1,4 +1,4 @@
-import type { Update } from "@tauri-apps/plugin-updater";
+import type { AppUpdate } from "@/platform/types";
 
 import { AssistantEditDialog } from "@/components/AssistantEditDialog";
 import { DeleteFileDialog } from "@/components/DeleteFileDialog";
@@ -61,7 +61,7 @@ type AppDialogsProps = {
   onCloseImport: () => void;
 
   // Update
-  availableUpdate: Update | null;
+  availableUpdate: AppUpdate | null;
   onDismissUpdate: () => void;
 
   // Version diff

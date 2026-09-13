@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { VoiceModelDownloadDialog } from "@/components/VoiceModelDownloadDialog";
 import { VoiceRecordingBanner } from "@/components/VoiceRecordingBanner";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
+import { platform } from "@/platform";
 import { type AiActionMode } from "@/lib/aiClient";
 
 type AiRewriteDialogProps = {
@@ -203,7 +204,7 @@ export function AiRewriteDialog({
           {title}
           {/* While recording there is no stop button — the banner below
               advertises the stop shortcuts (Ctrl+Shift+W / Esc) instead. */}
-          {!isRecording ? (
+          {!isRecording && platform.features.voiceInput ? (
             <button
               type="button"
               className="voice-mic-button"

@@ -1,5 +1,6 @@
 import { useEffect } from "react";
-import { getCurrentWindow } from "@tauri-apps/api/window";
+
+import { platform } from "@/platform";
 
 /** The window is created hidden (`visible: false` in tauri.conf.json) so the
  *  light default webview background never flashes before the themed UI is
@@ -14,15 +15,8 @@ export function useWindowReveal(): void {
         return;
       }
 
-      void (async () => {
-        try {
-          const window = getCurrentWindow();
-          await window.show();
-          await window.setFocus();
-        } catch {
-          // Outside the Tauri shell (plain `npm run dev`) there is no window.
-        }
-      })();
+      // Outside the Tauri shell (plain `npm run dev`) there is no window.
+      void platform.window.reveal().catch(() => undefined);
     });
 
     return () => {

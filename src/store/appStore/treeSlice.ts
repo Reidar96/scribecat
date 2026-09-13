@@ -1,4 +1,4 @@
-import { dirname, join } from "@tauri-apps/api/path";
+import { dirname, join } from "@/platform/paths";
 
 import i18n from "@/i18n";
 import {

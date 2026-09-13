@@ -1,5 +1,5 @@
-import { join } from "@tauri-apps/api/path";
-import { exists, mkdir } from "@tauri-apps/plugin-fs";
+import { join } from "@/platform/paths";
+import { exists, mkdir } from "@/platform/vaultFs";
 
 import { writeMarkdownFile } from "@/lib/fileSystem";
 import { snapshotFileVersion } from "@/store/appStore/versioning";

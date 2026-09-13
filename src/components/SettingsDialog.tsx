@@ -50,6 +50,7 @@ import {
 import { persistLanguage, type SupportedLanguage } from "@/i18n";
 import { useUpdateSettingsStore } from "@/store/useUpdateSettingsStore";
 import { isWindowsPlatform } from "@/lib/platform";
+import { platform } from "@/platform";
 import { useAppVersion } from "@/hooks/useAppVersion";
 
 export type { SettingsTab } from "@/components/settings/settingsTabs";
@@ -538,7 +539,7 @@ export function SettingsDialog({
                     </select>
                   </SettingRow>
 
-                  {isWindowsPlatform() ? (
+                  {platform.features.updater && isWindowsPlatform() ? (
                     <SettingRow
                       layout="switch"
                       label={t("settingsDialog.checkForUpdates")}

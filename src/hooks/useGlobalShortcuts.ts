@@ -4,6 +4,7 @@ import type { RefObject } from "react";
 import type { EditorHandle } from "@/components/Editor";
 import { couldBeShortcut } from "@/lib/shortcuts/binding";
 import { isRetiredDefault, matchShortcut } from "@/lib/shortcuts/resolve";
+import { getVaultCapabilities, platform } from "@/platform";
 import { useAppStore } from "@/store/useAppStore";
 import { useChatStore } from "@/store/useChatStore";
 import { ZOOM_STEP, useEditorSettingsStore } from "@/store/useEditorSettingsStore";
@@ -64,10 +65,16 @@ export function useGlobalShortcuts({
 
           return;
         case "openFolder":
-          void openFolderSafely();
+          if (platform.features.localFolders) {
+            void openFolderSafely();
+          }
+
           return;
         case "newFile":
-          void createFile();
+          if (getVaultCapabilities().create) {
+            void createFile();
+          }
+
           return;
         case "printFile":
           if (selectedFilePath) {

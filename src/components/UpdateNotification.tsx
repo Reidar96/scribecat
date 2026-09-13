@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import type { Update } from "@tauri-apps/plugin-updater";
-import { relaunch } from "@tauri-apps/plugin-process";
-import { openUrl } from "@tauri-apps/plugin-opener";
+
+import { platform } from "@/platform";
+import type { AppUpdate } from "@/platform/types";
 
 import { Button } from "@/components/ui/button";
 import { getPortableStatus } from "@/lib/portable";
@@ -11,7 +11,7 @@ import { getPortableStatus } from "@/lib/portable";
 const RELEASES_URL = "https://github.com/snooky234/scribedog/releases/latest";
 
 type UpdateNotificationProps = {
-  update: Update;
+  update: AppUpdate;
   onDismiss: () => void;
 };
 
@@ -45,7 +45,7 @@ export function UpdateNotification({ update, onDismiss }: UpdateNotificationProp
 
     try {
       await update.downloadAndInstall();
-      await relaunch();
+      await platform.updater?.relaunch();
     } catch {
       setError(t("updateNotification.installError"));
       setInstalling(false);
@@ -76,7 +76,7 @@ export function UpdateNotification({ update, onDismiss }: UpdateNotificationProp
 
       <div className="update-notification__actions">
         {isPortable ? (
-          <Button type="button" size="sm" onClick={() => void openUrl(RELEASES_URL)}>
+          <Button type="button" size="sm" onClick={() => void platform.shell.openUrl(RELEASES_URL)}>
             {t("updateNotification.openDownload")}
           </Button>
         ) : (

@@ -12,7 +12,7 @@
 // a path, while a drag from the desktop hands over a File whose path the
 // webview never discloses (see lib/dragDrop/droppedSources.ts).
 
-import { readTextFile, stat } from "@tauri-apps/plugin-fs";
+import { requireLocalFs } from "@/platform";
 
 import { allowFileAccess } from "@/lib/fileSystem";
 
@@ -113,17 +113,15 @@ export function sourceFromPath(path: string): ConvertSource {
     name: path.replace(/\\/g, "/").replace(/\/+$/, "").split("/").pop() ?? path,
     byteLength: async () => {
       await grantAccess();
-      return (await stat(path)).size;
+      return (await requireLocalFs().stat(path)).size;
     },
     bytes: async () => {
       await grantAccess();
-      const { readFile } = await import("@tauri-apps/plugin-fs");
-
-      return readFile(path);
+      return requireLocalFs().readFile(path);
     },
     text: async () => {
       await grantAccess();
-      return readTextFile(path);
+      return requireLocalFs().readTextFile(path);
     }
   };
 }

@@ -7,12 +7,22 @@
 // aiClient.embedTexts, so the endpoint rules that protect the chat protect this
 // too, rather than being reimplemented next to them.
 
-import { invoke } from "@tauri-apps/api/core";
+import { platform, PlatformUnavailableError } from "@/platform";
 
 import { embedTexts, type EmbeddingSettings } from "@/lib/aiClient";
 import { currentScope } from "@/lib/ragScope";
 import { useAppStore } from "@/store/useAppStore";
 import { currentEmbeddingSettings } from "@/store/useRagEmbeddingStore";
+
+// The index lives in the Rust process. Where there is none (the browser),
+// every call fails the same way and the callers' own fallbacks take over.
+function invoke<T>(command: string, args?: Record<string, unknown>): Promise<T> {
+  if (!platform.knowledgeIndex) {
+    return Promise.reject(new PlatformUnavailableError());
+  }
+
+  return platform.knowledgeIndex.call<T>(command, args);
+}
 
 /**
  * Passages per request. Small enough that a local model on CPU answers within

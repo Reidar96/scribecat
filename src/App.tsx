@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { dirname, join } from "@tauri-apps/api/path";
-import { open as openImportFilesDialog } from "@tauri-apps/plugin-dialog";
+import { platform } from "@/platform";
+import { dirname, join } from "@/platform/paths";
 import { useTranslation } from "react-i18next";
 
 import type { EditorHandle } from "@/components/Editor";
@@ -62,6 +62,7 @@ import { useRagEmbeddingStore } from "@/store/useRagEmbeddingStore";
 import { useRagSettingsStore } from "@/store/useRagSettingsStore";
 import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
 import { useNavigationHistoryStore } from "@/store/useNavigationHistoryStore";
+import { useSessionStore } from "@/store/useSessionStore";
 import { useShortcutsStore } from "@/store/useShortcutsStore";
 
 import "./App.css";
@@ -72,6 +73,7 @@ function App() {
     | { type: "file"; filePath: string }
     | { type: "folderNote"; folderPath: string }
     | { type: "folder"; folderPath: string | null }
+    | { type: "logout" }
     | null
   >(null);
   // Set right before a back/forward step so the history effect below moves the
@@ -159,6 +161,7 @@ function App() {
   const setChatFolder = useChatStore((state) => state.setFolder);
   const loadRagSettings = useRagSettingsStore((state) => state.loadForFolder);
   const loadRagEmbeddingSettings = useRagEmbeddingStore((state) => state.load);
+  const logout = useSessionStore((state) => state.logout);
 
   const dirtyFilePaths = useMemo(
     () =>
@@ -307,8 +310,10 @@ function App() {
       ? labelNotePath(pendingNavigation.filePath)
       : pendingNavigation.type === "folderNote"
         ? labelNotePath(getFolderNotePath(pendingNavigation.folderPath))
-        : (pendingNavigation.folderPath ? getFolderBasename(pendingNavigation.folderPath) : null) ??
-          t("app.pendingTargetOtherFolder")
+        : pendingNavigation.type === "logout"
+          ? t("app.pendingTargetLogout")
+          : (pendingNavigation.folderPath ? getFolderBasename(pendingNavigation.folderPath) : null) ??
+            t("app.pendingTargetOtherFolder")
     : null;
 
   const openFolderSafely = async () => {
@@ -319,6 +324,19 @@ function App() {
     }
 
     await openFolder();
+  };
+
+  // Server edition: signing out closes the vault as far as this browser is
+  // concerned, so it goes through the same unsaved-changes guard as opening
+  // another folder does.
+  const logoutSafely = async () => {
+    if (selectedFilePath && (isDirty || isAiActionPending)) {
+      setPendingNavigation({ type: "logout" });
+      setIsUnsavedDialogOpen(true);
+      return;
+    }
+
+    await logout();
   };
 
   const openRecentFolderSafely = async (targetFolderPath: string) => {
@@ -483,8 +501,11 @@ function App() {
   };
 
   const requestImportFiles = async () => {
-    const selected = await openImportFilesDialog({
-      multiple: true,
+    if (!platform.dialogs) {
+      return;
+    }
+
+    const selectedPaths = await platform.dialogs.chooseFiles({
       title: t("importDialog.chooseFilesTitle"),
       filters: [
         {
@@ -493,9 +514,6 @@ function App() {
         }
       ]
     });
-
-    const selectedPaths =
-      typeof selected === "string" ? [selected] : Array.isArray(selected) ? selected : [];
 
     if (selectedPaths.length > 0) {
       const { targetDirectory, insertAfterBasename } = await resolveNewEntryTarget();
@@ -568,6 +586,11 @@ function App() {
     const navigationIntent = navigationIntentRef.current;
     closeUnsavedDialog();
     navigationIntentRef.current = navigationIntent;
+
+    if (nextNavigation.type === "logout") {
+      await logout();
+      return;
+    }
 
     if (nextNavigation.type === "file") {
       await selectFilePath(nextNavigation.filePath);
@@ -813,6 +836,7 @@ function App() {
             onFileTreeSelectionChange={setFileTreeSelection}
             fileTreeSelectionCount={fileTreeSelection.length}
             onFilesDropped={handleFilesDropped}
+            onLogoutRequest={() => void logoutSafely()}
           />
 
           <div

@@ -1,4 +1,4 @@
-import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
+import { platform } from "@/platform";
 
 import i18n, { getCurrentLanguageEnglishName } from "@/i18n";
 import { type AiProvider, type AiSettings, type AiThinkingMode } from "@/store/useAiSettingsStore";
@@ -464,10 +464,10 @@ type HttpFetchInit = Omit<RequestInit, "headers"> & { headers?: Record<string, s
 
 async function httpFetch(url: string, init: HttpFetchInit): Promise<Response> {
   if (!isLocalApiUrl(url)) {
-    return tauriFetch(url, init);
+    return platform.http.fetch(url, init);
   }
 
-  return tauriFetch(url, {
+  return platform.http.fetch(url, {
     ...init,
     headers: { ...init.headers, Origin: LOCAL_ENDPOINT_ORIGIN }
   });

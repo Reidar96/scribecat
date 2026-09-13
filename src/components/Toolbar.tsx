@@ -64,6 +64,7 @@ import { ZoomControl } from "@/components/ZoomControl";
 import { CALLOUT_VARIANTS, type CalloutVariant } from "@/lib/editor/extensions/callout";
 import { checkSpellcheckDictionary } from "@/lib/spellcheckDictionary";
 import { useAiModelsStore } from "@/store/useAiModelsStore";
+import { platform } from "@/platform";
 import { useAiSettingsStore } from "@/store/useAiSettingsStore";
 import { useChatStore } from "@/store/useChatStore";
 import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
@@ -700,19 +701,21 @@ export function Toolbar({
         <TableGridPicker editor={editor} />
         {editor.isActive("table") ? <TableMenu editor={editor} /> : null}
         <EmojiPicker editor={editor} />
-        <Button
-          type="button"
-          size="icon-sm"
-          variant="outline"
-          aria-label={t("toolbar.insertImage")}
-          title={t("toolbar.insertImage")}
-          onMouseDown={(event) => {
-            event.preventDefault();
-          }}
-          onClick={onImageInsertRequest}
-        >
-          <ImagePlus />
-        </Button>
+        {platform.features.imagePicker ? (
+          <Button
+            type="button"
+            size="icon-sm"
+            variant="outline"
+            aria-label={t("toolbar.insertImage")}
+            title={t("toolbar.insertImage")}
+            onMouseDown={(event) => {
+              event.preventDefault();
+            }}
+            onClick={onImageInsertRequest}
+          >
+            <ImagePlus />
+          </Button>
+        ) : null}
         <CalloutMenu editor={editor} />
       </div>
 

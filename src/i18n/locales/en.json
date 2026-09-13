@@ -45,7 +45,8 @@
     "emptyTitle": "Select a Markdown file on the left",
     "emptyDescription": "Once a folder is open, its content and the editing surface will appear here.",
     "pendingTargetOtherFolder": "another folder",
-    "version": "v{{version}}"
+    "version": "v{{version}}",
+    "pendingTargetLogout": "signing out"
   },
   "unsavedDialog": {
     "eyebrow": "Unsaved changes",
@@ -480,7 +481,8 @@
     "searchingFolder": "Searching folder …",
     "openFolderPrompt": "Open a folder to see all Markdown files it contains.",
     "noMarkdownFiles": "No Markdown files found. Open a folder containing `.md` files.",
-    "dropImportHint": "Drop files or folders — they are imported as notes"
+    "dropImportHint": "Drop files or folders — they are imported as notes",
+    "logout": "Sign out"
   },
   "fileTree": {
     "treeLabel": "File tree",
@@ -930,5 +932,21 @@
     "labelTemplateHint": "{number} is replaced with the chapter number.",
     "includeChapterHeadings": "Generate chapter headings",
     "pageBreakBetweenChapters": "Start every chapter on a new page"
+  },
+  "login": {
+    "title": "ScribeDog",
+    "lead": "Sign in with the password of this ScribeDog server.",
+    "sessionExpired": "Your session has expired. Sign in again to continue; unsaved changes are kept.",
+    "password": "Password",
+    "submit": "Sign in",
+    "signingIn": "Signing in …",
+    "wrongPassword": "Wrong password.",
+    "serverUnreachable": "The server could not be reached.",
+    "failed": "Sign-in failed."
+  },
+  "platform": {
+    "notAvailable": "This feature is not available in this edition of ScribeDog.",
+    "serverNotYetAvailable": "This action is not available in the server edition yet.",
+    "pathOutsideVault": "\"{{path}}\" is outside the vault."
   }
 }

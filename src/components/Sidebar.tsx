@@ -12,6 +12,7 @@ import {
   FolderPlus,
   GripVertical,
   Import,
+  LogOut,
   Plus,
   Settings2,
   Trash2
@@ -39,6 +40,7 @@ import {
   type DropPayload
 } from "@/lib/dragDrop/droppedSources";
 import { formatFolderLabel, getFolderBasename } from "@/lib/fileSystem";
+import { getVaultCapabilities, platform, vaultCapabilityHint } from "@/platform";
 import type { ManualOrderMap, SortMode } from "@/lib/vaultMeta";
 import type { MoveTreeEntryInput } from "@/store/useAppStore";
 import { DROP_DIRECTORY_ATTRIBUTE, useImportDropStore } from "@/store/useImportDropStore";
@@ -85,6 +87,8 @@ type SidebarProps = {
   // Files dragged in from outside the app, with the vault-relative folder they
   // were dropped on ("" is the vault root).
   onFilesDropped: (payload: DropPayload, targetDirectory: string) => void;
+  /** Server edition only: ends the password session. */
+  onLogoutRequest: () => void;
 };
 
 export function Sidebar({
@@ -126,11 +130,24 @@ export function Sidebar({
   sidebarFocusRequestId,
   onFileTreeSelectionChange,
   fileTreeSelectionCount,
-  onFilesDropped
+  onFilesDropped,
+  onLogoutRequest
 }: SidebarProps) {
   const { t } = useTranslation();
   const folderLabel = formatFolderLabel(folderPath);
+  const capabilities = getVaultCapabilities();
+  const capabilityHint = vaultCapabilityHint();
   const [rootContextMenu, setRootContextMenu] = useState<{ x: number; y: number } | null>(null);
+
+  const openRootContextMenu = (event: React.MouseEvent) => {
+    if (folderPath === null || !platform.features.exportFiles) {
+      return;
+    }
+
+    event.preventDefault();
+    setRootContextMenu({ x: event.clientX, y: event.clientY });
+  };
+
   // Files dragged in from outside the app land as imported notes. Drags that
   // start inside the tree (reordering, or dragging a note into the editor) are
   // none of this handler's business and are left to bubble untouched.
@@ -231,9 +248,9 @@ export function Sidebar({
             variant="outline"
             size="sm"
             onClick={onCreateFolder}
-            disabled={isLoading || folderPath === null}
+            disabled={isLoading || folderPath === null || !capabilities.create}
             aria-label={t("sidebar.newFolder")}
-            title={t("sidebar.newFolder")}
+            title={capabilities.create ? t("sidebar.newFolder") : capabilityHint}
           >
             <FolderPlus />
           </Button>
@@ -243,33 +260,35 @@ export function Sidebar({
             variant="outline"
             size="sm"
             onClick={onCreateFile}
-            disabled={isLoading || folderPath === null}
+            disabled={isLoading || folderPath === null || !capabilities.create}
             aria-label={t("sidebar.newFile")}
-            title={t("sidebar.newFile")}
+            title={capabilities.create ? t("sidebar.newFile") : capabilityHint}
           >
             <Plus />
           </Button>
 
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onImportRequest}
-            disabled={isLoading || folderPath === null}
-            aria-label={t("sidebar.importFiles")}
-            title={t("sidebar.importFiles")}
-          >
-            <Import />
-          </Button>
+          {platform.features.importFiles ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onImportRequest}
+              disabled={isLoading || folderPath === null}
+              aria-label={t("sidebar.importFiles")}
+              title={t("sidebar.importFiles")}
+            >
+              <Import />
+            </Button>
+          ) : null}
 
           <Button
             type="button"
             variant="outline"
             size="sm"
             onClick={onDeleteToolbarRequest}
-            disabled={isLoading || (selectedFilePath === null && fileTreeSelectionCount === 0)}
+            disabled={isLoading || !capabilities.delete || (selectedFilePath === null && fileTreeSelectionCount === 0)}
             aria-label={t("sidebar.deleteFile")}
-            title={t("sidebar.deleteSelectedFile")}
+            title={capabilities.delete ? t("sidebar.deleteSelectedFile") : capabilityHint}
           >
             <Trash2 />
           </Button>
@@ -327,70 +346,89 @@ export function Sidebar({
           >
             <Settings2 />
           </Button>
+
+          {platform.features.session ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onLogoutRequest}
+              aria-label={t("sidebar.logout")}
+              title={t("sidebar.logout")}
+              data-testid="logout"
+            >
+              <LogOut />
+            </Button>
+          ) : null}
         </div>
         <div className="sidebar-panel__folder-wrap">
-          <Menu>
-            <MenuTrigger
-              render={
-                <button
-                  type="button"
-                  className="sidebar-panel__folder"
-                  disabled={isLoading}
-                  title={folderPath ?? t("sidebar.openFolder")}
-                  aria-label={t("sidebar.openRecentFolder")}
-                  // The vault root is the natural target for "export the whole
-                  // book", but it is not a row in the tree — so it carries its
-                  // own (unrelated) right-click menu alongside this one.
-                  onContextMenu={(event) => {
-                    if (folderPath === null) {
-                      return;
-                    }
-
-                    event.preventDefault();
-                    setRootContextMenu({ x: event.clientX, y: event.clientY });
-                  }}
-                />
-              }
+          {platform.features.localFolders ? (
+            <Menu>
+              <MenuTrigger
+                render={
+                  <button
+                    type="button"
+                    className="sidebar-panel__folder"
+                    disabled={isLoading}
+                    title={folderPath ?? t("sidebar.openFolder")}
+                    aria-label={t("sidebar.openRecentFolder")}
+                    // The vault root is the natural target for "export the whole
+                    // book", but it is not a row in the tree — so it carries its
+                    // own (unrelated) right-click menu alongside this one.
+                    onContextMenu={openRootContextMenu}
+                  />
+                }
+              >
+                {folderLabel}
+              </MenuTrigger>
+              <MenuPortal>
+                <MenuPositioner align="start">
+                  <MenuPopup>
+                    {recentFolderPaths.length > 0 ? (
+                      <>
+                        {recentFolderPaths.map((recentFolderPath) => (
+                          <MenuItem
+                            key={recentFolderPath}
+                            className="sidebar-panel__recent-folder-item"
+                            title={recentFolderPath}
+                            onClick={() => onOpenRecentFolder(recentFolderPath)}
+                          >
+                            {recentFolderPath === folderPath ? (
+                              <Check className="size-4" aria-hidden="true" />
+                            ) : (
+                              <span className="size-4" aria-hidden="true" />
+                            )}
+                            <span className="sidebar-panel__recent-folder-name">
+                              {getFolderBasename(recentFolderPath)}
+                            </span>
+                          </MenuItem>
+                        ))}
+                        <div className="editor-toolbar__menu-separator" role="separator" />
+                      </>
+                    ) : null}
+                    <MenuItem onClick={onOpenFolder}>
+                      <FolderOpen className="size-4" aria-hidden="true" />
+                      {t("sidebar.browseForFolder")}
+                    </MenuItem>
+                  </MenuPopup>
+                </MenuPositioner>
+              </MenuPortal>
+            </Menu>
+          ) : (
+            // One vault, nothing to switch to: the name is a label, not a menu.
+            <div
+              className="sidebar-panel__folder sidebar-panel__folder--static"
+              title={folderLabel}
+              onContextMenu={openRootContextMenu}
+              data-testid="vault-name"
             >
               {folderLabel}
-            </MenuTrigger>
-            <MenuPortal>
-              <MenuPositioner align="start">
-                <MenuPopup>
-                  {recentFolderPaths.length > 0 ? (
-                    <>
-                      {recentFolderPaths.map((recentFolderPath) => (
-                        <MenuItem
-                          key={recentFolderPath}
-                          className="sidebar-panel__recent-folder-item"
-                          title={recentFolderPath}
-                          onClick={() => onOpenRecentFolder(recentFolderPath)}
-                        >
-                          {recentFolderPath === folderPath ? (
-                            <Check className="size-4" aria-hidden="true" />
-                          ) : (
-                            <span className="size-4" aria-hidden="true" />
-                          )}
-                          <span className="sidebar-panel__recent-folder-name">
-                            {getFolderBasename(recentFolderPath)}
-                          </span>
-                        </MenuItem>
-                      ))}
-                      <div className="editor-toolbar__menu-separator" role="separator" />
-                    </>
-                  ) : null}
-                  <MenuItem onClick={onOpenFolder}>
-                    <FolderOpen className="size-4" aria-hidden="true" />
-                    {t("sidebar.browseForFolder")}
-                  </MenuItem>
-                </MenuPopup>
-              </MenuPositioner>
-            </MenuPortal>
-          </Menu>
+            </div>
+          )}
         </div>
       </div>
 
-      {rootContextMenu && folderPath !== null
+      {rootContextMenu && folderPath !== null && platform.features.exportFiles
         ? createPortal(
             <div
               className="file-tree-context-menu"

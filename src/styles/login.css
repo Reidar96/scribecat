@@ -1,0 +1,44 @@
+/* Password login of the server edition. Reuses the dialog panel; the
+   backdrop is opaque on purpose: after signing out (or when the session ran
+   out) nothing of the vault may stay readable behind the form. */
+
+.login-view {
+  background: var(--body-bg-end);
+  backdrop-filter: none;
+}
+
+.login-view__panel {
+  width: min(24rem, 100%);
+  display: grid;
+  gap: 0.9rem;
+  justify-items: stretch;
+  text-align: center;
+}
+
+.login-view__logo {
+  width: 3.5rem;
+  height: 3.5rem;
+  margin: 0.25rem auto 0;
+}
+
+.login-view__title {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 600;
+}
+
+.login-view__lead {
+  margin: 0;
+  color: rgba(var(--muted-rgb), 1);
+  font-size: 0.9rem;
+}
+
+.login-view__panel .ai-dialog__field {
+  text-align: left;
+}
+
+.login-view__error {
+  margin: 0;
+  color: var(--error-fg);
+  font-size: 0.9rem;
+}

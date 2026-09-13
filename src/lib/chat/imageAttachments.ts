@@ -7,8 +7,8 @@
 // per image, and the file on disk is the source of truth anyway — an edited
 // image should be re-read, not served from a stale copy in the history.
 
-import { dirname, join, normalize } from "@tauri-apps/api/path";
-import { readFile, stat } from "@tauri-apps/plugin-fs";
+import { dirname, join, normalize } from "@/platform/paths";
+import { readFile, stat } from "@/platform/vaultFs";
 
 import type { AiChatImage, AiChatMessage } from "@/lib/aiClient";
 import { ABSOLUTE_URL_PATTERN, guessImageMimeType, isPathInsideVault } from "@/lib/fileSystem";
