@@ -1,7 +1,7 @@
-import { readdir, readFile, realpath, rename, stat, writeFile } from "node:fs/promises";
+import { lstat, mkdir, readdir, readFile, realpath, rename, rm, rmdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { assertVaultPath, resolveVaultFile, VaultPathError } from "./paths.js";
+import { assertVaultPath, resolveVaultEntry, VaultPathError } from "./paths.js";
 
 const VAULT_META_DIR_NAME = ".scribedog";
 
@@ -11,13 +11,31 @@ export type MarkdownFileRecord = {
   mtimeMs: number;
 };
 
-export type NoteContent = {
-  relativePath: string;
-  content: string;
-  mtimeMs: number;
+/** Mirrors `DirEntry` of the desktop app's filesystem layer. */
+export type VaultDirectoryEntry = {
+  name: string;
+  isDirectory: boolean;
+  isFile: boolean;
+  isSymlink: boolean;
+};
+
+/** Mirrors `FileInfo`; times as epoch milliseconds, null where unknown. */
+export type VaultFileInfo = {
+  isFile: boolean;
+  isDirectory: boolean;
+  isSymlink: boolean;
+  size: number;
+  mtimeMs: number | null;
+  birthtimeMs: number | null;
 };
 
 export class NoteNotFoundError extends Error {}
+
+/** An entry that does not exist (ENOENT). */
+export class EntryNotFoundError extends Error {}
+
+/** A target that is already there, or a directory that is not empty (EEXIST, ENOTEMPTY). */
+export class EntryConflictError extends Error {}
 
 function isMarkdownFile(name: string): boolean {
   return name.toLowerCase().endsWith(".md");
@@ -66,13 +84,49 @@ async function collectMarkdownFiles(
   }
 }
 
+function translateFsError(error: unknown, relativePath: string): never {
+  const code = (error as NodeJS.ErrnoException).code;
+
+  if (code === "ENOENT") {
+    throw new EntryNotFoundError(`"${relativePath}" does not exist.`);
+  }
+
+  if (code === "EEXIST" || code === "ENOTEMPTY") {
+    throw new EntryConflictError(`"${relativePath}" already exists or is not empty.`);
+  }
+
+  if (code === "EISDIR" || code === "ERR_FS_EISDIR") {
+    throw new VaultPathError(`"${relativePath}" is a folder, not a file.`);
+  }
+
+  if (code === "ENOTDIR") {
+    throw new VaultPathError(`"${relativePath}" is not a folder.`);
+  }
+
+  throw error;
+}
+
+/**
+ * The vault as the frontend's filesystem layer sees it: the primitives of
+ * `VaultStorage` in src/platform/types.ts, plus the markdown listing. Every
+ * path goes through assertVaultPath and resolveVaultEntry, which are the
+ * security boundary; the methods themselves are thin wrappers over node:fs.
+ */
 export type Vault = {
   /** The vault root with symlinks resolved; every path check compares against this. */
   readonly realPath: string;
   listMarkdownFiles(): Promise<MarkdownFileRecord[]>;
-  readNote(rawPath: unknown): Promise<NoteContent>;
-  /** Overwrites an existing note. Creating files is a later stage. */
-  writeNote(rawPath: unknown, content: string): Promise<NoteContent>;
+  readDir(rawPath: unknown): Promise<VaultDirectoryEntry[]>;
+  stat(rawPath: unknown): Promise<VaultFileInfo>;
+  exists(rawPath: unknown): Promise<boolean>;
+  mkdir(rawPath: unknown, recursive: boolean): Promise<void>;
+  readText(rawPath: unknown): Promise<string>;
+  /** Creates or overwrites; the parent folder must exist. */
+  writeText(rawPath: unknown, content: string): Promise<{ mtimeMs: number }>;
+  readBytes(rawPath: unknown): Promise<Buffer>;
+  writeBytes(rawPath: unknown, data: Buffer): Promise<{ mtimeMs: number }>;
+  rename(rawFrom: unknown, rawTo: unknown): Promise<void>;
+  remove(rawPath: unknown, recursive: boolean): Promise<void>;
 };
 
 export async function openVault(vaultPath: string): Promise<Vault> {
@@ -88,27 +142,38 @@ export async function openVault(vaultPath: string): Promise<Vault> {
     throw new Error(`Vault path "${vaultPath}" is not a directory.`);
   }
 
-  async function resolveExistingNote(rawPath: unknown): Promise<{ relativePath: string; absolutePath: string }> {
-    const relativePath = assertVaultPath(rawPath);
-    const absolutePath = await resolveVaultFile(realPath, relativePath);
-
-    let info: import("node:fs").Stats;
-
-    try {
-      info = await stat(absolutePath);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-        throw new NoteNotFoundError(`"${relativePath}" does not exist.`);
-      }
-
-      throw error;
-    }
-
-    if (!info.isFile()) {
-      throw new VaultPathError(`"${relativePath}" is not a file.`);
-    }
+  async function resolve(rawPath: unknown, options: { allowRoot?: boolean } = {}) {
+    const relativePath = assertVaultPath(rawPath, options);
+    const absolutePath = await resolveVaultEntry(realPath, relativePath);
 
     return { relativePath, absolutePath };
+  }
+
+  // Write-then-rename so a container stopped mid-write leaves the old file
+  // intact rather than a truncated one.
+  async function writeAtomically(absolutePath: string, data: string | Buffer, relativePath: string) {
+    const tempPath = path.join(path.dirname(absolutePath), `.${path.basename(absolutePath)}.${process.pid}.tmp`);
+
+    try {
+      await writeFile(tempPath, data, typeof data === "string" ? "utf8" : undefined);
+      await rename(tempPath, absolutePath);
+    } catch (error) {
+      await rm(tempPath, { force: true }).catch(() => undefined);
+      translateFsError(error, relativePath);
+    }
+
+    return { mtimeMs: (await stat(absolutePath)).mtimeMs };
+  }
+
+  /**
+   * The root and the metadata directory itself never go away or get a new
+   * name through the API: removing `.scribedog` would take the server's own
+   * files with it, and the frontend never asks for either.
+   */
+  function assertMutableEntry(relativePath: string): void {
+    if (relativePath === "" || relativePath.toLowerCase() === VAULT_META_DIR_NAME) {
+      throw new VaultPathError(`"${relativePath || "/"}" cannot be renamed or removed.`);
+    }
   }
 
   return {
@@ -123,25 +188,136 @@ export async function openVault(vaultPath: string): Promise<Vault> {
       );
     },
 
-    async readNote(rawPath) {
-      const { relativePath, absolutePath } = await resolveExistingNote(rawPath);
-      const [content, info] = await Promise.all([readFile(absolutePath, "utf8"), stat(absolutePath)]);
+    async readDir(rawPath) {
+      const { relativePath, absolutePath } = await resolve(rawPath, { allowRoot: true });
 
-      return { relativePath, content, mtimeMs: info.mtimeMs };
+      try {
+        const entries = await readdir(absolutePath, { withFileTypes: true });
+
+        return entries.map((entry) => ({
+          name: entry.name,
+          isDirectory: entry.isDirectory(),
+          isFile: entry.isFile(),
+          isSymlink: entry.isSymbolicLink()
+        }));
+      } catch (error) {
+        return translateFsError(error, relativePath);
+      }
     },
 
-    async writeNote(rawPath, content) {
-      const { relativePath, absolutePath } = await resolveExistingNote(rawPath);
+    async stat(rawPath) {
+      const { relativePath, absolutePath } = await resolve(rawPath, { allowRoot: true });
 
-      // Write-then-rename so a container stopped mid-write leaves the old note
-      // intact rather than a truncated one.
-      const tempPath = path.join(path.dirname(absolutePath), `.${path.basename(absolutePath)}.${process.pid}.tmp`);
-      await writeFile(tempPath, content, "utf8");
-      await rename(tempPath, absolutePath);
+      try {
+        const [info, linkInfo] = await Promise.all([stat(absolutePath), lstat(absolutePath)]);
 
-      const info = await stat(absolutePath);
+        return {
+          isFile: info.isFile(),
+          isDirectory: info.isDirectory(),
+          isSymlink: linkInfo.isSymbolicLink(),
+          size: info.size,
+          mtimeMs: info.mtimeMs,
+          birthtimeMs: info.birthtimeMs > 0 ? info.birthtimeMs : null
+        };
+      } catch (error) {
+        return translateFsError(error, relativePath);
+      }
+    },
 
-      return { relativePath, content, mtimeMs: info.mtimeMs };
+    async exists(rawPath) {
+      const { absolutePath } = await resolve(rawPath, { allowRoot: true });
+
+      try {
+        await lstat(absolutePath);
+        return true;
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+          return false;
+        }
+
+        throw error;
+      }
+    },
+
+    async mkdir(rawPath, recursive) {
+      const { relativePath, absolutePath } = await resolve(rawPath);
+
+      try {
+        await mkdir(absolutePath, { recursive });
+      } catch (error) {
+        translateFsError(error, relativePath);
+      }
+    },
+
+    async readText(rawPath) {
+      const { relativePath, absolutePath } = await resolve(rawPath);
+
+      try {
+        return await readFile(absolutePath, "utf8");
+      } catch (error) {
+        return translateFsError(error, relativePath);
+      }
+    },
+
+    async writeText(rawPath, content) {
+      const { relativePath, absolutePath } = await resolve(rawPath);
+
+      return writeAtomically(absolutePath, content, relativePath);
+    },
+
+    async readBytes(rawPath) {
+      const { relativePath, absolutePath } = await resolve(rawPath);
+
+      try {
+        return await readFile(absolutePath);
+      } catch (error) {
+        return translateFsError(error, relativePath);
+      }
+    },
+
+    async writeBytes(rawPath, data) {
+      const { relativePath, absolutePath } = await resolve(rawPath);
+
+      return writeAtomically(absolutePath, data, relativePath);
+    },
+
+    async rename(rawFrom, rawTo) {
+      const from = await resolve(rawFrom);
+      const to = await resolve(rawTo);
+      assertMutableEntry(from.relativePath);
+      assertMutableEntry(to.relativePath);
+
+      // Like the desktop app's rename (std::fs::rename): a file at the target
+      // is replaced, a folder must not exist there. The frontend checks for a
+      // free name first and only ever moves within the vault.
+      try {
+        await rename(from.absolutePath, to.absolutePath);
+      } catch (error) {
+        translateFsError(error, from.relativePath);
+      }
+    },
+
+    async remove(rawPath, recursive) {
+      const { relativePath, absolutePath } = await resolve(rawPath);
+      assertMutableEntry(relativePath);
+
+      // Like the desktop app's remove (std::fs): a folder goes only when
+      // recursive is asked for or it is empty; a file goes either way.
+      try {
+        const info = await lstat(absolutePath);
+
+        if (info.isDirectory()) {
+          if (recursive) {
+            await rm(absolutePath, { recursive: true, force: false });
+          } else {
+            await rmdir(absolutePath);
+          }
+        } else {
+          await rm(absolutePath, { force: false });
+        }
+      } catch (error) {
+        translateFsError(error, relativePath);
+      }
     }
   };
 }

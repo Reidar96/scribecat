@@ -3,6 +3,7 @@ import { buildApp } from "./app.js";
 import { AuthSetupError, openAuthStore } from "./auth/authStore.js";
 import { ConfigError, loadConfig } from "./config.js";
 import { openVault } from "./vault/files.js";
+import { createVaultWatcher } from "./vault/watcher.js";
 import { ensureWelcomeNote } from "./vault/welcome.js";
 
 
@@ -25,16 +26,20 @@ async function main(): Promise<void> {
     log: bootLog
   });
 
+  const watcher = createVaultWatcher(vault.realPath, bootLog);
+
   const app = await buildApp({
     config,
     authStore,
     vault,
+    watcher,
     webDistDir: config.webDistDir,
     logger: { level: process.env.SCRIBEDOG_LOG_LEVEL ?? "info" }
   });
 
   const shutdown = async (signal: string) => {
     app.log.info({ signal }, "shutting down");
+    watcher.close();
     await app.close();
     process.exit(0);
   };

@@ -1,24 +1,42 @@
-import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
+import { lstat, mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { assertVaultPath, resolveVaultFile, VaultPathError } from "../src/vault/paths.js";
+import { assertMarkdownPath, assertVaultPath, resolveVaultEntry, VaultPathError } from "../src/vault/paths.js";
 
 describe("assertVaultPath", () => {
-  it("accepts plain vault-relative markdown paths and normalizes them", () => {
+  it("accepts plain vault-relative paths and normalizes them", () => {
     expect(assertVaultPath("Welcome.md")).toBe("Welcome.md");
     expect(assertVaultPath("Notes/Idea.md")).toBe("Notes/Idea.md");
     expect(assertVaultPath("./Notes/Idea.md")).toBe("Notes/Idea.md");
     expect(assertVaultPath("Notes\\Idea.md")).toBe("Notes/Idea.md");
     expect(assertVaultPath("  Notes/Idea.md  ")).toBe("Notes/Idea.md");
-    expect(assertVaultPath("Notes/Idea.MD")).toBe("Notes/Idea.MD");
+    expect(assertVaultPath("Notes/")).toBe("Notes");
+    expect(assertVaultPath("images/photo.png")).toBe("images/photo.png");
     expect(assertVaultPath("Ideen/Über ß und Emoji 🐶.md")).toBe("Ideen/Über ß und Emoji 🐶.md");
   });
 
+  it("lets the frontend reach its own sidecars, but never the server's", () => {
+    expect(assertVaultPath(".scribedog")).toBe(".scribedog");
+    expect(assertVaultPath(".scribedog/order.json")).toBe(".scribedog/order.json");
+    expect(assertVaultPath(".scribedog/versions/abc.md")).toBe(".scribedog/versions/abc.md");
+
+    for (const bad of [".scribedog/server", ".scribedog/server/auth.json", ".SCRIBEDOG/Server/session-secret", ".scribedog/server/"]) {
+      expect(() => assertVaultPath(bad), bad).toThrow(VaultPathError);
+    }
+  });
+
+  it("accepts the root only when asked to", () => {
+    expect(assertVaultPath("", { allowRoot: true })).toBe("");
+    expect(assertVaultPath("/", { allowRoot: true })).toBe("");
+    expect(assertVaultPath(".", { allowRoot: true })).toBe("");
+    expect(() => assertVaultPath("")).toThrow(VaultPathError);
+    expect(() => assertVaultPath("/")).toThrow(VaultPathError);
+  });
+
   it.each([
-    ["", "empty"],
     ["   ", "whitespace"],
     [42, "not a string"],
     [null, "null"],
@@ -31,12 +49,6 @@ describe("assertVaultPath", () => {
     ["Notes/../../outside.md", "parent segment in the middle"],
     ["Notes/./Idea.md", "dot segment"],
     ["Notes//Idea.md", "empty segment"],
-    [".scribedog/server/auth.json", "metadata directory"],
-    [".scribedog/secret.md", "markdown inside the metadata directory"],
-    [".SCRIBEDOG/secret.md", "metadata directory, different case"],
-    ["Notes/not-markdown.txt", "not markdown"],
-    ["Notes/Idea.md.bak", "wrong extension"],
-    ["Notes", "no extension"],
     ["Notes/Idea.md\u0000.txt", "null byte"],
     ["Notes/Idea\n.md", "newline"]
   ])("rejects %j (%s)", (input) => {
@@ -44,7 +56,17 @@ describe("assertVaultPath", () => {
   });
 });
 
-describe("resolveVaultFile", () => {
+describe("assertMarkdownPath", () => {
+  it("adds the .md requirement on top", () => {
+    expect(assertMarkdownPath("Notes/Idea.MD")).toBe("Notes/Idea.MD");
+
+    for (const bad of ["Notes/not-markdown.txt", "Notes/Idea.md.bak", "Notes", "images/x.png"]) {
+      expect(() => assertMarkdownPath(bad), bad).toThrow(VaultPathError);
+    }
+  });
+});
+
+describe("resolveVaultEntry", () => {
   let vaultPath: string;
   let outsidePath: string;
 
@@ -61,6 +83,8 @@ describe("resolveVaultFile", () => {
     try {
       await symlink(path.join(outsidePath, "secret.md"), path.join(vaultPath, "link-to-secret.md"), "file");
       await symlink(outsidePath, path.join(vaultPath, "linked-dir"), "dir");
+      await symlink(path.join(vaultPath, "Notes"), path.join(vaultPath, "linked-inside"), "dir");
+      await symlink(path.join(outsidePath, "never-created.md"), path.join(vaultPath, "dangling.md"), "file");
     } catch {
       // handled per test via canSymlink()
     }
@@ -72,25 +96,22 @@ describe("resolveVaultFile", () => {
 
   async function canSymlink(): Promise<boolean> {
     try {
-      await import("node:fs/promises").then((fs) => fs.lstat(path.join(vaultPath, "linked-dir")));
+      await lstat(path.join(vaultPath, "linked-dir"));
       return true;
     } catch {
       return false;
     }
   }
 
-  it("resolves an existing file inside the vault", async () => {
-    const resolved = await resolveVaultFile(vaultPath, "Notes/Idea.md");
-    expect(resolved).toBe(path.join(vaultPath, "Notes", "Idea.md"));
+  it("resolves the root, existing entries and not-yet-existing ones", async () => {
+    expect(await resolveVaultEntry(vaultPath, "")).toBe(vaultPath);
+    expect(await resolveVaultEntry(vaultPath, "Notes")).toBe(path.join(vaultPath, "Notes"));
+    expect(await resolveVaultEntry(vaultPath, "Notes/Idea.md")).toBe(path.join(vaultPath, "Notes", "Idea.md"));
+    expect(await resolveVaultEntry(vaultPath, "Notes/New.md")).toBe(path.join(vaultPath, "Notes", "New.md"));
   });
 
-  it("resolves a not-yet-existing file whose directory is inside the vault", async () => {
-    const resolved = await resolveVaultFile(vaultPath, "Notes/New.md");
-    expect(resolved).toBe(path.join(vaultPath, "Notes", "New.md"));
-  });
-
-  it("rejects a file whose directory does not exist", async () => {
-    await expect(resolveVaultFile(vaultPath, "Missing/New.md")).rejects.toThrow();
+  it("resolves a path whose folders do not exist yet (mkdir -p territory)", async () => {
+    expect(await resolveVaultEntry(vaultPath, "Missing/Deeper/New.md")).toBe(path.join(vaultPath, "Missing", "Deeper", "New.md"));
   });
 
   it("rejects a symlinked file that points outside the vault", async () => {
@@ -98,15 +119,33 @@ describe("resolveVaultFile", () => {
       return;
     }
 
-    await expect(resolveVaultFile(vaultPath, "link-to-secret.md")).rejects.toThrow(VaultPathError);
+    await expect(resolveVaultEntry(vaultPath, "link-to-secret.md")).rejects.toThrow(VaultPathError);
   });
 
-  it("rejects files reached through a symlinked directory that points outside the vault", async () => {
+  it("rejects entries reached through a symlinked directory that points outside the vault", async () => {
     if (!(await canSymlink())) {
       return;
     }
 
-    await expect(resolveVaultFile(vaultPath, "linked-dir/secret.md")).rejects.toThrow(VaultPathError);
-    await expect(resolveVaultFile(vaultPath, "linked-dir/new.md")).rejects.toThrow(VaultPathError);
+    await expect(resolveVaultEntry(vaultPath, "linked-dir")).rejects.toThrow(VaultPathError);
+    await expect(resolveVaultEntry(vaultPath, "linked-dir/secret.md")).rejects.toThrow(VaultPathError);
+    await expect(resolveVaultEntry(vaultPath, "linked-dir/new.md")).rejects.toThrow(VaultPathError);
+    await expect(resolveVaultEntry(vaultPath, "linked-dir/deeper/new.md")).rejects.toThrow(VaultPathError);
+  });
+
+  it("rejects a dangling symlink, which a write would otherwise follow", async () => {
+    if (!(await canSymlink())) {
+      return;
+    }
+
+    await expect(resolveVaultEntry(vaultPath, "dangling.md")).rejects.toThrow(VaultPathError);
+  });
+
+  it("allows a symlink that stays inside the vault", async () => {
+    if (!(await canSymlink())) {
+      return;
+    }
+
+    expect(await resolveVaultEntry(vaultPath, "linked-inside/Idea.md")).toBe(path.join(vaultPath, "linked-inside", "Idea.md"));
   });
 });

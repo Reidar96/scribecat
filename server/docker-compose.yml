@@ -16,10 +16,14 @@ services:
       dockerfile: server/Dockerfile
     image: scribedog-server:0.1.0
     restart: unless-stopped
-    # Must be able to read and write ./scribedog-data on the host. Match it to
-    # the owner of that folder (`id -u` / `id -g`); 1000 is the usual first user.
-    user: "${SCRIBEDOG_UID:-1000}:${SCRIBEDOG_GID:-1000}"
     environment:
+      # User and group the server runs as inside the container. The container
+      # starts as root, hands ./scribedog-data to these ids and then drops to
+      # them, so a folder Compose created itself works without any chown.
+      # Match them to your own user (`id -u` / `id -g`) so the notes stay
+      # yours on the host; 1000 is the usual first user.
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
       # Only used until a password exists in the data folder; remove afterwards.
       SCRIBEDOG_INIT_PASSWORD: ${SCRIBEDOG_INIT_PASSWORD:-}
       # Empty = app at "/". Set e.g. "/anna" to run under a path prefix.

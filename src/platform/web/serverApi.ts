@@ -30,10 +30,20 @@ export type RemoteMarkdownFileRecord = {
   mtimeMs: number;
 };
 
-export type RemoteNoteContent = {
-  relativePath: string;
-  content: string;
-  mtimeMs: number;
+export type RemoteDirectoryEntry = {
+  name: string;
+  isDirectory: boolean;
+  isFile: boolean;
+  isSymlink: boolean;
+};
+
+export type RemoteFileInfo = {
+  isFile: boolean;
+  isDirectory: boolean;
+  isSymlink: boolean;
+  size: number;
+  mtimeMs: number | null;
+  birthtimeMs: number | null;
 };
 
 export class ApiError extends Error {
@@ -63,9 +73,11 @@ type RequestOptions = RequestInit & {
    * it must not tear down the state the login form is already showing.
    */
   isLogin?: boolean;
+  /** The body is raw bytes (sent as application/octet-stream), not JSON. */
+  binary?: boolean;
 };
 
-async function request<T>(path: string, { isLogin = false, ...init }: RequestOptions = {}): Promise<T> {
+async function send(path: string, { isLogin = false, binary = false, ...init }: RequestOptions): Promise<Response> {
   let response: Response;
 
   try {
@@ -74,7 +86,7 @@ async function request<T>(path: string, { isLogin = false, ...init }: RequestOpt
       credentials: "same-origin",
       headers: {
         accept: "application/json",
-        ...(init.body ? { "content-type": "application/json" } : {}),
+        ...(init.body ? { "content-type": binary ? "application/octet-stream" : "application/json" } : {}),
         ...init.headers
       }
     });
@@ -94,18 +106,32 @@ async function request<T>(path: string, { isLogin = false, ...init }: RequestOpt
     throw new SessionError("unauthorized", "Not signed in.");
   }
 
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as { error?: string; message?: string } | null;
+
+    throw new ApiError(response.status, body?.error ?? "error", body?.message ?? `Request failed (${response.status}).`);
+  }
+
+  return response;
+}
+
+async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const response = await send(path, options);
+
   if (response.status === 204) {
     return undefined as T;
   }
 
-  const body = (await response.json().catch(() => null)) as { error?: string; message?: string } | null;
-
-  if (!response.ok) {
-    throw new ApiError(response.status, body?.error ?? "error", body?.message ?? `Request failed (${response.status}).`);
-  }
-
-  return body as T;
+  return (await response.json()) as T;
 }
+
+async function requestBytes(path: string): Promise<Uint8Array> {
+  const response = await send(path, {});
+
+  return new Uint8Array(await response.arrayBuffer());
+}
+
+const withPath = (route: string, path: string) => `${route}?path=${encodeURIComponent(path)}`;
 
 export const serverApi = {
   session: () => request<{ authenticated: boolean }>("/auth/session"),
@@ -113,7 +139,25 @@ export const serverApi = {
     request<{ ok: true }>("/auth/login", { method: "POST", body: JSON.stringify({ password }), isLogin: true }),
   logout: () => request<void>("/auth/logout", { method: "POST" }),
   listFiles: async () => (await request<{ files: RemoteMarkdownFileRecord[] }>("/files")).files,
-  readNote: (path: string) => request<RemoteNoteContent>(`/files/content?path=${encodeURIComponent(path)}`),
-  saveNote: (path: string, content: string) =>
-    request<RemoteNoteContent>("/files/content", { method: "PUT", body: JSON.stringify({ path, content }) })
+  readDir: async (path: string) => (await request<{ entries: RemoteDirectoryEntry[] }>(withPath("/fs/entries", path))).entries,
+  stat: (path: string) => request<RemoteFileInfo>(withPath("/fs/stat", path)),
+  exists: async (path: string) => (await request<{ exists: boolean }>(withPath("/fs/exists", path))).exists,
+  mkdir: (path: string, recursive: boolean) =>
+    request<void>("/fs/mkdir", { method: "POST", body: JSON.stringify({ path, recursive }) }),
+  readText: async (path: string) => (await request<{ content: string }>(withPath("/fs/text", path))).content,
+  writeText: (path: string, content: string) =>
+    request<{ mtimeMs: number }>("/fs/text", { method: "PUT", body: JSON.stringify({ path, content }) }),
+  readBytes: (path: string) => requestBytes(withPath("/fs/file", path)),
+  writeBytes: (path: string, data: Uint8Array) =>
+    request<{ mtimeMs: number }>(withPath("/fs/file", path), { method: "PUT", body: data as BodyInit, binary: true }),
+  rename: (from: string, to: string) => request<void>("/fs/rename", { method: "POST", body: JSON.stringify({ from, to }) }),
+  remove: (path: string, recursive: boolean) =>
+    request<void>("/fs/remove", { method: "POST", body: JSON.stringify({ path, recursive }) })
 };
+
+/** Absolute WebSocket URL of the live-update stream, prefix included. */
+export function eventsUrl(): string {
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+
+  return `${protocol}//${window.location.host}${getBasePath()}/api/events`;
+}

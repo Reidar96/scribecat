@@ -1,0 +1,6 @@
+# Files that end up inside the Docker image or are read by Linux tools must
+# keep LF endings even on a Windows checkout with core.autocrlf=true: a shell
+# script with CRLF fails at "#!/bin/sh\r".
+*.sh text eol=lf
+server/caddy/Caddyfile text eol=lf
+server/Dockerfile text eol=lf

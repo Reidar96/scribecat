@@ -1,9 +1,9 @@
-import { realpath } from "node:fs/promises";
+import { lstat, realpath } from "node:fs/promises";
 import path from "node:path";
 
 /**
  * Thrown for any path a client sends that is not a plain, vault-relative
- * markdown path. The message is safe to hand straight back in a 400 response.
+ * path. The message is safe to hand straight back in a 400 response.
  */
 export class VaultPathError extends Error {}
 
@@ -14,11 +14,15 @@ export class VaultPathError extends Error {}
  * Keep the two in step: both are the security boundary between a
  * client-supplied path and the filesystem.
  *
- * The desktop version additionally fences off `images/` for the agent; the
- * file API only ever serves markdown, so `.scribedog/` (the app's own
- * metadata, including the password hash) is the one forbidden root here.
+ * The file API serves the whole vault the way the desktop app's filesystem
+ * layer sees it: notes, the images folder and the `.scribedog/` sidecars
+ * (versions, manual order, checkpoints, chat sessions), which the frontend
+ * reads and writes itself. The one part of `.scribedog/` that belongs to the
+ * server alone is `.scribedog/server/` (password hash, session secret); no
+ * client-supplied path may point into it.
  */
-const FORBIDDEN_ROOT_SEGMENTS = [".scribedog"];
+const META_DIR_SEGMENT = ".scribedog";
+const SERVER_DIR_SEGMENT = "server";
 
 // Control characters never belong in a file name and are the classic way to
 // smuggle a second path past a naive check.
@@ -28,21 +32,31 @@ export function normalizeVaultPath(rawPath: string): string {
   return rawPath.replace(/\\/g, "/").replace(/^\.\//, "").replace(/^\/+/, "").replace(/\/+$/, "");
 }
 
+export type VaultPathOptions = {
+  /** Accept "" (or "/" or ".") for the vault root itself; off by default. */
+  allowRoot?: boolean;
+};
+
 /**
  * Validates a client-supplied path and returns it normalized (forward
- * slashes, no leading "./" or "/"). Rejects absolute paths, drive letters, UNC
- * prefixes, ".." and "." segments, empty segments, the metadata directory and
- * anything that is not a .md file.
+ * slashes, no leading "./" or "/", no trailing "/"; "" for the root when
+ * allowed). Rejects absolute paths, drive letters, UNC prefixes, ".." and "."
+ * segments, empty segments, control characters and the server's own metadata
+ * directory.
  */
-export function assertVaultPath(rawPath: unknown): string {
-  if (typeof rawPath !== "string" || !rawPath.trim()) {
+export function assertVaultPath(rawPath: unknown, options: VaultPathOptions = {}): string {
+  if (typeof rawPath !== "string") {
     throw new VaultPathError("No path given. Pass a vault-relative path such as Notes/Idea.md.");
   }
 
   const trimmed = rawPath.trim();
   const normalized = normalizeVaultPath(trimmed);
 
-  if (!normalized) {
+  if (!normalized || normalized === ".") {
+    if (options.allowRoot) {
+      return "";
+    }
+
     throw new VaultPathError("No path given. Pass a vault-relative path such as Notes/Idea.md.");
   }
 
@@ -64,12 +78,19 @@ export function assertVaultPath(rawPath: unknown): string {
     throw new VaultPathError(`"${trimmed}" is not a usable path.`);
   }
 
-  if (FORBIDDEN_ROOT_SEGMENTS.includes(segments[0].toLowerCase())) {
-    throw new VaultPathError(`"${trimmed}" is inside a folder that is off limits (${FORBIDDEN_ROOT_SEGMENTS.join(", ")}).`);
+  if (segments[0].toLowerCase() === META_DIR_SEGMENT && segments[1]?.toLowerCase() === SERVER_DIR_SEGMENT) {
+    throw new VaultPathError(`"${trimmed}" is inside a folder that is off limits (${META_DIR_SEGMENT}/${SERVER_DIR_SEGMENT}).`);
   }
 
+  return normalized;
+}
+
+/** The markdown-only variant, for routes that deal with notes and nothing else. */
+export function assertMarkdownPath(rawPath: unknown): string {
+  const normalized = assertVaultPath(rawPath);
+
   if (!/\.md$/i.test(normalized)) {
-    throw new VaultPathError(`"${trimmed}" is not a Markdown file. Only .md files can be opened or saved.`);
+    throw new VaultPathError(`"${normalized}" is not a Markdown file. Only .md files can be opened or saved.`);
   }
 
   return normalized;
@@ -80,45 +101,71 @@ function isInside(rootPath: string, candidatePath: string): boolean {
   return relative !== "" && !relative.startsWith("..") && !path.isAbsolute(relative);
 }
 
+function isRootOrInside(rootPath: string, candidatePath: string): boolean {
+  return candidatePath === rootPath || isInside(rootPath, candidatePath);
+}
+
 /**
  * Turns a validated vault-relative path into an absolute one and makes sure
- * the file it names (or, for a file that does not exist yet, its directory)
- * really lies below the vault root once symlinks are resolved. The desktop app
- * gets that guarantee from Tauri's scoped filesystem capability; the server
- * has to provide it itself, because a symlink planted in the vault would
- * otherwise turn "vault-relative" into "anywhere on disk".
+ * the entry it names, or, for an entry that does not exist yet, its nearest
+ * existing ancestor, really lies below the vault root once symlinks are
+ * resolved. The desktop app gets that guarantee from Tauri's scoped
+ * filesystem capability; the server has to provide it itself, because a
+ * symlink planted in the vault would otherwise turn "vault-relative" into
+ * "anywhere on disk".
+ *
+ * Returns the absolute path *without* resolving the entry's own symlink, so
+ * an operation on a link (rename, remove) acts on the link, not its target.
  */
-export async function resolveVaultFile(vaultRealPath: string, relativePath: string): Promise<string> {
+export async function resolveVaultEntry(vaultRealPath: string, relativePath: string): Promise<string> {
+  if (relativePath === "") {
+    return vaultRealPath;
+  }
+
   const absolutePath = path.join(vaultRealPath, ...relativePath.split("/"));
 
   if (!isInside(vaultRealPath, absolutePath)) {
     throw new VaultPathError(`"${relativePath}" leaves the vault.`);
   }
 
-  let resolvedTarget: string;
+  // Walk up to the nearest ancestor that exists; a symlink anywhere on the
+  // way (the entry itself included) must resolve back into the vault.
+  let probe = absolutePath;
 
-  try {
-    resolvedTarget = await realpath(absolutePath);
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
-      throw error;
+  for (;;) {
+    let exists = true;
+
+    try {
+      await lstat(probe);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+        throw error;
+      }
+
+      exists = false;
     }
 
-    // The file itself may not exist yet (first save); its parent directory
-    // must, and must be inside the vault. Resolving the parent keeps a symlink
-    // in the middle of the path from escaping.
-    const resolvedParent = await realpath(path.dirname(absolutePath));
+    if (exists) {
+      // lstat sees a dangling symlink where realpath does not; writing
+      // through one would create the file wherever the link points.
+      const resolved = await realpath(probe).catch(() => null);
 
-    if (resolvedParent !== vaultRealPath && !isInside(vaultRealPath, resolvedParent)) {
+      if (resolved === null || !isRootOrInside(vaultRealPath, resolved)) {
+        throw new VaultPathError(`"${relativePath}" leaves the vault.`);
+      }
+
+      return absolutePath;
+    }
+
+    const parent = path.dirname(probe);
+
+    if (parent === probe) {
       throw new VaultPathError(`"${relativePath}" leaves the vault.`);
     }
 
-    return path.join(resolvedParent, path.basename(absolutePath));
+    probe = parent;
   }
-
-  if (!isInside(vaultRealPath, resolvedTarget)) {
-    throw new VaultPathError(`"${relativePath}" leaves the vault.`);
-  }
-
-  return resolvedTarget;
 }
+
+/** Kept under its stage-1 name for the note routes; same guarantees as resolveVaultEntry. */
+export const resolveVaultFile = resolveVaultEntry;

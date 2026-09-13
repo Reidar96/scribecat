@@ -66,7 +66,7 @@ test("login, tree, open, edit in the editor, save, reload, logout", async ({ pag
   await signIn(page);
 
   // Known starting content, written through the API the UI itself uses.
-  const seeded = await page.request.put(`${basePath(page)}/api/files/content`, { data: { path: NOTE, content: SEED } });
+  const seeded = await page.request.put(`${basePath(page)}/api/fs/text`, { data: { path: NOTE, content: SEED } });
   expect(seeded.ok()).toBe(true);
   await page.reload();
   await expect(page.getByTestId("logout")).toBeVisible();
@@ -84,9 +84,6 @@ test("login, tree, open, edit in the editor, save, reload, logout", async ({ pag
   // folder menu (nothing to switch to).
   await expect(page.getByTestId("vault-name")).toContainText(new URL(page.url()).host);
   await expect(page.getByRole("button", { name: "Import files" })).toHaveCount(0);
-  // What the server cannot do yet is disabled, not hidden: it is coming.
-  await expect(page.getByRole("button", { name: "New file" })).toBeDisabled();
-  await expect(page.getByRole("button", { name: "New folder" })).toBeDisabled();
 
   // Open the note from the tree; the editor shows its rendered markdown.
   await openNote(page, NOTE);
@@ -112,7 +109,7 @@ test("login, tree, open, edit in the editor, save, reload, logout", async ({ pag
   await page.keyboard.press("Control+s");
   await expect(page.getByTestId("status")).toHaveAttribute("data-dirty", "false");
 
-  const saved = await page.request.get(`${basePath(page)}/api/files/content?path=${encodeURIComponent(NOTE)}`);
+  const saved = await page.request.get(`${basePath(page)}/api/fs/text?path=${encodeURIComponent(NOTE)}`);
   expect(saved.ok()).toBe(true);
   const body = (await saved.json()) as { content: string };
   expect(body.content).toContain(marker);

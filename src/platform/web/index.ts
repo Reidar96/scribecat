@@ -1,6 +1,7 @@
 import { SessionError } from "@/platform/errors";
 import type { Platform } from "@/platform/types";
 
+import { subscribeToVaultChanges } from "./liveUpdates";
 import { posixPaths } from "./paths";
 import { REMOTE_VAULT_ROOT, remoteVaultStorage } from "./remoteStorage";
 import { getBasePath, onUnauthorized, serverApi } from "./serverApi";
@@ -36,13 +37,12 @@ export const platform: Platform = {
   vault: {
     allowFolderAccess: async () => undefined,
     allowFileAccess: async () => undefined,
-    // Live updates from the server (the counterpart of the native watcher)
-    // are a later stage; until then the list refreshes on the app's own
-    // actions only.
+    // The change stream is per tab, not per folder (there is only one), so
+    // subscribing is what "watching" means here.
     watchFolder: async () => undefined,
     // One server, one vault: nothing to choose, the session decides.
     getStartupFolderPath: async () => REMOTE_VAULT_ROOT,
-    onFolderFilesChanged: async () => () => undefined,
+    onFolderFilesChanged: async (handler) => subscribeToVaultChanges(() => handler(REMOTE_VAULT_ROOT)),
     displayName: () => `${window.location.host}${getBasePath()}`
   },
 

@@ -6,13 +6,15 @@ instance.
 
 > **Status: early.** The web app is the desktop app's own frontend, so it
 > looks and works the same, but the server behind it is still growing. Today
-> it covers login/logout, the file tree, opening a note, editing it and saving
-> it back. Creating, renaming, moving and deleting notes and folders, images,
-> version history and the chat agent are not wired up to the server yet; the
-> corresponding actions report that they are not available. The AI features
-> are not adapted for the browser yet either (an API key entered in the
-> settings is kept in memory for the tab only). Features that only exist
-> natively (local folders, import/export, dictation, the updater) are hidden.
+> it covers login/logout and the whole file side: the file tree, creating,
+> renaming, moving and deleting notes and folders, images (paste and drop),
+> manual sort order, version history, and live updates when files change on
+> disk. The AI features are not adapted for the browser yet (an API key
+> entered in the settings is kept in memory for the tab only), the chat agent
+> and the knowledge base are not wired up, and there is no rate limiting on
+> the login yet. Features that only exist natively (local folders,
+> import from local files, export to a local folder, the image file picker,
+> dictation, the updater) are hidden.
 
 ## Quick start
 
@@ -20,9 +22,8 @@ Requirements: Docker with the Compose plugin.
 
 ```bash
 cd server
-cp .env.example .env         # set SCRIBEDOG_INIT_PASSWORD (8+ characters)
-mkdir -p scribedog-data      # your notes live here as plain .md files
-docker compose up -d --build
+cp .env.example .env         # set SCRIBEDOG_INIT_PASSWORD (8+ characters), PUID/PGID
+docker compose up -d --build # creates ./scribedog-data if it is not there
 ```
 
 Open <https://localhost/> and sign in with the password you set. On the very
@@ -51,7 +52,7 @@ Everything is set through environment variables in `.env` (read by
 | `SCRIBEDOG_SITE_ADDRESS` | `localhost` | Host name or IP Caddy answers on: `localhost`, the LAN name or IP of the box, or a public domain. |
 | `SCRIBEDOG_TLS` | `internal` | `internal` uses Caddy's local CA. For a public domain set your e-mail address and Caddy obtains a Let's Encrypt certificate. |
 | `SCRIBEDOG_HTTP_PORT` / `SCRIBEDOG_HTTPS_PORT` | `80` / `443` | Host ports Caddy listens on. |
-| `SCRIBEDOG_UID` / `SCRIBEDOG_GID` | `1000` / `1000` | User the server runs as inside the container. Must be able to read and write `./scribedog-data`; match it to the folder's owner (`id -u`, `id -g`). |
+| `PUID` / `PGID` | `1000` / `1000` | User and group the server runs as. The container starts as root, hands `./scribedog-data` to these ids and drops to them, so match them to your own user (`id -u`, `id -g`) and the notes stay yours on the host. |
 
 Variables the server itself understands (set on the `scribedog` service if you
 run it without the bundled compose file):
@@ -102,9 +103,17 @@ travel in clear text.
 `./scribedog-data` is bind-mounted into the container as `/data`. It holds:
 
 - your notes, as ordinary `.md` files in whatever folders you like;
-- `.scribedog/server/auth.json` with the password hash, and
-  `.scribedog/server/session-secret`, which signs session cookies. Both are
-  created on first start with mode `0600`.
+- `images/` for pictures pasted or dropped into notes;
+- `.scribedog/` with the same sidecars the desktop app keeps (version
+  history, manual sort order, chat sessions), written by the web app through
+  the server, plus `.scribedog/server/auth.json` with the password hash and
+  `.scribedog/server/session-secret`, which signs session cookies. The
+  `server/` part is created on first start with mode `0600` and is the one
+  place the file API never reaches.
+
+Changes made on the host (a sync tool, an editor over SSH) show up in open
+browser tabs within a second: the server watches the folder and pushes a
+signal over a WebSocket, the app rescans.
 
 Because it is a plain folder, back it up like any other folder with the tool
 you already use. Deleting `.scribedog/server/auth.json` resets the password:
@@ -174,9 +183,20 @@ health needs the session cookie.
 | `POST` | `/api/auth/logout` | clears the cookie |
 | `GET` | `/api/auth/session` | `{ "authenticated": true\|false }` |
 | `GET` | `/api/files` | list of `.md` files with modification times |
-| `GET` | `/api/files/content?path=Notes/Idea.md` | read a note |
-| `PUT` | `/api/files/content` | `{ "path": "...", "content": "..." }` → overwrite an existing note |
+| `GET` | `/api/fs/entries?path=Notes` | directory listing (`path=` for the root) |
+| `GET` | `/api/fs/stat?path=…` | size, times, kind of one entry |
+| `GET` | `/api/fs/exists?path=…` | `{ "exists": true|false }` |
+| `POST` | `/api/fs/mkdir` | `{ "path": "…", "recursive": true }` |
+| `GET` | `/api/fs/text?path=…` | read a text file |
+| `PUT` | `/api/fs/text` | `{ "path": "…", "content": "…" }` → create or overwrite (parent folder must exist) |
+| `GET` | `/api/fs/file?path=…` | read a binary file (images get their content type) |
+| `PUT` | `/api/fs/file?path=…` | body as `application/octet-stream` → create or overwrite |
+| `POST` | `/api/fs/rename` | `{ "from": "…", "to": "…" }` (files and folders) |
+| `POST` | `/api/fs/remove` | `{ "path": "…", "recursive": true }` (a folder without `recursive` must be empty) |
+| `GET` | `/api/events` | WebSocket; sends `{"type":"files-changed"}` when the vault changes on disk |
 | `GET` | `/api/health` | liveness probe |
 
-Paths are relative to the vault, must end in `.md`, and may not point into
-`.scribedog/` or outside the vault (symlinks included).
+The `/fs` routes are the frontend's filesystem layer, one call per
+primitive. Paths are relative to the vault and may not point outside it
+(symlinks included) or into `.scribedog/server/`; the vault root and
+`.scribedog` itself cannot be renamed or removed.

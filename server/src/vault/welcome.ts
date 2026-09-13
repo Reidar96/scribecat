@@ -7,20 +7,19 @@ const WELCOME_FILE_NAME = "Welcome.md";
 
 const WELCOME_CONTENT = `# Welcome to ScribeDog
 
-This is your vault. Every \`.md\` file in the mounted data folder shows up in the list on the left, and whatever you write here is saved back as plain Markdown.
+This is your vault. Every \`.md\` file in the mounted data folder shows up in the tree on the left, and whatever you write here is saved back as plain Markdown.
 
-- Open a note from the list
+- Open a note from the tree
 - Edit it
-- Save with the button or **Ctrl+S**
+- Save with **Ctrl+S**
 
-Add more notes by dropping \`.md\` files into the data folder.
+Add more notes with the **+** button, or drop \`.md\` files into the data folder.
 `;
 
 /**
- * A brand-new bind mount is an empty folder, and the first stage of the
- * server can only open and save notes that already exist. Seeding one note
- * makes a fresh install usable without touching the host filesystem first.
- * Nothing is written when the vault already holds any markdown file.
+ * A brand-new bind mount is an empty folder. Seeding one note gives a fresh
+ * install something to open and a place to read what to do next. Nothing is
+ * written when the vault already holds any markdown file.
  */
 export async function ensureWelcomeNote(vault: Vault, log: { info(message: string): void }): Promise<void> {
   const files = await vault.listMarkdownFiles();

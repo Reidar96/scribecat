@@ -1,10 +1,10 @@
 import i18n from "@/i18n";
-import { isMarkdownFileName, sortMarkdownRecords } from "@/lib/vaultPaths";
+import { sortMarkdownRecords } from "@/lib/vaultPaths";
 import { PlatformUnavailableError } from "@/platform/errors";
-import type { VaultStorage } from "@/platform/types";
+import { ALL_VAULT_CAPABILITIES, type FileInfo, type VaultStorage } from "@/platform/types";
 
 import { joinPosixPath } from "./paths";
-import { ApiError, serverApi } from "./serverApi";
+import { serverApi } from "./serverApi";
 
 /**
  * The one vault a ScribeDog server serves, seen through the store's
@@ -29,22 +29,20 @@ function toVaultRelative(path: string): string {
   return normalized.slice(REMOTE_VAULT_ROOT.length + 1);
 }
 
-function notYetAvailable(): never {
-  throw new PlatformUnavailableError(i18n.t("platform.serverNotYetAvailable"));
+function toDate(ms: number | null): Date | null {
+  return ms === null ? null : new Date(ms);
 }
 
 /**
- * Stage 2a of the server edition: list, read and overwrite notes. Every other
- * operation (creating, renaming, deleting, images, the `.scribedog/` sidecars
- * behind versioning and manual order) reports itself as not available yet.
- * The shared logic on top already treats those as optional: version
- * snapshots, image cleanup and sidecar writes are fire-and-forget, and the
- * sidecar readers fall back to their defaults.
+ * `VaultStorage` over the server's file API (server/src/vault/routes.ts):
+ * one request per primitive, on paths inside the virtual root. The server
+ * mirrors the semantics of Tauri's fs plugin (no implicit parent folders on
+ * write, a folder is removed only when empty or with `recursive`), so the
+ * shared vault logic behaves the same as on a local folder.
  */
 export const remoteVaultStorage: VaultStorage = {
-  // Nothing beyond list/read/overwrite exists on the server yet; the UI
-  // disables the controls behind these until the corresponding stage lands.
-  capabilities: { create: false, rename: false, move: false, delete: false, images: false },
+  capabilities: ALL_VAULT_CAPABILITIES,
+
   async listMarkdownFiles(rootPath) {
     const records = (await serverApi.listFiles()).map((file) => ({
       filePath: joinPosixPath(rootPath, file.relativePath),
@@ -55,42 +53,33 @@ export const remoteVaultStorage: VaultStorage = {
     return sortMarkdownRecords(records);
   },
 
-  async readTextFile(path) {
-    const relativePath = toVaultRelative(path);
+  // All async so a path outside the root rejects instead of throwing
+  // synchronously into a caller that expects a promise.
+  exists: async (path) => serverApi.exists(toVaultRelative(path)),
 
-    if (!isMarkdownFileName(relativePath)) {
-      return notYetAvailable();
-    }
+  async stat(path): Promise<FileInfo> {
+    const info = await serverApi.stat(toVaultRelative(path));
 
-    return (await serverApi.readNote(relativePath)).content;
+    return {
+      isFile: info.isFile,
+      isDirectory: info.isDirectory,
+      isSymlink: info.isSymlink,
+      size: info.size,
+      mtime: toDate(info.mtimeMs),
+      birthtime: toDate(info.birthtimeMs)
+    };
   },
 
+  readDir: async (path) => serverApi.readDir(toVaultRelative(path)),
+  mkdir: async (path, options) => serverApi.mkdir(toVaultRelative(path), options?.recursive === true),
+  readTextFile: async (path) => serverApi.readText(toVaultRelative(path)),
   async writeTextFile(path, contents) {
-    const relativePath = toVaultRelative(path);
-
-    if (!isMarkdownFileName(relativePath)) {
-      return notYetAvailable();
-    }
-
-    try {
-      await serverApi.saveNote(relativePath, contents);
-    } catch (error) {
-      // The file API of this stage only overwrites notes that exist; a 404
-      // here is "creating notes is not there yet", not a missing file.
-      if (error instanceof ApiError && error.status === 404) {
-        return notYetAvailable();
-      }
-
-      throw error;
-    }
+    await serverApi.writeText(toVaultRelative(path), contents);
   },
-
-  exists: async () => notYetAvailable(),
-  stat: async () => notYetAvailable(),
-  readDir: async () => notYetAvailable(),
-  mkdir: async () => notYetAvailable(),
-  readFile: async () => notYetAvailable(),
-  writeFile: async () => notYetAvailable(),
-  rename: async () => notYetAvailable(),
-  remove: async () => notYetAvailable()
+  readFile: async (path) => serverApi.readBytes(toVaultRelative(path)),
+  async writeFile(path, data) {
+    await serverApi.writeBytes(toVaultRelative(path), data);
+  },
+  rename: async (oldPath, newPath) => serverApi.rename(toVaultRelative(oldPath), toVaultRelative(newPath)),
+  remove: async (path, options) => serverApi.remove(toVaultRelative(path), options?.recursive === true)
 };

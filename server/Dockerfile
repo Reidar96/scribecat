@@ -39,16 +39,20 @@ ENV NODE_ENV=production \
     SCRIBEDOG_PORT=3000 \
     SCRIBEDOG_WEB_DIST_DIR=/app/dist-web
 WORKDIR /app/server
+# su-exec drops from root to PUID:PGID in the entrypoint (see docker-entrypoint.sh).
+RUN apk add --no-cache su-exec
 COPY --from=deps /app/server/node_modules ./node_modules
 COPY --from=server /app/server/dist ./dist
 COPY --from=web /app/dist-web /app/dist-web
 COPY server/package.json ./
+COPY --chmod=755 server/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 # The vault is a bind mount; the directory only exists here so a container
-# started without one still has somewhere writable and owned by "node".
+# started without one still has somewhere writable.
 RUN mkdir -p /data && chown node:node /data
-USER node
 EXPOSE 3000
 VOLUME ["/data"]
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD ["node", "dist/server/healthcheck.js"]
+# The container starts as root and drops to PUID:PGID, see docker-entrypoint.sh.
+ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["node", "dist/server/index.js"]

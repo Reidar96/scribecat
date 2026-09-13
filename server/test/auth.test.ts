@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readFile, rm } from "node:fs/promises";
 import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -83,9 +83,22 @@ describe("session tokens", () => {
 
 describe("auth store", () => {
   const log = { info: () => {}, warn: () => {} };
+  const vaults: string[] = [];
+
+  // Every test gets its own vault; drop them afterwards rather than leaving
+  // one temp folder per run behind.
+  async function tempVault(): Promise<string> {
+    const vaultPath = await createTempVault();
+    vaults.push(vaultPath);
+    return vaultPath;
+  }
+
+  afterEach(async () => {
+    await Promise.all(vaults.splice(0).map((vaultPath) => rm(vaultPath, { recursive: true, force: true })));
+  });
 
   it("creates the hash from the init password on first start only", async () => {
-    const vaultPath = await createTempVault();
+    const vaultPath = await tempVault();
     const warnings: string[] = [];
     const warnLog = { info: () => {}, warn: (message: string) => warnings.push(message) };
 
@@ -107,17 +120,17 @@ describe("auth store", () => {
   });
 
   it("refuses to start without a password and without an init password", async () => {
-    const vaultPath = await createTempVault();
+    const vaultPath = await tempVault();
     await expect(openAuthStore({ vaultPath, initPassword: null, log })).rejects.toThrow(/SCRIBEDOG_INIT_PASSWORD/);
   });
 
   it("refuses an init password that breaks the policy", async () => {
-    const vaultPath = await createTempVault();
+    const vaultPath = await tempVault();
     await expect(openAuthStore({ vaultPath, initPassword: "short", log })).rejects.toThrow(/at least/);
   });
 
   it("stores the hash and the secret under .scribedog/server", async () => {
-    const vaultPath = await createTempVault();
+    const vaultPath = await tempVault();
     await openAuthStore({ vaultPath, initPassword: "first password", log });
 
     const authFile = JSON.parse(await readFile(path.join(vaultPath, SERVER_META_DIR, "auth.json"), "utf8"));

@@ -9,6 +9,7 @@ import { openAuthStore, type AuthStore } from "../src/auth/authStore.js";
 import { SESSION_COOKIE_NAME } from "../src/auth/session.js";
 import { loadConfig, type ServerConfig } from "../src/config.js";
 import { openVault, type Vault } from "../src/vault/files.js";
+import { createVaultWatcher, type VaultWatcher } from "../src/vault/watcher.js";
 
 export const TEST_PASSWORD = "correct horse battery";
 
@@ -20,6 +21,8 @@ export type TestContext = {
   vault: Vault;
   authStore: AuthStore;
   app: FastifyInstance;
+  /** Only when created with `watch: true`. */
+  watcher: VaultWatcher | null;
   /** Logs in and returns the Cookie header value for subsequent requests. */
   login(password?: string): Promise<string>;
   cleanup(): Promise<void>;
@@ -38,7 +41,7 @@ export async function createTempVault(): Promise<string> {
 
 export async function createTestContext(
   env: NodeJS.ProcessEnv = {},
-  options: { webDistDir?: string } = {}
+  options: { webDistDir?: string; watch?: boolean } = {}
 ): Promise<TestContext> {
   const vaultPath = await createTempVault();
   const config = loadConfig({
@@ -49,7 +52,8 @@ export async function createTestContext(
   });
   const vault = await openVault(config.vaultPath);
   const authStore = await openAuthStore({ vaultPath: vault.realPath, initPassword: config.initPassword, log: silentLog });
-  const app = await buildApp({ config, authStore, vault, webDistDir: options.webDistDir });
+  const watcher = options.watch ? createVaultWatcher(vault.realPath, silentLog) : null;
+  const app = await buildApp({ config, authStore, vault, watcher: watcher ?? undefined, webDistDir: options.webDistDir });
 
   return {
     vaultPath,
@@ -57,6 +61,7 @@ export async function createTestContext(
     vault,
     authStore,
     app,
+    watcher,
     async login(password = TEST_PASSWORD) {
       const response = await app.inject({
         method: "POST",
@@ -77,6 +82,7 @@ export async function createTestContext(
       return `${cookie.name}=${cookie.value}`;
     },
     async cleanup() {
+      watcher?.close();
       await app.close();
       await rm(vaultPath, { recursive: true, force: true });
     }

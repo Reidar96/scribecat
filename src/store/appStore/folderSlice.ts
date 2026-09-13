@@ -126,7 +126,7 @@ export const createFolderSlice: AppSlice<FolderSlice> = (set, get) => ({
     }
   },
   refreshFolderFiles: async () => {
-    const { folderPath, selectedFilePath, fileDocuments, manualOrder, emptyFolderPaths } = get();
+    const { folderPath, fileDocuments, manualOrder, emptyFolderPaths } = get();
 
     if (!folderPath) {
       return false;
@@ -141,12 +141,33 @@ export const createFolderSlice: AppSlice<FolderSlice> = (set, get) => ({
         fileDocuments,
         nextFilePaths
       );
+
+      // The reads above take time (a round trip per file on a server vault),
+      // and the user keeps typing meanwhile. Anything that changed in the
+      // store since the snapshot was taken wins over the snapshot: writing
+      // the stale copy back would undo those keystrokes in the open editor.
+      const latestState = get();
+      const mergedDocuments: Record<string, FileDocumentState> = { ...refreshedDocuments };
+
+      for (const [path, latestDocument] of Object.entries(latestState.fileDocuments)) {
+        const snapshot = fileDocuments[path];
+
+        if (
+          !snapshot ||
+          latestDocument.content !== snapshot.content ||
+          latestDocument.baseContent !== snapshot.baseContent
+        ) {
+          mergedDocuments[path] = latestDocument;
+        }
+      }
+
+      const currentSelectedFilePath = latestState.selectedFilePath;
       const nextDocuments = pruneDocumentsToCurrentFolder(
-        refreshedDocuments,
+        mergedDocuments,
         nextFilePaths,
-        selectedFilePath
+        currentSelectedFilePath
       );
-      const selectedDocument = selectedFilePath ? nextDocuments[selectedFilePath] : null;
+      const selectedDocument = currentSelectedFilePath ? nextDocuments[currentSelectedFilePath] : null;
       const emptyFolderRelativePaths = emptyFolderPaths.map((path) =>
         getRelativeDisplayPath(folderPath, path)
       );
@@ -162,7 +183,7 @@ export const createFolderSlice: AppSlice<FolderSlice> = (set, get) => ({
         fileDocuments: nextDocuments,
         fileMtimeMs: buildFileMtimeMap(markdownFiles),
         manualOrder: nextManualOrder,
-        selectedFilePath: selectedDocument ? selectedFilePath : null,
+        selectedFilePath: selectedDocument ? currentSelectedFilePath : null,
         selectedFileContent: selectedDocument ? selectedDocument.content : null,
         selectedFileBaseContent: selectedDocument ? selectedDocument.baseContent : null,
         isFileLoading: false,
