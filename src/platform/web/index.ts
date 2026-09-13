@@ -1,13 +1,61 @@
 import { SessionError } from "@/platform/errors";
-import type { Platform } from "@/platform/types";
+import { secretRef } from "@/platform/secretRef";
+import type { CredentialsStatus, Platform } from "@/platform/types";
 
 import { subscribeToVaultChanges } from "./liveUpdates";
 import { posixPaths } from "./paths";
 import { REMOTE_VAULT_ROOT, remoteVaultStorage } from "./remoteStorage";
-import { getBasePath, onUnauthorized, serverApi } from "./serverApi";
+import {
+  ApiError,
+  getBasePath,
+  llmProxyUrl,
+  LLM_TARGET_HEADER,
+  onUnauthorized,
+  serverApi,
+  type RemoteSecretStatus
+} from "./serverApi";
 
-/** API keys entered in the browser stay in memory for this tab only. */
-const sessionApiKeys = new Map<string, string>();
+/**
+ * Which ids hold a key, cached for the tab. The values are never part of it:
+ * the server does not hand them out, and the frontend works with placeholders
+ * (see @/platform/secretRef).
+ */
+let secretStatus: Promise<RemoteSecretStatus> | null = null;
+
+function loadSecretStatus(): Promise<RemoteSecretStatus> {
+  secretStatus ??= serverApi.secretStatus().catch((error: unknown) => {
+    secretStatus = null;
+    throw error;
+  });
+
+  return secretStatus;
+}
+
+async function readSecretStatus(): Promise<RemoteSecretStatus> {
+  try {
+    return await loadSecretStatus();
+  } catch {
+    return { state: "locked", ids: [], discardedAt: null };
+  }
+}
+
+/**
+ * A request to a cloud AI provider cannot leave the tab directly: the browser
+ * would block it (CORS) and the API key would have to be in the page to send
+ * it. Anything aimed at another https host therefore goes to the server's LLM
+ * proxy, which fills in the key and streams the answer back. Same-origin
+ * requests and local endpoints (a model running on the user's own machine)
+ * stay in the browser.
+ */
+function llmTarget(url: string): string | null {
+  try {
+    const target = new URL(url, window.location.href);
+
+    return target.protocol === "https:" && target.host !== window.location.host ? target.toString() : null;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * The browser talking to a ScribeDog server. Everything vault-related goes
@@ -54,7 +102,20 @@ export const platform: Platform = {
       window.open(url, "_blank", "noopener,noreferrer");
     }
   },
-  http: { fetch: (url, init) => window.fetch(url, init) },
+  http: {
+    fetch: (url, init) => {
+      const target = llmTarget(url);
+
+      if (!target) {
+        return window.fetch(url, init);
+      }
+
+      const headers = new Headers(init?.headers);
+      headers.set(LLM_TARGET_HEADER, target);
+
+      return window.fetch(llmProxyUrl(), { ...init, headers, credentials: "same-origin" });
+    }
+  },
   window: {
     setZoom: async (factor) => {
       document.body.style.setProperty("zoom", String(factor));
@@ -71,13 +132,16 @@ export const platform: Platform = {
   },
   credentials: {
     storeApiKey: async (id, apiKey) => {
-      if (apiKey) {
-        sessionApiKeys.set(id, apiKey);
-      } else {
-        sessionApiKeys.delete(id);
-      }
+      await serverApi.storeSecret(id, apiKey);
+      secretStatus = null;
     },
-    getApiKey: async (id) => sessionApiKeys.get(id) ?? ""
+    // The key itself stays on the server; what comes back stands for it.
+    getApiKey: async (id) => ((await readSecretStatus()).ids.includes(id) ? secretRef(id) : ""),
+    getStatus: async (): Promise<CredentialsStatus> => {
+      const status = await readSecretStatus();
+
+      return { state: status.state, discardedAt: status.discardedAt };
+    }
   },
   portable: {
     getStatus: async () => ({ mode: "off", configDir: "" })
@@ -103,8 +167,32 @@ export const platform: Platform = {
 
         throw new SessionError("error", error instanceof Error ? error.message : String(error));
       }
+
+      // A new session brings a new key cookie, so whatever was known about
+      // the stored keys was answered under the old one.
+      secretStatus = null;
     },
-    logout: () => serverApi.logout(),
+    logout: async () => {
+      await serverApi.logout();
+      secretStatus = null;
+    },
+    changePassword: async (currentPassword, newPassword) => {
+      try {
+        await serverApi.changePassword(currentPassword, newPassword);
+      } catch (error) {
+        if (error instanceof SessionError) {
+          throw error;
+        }
+
+        if (error instanceof ApiError) {
+          throw new SessionError(error.code === "weak_password" ? "weak_password" : "error", error.message);
+        }
+
+        throw new SessionError("error", error instanceof Error ? error.message : String(error));
+      }
+
+      secretStatus = null;
+    },
     onUnauthorized
   }
 };

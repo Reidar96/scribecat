@@ -158,6 +158,7 @@
     "tabRag": "ナレッジベース",
     "tabVersioning": "バージョン",
     "tabVault": "開いているフォルダー",
+    "tabAccount": "アカウント",
     "vaultNavNoFolder": "フォルダーが開かれていません",
     "moreInfo": "詳しく見る",
     "language": "言語",
@@ -217,6 +218,10 @@
     "apiKey": "API キー",
     "apiKeyPlaceholder": "API キーを貼り付け",
     "apiKeyShort": "このデバイスにのみローカル保存され、選択したプロバイダーにのみ送信されます。",
+    "apiKeyServerHint": "ログインパスワードを使って、サーバーのデータフォルダーに暗号化して保存されます。プロバイダーへはサーバーが送信し、ブラウザーが目にすることはありません。",
+    "apiKeyStored": "保存済み（サーバーに保管）",
+    "apiKeyLocked": "このセッションでは保存されたキーを読み取れません。もう一度サインインしてください。",
+    "apiKeyDiscarded": "パスワードのリセット後、保存されたキーを読み取れなくなったため破棄されました。もう一度入力してください。",
     "showApiKey": "API キーを表示",
     "hideApiKey": "API キーを隠す",
     "cloudProviderNotice": "{{provider}} を使用すると、選択したテキストまたはドキュメントがデバイスの外部に送信され、{{provider}} の利用規約に従って処理されます。",
@@ -941,7 +946,21 @@
     "signingIn": "サインイン中 …",
     "wrongPassword": "パスワードが正しくありません。",
     "serverUnreachable": "サーバーに接続できません。",
-    "failed": "サインインに失敗しました。"
+    "failed": "サインインに失敗しました。",
+    "tooManyAttempts_one": "失敗が多すぎます。1 分後にもう一度お試しください。",
+    "tooManyAttempts_other": "失敗が多すぎます。{{count}} 分後にもう一度お試しください。"
+  },
+  "account": {
+    "changePassword": "パスワードを変更",
+    "changePasswordHint": "ほかのサインイン済みの端末はすべてサインアウトされます。保存された API キーは新しいパスワードで暗号化し直され、そのまま使えます。",
+    "currentPassword": "現在のパスワード",
+    "newPassword": "新しいパスワード",
+    "repeatPassword": "新しいパスワード（確認）",
+    "mismatch": "新しいパスワードが一致しません。",
+    "wrongCurrentPassword": "現在のパスワードが違います。",
+    "changeFailed": "パスワードを変更できませんでした。",
+    "changed": "パスワードを変更しました。ほかのセッションはすべて終了しました。",
+    "changing": "変更中 …"
   },
   "platform": {
     "notAvailable": "この機能は、このエディションの ScribeDog では利用できません。",

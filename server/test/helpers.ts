@@ -8,6 +8,8 @@ import { buildApp } from "../src/app.js";
 import { openAuthStore, type AuthStore } from "../src/auth/authStore.js";
 import { SESSION_COOKIE_NAME } from "../src/auth/session.js";
 import { loadConfig, type ServerConfig } from "../src/config.js";
+import { KEY_COOKIE_NAME } from "../src/secrets/keyCookie.js";
+import { openSecretStore, type SecretStore } from "../src/secrets/secretStore.js";
 import { openVault, type Vault } from "../src/vault/files.js";
 import { createVaultWatcher, type VaultWatcher } from "../src/vault/watcher.js";
 
@@ -20,10 +22,14 @@ export type TestContext = {
   config: ServerConfig;
   vault: Vault;
   authStore: AuthStore;
+  secrets: SecretStore;
   app: FastifyInstance;
   /** Only when created with `watch: true`. */
   watcher: VaultWatcher | null;
-  /** Logs in and returns the Cookie header value for subsequent requests. */
+  /**
+   * Logs in and returns the Cookie header value for subsequent requests,
+   * session token and key cookie together, the way a browser sends them.
+   */
   login(password?: string): Promise<string>;
   cleanup(): Promise<void>;
 };
@@ -52,14 +58,23 @@ export async function createTestContext(
   });
   const vault = await openVault(config.vaultPath);
   const authStore = await openAuthStore({ vaultPath: vault.realPath, initPassword: config.initPassword, log: silentLog });
+  const secrets = openSecretStore(vault.realPath);
   const watcher = options.watch ? createVaultWatcher(vault.realPath, silentLog) : null;
-  const app = await buildApp({ config, authStore, vault, watcher: watcher ?? undefined, webDistDir: options.webDistDir });
+  const app = await buildApp({
+    config,
+    authStore,
+    secrets,
+    vault,
+    watcher: watcher ?? undefined,
+    webDistDir: options.webDistDir
+  });
 
   return {
     vaultPath,
     config,
     vault,
     authStore,
+    secrets,
     app,
     watcher,
     async login(password = TEST_PASSWORD) {
@@ -79,7 +94,11 @@ export async function createTestContext(
         throw new Error("login did not set a session cookie");
       }
 
-      return `${cookie.name}=${cookie.value}`;
+      const keyCookie = response.cookies.find((entry) => entry.name === KEY_COOKIE_NAME && entry.value.length > 0);
+
+      return [`${cookie.name}=${cookie.value}`, keyCookie ? `${keyCookie.name}=${keyCookie.value}` : null]
+        .filter((entry): entry is string => entry !== null)
+        .join("; ");
     },
     async cleanup() {
       watcher?.close();

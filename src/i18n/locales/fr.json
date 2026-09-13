@@ -158,6 +158,7 @@
     "tabRag": "Base de connaissances",
     "tabVersioning": "Versions",
     "tabVault": "Dossier ouvert",
+    "tabAccount": "Compte",
     "vaultNavNoFolder": "Aucun dossier ouvert",
     "moreInfo": "En savoir plus",
     "language": "Langue",
@@ -218,6 +219,10 @@
     "apiKey": "Clé API",
     "apiKeyPlaceholder": "Collez la clé API",
     "apiKeyShort": "Stockée uniquement en local sur cet appareil et envoyée uniquement au fournisseur sélectionné.",
+    "apiKeyServerHint": "Conservée chiffrée dans le dossier de données du serveur, avec votre mot de passe de connexion. Le serveur l'envoie au fournisseur, le navigateur ne la voit jamais.",
+    "apiKeyStored": "Enregistrée (reste sur le serveur)",
+    "apiKeyLocked": "Les clés enregistrées ne peuvent pas être lues dans cette session. Reconnectez-vous.",
+    "apiKeyDiscarded": "Après la réinitialisation du mot de passe, les clés enregistrées n'étaient plus lisibles et ont été supprimées. Veuillez les saisir à nouveau.",
     "showApiKey": "Afficher la clé API",
     "hideApiKey": "Masquer la clé API",
     "cloudProviderNotice": "Avec {{provider}}, le texte sélectionné ou le document quitte votre appareil et est traité conformément aux conditions d'utilisation de {{provider}}.",
@@ -942,7 +947,21 @@
     "signingIn": "Connexion …",
     "wrongPassword": "Mot de passe incorrect.",
     "serverUnreachable": "Le serveur est injoignable.",
-    "failed": "La connexion a échoué."
+    "failed": "La connexion a échoué.",
+    "tooManyAttempts_one": "Trop de tentatives échouées. Réessayez dans une minute.",
+    "tooManyAttempts_other": "Trop de tentatives échouées. Réessayez dans {{count}} minutes."
+  },
+  "account": {
+    "changePassword": "Changer le mot de passe",
+    "changePasswordHint": "Tous les autres appareils connectés seront déconnectés. Les clés API enregistrées sont conservées et rechiffrées avec le nouveau mot de passe.",
+    "currentPassword": "Mot de passe actuel",
+    "newPassword": "Nouveau mot de passe",
+    "repeatPassword": "Répéter le nouveau mot de passe",
+    "mismatch": "Les deux nouveaux mots de passe ne correspondent pas.",
+    "wrongCurrentPassword": "Le mot de passe actuel est incorrect.",
+    "changeFailed": "Le mot de passe n'a pas pu être changé.",
+    "changed": "Mot de passe changé. Toutes les autres sessions ont pris fin.",
+    "changing": "Changement …"
   },
   "platform": {
     "notAvailable": "Cette fonction n'est pas disponible dans cette édition de ScribeDog.",

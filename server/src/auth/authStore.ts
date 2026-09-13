@@ -19,8 +19,8 @@ type AuthFile = {
   passwordHash: string;
   /**
    * Every session token carries the epoch it was issued under. Changing the
-   * password (a later stage) bumps this counter, which invalidates every
-   * existing session at once without a server-side session store.
+   * password bumps this counter, which invalidates every existing session at
+   * once without a server-side session store.
    */
   sessionEpoch: number;
   updatedAt: string;
@@ -65,8 +65,19 @@ function isAuthFile(value: unknown): value is AuthFile {
 export type AuthStore = {
   /** Secret behind the HMAC on session tokens; generated once per vault. */
   readonly sessionSecret: Buffer;
+  /**
+   * Read on every request through the guard, so it has to be a live value:
+   * changing the password bumps it and every token issued under the old epoch
+   * stops verifying.
+   */
   readonly sessionEpoch: number;
   verifyPassword(password: string): Promise<boolean>;
+  /**
+   * Replaces the password and bumps the session epoch. The caller has already
+   * verified the current password (and re-wrapped the stored API keys, see
+   * secrets/secretStore.ts) by the time this runs.
+   */
+  changePassword(newPassword: string): Promise<void>;
 };
 
 export type OpenAuthStoreOptions = {
@@ -146,9 +157,26 @@ export async function openAuthStore(options: OpenAuthStoreOptions): Promise<Auth
     options.log.info("Initial password stored from SCRIBEDOG_INIT_PASSWORD. The variable can now be removed.");
   }
 
+  let current = authFile;
+
   return {
     sessionSecret,
-    sessionEpoch: authFile.sessionEpoch,
-    verifyPassword: (password) => verifyPassword(password, authFile.passwordHash)
+    get sessionEpoch() {
+      return current.sessionEpoch;
+    },
+    verifyPassword: (password) => verifyPassword(password, current.passwordHash),
+    async changePassword(newPassword: string) {
+      assertPasswordPolicy(newPassword);
+
+      const next: AuthFile = {
+        version: 1,
+        passwordHash: await hashPassword(newPassword),
+        sessionEpoch: current.sessionEpoch + 1,
+        updatedAt: new Date().toISOString()
+      };
+
+      await writeFileAtomically(authFilePath, `${JSON.stringify(next, null, 2)}\n`);
+      current = next;
+    }
   };
 }

@@ -10,7 +10,8 @@ export type SettingsTab =
   | "assistants"
   | "rag"
   | "versioning"
-  | "vault";
+  | "vault"
+  | "account";
 
 export type SettingsGroup = "application" | "ai" | "folder";
 
@@ -20,19 +21,21 @@ export type SettingsGroup = "application" | "ai" | "folder";
  * its entries change meaning with the open folder.
  */
 export const SETTINGS_NAV: { group: SettingsGroup; tabs: SettingsTab[] }[] = [
-  { group: "application", tabs: ["application", "appearance", "fonts", "shortcuts"] },
+  { group: "application", tabs: ["application", "appearance", "fonts", "shortcuts", "account"] },
   { group: "ai", tabs: ["ai", "assistants", "rag"] },
   { group: "folder", tabs: ["versioning", "vault"] }
 ];
 
 /**
  * Entries that stand on a capability the shell may not have. The knowledge
- * base reads its index from disk, so the browser has no entry for it at all.
+ * base reads its index from disk, so the browser has no entry for it at all;
+ * the account entry only exists where there is a login to change.
  * Filtering here rather than in the navigation keeps the arrow keys from
  * landing on an entry that is not on screen.
  */
 const SETTINGS_TAB_FEATURE: Partial<Record<SettingsTab, keyof PlatformFeatures>> = {
-  rag: "knowledgeIndex"
+  rag: "knowledgeIndex",
+  account: "session"
 };
 
 export function isSettingsTabAvailable(tab: SettingsTab): boolean {
@@ -53,7 +56,15 @@ export const SETTINGS_TAB_ORDER: SettingsTab[] = SETTINGS_NAV_VISIBLE.flatMap((g
  * only mislead — on the knowledge base tab it would even look like the button
  * that applies its connection.
  */
-export const SELF_SAVING_TABS: SettingsTab[] = ["fonts", "shortcuts", "assistants", "rag", "versioning", "vault"];
+export const SELF_SAVING_TABS: SettingsTab[] = [
+  "fonts",
+  "shortcuts",
+  "assistants",
+  "rag",
+  "versioning",
+  "vault",
+  "account"
+];
 
 export const SETTINGS_TAB_LABEL_KEY: Record<SettingsTab, string> = {
   application: "settingsDialog.tabApplication",
@@ -64,7 +75,8 @@ export const SETTINGS_TAB_LABEL_KEY: Record<SettingsTab, string> = {
   assistants: "settingsDialog.tabAssistants",
   rag: "settingsDialog.tabRag",
   versioning: "settingsDialog.tabVersioning",
-  vault: "settingsDialog.tabVault"
+  vault: "settingsDialog.tabVault",
+  account: "settingsDialog.tabAccount"
 };
 
 export const SETTINGS_GROUP_LABEL_KEY: Record<SettingsGroup, string> = {

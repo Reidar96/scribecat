@@ -1,0 +1,84 @@
+name: Release server image
+
+# The server edition ships as a container image rather than an installer, but
+# it carries the same version as the app (the web client is the app's own
+# frontend), so it rides on the same tag as the desktop release.
+#
+# Only exact versions are published: no "latest", no moving major/minor tags.
+# An operator pins one version, and an upgrade is a deliberate edit of the
+# compose file, which is also what makes the data-version downgrade check in
+# the server meaningful.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to build and push, e.g. 0.11.0'
+        required: true
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Pushing to ghcr.io as the repository itself; no secret needed for it.
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Determine version
+        id: version
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            version="${{ inputs.version }}"
+          else
+            version="${GITHUB_REF_NAME#v}"
+          fi
+
+          manifest=$(node -p "require('./package.json').version")
+
+          if [ "$version" != "$manifest" ]; then
+            echo "Tag says $version but package.json says $manifest; bump the manifests first (see DOCS/RELEASING.md)." >&2
+            exit 1
+          fi
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          # The whole repository: the image needs the frontend under /src as
+          # well as /server (see server/Dockerfile).
+          context: .
+          file: server/Dockerfile
+          # arm64 is not an afterthought here: a Raspberry Pi is the typical
+          # box this runs on.
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/scribedog-server:${{ steps.version.outputs.version }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/scribedog-server:${{ steps.version.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

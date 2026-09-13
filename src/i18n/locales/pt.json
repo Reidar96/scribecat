@@ -158,6 +158,7 @@
     "tabRag": "Base de conhecimento",
     "tabVersioning": "Versões",
     "tabVault": "Pasta aberta",
+    "tabAccount": "Conta",
     "vaultNavNoFolder": "Nenhuma pasta aberta",
     "moreInfo": "Mais informações",
     "language": "Idioma",
@@ -218,6 +219,10 @@
     "apiKey": "Chave de API",
     "apiKeyPlaceholder": "Cole a chave de API",
     "apiKeyShort": "Armazenada apenas localmente neste dispositivo e enviada somente ao provedor selecionado.",
+    "apiKeyServerHint": "Guardada cifrada na pasta de dados do servidor, com a sua palavra-passe de acesso. O servidor envia-a ao provedor; o navegador nunca a vê.",
+    "apiKeyStored": "Guardada (fica no servidor)",
+    "apiKeyLocked": "As chaves guardadas não podem ser lidas nesta sessão. Inicie sessão novamente.",
+    "apiKeyDiscarded": "Depois de repor a palavra-passe, as chaves guardadas deixaram de ser legíveis e foram descartadas. Introduza-as de novo.",
     "showApiKey": "Mostrar chave de API",
     "hideApiKey": "Ocultar chave de API",
     "cloudProviderNotice": "Com {{provider}}, o texto ou documento selecionado sai do seu dispositivo e é processado de acordo com os termos de uso do {{provider}}.",
@@ -942,7 +947,21 @@
     "signingIn": "Entrando …",
     "wrongPassword": "Senha incorreta.",
     "serverUnreachable": "Não foi possível alcançar o servidor.",
-    "failed": "Falha ao entrar."
+    "failed": "Falha ao entrar.",
+    "tooManyAttempts_one": "Demasiadas tentativas falhadas. Tente novamente dentro de um minuto.",
+    "tooManyAttempts_other": "Demasiadas tentativas falhadas. Tente novamente dentro de {{count}} minutos."
+  },
+  "account": {
+    "changePassword": "Alterar palavra-passe",
+    "changePasswordHint": "Todos os outros dispositivos com sessão iniciada são desligados. As chaves de API guardadas são mantidas e cifradas de novo com a nova palavra-passe.",
+    "currentPassword": "Palavra-passe atual",
+    "newPassword": "Nova palavra-passe",
+    "repeatPassword": "Repetir a nova palavra-passe",
+    "mismatch": "As duas novas palavras-passe não coincidem.",
+    "wrongCurrentPassword": "A palavra-passe atual está errada.",
+    "changeFailed": "Não foi possível alterar a palavra-passe.",
+    "changed": "Palavra-passe alterada. Todas as outras sessões terminaram.",
+    "changing": "A alterar …"
   },
   "platform": {
     "notAvailable": "Este recurso não está disponível nesta edição do ScribeDog.",

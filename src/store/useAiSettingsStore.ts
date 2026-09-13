@@ -1,4 +1,5 @@
 import { platform } from "@/platform";
+import { isSecretRef } from "@/platform/secretRef";
 import { create } from "zustand";
 
 const AI_SETTINGS_STORAGE_KEY = "scribedog-ai-settings";
@@ -182,7 +183,28 @@ function persistNonSecretSettings(settings: AiSettings) {
 }
 
 function storeApiKeyForProvider(provider: AiProvider, apiKey: string) {
-  void platform.credentials.storeApiKey(provider, apiKey).catch(() => undefined);
+  // The server edition hands out a placeholder instead of the key (see
+  // platform/secretRef.ts). Getting it back unchanged means the user did not
+  // touch the field, so there is nothing to store; writing it would replace
+  // the real key with the placeholder.
+  if (isSecretRef(apiKey)) {
+    return;
+  }
+
+  void platform.credentials
+    .storeApiKey(provider, apiKey)
+    .then(async () => {
+      // Where the key does not live in the tab, reading it back yields that
+      // placeholder. Taking it here means the typed key is in memory for the
+      // save and no longer, instead of until the next reload.
+      const stored = await platform.credentials.getApiKey(provider);
+      const current = useAiSettingsStore.getState().settings;
+
+      if (stored && stored !== apiKey && current.provider === provider && current.apiKey === apiKey) {
+        useAiSettingsStore.setState({ settings: { ...current, apiKey: stored } });
+      }
+    })
+    .catch(() => undefined);
 }
 
 export async function loadApiKeyForProvider(provider: AiProvider): Promise<string> {

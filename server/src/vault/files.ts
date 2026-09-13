@@ -1,9 +1,9 @@
 import { lstat, mkdir, readdir, readFile, realpath, rename, rm, rmdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { assertVaultPath, resolveVaultEntry, VaultPathError } from "./paths.js";
+import { DATA_VERSION_RELATIVE_PATH } from "./dataVersion.js";
+import { assertVaultPath, resolveVaultEntry, VAULT_META_DIR_NAME, VaultPathError } from "./paths.js";
 
-const VAULT_META_DIR_NAME = ".scribedog";
 
 export type MarkdownFileRecord = {
   /** Vault-relative, forward slashes: "Notes/Idea.md". */
@@ -166,13 +166,20 @@ export async function openVault(vaultPath: string): Promise<Vault> {
   }
 
   /**
-   * The root and the metadata directory itself never go away or get a new
-   * name through the API: removing `.scribedog` would take the server's own
-   * files with it, and the frontend never asks for either.
+   * Entries the API never changes: the root and the metadata directory itself
+   * (removing `.scribedog` would take the server's own files with it), and the
+   * data-version marker, which belongs to the server's startup check rather
+   * than to any client. The frontend asks for none of them.
    */
   function assertMutableEntry(relativePath: string): void {
-    if (relativePath === "" || relativePath.toLowerCase() === VAULT_META_DIR_NAME) {
+    const normalized = relativePath.toLowerCase();
+
+    if (relativePath === "" || normalized === VAULT_META_DIR_NAME) {
       throw new VaultPathError(`"${relativePath || "/"}" cannot be renamed or removed.`);
+    }
+
+    if (normalized === DATA_VERSION_RELATIVE_PATH.toLowerCase()) {
+      throw new VaultPathError(`"${relativePath}" belongs to the server and cannot be changed.`);
     }
   }
 
@@ -261,6 +268,7 @@ export async function openVault(vaultPath: string): Promise<Vault> {
 
     async writeText(rawPath, content) {
       const { relativePath, absolutePath } = await resolve(rawPath);
+      assertMutableEntry(relativePath);
 
       return writeAtomically(absolutePath, content, relativePath);
     },
@@ -277,6 +285,7 @@ export async function openVault(vaultPath: string): Promise<Vault> {
 
     async writeBytes(rawPath, data) {
       const { relativePath, absolutePath } = await resolve(rawPath);
+      assertMutableEntry(relativePath);
 
       return writeAtomically(absolutePath, data, relativePath);
     },

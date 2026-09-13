@@ -16,8 +16,10 @@ export class PlatformUnavailableError extends Error {
 /** A refused login or a request made without a valid session. */
 export class SessionError extends Error {
   constructor(
-    readonly code: "invalid_password" | "unauthorized" | "unreachable" | "error",
-    message: string
+    readonly code: "invalid_password" | "weak_password" | "too_many_attempts" | "unauthorized" | "unreachable" | "error",
+    message: string,
+    /** Only for "too_many_attempts": how long the server wants us to wait. */
+    readonly retryAfterSeconds?: number
   ) {
     super(message);
     this.name = "SessionError";

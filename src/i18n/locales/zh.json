@@ -158,6 +158,7 @@
     "tabRag": "知识库",
     "tabVersioning": "版本",
     "tabVault": "打开的文件夹",
+    "tabAccount": "账户",
     "vaultNavNoFolder": "未打开文件夹",
     "moreInfo": "了解更多",
     "language": "语言",
@@ -217,6 +218,10 @@
     "apiKey": "API 密钥",
     "apiKeyPlaceholder": "粘贴 API 密钥",
     "apiKeyShort": "仅保存在本设备上，并仅发送给所选提供商。",
+    "apiKeyServerHint": "使用你的登录密码加密保存在服务器的数据文件夹中。由服务器发送给提供商，浏览器始终看不到它。",
+    "apiKeyStored": "已保存（保留在服务器上）",
+    "apiKeyLocked": "本次会话无法读取已保存的密钥。请重新登录。",
+    "apiKeyDiscarded": "重置密码后，已保存的密钥无法再读取并已被丢弃。请重新输入。",
     "showApiKey": "显示 API 密钥",
     "hideApiKey": "隐藏 API 密钥",
     "cloudProviderNotice": "使用 {{provider}} 时，选中的文本或文档将离开您的设备，并按照 {{provider}} 的使用条款进行处理。",
@@ -941,7 +946,21 @@
     "signingIn": "正在登录 …",
     "wrongPassword": "密码错误。",
     "serverUnreachable": "无法连接到服务器。",
-    "failed": "登录失败。"
+    "failed": "登录失败。",
+    "tooManyAttempts_one": "失败次数过多。请在一分钟后重试。",
+    "tooManyAttempts_other": "失败次数过多。请在 {{count}} 分钟后重试。"
+  },
+  "account": {
+    "changePassword": "修改密码",
+    "changePasswordHint": "其他已登录的设备都会被登出。已保存的 API 密钥会保留，并用新密码重新加密。",
+    "currentPassword": "当前密码",
+    "newPassword": "新密码",
+    "repeatPassword": "再次输入新密码",
+    "mismatch": "两次输入的新密码不一致。",
+    "wrongCurrentPassword": "当前密码不正确。",
+    "changeFailed": "无法修改密码。",
+    "changed": "密码已修改，其他会话均已结束。",
+    "changing": "正在修改 …"
   },
   "platform": {
     "notAvailable": "此功能在这个版本的 ScribeDog 中不可用。",

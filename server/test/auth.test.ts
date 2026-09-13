@@ -202,8 +202,10 @@ describe("auth routes", () => {
   });
 
   it("rejects a forged cookie", async () => {
-    const cookie = await context.login();
-    const forged = `${cookie.slice(0, -4)}AAAA`;
+    // The cookie header carries the session token and the key cookie; only
+    // the session token decides whether a request is let through.
+    const session = (await context.login()).split("; ").find((entry) => entry.startsWith(`${SESSION_COOKIE_NAME}=`)) ?? "";
+    const forged = `${session.slice(0, -4)}AAAA`;
 
     expect((await context.app.inject({ method: "GET", url: "/api/files", headers: { cookie: forged } })).statusCode).toBe(401);
     expect(

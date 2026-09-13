@@ -158,6 +158,7 @@
     "tabRag": "Base di conoscenza",
     "tabVersioning": "Versioni",
     "tabVault": "Cartella aperta",
+    "tabAccount": "Account",
     "vaultNavNoFolder": "Nessuna cartella aperta",
     "moreInfo": "Maggiori informazioni",
     "language": "Lingua",
@@ -218,6 +219,10 @@
     "apiKey": "Chiave API",
     "apiKeyPlaceholder": "Incolla la chiave API",
     "apiKeyShort": "Viene memorizzata solo localmente su questo dispositivo e inviata unicamente al provider selezionato.",
+    "apiKeyServerHint": "Viene salvata cifrata nella cartella dati del server, con la tua password di accesso. È il server a inviarla al provider; il browser non la vede mai.",
+    "apiKeyStored": "Salvata (resta sul server)",
+    "apiKeyLocked": "In questa sessione non è possibile leggere le chiavi salvate. Accedi di nuovo.",
+    "apiKeyDiscarded": "Dopo la reimpostazione della password le chiavi salvate non erano più leggibili e sono state eliminate. Inseriscile di nuovo.",
     "showApiKey": "Mostra chiave API",
     "hideApiKey": "Nascondi chiave API",
     "cloudProviderNotice": "Con {{provider}}, il testo o il documento selezionato lascia il tuo dispositivo e viene elaborato secondo i termini di utilizzo di {{provider}}.",
@@ -942,7 +947,21 @@
     "signingIn": "Accesso in corso …",
     "wrongPassword": "Password errata.",
     "serverUnreachable": "Il server non è raggiungibile.",
-    "failed": "Accesso non riuscito."
+    "failed": "Accesso non riuscito.",
+    "tooManyAttempts_one": "Troppi tentativi falliti. Riprova tra un minuto.",
+    "tooManyAttempts_other": "Troppi tentativi falliti. Riprova tra {{count}} minuti."
+  },
+  "account": {
+    "changePassword": "Cambia password",
+    "changePasswordHint": "Tutti gli altri dispositivi collegati vengono disconnessi. Le chiavi API salvate restano e vengono cifrate di nuovo con la nuova password.",
+    "currentPassword": "Password attuale",
+    "newPassword": "Nuova password",
+    "repeatPassword": "Ripeti la nuova password",
+    "mismatch": "Le due nuove password non coincidono.",
+    "wrongCurrentPassword": "La password attuale non è corretta.",
+    "changeFailed": "Non è stato possibile cambiare la password.",
+    "changed": "Password cambiata. Tutte le altre sessioni sono terminate.",
+    "changing": "Modifica in corso …"
   },
   "platform": {
     "notAvailable": "Questa funzione non è disponibile in questa edizione di ScribeDog.",

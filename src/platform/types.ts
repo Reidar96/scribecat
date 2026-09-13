@@ -199,13 +199,35 @@ export type SpellcheckDictionaryStatus = {
 };
 
 /**
- * The OS credential store for API keys. The web platform has none and keeps
- * keys in memory for the session; encrypted server-side storage is a later
- * stage of the server edition.
+ * "ready": keys can be read and written.
+ * "locked": the store is there but this session cannot open it. In the
+ * browser that means the session predates the encrypted storage or a password
+ * change; signing in again is the way back. The desktop credential store is
+ * never locked.
+ */
+export type CredentialsStatus = {
+  state: "ready" | "locked";
+  /**
+   * Set when stored keys had to be discarded because the password was reset
+   * (the key that encrypted them is gone with the old password). The settings
+   * dialog says so once; entering a key clears it.
+   */
+  discardedAt: string | null;
+};
+
+/**
+ * Where API keys are kept: the OS credential store on the desktop, encrypted
+ * in the data volume on the server (see server/src/secrets/).
+ *
+ * `getApiKey` does not promise to return the key itself. The server edition
+ * answers with a placeholder (see ../secretRef.ts) that stands for "a key is
+ * stored", travels through the AI client unchanged and is resolved by the
+ * server on its way out. Anything that displays the value has to handle that.
  */
 export type CredentialsApi = {
   storeApiKey(id: string, apiKey: string): Promise<void>;
   getApiKey(id: string): Promise<string>;
+  getStatus(): Promise<CredentialsStatus>;
 };
 
 /**
@@ -229,6 +251,14 @@ export type SessionApi = {
   /** Rejects with `SessionError` on a wrong password. */
   login(password: string): Promise<void>;
   logout(): Promise<void>;
+  /**
+   * Replaces the password. Every other session ends (the server bumps the
+   * session epoch), this one keeps working, and the stored API keys are
+   * re-encrypted under the new password. Rejects with `SessionError`
+   * ("invalid_password" for a wrong current password, "weak_password" for a
+   * new one the server refuses).
+   */
+  changePassword(currentPassword: string, newPassword: string): Promise<void>;
   /** Fires when any request is refused for lack of a session. */
   onUnauthorized(handler: () => void): () => void;
 };

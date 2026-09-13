@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import { AssistantsSettings } from "@/components/AssistantsSettings";
+import { AccountSettings } from "@/components/web/AccountSettings";
 import { LicensesDialog } from "@/components/LicensesDialog";
 import { RagSettings } from "@/components/RagSettings";
 import { AppearanceSettings } from "@/components/settings/AppearanceSettings";
@@ -51,9 +52,14 @@ import { persistLanguage, type SupportedLanguage } from "@/i18n";
 import { useUpdateSettingsStore } from "@/store/useUpdateSettingsStore";
 import { isWindowsPlatform } from "@/lib/platform";
 import { platform } from "@/platform";
+import { isSecretRef } from "@/platform/secretRef";
+import type { CredentialsStatus } from "@/platform/types";
 import { useAppVersion } from "@/hooks/useAppVersion";
 
 export type { SettingsTab } from "@/components/settings/settingsTabs";
+
+/** Nothing to report where the OS keeps the keys; see CredentialsApi. */
+const READY_CREDENTIALS: CredentialsStatus = { state: "ready", discardedAt: null };
 
 /** The agent's own settings, split off so the dialog can reset them as one. */
 type AgentSettings = Pick<
@@ -385,9 +391,14 @@ export function SettingsDialog({
   const [thinkingMode, setThinkingMode] = useState(settings.thinkingMode);
   const [agent, setAgent] = useState<AgentSettings>(() => pickAgentSettings(settings));
 
+  // In the server edition the field never holds the key itself, only a
+  // placeholder standing for "one is stored" (see platform/secretRef.ts).
+  const isApiKeyStored = isSecretRef(apiKey);
+
   const [licensesOpen, setLicensesOpen] = useState(false);
   const [portableMode, setPortableMode] = useState<PortableMode>("off");
   const [portableConfigDir, setPortableConfigDir] = useState("");
+  const [credentialsStatus, setCredentialsStatus] = useState<CredentialsStatus>(READY_CREDENTIALS);
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [modelsError, setModelsError] = useState<string | null>(null);
@@ -444,6 +455,34 @@ export function SettingsDialog({
     setModelsError(null);
     void loadModels(settings.provider, settings.apiUrl, settings.apiKey);
   }, [open, settings, initialTab]);
+
+  // Where the keys live can be in a state worth reporting: the server
+  // edition keeps them encrypted and needs a fresh sign-in to read them
+  // after a password change, and loses them to a password reset.
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    let active = true;
+
+    void platform.credentials
+      .getStatus()
+      .then((status) => {
+        if (active) {
+          setCredentialsStatus(status);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setCredentialsStatus(READY_CREDENTIALS);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [open, apiKey]);
 
   useEffect(() => {
     if (!open) {
@@ -614,6 +653,10 @@ export function SettingsDialog({
               <SettingsPage tab="vault">
                 <VaultSettings />
               </SettingsPage>
+            ) : activeTab === "account" ? (
+              <SettingsPage tab="account">
+                <AccountSettings />
+              </SettingsPage>
             ) : (
               <SettingsPage tab="ai">
                 {/* Two areas on this page: the connection to the model, and
@@ -674,29 +717,56 @@ export function SettingsDialog({
                   </SettingRow>
 
                   {isCloudProvider(provider) ? (
-                    <SettingRow full label={t("settingsDialog.apiKey")} hint={t("settingsDialog.apiKeyShort")}>
+                    <SettingRow
+                      full
+                      label={t("settingsDialog.apiKey")}
+                      hint={
+                        platform.features.session
+                          ? t("settingsDialog.apiKeyServerHint")
+                          : t("settingsDialog.apiKeyShort")
+                      }
+                    >
                       {({ id, describedBy }) => (
-                        <div className="ai-dialog__model-field">
-                          <input
-                            id={id}
-                            type={showApiKey ? "text" : "password"}
-                            value={apiKey}
-                            autoComplete="off"
-                            onChange={(event) => setApiKey(event.target.value)}
-                            onBlur={() => void loadModels(provider, apiUrl, apiKey)}
-                            placeholder={t("settingsDialog.apiKeyPlaceholder")}
-                            aria-describedby={describedBy}
-                          />
-                          <button
-                            type="button"
-                            className="ai-dialog__model-refresh"
-                            onClick={() => setShowApiKey((value) => !value)}
-                            aria-label={t(showApiKey ? "settingsDialog.hideApiKey" : "settingsDialog.showApiKey")}
-                            title={t(showApiKey ? "settingsDialog.hideApiKey" : "settingsDialog.showApiKey")}
-                          >
-                            {showApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
-                          </button>
-                        </div>
+                        <>
+                          <div className="ai-dialog__model-field">
+                            {/* A stored key the server keeps to itself shows as an
+                                empty field with a "stored" placeholder: there is no
+                                value to display, and typing replaces it. */}
+                            <input
+                              id={id}
+                              type={showApiKey && !isApiKeyStored ? "text" : "password"}
+                              value={isApiKeyStored ? "" : apiKey}
+                              autoComplete="off"
+                              onChange={(event) => setApiKey(event.target.value)}
+                              onBlur={() => void loadModels(provider, apiUrl, apiKey)}
+                              placeholder={
+                                isApiKeyStored ? t("settingsDialog.apiKeyStored") : t("settingsDialog.apiKeyPlaceholder")
+                              }
+                              aria-describedby={describedBy}
+                              data-testid="api-key"
+                            />
+                            {isApiKeyStored ? null : (
+                              <button
+                                type="button"
+                                className="ai-dialog__model-refresh"
+                                onClick={() => setShowApiKey((value) => !value)}
+                                aria-label={t(showApiKey ? "settingsDialog.hideApiKey" : "settingsDialog.showApiKey")}
+                                title={t(showApiKey ? "settingsDialog.hideApiKey" : "settingsDialog.showApiKey")}
+                              >
+                                {showApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                              </button>
+                            )}
+                          </div>
+                          {credentialsStatus.state === "locked" ? (
+                            <span className="ai-dialog__error" role="status">
+                              {t("settingsDialog.apiKeyLocked")}
+                            </span>
+                          ) : credentialsStatus.discardedAt ? (
+                            <span className="ai-dialog__error" role="status">
+                              {t("settingsDialog.apiKeyDiscarded")}
+                            </span>
+                          ) : null}
+                        </>
                       )}
                     </SettingRow>
                   ) : null}

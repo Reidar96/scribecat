@@ -6,13 +6,13 @@ instance.
 
 > **Status: early.** The web app is the desktop app's own frontend, so it
 > looks and works the same, but the server behind it is still growing. Today
-> it covers login/logout and the whole file side: the file tree, creating,
-> renaming, moving and deleting notes and folders, images (paste and drop),
-> manual sort order, version history, and live updates when files change on
-> disk. The AI features are not adapted for the browser yet (an API key
-> entered in the settings is kept in memory for the tab only), the chat agent
-> and the knowledge base are not wired up, and there is no rate limiting on
-> the login yet. Features that only exist natively (local folders,
+> it covers the whole file side (the file tree, creating, renaming, moving and
+> deleting notes and folders, images, manual sort order, version history, live
+> updates when files change on disk), the account side (login, logout,
+> changing the password, brute-force protection) and the cloud AI providers
+> (rewrite, insert, grammar check), with the API keys stored encrypted on the
+> server. Not there yet: the chat agent and its vault tools, the knowledge
+> base, and local AI models. Features that only exist natively (local folders,
 > import from local files, export to a local folder, the image file picker,
 > dictation, the updater) are hidden.
 
@@ -62,8 +62,13 @@ run it without the bundled compose file):
 | `SCRIBEDOG_VAULT_PATH` | `/data` | Folder with the notes. |
 | `SCRIBEDOG_HOST` / `SCRIBEDOG_PORT` | `0.0.0.0` / `3000` | Where the server listens. |
 | `SCRIBEDOG_COOKIE_SECURE` | `true` | Session cookie carries the `Secure` flag. Set to `false` only for plain-http development on localhost. |
-| `SCRIBEDOG_TRUST_PROXY` | `true` | Trust `X-Forwarded-*` headers from the reverse proxy. |
+| `SCRIBEDOG_TRUST_PROXY` | `1` | How many reverse proxies stand in front. The bundled Caddy is one. `false` for none (the server is reached directly); a number, or a list of proxy addresses, otherwise. It decides which address a request counts as, which is what the login lock is applied to. |
 | `SCRIBEDOG_SESSION_MAX_AGE_DAYS` | `60` | How long a session stays valid without activity (sliding, capped at 60). |
+| `SCRIBEDOG_LOGIN_MAX_ATTEMPTS` | `5` | Failed logins from one address before it is locked out. |
+| `SCRIBEDOG_LOGIN_LOCK_SECONDS` | `60` | How long the first lock lasts. Each further series of failures multiplies it by five. |
+| `SCRIBEDOG_LOGIN_LOCK_MAX_SECONDS` | `900` | Upper limit for that escalation. |
+| `SCRIBEDOG_ALLOWED_ORIGINS` | *(empty)* | Extra origins accepted on requests that change something, e.g. `https://notes.example.com`. Only needed if your proxy passes on a different host than the browser uses. |
+| `SCRIBEDOG_LLM_ALLOWED_HOSTS` | the three cloud providers | Hosts the server may forward AI requests to. Add your own gateway here if you use one. |
 | `SCRIBEDOG_LOG_LEVEL` | `info` | Pino log level. |
 | `SCRIBEDOG_WEB_DIST_DIR` | `../dist-web` | Directory with the built web client (see Development). The Docker image sets it. |
 
@@ -98,6 +103,53 @@ compose file ships with Caddy for that:
 Do not expose the server without TLS beyond `localhost`: the password would
 travel in clear text.
 
+## Your password
+
+One password protects the instance; there is no user name. Three things are
+worth knowing about it.
+
+**Changing it** is in Settings → Account. It takes effect everywhere at once:
+every other signed-in device is signed out, and the device you changed it on
+stays signed in. Stored API keys survive the change, re-encrypted under the
+new password.
+
+**Wrong guesses are slowed down.** After five failures from one address the
+next attempt is refused for a minute, after the next five for five minutes,
+then fifteen, which is the ceiling. A correct password clears the count. The
+numbers are configurable (see Configuration); behind a reverse proxy the count
+follows `X-Forwarded-For`, so one attacker does not lock out the household.
+
+**Forgotten it?** Delete `.scribedog/server/auth.json`, set
+`SCRIBEDOG_INIT_PASSWORD` again and restart. Your notes are untouched, but the
+stored API keys are not: they are encrypted with a key derived from the old
+password and cannot be recovered. The app says so once and asks you to enter
+them again.
+
+## AI
+
+The cloud providers (OpenAI, Anthropic, Mistral) work in the browser. Enter
+the API key in Settings → AI as you would on the desktop; from there on it
+differs from the desktop in two ways worth knowing.
+
+**The key stays on the server.** It is encrypted with a key derived from your
+login password and kept in `.scribedog/server/secrets.json`. The browser never
+receives it back: the settings field shows "stored" instead of a value, and
+requests to the provider are sent by the server, which fills the key in on the
+way out. So someone who copies the data folder gets your notes (they are plain
+Markdown on purpose) but not your API keys, and a browser extension or a stray
+script in the page has nothing to find.
+
+**The server talks to the provider, not the browser.** Browsers block direct
+calls to another site's API, and sending the key to the tab to try would give
+up what the paragraph above buys. The server only forwards to the three
+provider hosts over https; anything else is refused, so this cannot become a
+way to reach something else on your network. If you use your own gateway in
+front of a provider, add its host to `SCRIBEDOG_LLM_ALLOWED_HOSTS`.
+
+Local models (Ollama, Jan.ai, LM Studio) are not available in the browser yet.
+On a server "localhost" is the container, not your machine, and reaching a
+model on your own device from a web page is a separate piece of work.
+
 ## Where your data is
 
 `./scribedog-data` is bind-mounted into the container as `/data`. It holds:
@@ -106,10 +158,12 @@ travel in clear text.
 - `images/` for pictures pasted or dropped into notes;
 - `.scribedog/` with the same sidecars the desktop app keeps (version
   history, manual sort order, chat sessions), written by the web app through
-  the server, plus `.scribedog/server/auth.json` with the password hash and
-  `.scribedog/server/session-secret`, which signs session cookies. The
-  `server/` part is created on first start with mode `0600` and is the one
-  place the file API never reaches.
+  the server, plus `.scribedog/server-data-version`, which says which layout
+  the folder is in (see Updating);
+- `.scribedog/server/` with the server's own files: `auth.json` (the password
+  hash), `session-secret` (signs session cookies) and `secrets.json` (the
+  encrypted API keys). It is created on first start with mode `0600` and is
+  the one place the file API never reaches.
 
 Changes made on the host (a sync tool, an editor over SSH) show up in open
 browser tabs within a second: the server watches the folder and pushes a
@@ -121,12 +175,35 @@ set `SCRIBEDOG_INIT_PASSWORD` again and restart.
 
 ## Updating
 
+Images are published per version, with no `latest` tag: you pick a version and
+keep it until you decide to move. Put the one you want in `.env`,
+
+```dotenv
+SCRIBEDOG_IMAGE=ghcr.io/snooky234/scribedog-server:0.11.0
+```
+
+and update with
+
 ```bash
-docker compose pull   # or: git pull && docker compose build
+docker compose pull
 docker compose up -d
 ```
 
+Building from the repository instead works as well:
+
+```bash
+git pull && docker compose up -d --build
+```
+
 Sessions survive restarts and updates; nobody has to sign in again.
+
+**Going back a version** is fine as long as the data folder's layout has not
+moved on. The server writes its layout version to
+`.scribedog/server-data-version`, brings an older folder forward on start, and
+refuses to start on a folder written by a newer server rather than reading a
+format it does not know. If that happens, start the newer version again, or
+restore the folder from a backup made before the upgrade. Release notes say
+when a version changes the layout.
 
 ## Development
 
@@ -182,6 +259,7 @@ health needs the session cookie.
 | `POST` | `/api/auth/login` | `{ "password": "..." }` → sets the session cookie |
 | `POST` | `/api/auth/logout` | clears the cookie |
 | `GET` | `/api/auth/session` | `{ "authenticated": true\|false }` |
+| `POST` | `/api/auth/password` | `{ "currentPassword": "...", "newPassword": "..." }` → new password, every other session ends |
 | `GET` | `/api/files` | list of `.md` files with modification times |
 | `GET` | `/api/fs/entries?path=Notes` | directory listing (`path=` for the root) |
 | `GET` | `/api/fs/stat?path=…` | size, times, kind of one entry |
@@ -193,10 +271,20 @@ health needs the session cookie.
 | `PUT` | `/api/fs/file?path=…` | body as `application/octet-stream` → create or overwrite |
 | `POST` | `/api/fs/rename` | `{ "from": "…", "to": "…" }` (files and folders) |
 | `POST` | `/api/fs/remove` | `{ "path": "…", "recursive": true }` (a folder without `recursive` must be empty) |
+| `GET` | `/api/secrets` | which API keys are stored, never their values |
+| `PUT` | `/api/secrets/:id` | `{ "value": "..." }` → store a key (an empty value removes it) |
+| `DELETE` | `/api/secrets/:id` | remove a key |
+| `GET`/`POST` | `/api/llm/request` | forwards one request to the AI provider named in `X-Scribedog-Llm-Url` |
 | `GET` | `/api/events` | WebSocket; sends `{"type":"files-changed"}` when the vault changes on disk |
 | `GET` | `/api/health` | liveness probe |
 
 The `/fs` routes are the frontend's filesystem layer, one call per
 primitive. Paths are relative to the vault and may not point outside it
-(symlinks included) or into `.scribedog/server/`; the vault root and
-`.scribedog` itself cannot be renamed or removed.
+(symlinks included) or into `.scribedog/server/`; the vault root,
+`.scribedog` itself and the data-version marker cannot be renamed or removed.
+
+Requests that change something must come from this instance: the session
+cookie is `SameSite=Lax`, and the server additionally rejects a request whose
+`Origin` or `Referer` names another site. A request with neither header (curl,
+a script) is accepted, since it cannot be a browser carrying someone else's
+cookie.

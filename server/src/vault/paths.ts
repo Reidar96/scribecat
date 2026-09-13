@@ -21,7 +21,9 @@ export class VaultPathError extends Error {}
  * server alone is `.scribedog/server/` (password hash, session secret); no
  * client-supplied path may point into it.
  */
-const META_DIR_SEGMENT = ".scribedog";
+/** The metadata directory the desktop app and the server share. */
+export const VAULT_META_DIR_NAME = ".scribedog";
+const META_DIR_SEGMENT = VAULT_META_DIR_NAME;
 const SERVER_DIR_SEGMENT = "server";
 
 // Control characters never belong in a file name and are the classic way to

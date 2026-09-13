@@ -158,6 +158,7 @@
     "tabRag": "Knowledge base",
     "tabVersioning": "Versioning",
     "tabVault": "Open folder",
+    "tabAccount": "Account",
     "vaultNavNoFolder": "No folder open",
     "moreInfo": "More about this",
     "language": "Language",
@@ -218,6 +219,10 @@
     "apiKey": "API key",
     "apiKeyPlaceholder": "Paste API key",
     "apiKeyShort": "Stored only locally on this device and sent only to the selected provider.",
+    "apiKeyServerHint": "Kept encrypted in the server's data folder, using your sign-in password. The server sends it to the provider; the browser never sees it.",
+    "apiKeyStored": "Stored (stays on the server)",
+    "apiKeyLocked": "The stored keys cannot be read in this session. Sign in again.",
+    "apiKeyDiscarded": "After the password was reset the stored keys could no longer be read and were discarded. Please enter them again.",
     "showApiKey": "Show API key",
     "hideApiKey": "Hide API key",
     "cloudProviderNotice": "With {{provider}}, the selected text or document leaves your device and is processed according to {{provider}}'s terms of use.",
@@ -942,7 +947,21 @@
     "signingIn": "Signing in …",
     "wrongPassword": "Wrong password.",
     "serverUnreachable": "The server could not be reached.",
-    "failed": "Sign-in failed."
+    "failed": "Sign-in failed.",
+    "tooManyAttempts_one": "Too many failed attempts. Try again in a minute.",
+    "tooManyAttempts_other": "Too many failed attempts. Try again in {{count}} minutes."
+  },
+  "account": {
+    "changePassword": "Change password",
+    "changePasswordHint": "Every other signed-in device is signed out. Stored API keys are kept and re-encrypted with the new password.",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "repeatPassword": "Repeat new password",
+    "mismatch": "The two new passwords do not match.",
+    "wrongCurrentPassword": "The current password is wrong.",
+    "changeFailed": "The password could not be changed.",
+    "changed": "Password changed. All other sessions have ended.",
+    "changing": "Changing …"
   },
   "platform": {
     "notAvailable": "This feature is not available in this edition of ScribeDog.",

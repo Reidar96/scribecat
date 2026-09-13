@@ -343,6 +343,7 @@ export function Sidebar({
             onClick={onAiSettingsRequest}
             aria-label={t("sidebar.settings")}
             title={t("sidebar.settings")}
+            data-testid="settings"
           >
             <Settings2 />
           </Button>

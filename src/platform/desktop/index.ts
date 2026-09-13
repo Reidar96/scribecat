@@ -97,7 +97,10 @@ export const platform: Platform = {
   },
   credentials: {
     storeApiKey: (id, apiKey) => invoke("store_api_key", { provider: id, apiKey }),
-    getApiKey: (id) => invoke<string>("get_api_key", { provider: id })
+    getApiKey: (id) => invoke<string>("get_api_key", { provider: id }),
+    // The OS credential store is unlocked whenever the user's desktop session
+    // is; there is no state to report.
+    getStatus: async () => ({ state: "ready", discardedAt: null })
   },
   portable: {
     // Resolved once per session: the Rust side detects the mode once at

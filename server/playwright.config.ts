@@ -10,6 +10,9 @@ export default defineConfig({
   testDir: "./e2e",
   timeout: 30_000,
   retries: 0,
+  // One worker: the specs share a single live instance, one vault and one
+  // password, and account.spec.ts changes that password mid-run.
+  workers: 1,
   reporter: "list",
   use: {
     baseURL: process.env.SCRIBEDOG_E2E_URL ?? "https://localhost/",

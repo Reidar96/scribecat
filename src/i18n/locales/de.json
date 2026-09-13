@@ -158,6 +158,7 @@
     "tabRag": "Wissensbasis",
     "tabVersioning": "Versionierung",
     "tabVault": "Geöffneter Ordner",
+    "tabAccount": "Konto",
     "vaultNavNoFolder": "Kein Ordner geöffnet",
     "moreInfo": "Mehr dazu",
     "language": "Sprache",
@@ -218,6 +219,10 @@
     "apiKey": "API-Key",
     "apiKeyPlaceholder": "API-Key einfügen",
     "apiKeyShort": "Wird nur lokal auf diesem Gerät gespeichert und ausschließlich an den gewählten Provider gesendet.",
+    "apiKeyServerHint": "Wird verschlüsselt im Datenordner des Servers gespeichert, mit deinem Anmeldepasswort. Der Server schickt ihn an den Provider, der Browser sieht ihn nie.",
+    "apiKeyStored": "Gespeichert (bleibt auf dem Server)",
+    "apiKeyLocked": "Die gespeicherten Schlüssel lassen sich in dieser Sitzung nicht lesen. Melde dich erneut an.",
+    "apiKeyDiscarded": "Nach dem Zurücksetzen des Passworts waren die gespeicherten Schlüssel nicht mehr lesbar und wurden verworfen. Bitte neu eingeben.",
     "showApiKey": "API-Key anzeigen",
     "hideApiKey": "API-Key verbergen",
     "cloudProviderNotice": "Bei {{provider}} verlassen der markierte Text bzw. das Dokument dein Gerät und werden gemäß den Nutzungsbedingungen von {{provider}} verarbeitet.",
@@ -942,7 +947,21 @@
     "signingIn": "Anmeldung läuft …",
     "wrongPassword": "Falsches Passwort.",
     "serverUnreachable": "Der Server ist nicht erreichbar.",
-    "failed": "Die Anmeldung ist fehlgeschlagen."
+    "failed": "Die Anmeldung ist fehlgeschlagen.",
+    "tooManyAttempts_one": "Zu viele Fehlversuche. Versuche es in einer Minute erneut.",
+    "tooManyAttempts_other": "Zu viele Fehlversuche. Versuche es in {{count}} Minuten erneut."
+  },
+  "account": {
+    "changePassword": "Passwort ändern",
+    "changePasswordHint": "Alle anderen angemeldeten Geräte werden dabei abgemeldet. Gespeicherte API-Schlüssel bleiben erhalten, sie werden mit dem neuen Passwort neu verschlüsselt.",
+    "currentPassword": "Aktuelles Passwort",
+    "newPassword": "Neues Passwort",
+    "repeatPassword": "Neues Passwort wiederholen",
+    "mismatch": "Die beiden neuen Passwörter stimmen nicht überein.",
+    "wrongCurrentPassword": "Das aktuelle Passwort ist falsch.",
+    "changeFailed": "Das Passwort konnte nicht geändert werden.",
+    "changed": "Passwort geändert. Alle anderen Sitzungen wurden beendet.",
+    "changing": "Wird geändert …"
   },
   "platform": {
     "notAvailable": "Diese Funktion ist in dieser Ausgabe von ScribeDog nicht verfügbar.",

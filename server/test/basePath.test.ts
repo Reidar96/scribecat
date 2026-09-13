@@ -5,7 +5,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { SESSION_COOKIE_NAME } from "../src/auth/session.js";
-import { ConfigError, loadConfig, normalizeBasePath } from "../src/config.js";
+import { ConfigError, loadConfig, normalizeBasePath, parseTrustProxy } from "../src/config.js";
 import { BASE_PATH_PLACEHOLDER, renderIndexHtml } from "../src/web/staticSite.js";
 import { createTestContext, TEST_PASSWORD, type TestContext } from "./helpers.js";
 
@@ -193,5 +193,21 @@ describe("app at the root", () => {
     expect((await context.app.inject({ method: "GET", url: "/assets/app.js" })).statusCode).toBe(200);
     expect((await context.app.inject({ method: "GET", url: "/theme-boot.js" })).statusCode).toBe(200);
     expect((await context.app.inject({ method: "GET", url: "/index.html" })).statusCode).toBe(404);
+  });
+});
+
+describe("trust proxy", () => {
+  it("defaults to the one proxy the compose file puts in front", () => {
+    expect(parseTrustProxy(undefined)).toBe(1);
+    expect(parseTrustProxy("")).toBe(1);
+    // "true" must not become "trust every hop the client claims": that is
+    // what would let a forged X-Forwarded-For pick its own rate-limit bucket.
+    expect(parseTrustProxy("true")).toBe(1);
+  });
+
+  it("takes a hop count, a switch-off, or a list of proxy addresses", () => {
+    expect(parseTrustProxy("2")).toBe(2);
+    expect(parseTrustProxy("false")).toBe(false);
+    expect(parseTrustProxy("10.0.0.0/8")).toBe("10.0.0.0/8");
   });
 });

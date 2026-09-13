@@ -1,6 +1,7 @@
 import { watch, type FSWatcher } from "node:fs";
 
-const VAULT_META_DIR_NAME = ".scribedog";
+import { VAULT_META_DIR_NAME } from "./paths.js";
+
 
 /** Same idea as the frontend's 150 ms debounce: one event per burst of writes. */
 const DEBOUNCE_MS = 200;

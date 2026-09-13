@@ -34,6 +34,8 @@ function messageFor(error: unknown): string {
     switch (error.code) {
       case "invalid_password":
         return i18n.t("login.wrongPassword");
+      case "too_many_attempts":
+        return i18n.t("login.tooManyAttempts", { count: Math.max(1, Math.ceil((error.retryAfterSeconds ?? 60) / 60)) });
       case "unreachable":
         return i18n.t("login.serverUnreachable");
       default:

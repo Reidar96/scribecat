@@ -2,6 +2,8 @@
 import { buildApp } from "./app.js";
 import { AuthSetupError, openAuthStore } from "./auth/authStore.js";
 import { ConfigError, loadConfig } from "./config.js";
+import { openSecretStore } from "./secrets/secretStore.js";
+import { DataVersionError, ensureDataVersion } from "./vault/dataVersion.js";
 import { openVault } from "./vault/files.js";
 import { createVaultWatcher } from "./vault/watcher.js";
 import { ensureWelcomeNote } from "./vault/welcome.js";
@@ -18,6 +20,11 @@ async function main(): Promise<void> {
   };
 
   const vault = await openVault(config.vaultPath);
+
+  // Before anything else touches the folder: bring an older layout forward,
+  // and refuse to start on one a newer server wrote (see dataVersion.ts).
+  const dataVersion = await ensureDataVersion(vault.realPath, bootLog);
+
   await ensureWelcomeNote(vault, bootLog);
 
   const authStore = await openAuthStore({
@@ -26,11 +33,13 @@ async function main(): Promise<void> {
     log: bootLog
   });
 
+  const secrets = openSecretStore(vault.realPath);
   const watcher = createVaultWatcher(vault.realPath, bootLog);
 
   const app = await buildApp({
     config,
     authStore,
+    secrets,
     vault,
     watcher,
     webDistDir: config.webDistDir,
@@ -50,7 +59,13 @@ async function main(): Promise<void> {
   await app.listen({ host: config.host, port: config.port });
 
   app.log.info(
-    { vault: vault.realPath, basePath: config.basePath || "/", cookieSecure: config.cookieSecure, webDistDir: config.webDistDir },
+    {
+      vault: vault.realPath,
+      dataVersion,
+      basePath: config.basePath || "/",
+      cookieSecure: config.cookieSecure,
+      webDistDir: config.webDistDir
+    },
     "ScribeDog Server ready"
   );
 
@@ -60,7 +75,7 @@ async function main(): Promise<void> {
 }
 
 main().catch((error: unknown) => {
-  if (error instanceof ConfigError || error instanceof AuthSetupError) {
+  if (error instanceof ConfigError || error instanceof AuthSetupError || error instanceof DataVersionError) {
     console.error(`[scribedog] ${error.message}`);
   } else {
     console.error("[scribedog] failed to start", error);

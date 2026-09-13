@@ -46,6 +46,12 @@ export type RemoteFileInfo = {
   birthtimeMs: number | null;
 };
 
+export type RemoteSecretStatus = {
+  state: "ready" | "locked";
+  ids: string[];
+  discardedAt: string | null;
+};
+
 export class ApiError extends Error {
   constructor(
     readonly status: number,
@@ -107,7 +113,15 @@ async function send(path: string, { isLogin = false, binary = false, ...init }: 
   }
 
   if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as { error?: string; message?: string } | null;
+    const body = (await response.json().catch(() => null)) as
+      | { error?: string; message?: string; retryAfterSeconds?: number }
+      | null;
+
+    // The login lock is a session matter, not a request that went wrong: the
+    // form shows it in place of "wrong password".
+    if (response.status === 429) {
+      throw new SessionError("too_many_attempts", body?.message ?? "Too many attempts.", body?.retryAfterSeconds);
+    }
 
     throw new ApiError(response.status, body?.error ?? "error", body?.message ?? `Request failed (${response.status}).`);
   }
@@ -152,8 +166,28 @@ export const serverApi = {
     request<{ mtimeMs: number }>(withPath("/fs/file", path), { method: "PUT", body: data as BodyInit, binary: true }),
   rename: (from: string, to: string) => request<void>("/fs/rename", { method: "POST", body: JSON.stringify({ from, to }) }),
   remove: (path: string, recursive: boolean) =>
-    request<void>("/fs/remove", { method: "POST", body: JSON.stringify({ path, recursive }) })
+    request<void>("/fs/remove", { method: "POST", body: JSON.stringify({ path, recursive }) }),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    request<{ ok: true }>("/auth/password", {
+      method: "POST",
+      body: JSON.stringify({ currentPassword, newPassword }),
+      // A 401 here means "the current password is wrong", not "your session
+      // ended"; it must not pull the login form over a settings dialog.
+      isLogin: true
+    }),
+  secretStatus: () => request<RemoteSecretStatus>("/secrets"),
+  storeSecret: (id: string, value: string) =>
+    request<void>(`/secrets/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify({ value }) })
 };
+
+/** Where `platform.http.fetch` sends a cloud AI request; see web/index.ts. */
+const LLM_PROXY_PATH = "/llm/request";
+export const LLM_TARGET_HEADER = "x-scribedog-llm-url";
+
+/** Absolute URL of the proxy, for the one caller that builds its own request. */
+export function llmProxyUrl(): string {
+  return `${getBasePath()}/api${LLM_PROXY_PATH}`;
+}
 
 /** Absolute WebSocket URL of the live-update stream, prefix included. */
 export function eventsUrl(): string {
