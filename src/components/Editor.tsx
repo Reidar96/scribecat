@@ -174,6 +174,11 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   const { t } = useTranslation();
   const editorRef = useRef<TipTapEditor | null>(null);
   const lastSyncedMarkdownRef = useRef(markdown);
+  // Kept in a ref so the sync effect below doesn't re-run for a new callback
+  // identity: it may only react to actual content changes. Declared up here
+  // because the editor's onUpdate reaches for it too.
+  const onCanonicalMarkdownRef = useRef(onCanonicalMarkdown);
+  onCanonicalMarkdownRef.current = onCanonicalMarkdown;
   const spellcheckEnabled = useEditorSettingsStore((state) => state.spellcheckEnabled);
   const paperSurface = useEditorSettingsStore((state) => state.paperSurface);
   const detailsPanelVisible = useEditorSettingsStore((state) => state.detailsPanelVisible);
@@ -987,9 +992,22 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     onCreate: () => {
       lastSyncedMarkdownRef.current = markdown;
     },
-    onUpdate: ({ editor }) => {
+    onUpdate: ({ editor, transaction }) => {
       const nextMarkdown = getEditorMarkdown(editor, markdown);
       lastSyncedMarkdownRef.current = nextMarkdown;
+
+      // A document change that only an appended transaction made is not an
+      // edit: StarterKit's TrailingNode adds an empty paragraph after a
+      // closing code block (or table, image) on the first transaction after
+      // the file opens, which a plugin fires right at mount. Reported as an
+      // edit it made every such note "unsaved" the moment it was opened,
+      // since the baseline still had the file's own form. It is formatting,
+      // so it goes to the baseline first, the way the sync effect below
+      // reports the canonical form; a note with real unsaved edits keeps
+      // them (adoptCanonicalFileContent leaves a dirty document alone).
+      if (!transaction.docChanged && filePath) {
+        onCanonicalMarkdownRef.current?.(filePath, nextMarkdown);
+      }
 
       onMarkdownChange(nextMarkdown);
 
@@ -1336,11 +1354,6 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   const stagedRelativePath =
     folderPath && filePath ? normalizeVaultPath(getRelativeDisplayPath(folderPath, filePath)) : "";
 
-
-  // Kept in a ref so the sync effect below doesn't re-run for a new callback
-  // identity — it may only react to actual content changes.
-  const onCanonicalMarkdownRef = useRef(onCanonicalMarkdown);
-  onCanonicalMarkdownRef.current = onCanonicalMarkdown;
 
   useEffect(() => {
     const currentEditor = editorRef.current;
