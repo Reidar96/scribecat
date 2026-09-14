@@ -52,6 +52,10 @@ services:
       # the Docker host itself; the LAN name/IP of the box for the home network;
       # a real domain for Let's Encrypt.
       SCRIBEDOG_SITE_ADDRESS: ${SCRIBEDOG_SITE_ADDRESS:-localhost}
+      # Which site's certificate answers a client that names none, i.e. a
+      # browser opening the app by IP address. The site address itself unless
+      # that is a list; then set it to the address the phones use.
+      SCRIBEDOG_DEFAULT_SNI: ${SCRIBEDOG_DEFAULT_SNI:-${SCRIBEDOG_SITE_ADDRESS:-localhost}}
       # "internal" = Caddy's own local CA (no domain needed). For a real domain
       # set this to your e-mail address and Caddy fetches a public certificate.
       SCRIBEDOG_TLS: ${SCRIBEDOG_TLS:-internal}

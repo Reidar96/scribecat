@@ -8,6 +8,15 @@
 #   handle /anna* { reverse_proxy scribedog-anna:3000 }
 #   handle /bob*  { reverse_proxy scribedog-bob:3000 }
 
+{
+	# A browser that opens the site by IP address sends no server name, and
+	# with more than one site in this file (several instances, the test
+	# stack's mock model) Caddy then has nothing to pick a certificate by and
+	# drops the handshake. This names the site whose certificate answers such
+	# a client; docker-compose.yml defaults it to the site address.
+	default_sni {$SCRIBEDOG_DEFAULT_SNI:localhost}
+}
+
 {$SCRIBEDOG_SITE_ADDRESS:localhost} {
 	# "internal": Caddy's own local CA, works for localhost, LAN names and
 	# plain IPs. For a public domain set SCRIBEDOG_TLS to your e-mail address
