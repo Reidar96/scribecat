@@ -1,5 +1,8 @@
 scribedog-data/
+# The multi-instance example keeps one data folder per instance.
+examples/*/*-data/
 .env
+examples/*/.env
 test-results/
 playwright-report/
 caddy-root.crt

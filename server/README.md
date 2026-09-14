@@ -4,19 +4,21 @@ Run ScribeDog as a self-hosted web app: your notes live in a folder on the
 server, you edit them in the browser, and a single password protects the
 instance.
 
-> **Status: early.** The web app is the desktop app's own frontend, so it
-> looks and works the same, but the server behind it is still growing. Today
-> it covers the whole file side (the file tree, creating, renaming, moving and
-> deleting notes and folders, images, manual sort order, version history, live
-> updates when files change on disk), the account side (login, logout,
-> changing the password, brute-force protection), the cloud AI providers
-> (rewrite, insert, grammar check, and the chat with its vault agent: staged
-> proposals, review, checkpoints and undo), with the API keys stored encrypted
-> on the server, and local models running on the device you browse from (see
-> AI below for what that needs). Not there yet: the knowledge base (vault
-> search index). Features that only exist natively (local folders, import
-> from local files, export to a local folder, the image file picker,
-> dictation, the updater) are hidden.
+> **Status: usable.** The web app is the desktop app's own frontend, so it
+> looks and works the same, on a desktop browser as well as on a phone or
+> tablet. It covers the whole file side (the file tree, creating, renaming,
+> moving and deleting notes and folders, images, manual sort order, version
+> history, live updates when files change on disk), the account side (login,
+> logout, changing the password, brute-force protection), the AI side (rewrite,
+> insert, grammar check, and the chat with its vault agent: staged proposals,
+> review, checkpoints and undo) with the cloud providers through the server
+> and their API keys stored encrypted there, or with a local model on the
+> device you browse from. Two things stay desktop only on purpose: the
+> knowledge base (the vault search index lives in the desktop app's native
+> process) and built-in dictation (see "Dictation" below for what to use
+> instead). Features that need the native shell (local folders, import from
+> local files, export to a local folder, the image file picker, the updater)
+> are hidden.
 
 ## Quick start
 
@@ -51,7 +53,8 @@ Everything is set through environment variables in `.env` (read by
 | --- | --- | --- |
 | `SCRIBEDOG_INIT_PASSWORD` | | Password for the first start. Only used while no password exists in the data folder; afterwards it is ignored (the server logs a note) and can be removed. |
 | `SCRIBEDOG_BASE_PATH` | *(empty)* | Serve the app under a path prefix, e.g. `/anna`. See below. |
-| `SCRIBEDOG_SITE_ADDRESS` | `localhost` | Host name or IP Caddy answers on: `localhost`, the LAN name or IP of the box, or a public domain. |
+| `SCRIBEDOG_SITE_ADDRESS` | `localhost` | Host name or IP Caddy answers on: `localhost`, the LAN name or IP of the box, or a public domain. Several, separated by commas, if the box is reached under more than one name. |
+| `SCRIBEDOG_DEFAULT_SNI` | the site address | Only matters with several site addresses: which one's certificate answers a browser that names none, which is what browsers do when they open the app by IP address. Set it to that IP. |
 | `SCRIBEDOG_TLS` | `internal` | `internal` uses Caddy's local CA. For a public domain set your e-mail address and Caddy obtains a Let's Encrypt certificate. |
 | `SCRIBEDOG_HTTP_PORT` / `SCRIBEDOG_HTTPS_PORT` | `80` / `443` | Host ports Caddy listens on. |
 | `PUID` / `PGID` | `1000` / `1000` | User and group the server runs as. The container starts as root, hands `./scribedog-data` to these ids and drops to them, so match them to your own user (`id -u`, `id -g`) and the notes stay yours on the host. |
@@ -90,6 +93,51 @@ Traefik in front, proxy `/anna` to the container as `/anna`, not as `/`.
 Changing the prefix later logs everyone out (the cookie was scoped to the old
 path); that is all.
 
+## Several people on one host
+
+ScribeDog has one password and one vault per instance, on purpose: there are
+no accounts, no sharing rules and no permissions to get wrong. Two people on
+one box therefore get two instances, each under its own path prefix behind one
+Caddy. [`examples/multi-instance/`](examples/multi-instance/) is a complete
+compose file for that:
+
+```bash
+cd server/examples/multi-instance
+cp .env.example .env         # one init password per instance, host name, ids
+docker compose up -d --build
+```
+
+which serves `https://<host>/anna/` and `https://<host>/bob/` from two
+containers with two data folders (`anna-data`, `bob-data`). Each instance has
+its own password and its own session cookie, scoped to its prefix, so signing
+in to one says nothing about the other. Adding a third means one more service
+block, one more `handle` block in the Caddyfile and one more folder.
+
+Two details of the Caddyfile are worth knowing if you write your own:
+
+- The instances are routed with `handle /anna*`, not `handle_path`: the
+  prefix has to reach the container intact, because the app answers under it
+  and would otherwise neither find its assets nor scope its cookie.
+- A browser that opens the site by IP address sends no server name, and with
+  more than one site Caddy needs `default_sni` to pick a certificate (see
+  `SCRIBEDOG_DEFAULT_SNI` above).
+
+**Keeping the folders apart.** The data folders are plain folders on the
+host, so whoever can read `anna-data` can read Anna's notes. If the people
+sharing the box also have shell access to it, give every instance its own
+Linux user and folder permissions to match:
+
+```bash
+sudo useradd --system --no-create-home anna
+sudo mkdir anna-data && sudo chown anna:anna anna-data && sudo chmod 700 anna-data
+id anna                       # -> the ANNA_PUID / ANNA_PGID for .env
+```
+
+The container starts as root, hands the folder to that user and drops to it,
+so the files it writes stay that user's. This keeps ordinary users out of
+each other's notes; it does not keep root out, and nothing on the host can
+(see "Where your data is").
+
 ## TLS and the reverse proxy
 
 The server speaks plain HTTP and expects a reverse proxy to terminate TLS. The
@@ -126,6 +174,31 @@ follows `X-Forwarded-For`, so one attacker does not lock out the household.
 stored API keys are not: they are encrypted with a key derived from the old
 password and cannot be recovered. The app says so once and asks you to enter
 them again.
+
+## On a phone or tablet
+
+The same app, laid out for the screen it is on. Below about 640 px (a phone)
+the file list is a sheet behind the button at the top left and comes up by
+itself while no note is open; the formatting toolbar sits at the bottom, above
+the keyboard, and scrolls sideways; the save button is the status pill in the
+header, and everything else the toolbar offers on the desktop (find and
+replace, details, zoom, zen mode, print, spell check, versions, back and
+forward) is in the header's menu. The chat and the details panel open as
+full-screen sheets. Up to about 920 px (a tablet in portrait) the file list
+stays next to the note and the chat comes in from the right; above that the
+layout is the desktop one. On a touch screen every tree row has a "…" button
+for its menu (a long press works on Android too), and "Move to…" in that menu
+does what dragging does with a mouse.
+
+Add the site to the home screen (Chrome: "Add to Home screen", Safari: share
+sheet, "Add to Home Screen") and it opens without the browser chrome. The
+session cookie lasts 60 days of use, so the password is asked for rarely.
+
+Chrome and Safari on phones show a certificate warning for Caddy's local CA
+just like the desktop browsers; import `caddy-root.crt` on the device once
+(Android: Settings, Security, Install a certificate; iOS: open the file,
+install the profile, then trust it under Certificate Trust Settings) or accept
+the warning.
 
 ## AI
 
@@ -198,6 +271,25 @@ each device keeps its own. A phone without a model server simply picks a
 cloud provider in its own settings; the API key is stored once on the server
 and works from every device.
 
+### Dictation
+
+The desktop app's dictation runs Whisper in its native process; the server
+does not transcribe, and the web app has no microphone button. Use what the
+device already has, all of which type straight into the editor:
+
+- **Windows:** press Win+H with the cursor in the note (voice typing, needs
+  a one-time download of the language pack under Settings, Time & language,
+  Speech).
+- **macOS:** press the dictation key or Fn twice (System Settings, Keyboard,
+  Dictation). Recent macOS versions transcribe on the device.
+- **Phones and tablets:** the microphone key on the keyboard (Gboard, iOS).
+
+The one thing the app could add on its own is a button on the browser's
+Web Speech API, and it deliberately does not: in Chrome and Edge that API
+sends the audio to Google's servers, Firefox does not support it at all, and
+the system dictation above is on every device already, offline where the
+system does it offline.
+
 ## Where your data is
 
 `./scribedog-data` is bind-mounted into the container as `/data`. It holds:
@@ -218,9 +310,45 @@ Changes made on the host (a sync tool, an editor over SSH) show up in open
 browser tabs within a second: the server watches the folder and pushes a
 signal over a WebSocket, the app rescans.
 
+Deleting `.scribedog/server/auth.json` resets the password: set
+`SCRIBEDOG_INIT_PASSWORD` again and restart.
+
+### Backups
+
 Because it is a plain folder, back it up like any other folder with the tool
-you already use. Deleting `.scribedog/server/auth.json` resets the password:
-set `SCRIBEDOG_INIT_PASSWORD` again and restart.
+you already use; ScribeDog brings no backup feature of its own. Two things
+matter in the choice: the copy should be encrypted (the notes are plain
+Markdown), and it should keep history (a note deleted by mistake is only in
+yesterday's copy). [restic](https://restic.net) and
+[kopia](https://kopia.io) do both and run from a cron job or systemd timer
+on the host, outside Docker, for example every night:
+
+```bash
+# once: restic init --repo /backup/scribedog   (or an S3/SFTP/rclone target)
+0 3 * * * restic --repo /backup/scribedog backup /srv/scribedog/scribedog-data && restic --repo /backup/scribedog forget --keep-daily 14 --keep-weekly 8 --prune
+```
+
+Backing up while the app is running is fine: the folder holds small text and
+JSON files that are written one at a time, there is no database with locks or
+a write-ahead log, so the worst case is one note caught between two saves.
+
+If the host cannot run a cron job (some NAS appliances), a backup container
+in the compose file is the alternative: a `restic` or `kopia` image with
+`./scribedog-data` mounted read-only and the repository mounted or reachable
+over the network, scheduled by its own entrypoint. It is the same backup, just
+a heavier way to schedule it.
+
+**What a backup does not cover.** The notes are not encrypted at rest on
+purpose (they stay readable with any editor, greppable, free of lock-in), so
+whoever gets the disk gets the notes. If that matters where the box stands,
+encrypt below the folder rather than in it: full-disk encryption (LUKS on a
+server, the SD card of a Raspberry Pi included) or a transparent layer such as
+[gocryptfs](https://nuetzlich.net/gocryptfs/) mounted at the bind-mount path.
+Both are invisible to ScribeDog. What no file system setting covers is root
+on the same host, who can read everything by definition; the server edition
+does not try to (that would take client-side encryption, which would break
+search and the agent's file tools), so the host's administrator is someone
+you trust or yourself.
 
 ## Updating
 

@@ -1,0 +1,29 @@
+# One Caddy, several ScribeDog instances, each under its own path prefix.
+#
+# `handle`, never `handle_path`: the prefix has to reach the instance intact.
+# Each ScribeDog knows its own SCRIBEDOG_BASE_PATH, answers under it and 404s
+# everywhere else; `handle_path` would strip the prefix and the app would
+# neither find its assets nor scope its cookie.
+
+{
+	default_sni {$SCRIBEDOG_DEFAULT_SNI:localhost}
+}
+
+{$SCRIBEDOG_SITE_ADDRESS:localhost} {
+	tls {$SCRIBEDOG_TLS:internal}
+
+	encode zstd gzip
+
+	handle /anna* {
+		reverse_proxy scribedog-anna:3000
+	}
+
+	handle /bob* {
+		reverse_proxy scribedog-bob:3000
+	}
+
+	# Everything else: a short list of the instances instead of a bare 404.
+	handle {
+		respond "ScribeDog instances: /anna/ and /bob/" 404
+	}
+}
