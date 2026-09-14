@@ -7,8 +7,14 @@ import { useTranslation } from "react-i18next";
 import type { Editor } from "@tiptap/react";
 
 import { Button } from "@/components/ui/button";
+import { useLayoutMode } from "@/hooks/useLayoutMode";
 import { useDismissablePopover } from "@/lib/useDismissablePopover";
-import { usePopoverOverflowAlign } from "@/lib/usePopoverOverflowAlign";
+import {
+  anchorForTrigger,
+  popoverStyle,
+  usePopoverOverflowAlign,
+  type PopoverAnchor
+} from "@/lib/usePopoverOverflowAlign";
 
 const MAX_ROWS = 8;
 const MAX_COLS = 8;
@@ -19,8 +25,10 @@ type TableGridPickerProps = {
 
 export function TableGridPicker({ editor }: TableGridPickerProps) {
   const { t } = useTranslation();
-  const [anchor, setAnchor] = useState<{ top: number; left: number; right: number } | null>(null);
+  const [anchor, setAnchor] = useState<PopoverAnchor | null>(null);
   const [align, setAlign] = useState<"left" | "right">("left");
+  const [valign, setValign] = useState<"below" | "above">("below");
+  const isSheet = useLayoutMode() === "phone";
   const [hovered, setHovered] = useState<{ row: number; col: number } | null>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
 
@@ -32,7 +40,7 @@ export function TableGridPicker({ editor }: TableGridPickerProps) {
   };
 
   useDismissablePopover(isOpen, close);
-  usePopoverOverflowAlign(anchor, popoverRef, setAlign);
+  usePopoverOverflowAlign(anchor, popoverRef, setAlign, setValign);
 
   const insertTable = (rows: number, cols: number) => {
     editor.chain().focus().insertTable({ rows, cols, withHeaderRow: true }).run();
@@ -62,9 +70,9 @@ export function TableGridPicker({ editor }: TableGridPickerProps) {
             return;
           }
 
-          const rect = event.currentTarget.getBoundingClientRect();
           setAlign("left");
-          setAnchor({ top: rect.bottom + 6, left: rect.left, right: window.innerWidth - rect.right });
+          setValign("below");
+          setAnchor(anchorForTrigger(event.currentTarget.getBoundingClientRect()));
         }}
       >
         <Table />
@@ -74,10 +82,12 @@ export function TableGridPicker({ editor }: TableGridPickerProps) {
         ? createPortal(
             <div
               ref={popoverRef}
-              className="editor-popover table-grid-picker"
+              className={
+                isSheet ? "editor-popover editor-popover--sheet table-grid-picker" : "editor-popover table-grid-picker"
+              }
               role="menu"
               aria-label={t("tableGridPicker.chooseSize")}
-              style={align === "right" ? { top: anchor.top, right: anchor.right } : { top: anchor.top, left: anchor.left }}
+              style={isSheet ? undefined : popoverStyle(anchor, align, valign)}
               onClick={(event) => event.stopPropagation()}
             >
               <div

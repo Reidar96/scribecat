@@ -15,7 +15,8 @@ import {
   LogOut,
   Plus,
   Settings2,
-  Trash2
+  Trash2,
+  X
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -78,6 +79,7 @@ type SidebarProps = {
   onRenameFolder: (folderPath: string, newBaseName: string) => Promise<boolean>;
   onRenameFile: (filePath: string, newBaseName: string) => Promise<boolean>;
   onMoveEntry: (input: MoveTreeEntryInput) => Promise<boolean>;
+  onMoveRequest: (entries: BatchEntry[]) => void;
   onSetSortMode: (mode: SortMode) => void;
   onAiSettingsRequest: () => void;
   onRequestEditorFocus: () => void;
@@ -89,6 +91,8 @@ type SidebarProps = {
   onFilesDropped: (payload: DropPayload, targetDirectory: string) => void;
   /** Server edition only: ends the password session. */
   onLogoutRequest: () => void;
+  /** Set while the panel is a sheet (phone layout); renders the close button. */
+  onClose?: () => void;
 };
 
 export function Sidebar({
@@ -124,6 +128,7 @@ export function Sidebar({
   onRenameFolder,
   onRenameFile,
   onMoveEntry,
+  onMoveRequest,
   onSetSortMode,
   onAiSettingsRequest,
   onRequestEditorFocus,
@@ -131,7 +136,8 @@ export function Sidebar({
   onFileTreeSelectionChange,
   fileTreeSelectionCount,
   onFilesDropped,
-  onLogoutRequest
+  onLogoutRequest,
+  onClose
 }: SidebarProps) {
   const { t } = useTranslation();
   const folderLabel = formatFolderLabel(folderPath);
@@ -363,6 +369,22 @@ export function Sidebar({
           ) : null}
         </div>
         <div className="sidebar-panel__folder-wrap">
+          {onClose ? (
+            // In the sheet the vault name row has the room the action row
+            // has not; the close button sits at its end.
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className="sidebar-panel__close"
+              onClick={onClose}
+              aria-label={t("sidebar.close")}
+              title={t("sidebar.close")}
+              data-testid="sidebar-close"
+            >
+              <X />
+            </Button>
+          ) : null}
           {platform.features.localFolders ? (
             <Menu>
               <MenuTrigger
@@ -523,6 +545,7 @@ export function Sidebar({
             onRenameFolder={onRenameFolder}
             onRenameFile={onRenameFile}
             onMoveEntry={onMoveEntry}
+            onMoveRequest={onMoveRequest}
             onRequestEditorFocus={onRequestEditorFocus}
             focusRequestId={sidebarFocusRequestId}
             onSelectionChange={onFileTreeSelectionChange}

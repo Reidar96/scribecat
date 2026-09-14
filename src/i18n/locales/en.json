@@ -46,7 +46,11 @@
     "emptyDescription": "Once a folder is open, its content and the editing surface will appear here.",
     "pendingTargetOtherFolder": "another folder",
     "version": "v{{version}}",
-    "pendingTargetLogout": "signing out"
+    "pendingTargetLogout": "signing out",
+    "openSidebar": "Show files",
+    "documentMenu": "Document menu",
+    "saveButton": "Save",
+    "saveButtonTitle": "Save changes"
   },
   "unsavedDialog": {
     "eyebrow": "Unsaved changes",
@@ -205,6 +209,7 @@
     "vaultScopeNoFolder": "No folder open",
     "vaultScopeHint": "These settings are saved in {{name}}/.scribedog and apply only there. Other folders have their own.",
     "vaultScopeNoFolderHint": "Open a folder to use these settings: they are saved with the folder, not with the application.",
+    "reopenLastNote": "Reopen the last note on start",
     "accentColorReset": "Reset",
     "checkForUpdates": "Check for updates",
     "checkForUpdatesShort": "Asks GitHub once at startup whether a newer version exists.",
@@ -488,7 +493,8 @@
     "openFolderPrompt": "Open a folder to see all Markdown files it contains.",
     "noMarkdownFiles": "No Markdown files found. Open a folder containing `.md` files.",
     "dropImportHint": "Drop files or folders — they are imported as notes",
-    "logout": "Sign out"
+    "logout": "Sign out",
+    "close": "Close file list"
   },
   "fileTree": {
     "treeLabel": "File tree",
@@ -504,7 +510,21 @@
     "stagedChangeFolder": "Proposed changes in this folder: {{count}}",
     "openFolderNote": "{{path}} – click opens the folder note, the arrow expands and collapses",
     "expandFolder": "Expand",
-    "collapseFolder": "Collapse"
+    "collapseFolder": "Collapse",
+    "moreActions": "More actions",
+    "moveTo": "Move to…",
+    "selectionCount": "{{count}} selected"
+  },
+  "moveDialog": {
+    "eyebrow": "Move",
+    "title": "Move “{{name}}”",
+    "titleMultiple": "Move {{count}} entries",
+    "filterPlaceholder": "Filter folders",
+    "listLabel": "Target folder",
+    "root": "Vault root",
+    "noMatch": "No folder matches.",
+    "confirm": "Move",
+    "moving": "Moving …"
   },
   "toolbar": {
     "formattingLabel": "Formatting tools",

@@ -331,9 +331,6 @@ button.details-sidebar__outline-item:hover {
   display: none;
 }
 
-@media (max-width: 920px) {
-  .details-sidebar,
-  .editor-view__panes > .workspace-resizer {
-    display: none;
-  }
-}
+/* Below the desktop width the panel is a sheet (Editor.tsx renders it through
+   MobileSheet, styled in responsive.css); nothing is docked here anymore, so
+   there is nothing to hide. */

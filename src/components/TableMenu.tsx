@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import {
@@ -14,7 +14,14 @@ import { useTranslation } from "react-i18next";
 import type { Editor } from "@tiptap/react";
 
 import { Button } from "@/components/ui/button";
+import { useLayoutMode } from "@/hooks/useLayoutMode";
 import { useDismissablePopover } from "@/lib/useDismissablePopover";
+import {
+  anchorForTrigger,
+  popoverStyle,
+  usePopoverOverflowAlign,
+  type PopoverAnchor
+} from "@/lib/usePopoverOverflowAlign";
 
 type TableMenuProps = {
   editor: Editor;
@@ -56,12 +63,17 @@ function MenuItem({ icon, label, disabled, danger, onSelect }: MenuItemProps) {
 // again on the next load with HTML parsing disabled.
 export function TableMenu({ editor }: TableMenuProps) {
   const { t } = useTranslation();
-  const [anchor, setAnchor] = useState<{ top: number; left: number } | null>(null);
+  const [anchor, setAnchor] = useState<PopoverAnchor | null>(null);
+  const [align, setAlign] = useState<"left" | "right">("left");
+  const [valign, setValign] = useState<"below" | "above">("below");
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const isSheet = useLayoutMode() === "phone";
 
   const isOpen = anchor !== null;
   const close = () => setAnchor(null);
 
   useDismissablePopover(isOpen, close);
+  usePopoverOverflowAlign(anchor, popoverRef, setAlign, setValign);
 
   const isInHeaderRow = editor.isActive("tableHeader");
 
@@ -93,8 +105,9 @@ export function TableMenu({ editor }: TableMenuProps) {
             return;
           }
 
-          const rect = event.currentTarget.getBoundingClientRect();
-          setAnchor({ top: rect.bottom + 6, left: rect.left });
+          setAlign("left");
+          setValign("below");
+          setAnchor(anchorForTrigger(event.currentTarget.getBoundingClientRect()));
         }}
       >
         <TableProperties />
@@ -103,10 +116,11 @@ export function TableMenu({ editor }: TableMenuProps) {
       {anchor
         ? createPortal(
             <div
-              className="editor-popover table-menu"
+              ref={popoverRef}
+              className={isSheet ? "editor-popover editor-popover--sheet table-menu" : "editor-popover table-menu"}
               role="menu"
               aria-label={t("tableMenu.options")}
-              style={{ top: anchor.top, left: anchor.left }}
+              style={isSheet ? undefined : popoverStyle(anchor, align, valign)}
               onClick={(event) => event.stopPropagation()}
             >
               <MenuItem

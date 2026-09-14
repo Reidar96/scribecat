@@ -488,7 +488,7 @@ export function Toolbar({
 
   return (
     <div className="editor-toolbar" aria-label={t("toolbar.formattingLabel")}>
-      <div className="editor-toolbar__group">
+      <div className="editor-toolbar__group editor-toolbar__group--ai">
         <Button
           type="button"
           size="icon-sm"
@@ -719,9 +719,12 @@ export function Toolbar({
         <CalloutMenu editor={editor} />
       </div>
 
-      <div className="editor-toolbar__separator" aria-hidden="true" />
+      {/* View controls: on phone and tablet these live in the document
+          header's menu (DocumentMenu), and the group is hidden with its
+          separator (responsive.css). */}
+      <div className="editor-toolbar__separator editor-toolbar__separator--view" aria-hidden="true" />
 
-      <div className="editor-toolbar__group">
+      <div className="editor-toolbar__group editor-toolbar__group--view">
         <Button
           type="button"
           size="icon-sm"

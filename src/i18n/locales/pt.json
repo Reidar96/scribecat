@@ -46,7 +46,11 @@
     "emptyDescription": "Assim que uma pasta for aberta, seu conteúdo e a área de edição aparecerão aqui.",
     "pendingTargetOtherFolder": "outra pasta",
     "version": "v{{version}}",
-    "pendingTargetLogout": "sair"
+    "pendingTargetLogout": "sair",
+    "openSidebar": "Mostrar arquivos",
+    "documentMenu": "Menu do documento",
+    "saveButton": "Salvar",
+    "saveButtonTitle": "Salvar alterações"
   },
   "unsavedDialog": {
     "eyebrow": "Alterações não salvas",
@@ -205,6 +209,7 @@
     "vaultScopeNoFolder": "Nenhuma pasta aberta",
     "vaultScopeHint": "Estas definições são guardadas em {{name}}/.scribedog e valem só aí. As outras pastas têm as suas.",
     "vaultScopeNoFolderHint": "Abra uma pasta para usar estas definições: são guardadas com a pasta, não com a aplicação.",
+    "reopenLastNote": "Reabrir a última nota ao iniciar",
     "accentColorReset": "Redefinir",
     "checkForUpdates": "Verificar atualizações",
     "checkForUpdatesShort": "Pergunta uma vez ao GitHub, no arranque, se existe uma versão mais recente.",
@@ -488,7 +493,8 @@
     "openFolderPrompt": "Abra uma pasta para ver todos os arquivos Markdown que ela contém.",
     "noMarkdownFiles": "Nenhum arquivo Markdown encontrado. Abra uma pasta que contenha arquivos `.md`.",
     "dropImportHint": "Largue ficheiros ou pastas — são importados como notas",
-    "logout": "Sair"
+    "logout": "Sair",
+    "close": "Fechar a lista de arquivos"
   },
   "fileTree": {
     "treeLabel": "Árvore de arquivos",
@@ -504,7 +510,21 @@
     "stagedChangeFolder": "Alterações propostas nesta pasta: {{count}}",
     "openFolderNote": "{{path}} – um clique abre a nota da pasta, a seta expande e recolhe",
     "expandFolder": "Expandir",
-    "collapseFolder": "Recolher"
+    "collapseFolder": "Recolher",
+    "moreActions": "Mais ações",
+    "moveTo": "Mover para…",
+    "selectionCount": "{{count}} selecionados"
+  },
+  "moveDialog": {
+    "eyebrow": "Mover",
+    "title": "Mover “{{name}}”",
+    "titleMultiple": "Mover {{count}} itens",
+    "filterPlaceholder": "Filtrar pastas",
+    "listLabel": "Pasta de destino",
+    "root": "Raiz do vault",
+    "noMatch": "Nenhuma pasta corresponde.",
+    "confirm": "Mover",
+    "moving": "Movendo …"
   },
   "toolbar": {
     "formattingLabel": "Ferramentas de formatação",

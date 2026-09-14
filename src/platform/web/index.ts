@@ -120,7 +120,10 @@ export const platform: Platform = {
   },
   window: {
     setZoom: async (factor) => {
-      document.body.style.setProperty("zoom", String(factor));
+      // The stylesheet decides what the factor scales (responsive.css): the
+      // whole page on a wide viewport, only the document text on a narrow
+      // one, where a body-level zoom fights the pinch zoom and the viewport.
+      document.documentElement.style.setProperty("--app-zoom", String(factor));
     },
     reveal: async () => undefined,
     isFullscreen: async () => document.fullscreenElement !== null,

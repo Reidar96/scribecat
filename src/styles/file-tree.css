@@ -162,6 +162,24 @@
   outline-offset: -2px;
 }
 
+/* Drop zone below the last row, only while a row is being dragged: the end
+   of the top level (useTreeDragDrop.handleTailDrop). */
+.file-tree__tail {
+  position: relative;
+  min-height: 3rem;
+}
+
+.file-tree__tail--drop::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0.5rem;
+  right: 0.5rem;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--blue-fg);
+}
+
 .file-tree__rename-input {
   min-width: 0;
   flex: 1;

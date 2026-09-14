@@ -46,7 +46,11 @@
     "emptyDescription": "Une fois un dossier ouvert, son contenu et la surface d'édition apparaîtront ici.",
     "pendingTargetOtherFolder": "un autre dossier",
     "version": "v{{version}}",
-    "pendingTargetLogout": "la déconnexion"
+    "pendingTargetLogout": "la déconnexion",
+    "openSidebar": "Afficher les fichiers",
+    "documentMenu": "Menu du document",
+    "saveButton": "Enregistrer",
+    "saveButtonTitle": "Enregistrer les modifications"
   },
   "unsavedDialog": {
     "eyebrow": "Modifications non enregistrées",
@@ -205,6 +209,7 @@
     "vaultScopeNoFolder": "Aucun dossier ouvert",
     "vaultScopeHint": "Ces réglages sont enregistrés dans {{name}}/.scribedog et ne valent que là. Les autres dossiers ont les leurs.",
     "vaultScopeNoFolderHint": "Ouvrez un dossier pour utiliser ces réglages : ils sont enregistrés avec le dossier, pas avec l'application.",
+    "reopenLastNote": "Rouvrir la dernière note au démarrage",
     "accentColorReset": "Réinitialiser",
     "checkForUpdates": "Vérifier les mises à jour",
     "checkForUpdatesShort": "Demande une fois à GitHub, au démarrage, s'il existe une version plus récente.",
@@ -488,7 +493,8 @@
     "openFolderPrompt": "Ouvrez un dossier pour voir tous les fichiers Markdown qu'il contient.",
     "noMarkdownFiles": "Aucun fichier Markdown trouvé. Ouvrez un dossier contenant des fichiers `.md`.",
     "dropImportHint": "Déposez des fichiers ou des dossiers — ils sont importés comme notes",
-    "logout": "Se déconnecter"
+    "logout": "Se déconnecter",
+    "close": "Fermer la liste des fichiers"
   },
   "fileTree": {
     "treeLabel": "Arborescence des fichiers",
@@ -504,7 +510,21 @@
     "stagedChangeFolder": "Modifications proposées dans ce dossier : {{count}}",
     "openFolderNote": "{{path}} – un clic ouvre la note du dossier, la flèche déplie et replie",
     "expandFolder": "Déplier",
-    "collapseFolder": "Replier"
+    "collapseFolder": "Replier",
+    "moreActions": "Autres actions",
+    "moveTo": "Déplacer vers…",
+    "selectionCount": "{{count}} sélectionnés"
+  },
+  "moveDialog": {
+    "eyebrow": "Déplacer",
+    "title": "Déplacer « {{name}} »",
+    "titleMultiple": "Déplacer {{count}} éléments",
+    "filterPlaceholder": "Filtrer les dossiers",
+    "listLabel": "Dossier de destination",
+    "root": "Racine du coffre",
+    "noMatch": "Aucun dossier ne correspond.",
+    "confirm": "Déplacer",
+    "moving": "Déplacement …"
   },
   "toolbar": {
     "formattingLabel": "Outils de mise en forme",

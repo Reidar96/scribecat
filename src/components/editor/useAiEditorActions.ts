@@ -135,6 +135,7 @@ export function useAiEditorActions({
     openAiDraft("insert", from, to, "", "");
   };
 
+
   // Shows the diff widget for a result against the tracked original — used
   // while a rewrite is still streaming (isStreaming: true, actions disabled,
   // updated on every chunk), once a generation finishes, and when a

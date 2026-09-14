@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { BookOpen, Download, FilePlus, Pencil, Printer, Trash2 } from "lucide-react";
+import { BookOpen, Download, FilePlus, FolderInput, Pencil, Printer, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { getVaultCapabilities, platform, vaultCapabilityHint } from "@/platform";
 import { dirname, join } from "@/platform/paths";
+import { carriesExternalFiles } from "@/lib/dragDrop/droppedSources";
+import { cn } from "@/lib/utils";
 
 import type { ExportMode } from "@/components/ExportDialog";
 import {
@@ -23,7 +25,7 @@ import { ContextMenuSurface } from "./fileTree/ContextMenuSurface";
 import { TreeNodeRow } from "./fileTree/TreeNodeRow";
 import { useExpandedFolders } from "./fileTree/useExpandedFolders";
 import { useTreeContextMenu } from "./fileTree/useTreeContextMenu";
-import { useTreeDragDrop } from "./fileTree/useTreeDragDrop";
+import { TREE_TAIL_KEY, useTreeDragDrop } from "./fileTree/useTreeDragDrop";
 import { useTreeRename } from "./fileTree/useTreeRename";
 import { useTreeSelection } from "./fileTree/useTreeSelection";
 import {
@@ -62,6 +64,8 @@ type FileTreeProps = {
   onRenameFolder: (folderPath: string, newBaseName: string) => Promise<boolean>;
   onRenameFile: (filePath: string, newBaseName: string) => Promise<boolean>;
   onMoveEntry: (input: MoveTreeEntryInput) => Promise<boolean>;
+  /** "Move to…" from the context menu; entries carry absolute paths. */
+  onMoveRequest: (entries: BatchEntry[]) => void;
   onDeleteMultipleRequest: (entries: BatchEntry[]) => void;
   onExportMultipleRequest: (entries: BatchEntry[], mode: ExportMode) => void;
   onRequestEditorFocus?: () => void;
@@ -91,6 +95,7 @@ export function FileTree({
   onRenameFolder,
   onRenameFile,
   onMoveEntry,
+  onMoveRequest,
   onDeleteMultipleRequest,
   onExportMultipleRequest,
   onRequestEditorFocus,
@@ -270,7 +275,8 @@ export function FileTree({
     handleRowDragStart,
     handleRowDropIndicatorChange,
     handleRowDragEnd,
-    handleRowDrop
+    handleRowDrop,
+    handleTailDrop
   } = useTreeDragDrop({
     folderPath,
     flatNodes,
@@ -574,6 +580,27 @@ export function FileTree({
     }
   };
 
+  // The context menu's batch actions all start from the same list: the
+  // top-level entries of the selection, folders resolved to absolute paths.
+  const resolveSelectedEntries = (keys: string[]) =>
+    Promise.all(
+      getTopLevelSelection(keys, flatNodes).map(
+        async (node): Promise<BatchEntry> => ({
+          kind: node.kind,
+          path: node.kind === "file" ? node.filePath : await join(folderPath, node.relativePath)
+        })
+      )
+    );
+
+  const contextMenuTitle =
+    contextMenu === null
+      ? undefined
+      : contextMenu.kind === "multiple"
+        ? t("fileTree.selectionCount", { count: getTopLevelSelection(contextMenu.keys, flatNodes).length })
+        : contextMenu.kind === "folder"
+          ? contextMenu.relativePath.slice(contextMenu.relativePath.lastIndexOf("/") + 1)
+          : getRelativeDisplayPath(folderPath, contextMenu.filePath).split("/").pop();
+
   return (
     <>
       <ul
@@ -622,10 +649,40 @@ export function FileTree({
         ))}
       </ul>
 
+      {sortMode === "manual" && capabilities.move && dragSourceKeys.length > 0 ? (
+        <div
+          className={cn(
+            "file-tree__tail",
+            dropIndicator?.key === TREE_TAIL_KEY && "file-tree__tail--drop"
+          )}
+          aria-hidden="true"
+          onDragOver={(event) => {
+            if (carriesExternalFiles(event.dataTransfer)) {
+              return;
+            }
+
+            event.preventDefault();
+            event.dataTransfer.dropEffect = "move";
+            handleRowDropIndicatorChange(TREE_TAIL_KEY, "below");
+          }}
+          onDragLeave={() => handleRowDropIndicatorChange(TREE_TAIL_KEY, null)}
+          onDrop={(event) => {
+            if (carriesExternalFiles(event.dataTransfer)) {
+              return;
+            }
+
+            event.preventDefault();
+            event.stopPropagation();
+            handleTailDrop();
+          }}
+        />
+      ) : null}
+
       {contextMenu ? (
         <ContextMenuSurface
           x={contextMenu.x}
           y={contextMenu.y}
+          title={contextMenuTitle}
           onClick={(event) => event.stopPropagation()}
         >
           {contextMenu.kind === "multiple" ? (
@@ -665,6 +722,21 @@ export function FileTree({
                   {t(mode === "manuscript" ? "fileTree.exportManuscript" : "fileTree.export")}
                 </button>
               )) : null}
+
+              <button
+                type="button"
+                role="menuitem"
+                className="file-tree-context-menu__item"
+                disabled={!capabilities.move}
+                title={capabilities.move ? undefined : capabilityHint}
+                onClick={() => {
+                  void resolveSelectedEntries(contextMenu.keys).then(onMoveRequest);
+                  setContextMenu(null);
+                }}
+              >
+                <FolderInput aria-hidden="true" />
+                {t("fileTree.moveTo")}
+              </button>
 
               <button
                 type="button"
@@ -735,6 +807,28 @@ export function FileTree({
               >
                 <Pencil aria-hidden="true" />
                 {t("fileTree.rename")}
+              </button>
+
+              <button
+                type="button"
+                role="menuitem"
+                className="file-tree-context-menu__item"
+                disabled={!capabilities.move}
+                title={capabilities.move ? undefined : capabilityHint}
+                onClick={() => {
+                  if (contextMenu.kind === "folder") {
+                    void join(folderPath, contextMenu.relativePath).then((path) =>
+                      onMoveRequest([{ kind: "folder", path }])
+                    );
+                  } else {
+                    onMoveRequest([{ kind: "file", path: contextMenu.filePath }]);
+                  }
+
+                  setContextMenu(null);
+                }}
+              >
+                <FolderInput aria-hidden="true" />
+                {t("fileTree.moveTo")}
               </button>
 
               {platform.features.exportFiles ? (

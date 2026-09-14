@@ -46,7 +46,11 @@
     "emptyDescription": "フォルダーを開くと、その内容と編集画面がここに表示されます。",
     "pendingTargetOtherFolder": "別のフォルダー",
     "version": "v{{version}}",
-    "pendingTargetLogout": "サインアウト"
+    "pendingTargetLogout": "サインアウト",
+    "openSidebar": "ファイルを表示",
+    "documentMenu": "ドキュメントメニュー",
+    "saveButton": "保存",
+    "saveButtonTitle": "変更を保存"
   },
   "unsavedDialog": {
     "eyebrow": "未保存の変更",
@@ -204,6 +208,7 @@
     "vaultScopeNoFolder": "フォルダーが開かれていません",
     "vaultScopeHint": "これらの設定は {{name}}/.scribedog に保存され、そのフォルダーにだけ適用されます。他のフォルダーには別の設定があります。",
     "vaultScopeNoFolderHint": "これらの設定を使うにはフォルダーを開いてください。設定はアプリケーションではなくフォルダーに保存されます。",
+    "reopenLastNote": "起動時に最後のノートを再び開く",
     "accentColorReset": "リセット",
     "checkForUpdates": "アップデートを確認",
     "checkForUpdatesShort": "起動時に一度だけ GitHub に新しいバージョンがあるか確認します。",
@@ -487,7 +492,8 @@
     "openFolderPrompt": "フォルダーを開くと、含まれるすべての Markdown ファイルが表示されます。",
     "noMarkdownFiles": "Markdown ファイルが見つかりません。`.md` ファイルを含むフォルダーを開いてください。",
     "dropImportHint": "ファイルやフォルダーをドロップするとノートとしてインポートされます",
-    "logout": "サインアウト"
+    "logout": "サインアウト",
+    "close": "ファイル一覧を閉じる"
   },
   "fileTree": {
     "treeLabel": "ファイルツリー",
@@ -503,7 +509,21 @@
     "stagedChangeFolder": "このフォルダー内の提案された変更：{{count}}",
     "openFolderNote": "{{path}} – クリックでフォルダーノートを開き、矢印で展開・折りたたみ",
     "expandFolder": "展開",
-    "collapseFolder": "折りたたむ"
+    "collapseFolder": "折りたたむ",
+    "moreActions": "その他の操作",
+    "moveTo": "移動先…",
+    "selectionCount": "{{count}} 件を選択中"
+  },
+  "moveDialog": {
+    "eyebrow": "移動",
+    "title": "「{{name}}」を移動",
+    "titleMultiple": "{{count}} 件を移動",
+    "filterPlaceholder": "フォルダーを絞り込む",
+    "listLabel": "移動先フォルダー",
+    "root": "Vault のルート",
+    "noMatch": "一致するフォルダーがありません。",
+    "confirm": "移動",
+    "moving": "移動中 …"
   },
   "toolbar": {
     "formattingLabel": "書式設定ツール",

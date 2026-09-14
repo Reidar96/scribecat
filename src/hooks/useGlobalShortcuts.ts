@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import type { RefObject } from "react";
 
 import type { EditorHandle } from "@/components/Editor";
+import { TABLET_QUERY } from "@/lib/layoutMode";
 import { couldBeShortcut } from "@/lib/shortcuts/binding";
 import { isRetiredDefault, matchShortcut } from "@/lib/shortcuts/resolve";
 import { getVaultCapabilities, platform } from "@/platform";
@@ -118,9 +119,16 @@ export function useGlobalShortcuts({
           // The panel shows details of the current file, so it only makes
           // sense with a document open.
           if (selectedFilePath) {
-            const { detailsPanelVisible, setDetailsPanelVisible } =
+            const { detailsPanelVisible, setDetailsPanelVisible, detailsSheetOpen, setDetailsSheetOpen } =
               useEditorSettingsStore.getState();
-            setDetailsPanelVisible(!detailsPanelVisible);
+
+            // Below the desktop width the panel is a sheet with its own
+            // switch (see the store); a narrow desktop window has a keyboard.
+            if (window.matchMedia(TABLET_QUERY).matches) {
+              setDetailsSheetOpen(!detailsSheetOpen);
+            } else {
+              setDetailsPanelVisible(!detailsPanelVisible);
+            }
           }
 
           return;

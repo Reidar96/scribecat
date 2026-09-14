@@ -46,7 +46,11 @@
     "emptyDescription": "После открытия папки здесь появятся её содержимое и область редактирования.",
     "pendingTargetOtherFolder": "другую папку",
     "version": "v{{version}}",
-    "pendingTargetLogout": "выход"
+    "pendingTargetLogout": "выход",
+    "openSidebar": "Показать файлы",
+    "documentMenu": "Меню документа",
+    "saveButton": "Сохранить",
+    "saveButtonTitle": "Сохранить изменения"
   },
   "unsavedDialog": {
     "eyebrow": "Несохранённые изменения",
@@ -209,6 +213,7 @@
     "vaultScopeNoFolder": "Папка не открыта",
     "vaultScopeHint": "Эти настройки сохраняются в {{name}}/.scribedog и действуют только там. У других папок свои.",
     "vaultScopeNoFolderHint": "Откройте папку, чтобы использовать эти настройки: они хранятся в папке, а не в приложении.",
+    "reopenLastNote": "Открывать последнюю заметку при запуске",
     "accentColorReset": "Сбросить",
     "checkForUpdates": "Проверить обновления",
     "checkForUpdatesShort": "При запуске один раз спрашивает GitHub, есть ли более новая версия.",
@@ -500,7 +505,8 @@
     "openFolderPrompt": "Откройте папку, чтобы увидеть все содержащиеся в ней файлы Markdown.",
     "noMarkdownFiles": "Файлы Markdown не найдены. Откройте папку с файлами `.md`.",
     "dropImportHint": "Перетащите файлы или папки — они будут импортированы как заметки",
-    "logout": "Выйти"
+    "logout": "Выйти",
+    "close": "Закрыть список файлов"
   },
   "fileTree": {
     "treeLabel": "Дерево файлов",
@@ -516,7 +522,21 @@
     "stagedChangeFolder": "Предложенных изменений в этой папке: {{count}}",
     "openFolderNote": "{{path}} – щелчок открывает заметку папки, стрелка разворачивает и сворачивает",
     "expandFolder": "Развернуть",
-    "collapseFolder": "Свернуть"
+    "collapseFolder": "Свернуть",
+    "moreActions": "Другие действия",
+    "moveTo": "Переместить в…",
+    "selectionCount": "Выбрано: {{count}}"
+  },
+  "moveDialog": {
+    "eyebrow": "Перемещение",
+    "title": "Переместить «{{name}}»",
+    "titleMultiple": "Переместить элементов: {{count}}",
+    "filterPlaceholder": "Фильтр папок",
+    "listLabel": "Целевая папка",
+    "root": "Корень хранилища",
+    "noMatch": "Ни одна папка не подходит.",
+    "confirm": "Переместить",
+    "moving": "Перемещение …"
   },
   "toolbar": {
     "formattingLabel": "Инструменты форматирования",

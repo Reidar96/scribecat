@@ -1,6 +1,7 @@
 import {
   ChevronDown,
   ChevronRight,
+  Ellipsis,
   FileText,
   Folder,
   FolderOpen,
@@ -80,6 +81,35 @@ type TreeNodeRowProps = {
   /** Absolute paths this drag carries — the row itself, or the whole selection. */
   resolveDragFilePaths: (node: FileTreeNode) => string[];
 };
+
+/**
+ * The row's context menu without a right-click. Only shown for a coarse
+ * pointer (file-tree.css): a finger cannot right-click, and a long press is
+ * the browser's own gesture on both platforms. A sibling of the row button,
+ * not a child, since a button may not contain another.
+ */
+function RowMoreButton({ onOpen }: { onOpen: (x: number, y: number) => void }) {
+  const { t } = useTranslation();
+
+  return (
+    <button
+      type="button"
+      className="file-tree__more"
+      aria-label={t("fileTree.moreActions")}
+      title={t("fileTree.moreActions")}
+      data-testid="row-more"
+      onClick={(event) => {
+        // The tree's context menu closes on any window click; the one that
+        // opens it must not reach that listener.
+        event.stopPropagation();
+        const rect = event.currentTarget.getBoundingClientRect();
+        onOpen(rect.left, rect.bottom);
+      }}
+    >
+      <Ellipsis aria-hidden="true" />
+    </button>
+  );
+}
 
 export function TreeNodeRow({
   node,
@@ -368,6 +398,9 @@ export function TreeNodeRow({
             ) : null}
           </button>
         )}
+        {!isRenaming ? (
+          <RowMoreButton onOpen={(x, y) => onRowContextMenu(node, x, y)} />
+        ) : null}
 
         {isExpanded ? (
           <ul role="group" className="file-tree__group">
@@ -510,6 +543,9 @@ export function TreeNodeRow({
           ) : null}
         </button>
       )}
+      {!isRenaming ? (
+        <RowMoreButton onOpen={(x, y) => onRowContextMenu(node, x, y)} />
+      ) : null}
     </li>
   );
 }

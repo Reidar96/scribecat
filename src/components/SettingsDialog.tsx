@@ -380,6 +380,8 @@ export function SettingsDialog({
     (state) => state.setCheckForUpdatesEnabled
   );
   const appVersion = useAppVersion();
+  const reopenLastNote = useEditorSettingsStore((state) => state.reopenLastNote);
+  const setReopenLastNote = useEditorSettingsStore((state) => state.setReopenLastNote);
 
   const ragEnabled = useRagSettingsStore((state) => state.config.enabled);
 
@@ -581,6 +583,14 @@ export function SettingsDialog({
                       <option value="it">{t("settingsDialog.languageItalian")}</option>
                       <option value="uk">{t("settingsDialog.languageUkrainian")}</option>
                     </select>
+                  </SettingRow>
+
+                  <SettingRow layout="switch" label={t("settingsDialog.reopenLastNote")}>
+                    <input
+                      type="checkbox"
+                      checked={reopenLastNote}
+                      onChange={(event) => setReopenLastNote(event.target.checked)}
+                    />
                   </SettingRow>
 
                   {platform.features.updater && isWindowsPlatform() ? (

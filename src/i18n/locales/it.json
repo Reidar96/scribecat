@@ -46,7 +46,11 @@
     "emptyDescription": "Una volta aperta una cartella, il suo contenuto e l'area di modifica verranno visualizzati qui.",
     "pendingTargetOtherFolder": "un'altra cartella",
     "version": "v{{version}}",
-    "pendingTargetLogout": "la disconnessione"
+    "pendingTargetLogout": "la disconnessione",
+    "openSidebar": "Mostra file",
+    "documentMenu": "Menu del documento",
+    "saveButton": "Salva",
+    "saveButtonTitle": "Salva le modifiche"
   },
   "unsavedDialog": {
     "eyebrow": "Modifiche non salvate",
@@ -205,6 +209,7 @@
     "vaultScopeNoFolder": "Nessuna cartella aperta",
     "vaultScopeHint": "Queste impostazioni sono salvate in {{name}}/.scribedog e valgono solo lì. Le altre cartelle hanno le proprie.",
     "vaultScopeNoFolderHint": "Apri una cartella per usare queste impostazioni: vengono salvate con la cartella, non con l'applicazione.",
+    "reopenLastNote": "Riapri l’ultima nota all’avvio",
     "accentColorReset": "Ripristina",
     "checkForUpdates": "Controlla aggiornamenti",
     "checkForUpdatesShort": "All'avvio chiede una volta a GitHub se esiste una versione più recente.",
@@ -488,7 +493,8 @@
     "openFolderPrompt": "Apri una cartella per vedere tutti i file Markdown che contiene.",
     "noMarkdownFiles": "Nessun file Markdown trovato. Apri una cartella contenente file `.md`.",
     "dropImportHint": "Rilascia file o cartelle: vengono importati come note",
-    "logout": "Esci"
+    "logout": "Esci",
+    "close": "Chiudi l’elenco dei file"
   },
   "fileTree": {
     "treeLabel": "Struttura dei file",
@@ -504,7 +510,21 @@
     "stagedChangeFolder": "Modifiche proposte in questa cartella: {{count}}",
     "openFolderNote": "{{path}} – un clic apre la nota della cartella, la freccia espande e comprime",
     "expandFolder": "Espandi",
-    "collapseFolder": "Comprimi"
+    "collapseFolder": "Comprimi",
+    "moreActions": "Altre azioni",
+    "moveTo": "Sposta in…",
+    "selectionCount": "{{count}} selezionati"
+  },
+  "moveDialog": {
+    "eyebrow": "Sposta",
+    "title": "Sposta “{{name}}”",
+    "titleMultiple": "Sposta {{count}} elementi",
+    "filterPlaceholder": "Filtra cartelle",
+    "listLabel": "Cartella di destinazione",
+    "root": "Radice del vault",
+    "noMatch": "Nessuna cartella corrisponde.",
+    "confirm": "Sposta",
+    "moving": "Spostamento …"
   },
   "toolbar": {
     "formattingLabel": "Strumenti di formattazione",

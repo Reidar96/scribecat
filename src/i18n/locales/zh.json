@@ -46,7 +46,11 @@
     "emptyDescription": "打开文件夹后，其内容和编辑界面将显示在此处。",
     "pendingTargetOtherFolder": "另一个文件夹",
     "version": "v{{version}}",
-    "pendingTargetLogout": "退出登录"
+    "pendingTargetLogout": "退出登录",
+    "openSidebar": "显示文件",
+    "documentMenu": "文档菜单",
+    "saveButton": "保存",
+    "saveButtonTitle": "保存更改"
   },
   "unsavedDialog": {
     "eyebrow": "未保存的更改",
@@ -204,6 +208,7 @@
     "vaultScopeNoFolder": "未打开文件夹",
     "vaultScopeHint": "这些设置保存在 {{name}}/.scribedog 中，仅对该文件夹生效。其他文件夹有各自的设置。",
     "vaultScopeNoFolderHint": "请先打开一个文件夹再使用这些设置：它们随文件夹保存，而不是随应用程序保存。",
+    "reopenLastNote": "启动时重新打开上次的笔记",
     "accentColorReset": "重置",
     "checkForUpdates": "检查更新",
     "checkForUpdatesShort": "启动时向 GitHub 查询一次是否有更新的版本。",
@@ -487,7 +492,8 @@
     "openFolderPrompt": "打开一个文件夹以查看其中包含的所有 Markdown 文件。",
     "noMarkdownFiles": "未找到 Markdown 文件。请打开包含 `.md` 文件的文件夹。",
     "dropImportHint": "拖入文件或文件夹，将作为笔记导入",
-    "logout": "退出登录"
+    "logout": "退出登录",
+    "close": "关闭文件列表"
   },
   "fileTree": {
     "treeLabel": "文件树",
@@ -503,7 +509,21 @@
     "stagedChangeFolder": "此文件夹中提议的更改：{{count}}",
     "openFolderNote": "{{path}} – 点击打开文件夹笔记，箭头用于展开和折叠",
     "expandFolder": "展开",
-    "collapseFolder": "折叠"
+    "collapseFolder": "折叠",
+    "moreActions": "更多操作",
+    "moveTo": "移动到…",
+    "selectionCount": "已选择 {{count}} 项"
+  },
+  "moveDialog": {
+    "eyebrow": "移动",
+    "title": "移动“{{name}}”",
+    "titleMultiple": "移动 {{count}} 项",
+    "filterPlaceholder": "筛选文件夹",
+    "listLabel": "目标文件夹",
+    "root": "Vault 根目录",
+    "noMatch": "没有匹配的文件夹。",
+    "confirm": "移动",
+    "moving": "正在移动 …"
   },
   "toolbar": {
     "formattingLabel": "格式化工具",

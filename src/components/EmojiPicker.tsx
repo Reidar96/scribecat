@@ -28,8 +28,14 @@ import { emojiDataPt } from "@/lib/emojiKeywordsPt";
 import { emojiDataRu } from "@/lib/emojiKeywordsRu";
 import { emojiDataIt } from "@/lib/emojiKeywordsIt";
 import { emojiDataUk } from "@/lib/emojiKeywordsUk";
+import { useLayoutMode } from "@/hooks/useLayoutMode";
 import { useDismissablePopover } from "@/lib/useDismissablePopover";
-import { usePopoverOverflowAlign } from "@/lib/usePopoverOverflowAlign";
+import {
+  anchorForTrigger,
+  popoverStyle,
+  usePopoverOverflowAlign,
+  type PopoverAnchor
+} from "@/lib/usePopoverOverflowAlign";
 import type { SupportedLanguage } from "@/i18n";
 
 const EMOJI_DATA: Record<SupportedLanguage, unknown> = {
@@ -123,9 +129,11 @@ function EmojiMartPicker({ language, onEmojiSelect }: EmojiMartPickerProps) {
 export function EmojiPicker({ editor, onSelect, trigger }: EmojiPickerProps) {
   const { t, i18n } = useTranslation();
   const language = (i18n.resolvedLanguage ?? i18n.language) as SupportedLanguage;
-  const [anchor, setAnchor] = useState<{ top: number; left: number; right: number } | null>(null);
+  const [anchor, setAnchor] = useState<PopoverAnchor | null>(null);
   const [align, setAlign] = useState<"left" | "right">("left");
+  const [valign, setValign] = useState<"below" | "above">("below");
   const popoverRef = useRef<HTMLDivElement>(null);
+  const isSheet = useLayoutMode() === "phone";
 
   const isOpen = anchor !== null;
 
@@ -134,7 +142,7 @@ export function EmojiPicker({ editor, onSelect, trigger }: EmojiPickerProps) {
   };
 
   useDismissablePopover(isOpen, close);
-  usePopoverOverflowAlign(anchor, popoverRef, setAlign);
+  usePopoverOverflowAlign(anchor, popoverRef, setAlign, setValign);
 
   const insertEmoji = (emoji: EmojiSelection) => {
     const value = emoji.native ?? emoji.shortcodes;
@@ -173,9 +181,9 @@ export function EmojiPicker({ editor, onSelect, trigger }: EmojiPickerProps) {
             return;
           }
 
-          const rect = event.currentTarget.getBoundingClientRect();
           setAlign("left");
-          setAnchor({ top: rect.bottom + 6, left: rect.left, right: window.innerWidth - rect.right });
+          setValign("below");
+          setAnchor(anchorForTrigger(event.currentTarget.getBoundingClientRect()));
         }}
       >
         {trigger ?? <Smile />}
@@ -185,10 +193,10 @@ export function EmojiPicker({ editor, onSelect, trigger }: EmojiPickerProps) {
         ? createPortal(
             <div
               ref={popoverRef}
-              className="editor-popover emoji-picker"
+              className={isSheet ? "editor-popover editor-popover--sheet emoji-picker" : "editor-popover emoji-picker"}
               role="menu"
               aria-label={t("emojiPicker.selectEmoji")}
-              style={align === "right" ? { top: anchor.top, right: anchor.right } : { top: anchor.top, left: anchor.left }}
+              style={isSheet ? undefined : popoverStyle(anchor, align, valign)}
               onClick={(event) => event.stopPropagation()}
             >
               <EmojiMartPicker language={language} onEmojiSelect={insertEmoji} />

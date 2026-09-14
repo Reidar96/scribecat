@@ -24,6 +24,7 @@ import {
 } from "@/lib/vaultMeta";
 
 export const SPELLCHECK_STORAGE_KEY = "scribedog-spellcheck-enabled";
+export const REOPEN_LAST_NOTE_STORAGE_KEY = "scribedog-reopen-last-note";
 export const DETAILS_PANEL_STORAGE_KEY = "scribedog-details-panel-visible";
 export const OUTLINE_DEPTH_STORAGE_KEY = "scribedog-outline-max-depth";
 export const DETAILS_COLLAPSED_STORAGE_KEY = "scribedog-details-collapsed-sections";
@@ -104,6 +105,24 @@ function getStoredSpellcheckEnabled(): boolean {
 function persistSpellcheckEnabled(enabled: boolean): void {
   try {
     window.localStorage.setItem(SPELLCHECK_STORAGE_KEY, String(enabled));
+  } catch {
+    // localStorage may be unavailable in some environments.
+  }
+}
+
+// On by default: the app already returns to the last folder, and stopping
+// one step short of the note is the step the user then takes every time.
+function getStoredReopenLastNote(): boolean {
+  try {
+    return window.localStorage.getItem(REOPEN_LAST_NOTE_STORAGE_KEY) !== "false";
+  } catch {
+    return true;
+  }
+}
+
+function persistReopenLastNote(enabled: boolean): void {
+  try {
+    window.localStorage.setItem(REOPEN_LAST_NOTE_STORAGE_KEY, String(enabled));
   } catch {
     // localStorage may be unavailable in some environments.
   }
@@ -212,6 +231,9 @@ function persistFontSizePt(sizePt: number): void {
 type EditorSettingsState = {
   spellcheckEnabled: boolean;
   setSpellcheckEnabled: (enabled: boolean) => void;
+  /** Open the note that was open in the vault last time when it is opened again. */
+  reopenLastNote: boolean;
+  setReopenLastNote: (enabled: boolean) => void;
   /**
    * Document font, shared by the editor and every export format. Selecting it
    * pulls in the family's faces on demand (see src/lib/fonts.ts).
@@ -242,6 +264,13 @@ type EditorSettingsState = {
   /** Details sidebar next to the document, toggled from the toolbar. */
   detailsPanelVisible: boolean;
   setDetailsPanelVisible: (visible: boolean) => void;
+  /**
+   * The details panel as a sheet on phone and tablet. Deliberately separate
+   * from detailsPanelVisible and not persisted: a panel left docked on the
+   * desktop must not come up as a sheet over every note opened on a phone.
+   */
+  detailsSheetOpen: boolean;
+  setDetailsSheetOpen: (open: boolean) => void;
   /** Deepest heading level the details panel's outline lists, 1..6. */
   outlineMaxDepth: number;
   setOutlineMaxDepth: (depth: number) => void;
@@ -298,6 +327,11 @@ export const useEditorSettingsStore = create<EditorSettingsState>((set, get) => 
     persistSpellcheckEnabled(enabled);
     set({ spellcheckEnabled: enabled });
   },
+  reopenLastNote: getStoredReopenLastNote(),
+  setReopenLastNote: (enabled: boolean) => {
+    persistReopenLastNote(enabled);
+    set({ reopenLastNote: enabled });
+  },
   fontId: initialFontId,
   setFontId: (fontId: AppFontId) => {
     persistFontId(fontId);
@@ -333,6 +367,8 @@ export const useEditorSettingsStore = create<EditorSettingsState>((set, get) => 
     persistDetailsPanelVisible(visible);
     set({ detailsPanelVisible: visible });
   },
+  detailsSheetOpen: false,
+  setDetailsSheetOpen: (open: boolean) => set({ detailsSheetOpen: open }),
   outlineMaxDepth: getStoredOutlineMaxDepth(),
   setOutlineMaxDepth: (depth: number) => {
     const clamped = clampOutlineDepth(depth);

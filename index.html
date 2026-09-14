@@ -2,7 +2,15 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover: the layout extends under the notch and home bar
+         and pads itself with the safe-area insets. interactive-widget:
+         Chrome shrinks the layout viewport for the on-screen keyboard, so the
+         editor toolbar stays above the keys (Safari ignores it and is
+         handled by useViewportHeight). The native shells ignore both. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content"
+    />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>ScribeDog</title>
     <style>

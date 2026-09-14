@@ -17,6 +17,8 @@ import { FileLinkSuggestionPopover } from "@/components/editor/FileLinkSuggestio
 import { DetailsPanel } from "@/components/editor/DetailsPanel";
 import { SelectionContextMenu, type SelectionContextMenuState } from "@/components/editor/SelectionContextMenu";
 import { StagedChangeBar } from "@/components/editor/StagedChangeBar";
+import { MobileSheet } from "@/components/app/MobileSheet";
+import { useLayoutMode } from "@/hooks/useLayoutMode";
 import {
   DETAILS_PANEL_MAX_WIDTH,
   DETAILS_PANEL_MIN_WIDTH,
@@ -182,6 +184,14 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   const spellcheckEnabled = useEditorSettingsStore((state) => state.spellcheckEnabled);
   const paperSurface = useEditorSettingsStore((state) => state.paperSurface);
   const detailsPanelVisible = useEditorSettingsStore((state) => state.detailsPanelVisible);
+  const layout = useLayoutMode();
+  // Phone and tablet show the panel as a sheet with its own switch (see the
+  // store), and have one right-hand sheet: while the chat is open it covers
+  // the details, which come back when the chat closes (the flag stays set,
+  // so nothing is lost).
+  const detailsSheetOpen = useEditorSettingsStore((state) => state.detailsSheetOpen);
+  const setDetailsSheetOpen = useEditorSettingsStore((state) => state.setDetailsSheetOpen);
+  const isChatOpen = useChatStore((state) => state.isOpen);
   const setDetailsPanelVisible = useEditorSettingsStore((state) => state.setDetailsPanelVisible);
   const {
     detailsPanelWidth,
@@ -273,6 +283,20 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     const currentEditor = editorRef.current;
 
     if (!currentEditor) {
+      return;
+    }
+
+    // On a touch screen the long press (and on Android the double tap that
+    // selects a word) arrives as this event too; it is how a word gets
+    // selected there, and our menu would open instead of the selection
+    // handles. The paw button in the toolbar is the way in on touch.
+    const nativeEvent = event.nativeEvent as PointerEvent | MouseEvent;
+    const fromTouch =
+      "pointerType" in nativeEvent
+        ? nativeEvent.pointerType === "touch"
+        : window.matchMedia("(pointer: coarse)").matches;
+
+    if (fromTouch) {
       return;
     }
 
@@ -1542,7 +1566,31 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
               />
             </ScrollArea>
 
-            {detailsPanelVisible ? (
+            {detailsSheetOpen && layout !== "desktop" && !isChatOpen ? (
+              <MobileSheet
+                side={layout === "phone" ? "full" : "right"}
+                backdrop={layout === "phone"}
+                label={t("detailsPanel.title")}
+                onClose={() => setDetailsSheetOpen(false)}
+                className="mobile-sheet__panel--details"
+              >
+                <DetailsPanel
+                  editor={editor}
+                  folderPath={folderPath}
+                  filePath={filePath}
+                  markdown={markdown}
+                  vaultFilePaths={vaultFilePaths}
+                  outlineFocusRequestId={outlineFocusRequestId}
+                  onJumpToHeading={jumpToHeading}
+                  onRequestEditorFocus={focusEditor}
+                  onRequestFileOpen={onRequestFileOpen}
+                  onClose={() => setDetailsSheetOpen(false)}
+                  width={detailsPanelWidth}
+                />
+              </MobileSheet>
+            ) : null}
+
+            {detailsPanelVisible && layout === "desktop" ? (
               <>
                 <div
                   className={cn(

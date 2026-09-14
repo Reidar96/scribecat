@@ -5,6 +5,7 @@ import { DeleteFileDialog } from "@/components/DeleteFileDialog";
 import { ExportDialog, type ExportDialogTarget } from "@/components/ExportDialog";
 import type { MarkdownFileRecord } from "@/lib/fileSystem";
 import { ImportDialog } from "@/components/ImportDialog";
+import { MoveToDialog, type MoveRequest } from "@/components/MoveToDialog";
 import { SettingsDialog, type SettingsTab } from "@/components/SettingsDialog";
 import { UnsavedChangesDialog } from "@/components/UnsavedChangesDialog";
 import { UpdateNotification } from "@/components/UpdateNotification";
@@ -37,6 +38,14 @@ type AppDialogsProps = {
   // Assistant edit
   assistantEditTarget: { assistant: Assistant | null } | null;
   onCloseAssistantEdit: () => void;
+
+  // Move to folder (tree context menu)
+  moveRequest: MoveRequest | null;
+  fileRelativePaths: string[];
+  emptyFolderRelativePaths: string[];
+  isMoving: boolean;
+  onConfirmMove: (targetRelativePath: string) => void;
+  onCancelMove: () => void;
 
   // Delete
   deleteTarget: DeleteTarget | null;
@@ -89,6 +98,12 @@ export function AppDialogs({
   onAssistantEditRequest,
   assistantEditTarget,
   onCloseAssistantEdit,
+  moveRequest,
+  fileRelativePaths,
+  emptyFolderRelativePaths,
+  isMoving,
+  onConfirmMove,
+  onCancelMove,
   deleteTarget,
   deleteTargetLabel,
   isDeleting,
@@ -142,6 +157,15 @@ export function AppDialogs({
         open={assistantEditTarget !== null}
         assistant={assistantEditTarget?.assistant ?? null}
         onClose={onCloseAssistantEdit}
+      />
+
+      <MoveToDialog
+        request={moveRequest}
+        fileRelativePaths={fileRelativePaths}
+        emptyFolderRelativePaths={emptyFolderRelativePaths}
+        isMoving={isMoving}
+        onConfirm={onConfirmMove}
+        onCancel={onCancelMove}
       />
 
       <DeleteFileDialog

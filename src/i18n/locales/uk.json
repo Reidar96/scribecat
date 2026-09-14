@@ -46,7 +46,11 @@
     "emptyDescription": "Після відкриття папки тут з'являться її вміст і область редагування.",
     "pendingTargetOtherFolder": "іншу папку",
     "version": "v{{version}}",
-    "pendingTargetLogout": "вихід"
+    "pendingTargetLogout": "вихід",
+    "openSidebar": "Показати файли",
+    "documentMenu": "Меню документа",
+    "saveButton": "Зберегти",
+    "saveButtonTitle": "Зберегти зміни"
   },
   "unsavedDialog": {
     "eyebrow": "Незбережені зміни",
@@ -210,6 +214,7 @@
     "vaultScopeHint": "Ці налаштування зберігаються в {{name}}/.scribedog і діють лише там. Інші теки мають свої.",
     "vaultScopeNoFolderHint": "Відкрийте теку, щоб використовувати ці налаштування: вони зберігаються з текою, а не із застосунком.",
     "accentColorReset": "Скинути",
+    "reopenLastNote": "Відкривати останню нотатку під час запуску",
     "checkForUpdates": "Перевірити оновлення",
     "checkForUpdatesShort": "Під час запуску один раз запитує GitHub, чи є новіша версія.",
     "checkForUpdatesHint": "Порівнюється лише номер версії, дані про використання не надсилаються. Якщо є нова версія, з'являється сповіщення; у портативному режимі воно веде на сторінку випуску замість встановлення.",
@@ -500,7 +505,8 @@
     "openFolderPrompt": "Відкрийте папку, щоб побачити всі файли Markdown, які вона містить.",
     "noMarkdownFiles": "Файлів Markdown не знайдено. Відкрийте папку з файлами `.md`.",
     "dropImportHint": "Перетягніть файли або теки — вони будуть імпортовані як нотатки",
-    "logout": "Вийти"
+    "logout": "Вийти",
+    "close": "Закрити список файлів"
   },
   "fileTree": {
     "treeLabel": "Дерево файлів",
@@ -516,7 +522,21 @@
     "stagedChangeFolder": "Запропонованих змін у цій теці: {{count}}",
     "openFolderNote": "{{path}} – клац відкриває нотатку теки, стрілка розгортає та згортає",
     "expandFolder": "Розгорнути",
-    "collapseFolder": "Згорнути"
+    "collapseFolder": "Згорнути",
+    "moreActions": "Інші дії",
+    "moveTo": "Перемістити до…",
+    "selectionCount": "Вибрано: {{count}}"
+  },
+  "moveDialog": {
+    "eyebrow": "Переміщення",
+    "title": "Перемістити «{{name}}»",
+    "titleMultiple": "Перемістити елементів: {{count}}",
+    "filterPlaceholder": "Фільтр тек",
+    "listLabel": "Цільова тека",
+    "root": "Корінь сховища",
+    "noMatch": "Жодна тека не підходить.",
+    "confirm": "Перемістити",
+    "moving": "Переміщення …"
   },
   "toolbar": {
     "formattingLabel": "Інструменти форматування",

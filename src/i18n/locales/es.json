@@ -46,7 +46,11 @@
     "emptyDescription": "Una vez que se abra una carpeta, su contenido y la superficie de edición aparecerán aquí.",
     "pendingTargetOtherFolder": "otra carpeta",
     "version": "v{{version}}",
-    "pendingTargetLogout": "cerrar sesión"
+    "pendingTargetLogout": "cerrar sesión",
+    "openSidebar": "Mostrar archivos",
+    "documentMenu": "Menú del documento",
+    "saveButton": "Guardar",
+    "saveButtonTitle": "Guardar cambios"
   },
   "unsavedDialog": {
     "eyebrow": "Cambios sin guardar",
@@ -205,6 +209,7 @@
     "vaultScopeNoFolder": "Ninguna carpeta abierta",
     "vaultScopeHint": "Estos ajustes se guardan en {{name}}/.scribedog y solo valen ahí. Las demás carpetas tienen los suyos.",
     "vaultScopeNoFolderHint": "Abre una carpeta para usar estos ajustes: se guardan con la carpeta, no con la aplicación.",
+    "reopenLastNote": "Volver a abrir la última nota al iniciar",
     "accentColorReset": "Restablecer",
     "checkForUpdates": "Buscar actualizaciones",
     "checkForUpdatesShort": "Pregunta una vez a GitHub al iniciar si existe una versión más reciente.",
@@ -488,7 +493,8 @@
     "openFolderPrompt": "Abre una carpeta para ver todos los archivos Markdown que contiene.",
     "noMarkdownFiles": "No se encontraron archivos Markdown. Abre una carpeta que contenga archivos `.md`.",
     "dropImportHint": "Suelta archivos o carpetas: se importan como notas",
-    "logout": "Cerrar sesión"
+    "logout": "Cerrar sesión",
+    "close": "Cerrar la lista de archivos"
   },
   "fileTree": {
     "treeLabel": "Árbol de archivos",
@@ -504,7 +510,21 @@
     "stagedChangeFolder": "Cambios propuestos en esta carpeta: {{count}}",
     "openFolderNote": "{{path}} – un clic abre la nota de la carpeta, la flecha la despliega y pliega",
     "expandFolder": "Desplegar",
-    "collapseFolder": "Plegar"
+    "collapseFolder": "Plegar",
+    "moreActions": "Más acciones",
+    "moveTo": "Mover a…",
+    "selectionCount": "{{count}} seleccionados"
+  },
+  "moveDialog": {
+    "eyebrow": "Mover",
+    "title": "Mover «{{name}}»",
+    "titleMultiple": "Mover {{count}} elementos",
+    "filterPlaceholder": "Filtrar carpetas",
+    "listLabel": "Carpeta de destino",
+    "root": "Raíz del vault",
+    "noMatch": "Ninguna carpeta coincide.",
+    "confirm": "Mover",
+    "moving": "Moviendo …"
   },
   "toolbar": {
     "formattingLabel": "Herramientas de formato",

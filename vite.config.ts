@@ -86,7 +86,20 @@ export default defineConfig(async ({ mode }) => {
           port: 5173,
           strictPort: true,
           proxy: {
-            "/api": "http://127.0.0.1:3000"
+            "/api": {
+              target: "http://127.0.0.1:3000",
+              // /api/events is a WebSocket (the live-update channel). Without
+              // `ws` the upgrade is not forwarded, and without the error
+              // handler a client that drops the socket hard (a closed tab, a
+              // browser test ending) takes the whole dev server down with an
+              // unhandled ECONNRESET.
+              ws: true,
+              configure: (proxy) => {
+                proxy.on("error", (error) => {
+                  console.warn(`[dev:web] proxy: ${error.message}`);
+                });
+              }
+            }
           }
         }
       : {

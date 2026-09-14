@@ -8,6 +8,7 @@ import type { SettingsTab } from "@/components/SettingsDialog";
 import { Sidebar } from "@/components/Sidebar";
 import { AppDialogs } from "@/components/app/AppDialogs";
 import { DocumentPanel } from "@/components/app/DocumentPanel";
+import { MobileSheet } from "@/components/app/MobileSheet";
 import { ZenMode } from "@/components/app/ZenMode";
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import { ChatSessionOverview } from "@/components/chat/ChatSessionOverview";
@@ -22,6 +23,8 @@ import { useDeleteTarget } from "@/hooks/useDeleteTarget";
 import { useExportTarget } from "@/hooks/useExportTarget";
 import { useFolderWatcher } from "@/hooks/useFolderWatcher";
 import { useGlobalShortcuts } from "@/hooks/useGlobalShortcuts";
+import { useLayoutMode } from "@/hooks/useLayoutMode";
+import { useMoveTarget } from "@/hooks/useMoveTarget";
 import { useRagIndexAutoUpdate } from "@/hooks/useRagIndexAutoUpdate";
 import {
   SIDEBAR_MAX_WIDTH,
@@ -31,6 +34,7 @@ import {
 import { useStartupFolder } from "@/hooks/useStartupFolder";
 import { useTitleRename } from "@/hooks/useTitleRename";
 import { useUpdateCheck } from "@/hooks/useUpdateCheck";
+import { useViewportHeight } from "@/hooks/useViewportHeight";
 import { useWebviewZoom } from "@/hooks/useWebviewZoom";
 import { useWindowReveal } from "@/hooks/useWindowReveal";
 import { useZenMode } from "@/hooks/useZenMode";
@@ -41,6 +45,7 @@ import {
   getFolderNotePath,
   isFolderNotePath
 } from "@/lib/folderNotes";
+import { getLastOpenedRelativePath, setLastOpenedRelativePath } from "@/lib/lastOpenedFile";
 import { clearVaultSearchCache } from "@/lib/ragSearch";
 import { findStepIndex } from "@/lib/navigationHistory";
 import { printMarkdown } from "@/lib/print";
@@ -104,6 +109,8 @@ function App() {
   const [fileTreeSelection, setFileTreeSelection] = useState<BatchEntry[]>([]);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [isAiActionPending, setIsAiActionPending] = useState(false);
+  // Phone layout only: the file list is a sheet over the document.
+  const [isSidebarSheetOpen, setIsSidebarSheetOpen] = useState(false);
   const appVersion = useAppVersion();
   const editorHandleRef = useRef<EditorHandle | null>(null);
   const folderRenameRequestIdRef = useRef(0);
@@ -169,6 +176,15 @@ function App() {
         .filter(([, document]) => document.content !== document.baseContent)
         .map(([filePath]) => filePath),
     [fileDocuments]
+  );
+
+  const fileRelativePaths = useMemo(
+    () => (folderPath ? filePaths.map((path) => getRelativeDisplayPath(folderPath, path)) : []),
+    [folderPath, filePaths]
+  );
+  const emptyFolderRelativePaths = useMemo(
+    () => (folderPath ? emptyFolderPaths.map((path) => getRelativeDisplayPath(folderPath, path)) : []),
+    [folderPath, emptyFolderPaths]
   );
 
   const selectedRelativePath =
@@ -238,6 +254,26 @@ function App() {
 
   useWebviewZoom();
   useWindowReveal();
+  useViewportHeight();
+
+  const layout = useLayoutMode();
+
+  // A phone has no room for the file list next to the document, and no note
+  // means there is nothing but the file list to look at: the sheet opens by
+  // itself then. It closes when the user picks or creates a note (the
+  // handlers below), not on every change of the selected path: a move or
+  // rename in the tree changes that path too, and closing the sheet then
+  // hides the result the user is looking at.
+  useEffect(() => {
+    if (layout !== "phone") {
+      setIsSidebarSheetOpen(false);
+      return;
+    }
+
+    if (selectedFilePath === null && folderPath !== null) {
+      setIsSidebarSheetOpen(true);
+    }
+  }, [layout, selectedFilePath, folderPath]);
 
   const { availableUpdate, dismissUpdate } = useUpdateCheck();
 
@@ -273,6 +309,11 @@ function App() {
     fileTreeSelection,
     deleteFilePath,
     deleteFolderPath
+  });
+
+  const { moveRequest, isMoving, requestMove, cancelMove, confirmMove } = useMoveTarget({
+    folderPath,
+    moveTreeEntry
   });
 
   const {
@@ -484,6 +525,9 @@ function App() {
     if (newFilePath) {
       const fileName = newFilePath.replace(/\\/g, "/").split("/").pop() ?? "";
       startTitleRename(fileName.replace(/\.md$/i, ""), newFilePath);
+      // The new note is open behind the sheet; the rename above wants the eye
+      // on its title.
+      setIsSidebarSheetOpen(false);
     }
   };
 
@@ -756,6 +800,52 @@ function App() {
 
   useStartupFolder(openFolderAtPath);
   useFolderWatcher(refreshFolderFiles);
+
+  // The open note is remembered per vault and per device, and opened again
+  // when the vault is next opened (Settings, "reopen the last note"). Only
+  // once per opened folder: closing or deleting the note afterwards must
+  // not bring it straight back.
+  const reopenLastNote = useEditorSettingsStore((state) => state.reopenLastNote);
+  const restoredFolderRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (folderPath && selectedFilePath) {
+      setLastOpenedRelativePath(folderPath, getRelativeDisplayPath(folderPath, selectedFilePath));
+    }
+  }, [folderPath, selectedFilePath]);
+
+  useEffect(() => {
+    if (!folderPath || isLoading || restoredFolderRef.current === folderPath) {
+      return;
+    }
+
+    restoredFolderRef.current = folderPath;
+
+    if (!reopenLastNote || selectedFilePath !== null) {
+      return;
+    }
+
+    const relativePath = getLastOpenedRelativePath(folderPath);
+
+    if (!relativePath) {
+      return;
+    }
+
+    // Gone since last time (deleted, moved from another device): nothing to
+    // open, and the stale bookmark goes with it.
+    const filePath = filePaths.find(
+      (candidate) => getRelativeDisplayPath(folderPath, candidate) === relativePath
+    );
+
+    if (filePath) {
+      void selectFilePath(filePath);
+      // The phone's sheet opened for the empty state a moment ago; the note
+      // it is about to cover is the one the user wants to see.
+      setIsSidebarSheetOpen(false);
+    } else {
+      setLastOpenedRelativePath(folderPath, null);
+    }
+  }, [folderPath, isLoading, filePaths, reopenLastNote, selectedFilePath, selectFilePath]);
   useRagIndexAutoUpdate();
   useGlobalShortcuts({
     selectedFilePath,
@@ -772,6 +862,74 @@ function App() {
     editorHandleRef
   });
 
+  // The same Sidebar element goes into the grid on tablet and desktop and
+  // into a sheet on the phone; the props do not know the difference.
+  const sidebar = (
+    <Sidebar
+      folderPath={folderPath}
+      filePaths={filePaths}
+      emptyFolderPaths={emptyFolderPaths}
+      selectedFilePath={selectedFilePath}
+      dirtyFilePaths={dirtyFilePaths}
+      folderError={folderError}
+      isLoading={isLoading}
+      pendingFolderRename={pendingFolderRename}
+      sortMode={sortMode}
+      manualOrder={manualOrder}
+      fileMtimeMs={fileMtimeMs}
+      emptyFolderMtimeMs={emptyFolderMtimeMs}
+      onOpenFolder={openFolderSafely}
+      recentFolderPaths={getRecentFolderPaths()}
+      onOpenRecentFolder={(targetFolderPath) => void openRecentFolderSafely(targetFolderPath)}
+      onCreateFile={() => void handleCreateFile()}
+      onCreateFileRequest={(targetDirectory) => void handleCreateFile(targetDirectory)}
+      onCreateFolder={() => void handleCreateFolder()}
+      onImportRequest={() => void requestImportFiles()}
+      onSelectFilePath={async (filePath) => {
+        await selectFilePathSafely(filePath);
+        setIsSidebarSheetOpen(false);
+      }}
+      onOpenFolderNote={async (targetFolderPath) => {
+        await openFolderNoteSafely(targetFolderPath);
+        setIsSidebarSheetOpen(false);
+      }}
+      onDeleteFileRequest={requestDeleteFile}
+      onDeleteFolderRequest={requestDeleteFolder}
+      onDeleteMultipleRequest={requestDeleteMultiple}
+      onDeleteToolbarRequest={requestDeleteFromToolbar}
+      onExportFileRequest={requestExportFile}
+      onExportFolderRequest={requestExportFolder}
+      onExportMultipleRequest={requestExportMultiple}
+      onPrintFileRequest={handlePrintFileRequest}
+      onRenameFolder={renameFolderPath}
+      onRenameFile={renameFilePath}
+      onMoveEntry={moveTreeEntry}
+      onMoveRequest={requestMove}
+      onSetSortMode={(mode) => void setSortMode(mode)}
+      onAiSettingsRequest={() => {
+        setSettingsInitialTab("application");
+        setIsAiSettingsOpen(true);
+      }}
+      onRequestEditorFocus={() => setEditorFocusRequestId((id) => id + 1)}
+      sidebarFocusRequestId={sidebarFocusRequestId}
+      onFileTreeSelectionChange={setFileTreeSelection}
+      fileTreeSelectionCount={fileTreeSelection.length}
+      onFilesDropped={handleFilesDropped}
+      onLogoutRequest={() => void logoutSafely()}
+      onClose={layout === "phone" ? () => setIsSidebarSheetOpen(false) : undefined}
+    />
+  );
+
+  const chatContent =
+    chatView === "overview" ? (
+      <ChatSessionOverview />
+    ) : (
+      <ChatPanel
+        canEditDocument={selectedFilePath !== null}
+        onAssistantSettingsRequest={openAssistantSettings}
+      />
+    );
+
   return (
     <main
       className={cn("app-shell", isZenMode && "app-shell--zen")}
@@ -783,7 +941,7 @@ function App() {
           className={cn(
             "workspace-grid",
             isZenMode && "workspace-grid--zen",
-            isChatOpen && "workspace-grid--chat-open"
+            isChatOpen && layout === "desktop" && "workspace-grid--chat-open"
           )}
           aria-label={t("app.workspaceLabel")}
           style={
@@ -793,51 +951,7 @@ function App() {
             } as React.CSSProperties
           }
         >
-          <Sidebar
-            folderPath={folderPath}
-            filePaths={filePaths}
-            emptyFolderPaths={emptyFolderPaths}
-            selectedFilePath={selectedFilePath}
-            dirtyFilePaths={dirtyFilePaths}
-            folderError={folderError}
-            isLoading={isLoading}
-            pendingFolderRename={pendingFolderRename}
-            sortMode={sortMode}
-            manualOrder={manualOrder}
-            fileMtimeMs={fileMtimeMs}
-            emptyFolderMtimeMs={emptyFolderMtimeMs}
-            onOpenFolder={openFolderSafely}
-            recentFolderPaths={getRecentFolderPaths()}
-            onOpenRecentFolder={(targetFolderPath) => void openRecentFolderSafely(targetFolderPath)}
-            onCreateFile={() => void handleCreateFile()}
-            onCreateFileRequest={(targetDirectory) => void handleCreateFile(targetDirectory)}
-            onCreateFolder={() => void handleCreateFolder()}
-            onImportRequest={() => void requestImportFiles()}
-            onSelectFilePath={selectFilePathSafely}
-            onOpenFolderNote={openFolderNoteSafely}
-            onDeleteFileRequest={requestDeleteFile}
-            onDeleteFolderRequest={requestDeleteFolder}
-            onDeleteMultipleRequest={requestDeleteMultiple}
-            onDeleteToolbarRequest={requestDeleteFromToolbar}
-            onExportFileRequest={requestExportFile}
-            onExportFolderRequest={requestExportFolder}
-            onExportMultipleRequest={requestExportMultiple}
-            onPrintFileRequest={handlePrintFileRequest}
-            onRenameFolder={renameFolderPath}
-            onRenameFile={renameFilePath}
-            onMoveEntry={moveTreeEntry}
-            onSetSortMode={(mode) => void setSortMode(mode)}
-            onAiSettingsRequest={() => {
-              setSettingsInitialTab("application");
-              setIsAiSettingsOpen(true);
-            }}
-            onRequestEditorFocus={() => setEditorFocusRequestId((id) => id + 1)}
-            sidebarFocusRequestId={sidebarFocusRequestId}
-            onFileTreeSelectionChange={setFileTreeSelection}
-            fileTreeSelectionCount={fileTreeSelection.length}
-            onFilesDropped={handleFilesDropped}
-            onLogoutRequest={() => void logoutSafely()}
-          />
+          {layout === "phone" ? null : sidebar}
 
           <div
             className={cn(
@@ -898,9 +1012,11 @@ function App() {
             onZenModeRequest={enterZenMode}
             onVersionDiffRequest={handleVersionDiffRequest}
             onVersionRestoreRequest={(version) => void handleVersionRestore(version)}
+            onOpenSidebar={() => setIsSidebarSheetOpen(true)}
+            onSaveRequest={() => void saveSelectedFile()}
           />
 
-          {isChatOpen ? (
+          {isChatOpen && layout === "desktop" ? (
             <div
               className={cn(
                 "workspace-resizer",
@@ -920,20 +1036,38 @@ function App() {
             </div>
           ) : null}
 
-          {isChatOpen ? (
+          {isChatOpen && layout === "desktop" ? (
             <aside className="chat-column" aria-label={t("chat.panelLabel")}>
-              {chatView === "overview" ? (
-                <ChatSessionOverview />
-              ) : (
-                <ChatPanel
-                  canEditDocument={selectedFilePath !== null}
-                  onAssistantSettingsRequest={openAssistantSettings}
-                />
-              )}
+              {chatContent}
             </aside>
           ) : null}
         </section>
       </div>
+
+      {isSidebarSheetOpen && layout === "phone" ? (
+        <MobileSheet
+          side="left"
+          label={t("sidebar.filesLabel")}
+          onClose={() => setIsSidebarSheetOpen(false)}
+          className="mobile-sheet__panel--sidebar"
+        >
+          {sidebar}
+        </MobileSheet>
+      ) : null}
+
+      {isChatOpen && layout !== "desktop" ? (
+        <MobileSheet
+          side={layout === "phone" ? "full" : "right"}
+          backdrop={layout === "phone"}
+          label={t("chat.panelLabel")}
+          onClose={() => useChatStore.getState().closePanel()}
+          className="mobile-sheet__panel--chat"
+        >
+          <aside className="chat-column" aria-label={t("chat.panelLabel")}>
+            {chatContent}
+          </aside>
+        </MobileSheet>
+      ) : null}
 
       {isZenMode ? <ZenMode onExit={exitZenMode} isDirty={isDirty} /> : null}
 
@@ -963,6 +1097,12 @@ function App() {
           setSettingsInitialTab("assistants");
           setIsAiSettingsOpen(true);
         }}
+        moveRequest={moveRequest}
+        fileRelativePaths={fileRelativePaths}
+        emptyFolderRelativePaths={emptyFolderRelativePaths}
+        isMoving={isMoving}
+        onConfirmMove={(target) => void confirmMove(target)}
+        onCancelMove={cancelMove}
         deleteTarget={deleteTarget}
         deleteTargetLabel={deleteTargetLabel}
         isDeleting={isDeleting}

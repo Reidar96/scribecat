@@ -17,6 +17,9 @@ type UseTreeDragDropOptions = {
   onMoveEntry: (input: MoveTreeEntryInput) => Promise<boolean>;
 };
 
+/** Indicator key of the drop zone below the last row (see handleTailDrop). */
+export const TREE_TAIL_KEY = "__tree-tail__";
+
 /** Drag & drop reordering and moving, active in manual sort mode only. */
 export function useTreeDragDrop({
   folderPath,
@@ -142,12 +145,42 @@ export function useTreeDragDrop({
     [clearSelection, dragSourceKeys, flatNodes, folderPath, nodeContextByKey, onMoveEntry]
   );
 
+  // The strip below the last row: a drop there puts the entries at the end
+  // of the top level. Without it a note in the last folder of the vault has
+  // no way out of that folder by dragging once the folder is expanded, since
+  // every row below the folder's own is one of its children.
+  const handleTailDrop = useCallback(() => {
+    const sourceKeys = dragSourceKeys;
+    setDragSourceKeys([]);
+    setDropIndicator(null);
+
+    if (sourceKeys.length === 0) {
+      return;
+    }
+
+    const topLevelSourceNodes = getTopLevelSelection(sourceKeys, flatNodes);
+
+    void (async () => {
+      for (const sourceNode of topLevelSourceNodes) {
+        await onMoveEntry({
+          kind: sourceNode.kind,
+          sourcePath: await join(folderPath, sourceNode.relativePath),
+          targetParentDirectory: folderPath,
+          targetIndex: Number.MAX_SAFE_INTEGER
+        });
+      }
+
+      clearSelection();
+    })();
+  }, [clearSelection, dragSourceKeys, flatNodes, folderPath, onMoveEntry]);
+
   return {
     dragSourceKeys,
     dropIndicator,
     handleRowDragStart,
     handleRowDropIndicatorChange,
     handleRowDragEnd,
-    handleRowDrop
+    handleRowDrop,
+    handleTailDrop
   };
 }

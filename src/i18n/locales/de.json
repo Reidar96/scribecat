@@ -46,7 +46,11 @@
     "emptyDescription": "Sobald ein Ordner geöffnet ist, erscheinen hier Inhalt und die spätere Bearbeitungsoberfläche.",
     "pendingTargetOtherFolder": "einen anderen Ordner",
     "version": "v{{version}}",
-    "pendingTargetLogout": "Abmelden"
+    "pendingTargetLogout": "Abmelden",
+    "openSidebar": "Dateien anzeigen",
+    "documentMenu": "Dokumentmenü",
+    "saveButton": "Speichern",
+    "saveButtonTitle": "Änderungen speichern"
   },
   "unsavedDialog": {
     "eyebrow": "Ungespeicherte Änderungen",
@@ -205,6 +209,7 @@
     "vaultScopeNoFolder": "Kein Ordner geöffnet",
     "vaultScopeHint": "Diese Einstellungen werden in {{name}}/.scribedog gespeichert und gelten nur dort. Andere Ordner haben ihre eigenen.",
     "vaultScopeNoFolderHint": "Öffne einen Ordner, um diese Einstellungen zu verwenden: Sie werden mit dem Ordner gespeichert, nicht mit der Anwendung.",
+    "reopenLastNote": "Zuletzt geöffnete Notiz beim Start wieder öffnen",
     "accentColorReset": "Zurücksetzen",
     "checkForUpdates": "Auf Updates prüfen",
     "checkForUpdatesShort": "Fragt beim Start einmal bei GitHub nach einer neueren Version.",
@@ -488,7 +493,8 @@
     "openFolderPrompt": "Öffne einen Ordner, um alle darin enthaltenen Markdown-Dateien zu sehen.",
     "noMarkdownFiles": "Keine Markdown-Dateien gefunden. Öffne einen Ordner mit `.md` Dateien.",
     "dropImportHint": "Dateien oder Ordner ablegen – sie werden als Notizen importiert",
-    "logout": "Abmelden"
+    "logout": "Abmelden",
+    "close": "Dateiliste schließen"
   },
   "fileTree": {
     "treeLabel": "Dateibaum",
@@ -504,7 +510,21 @@
     "stagedChangeFolder": "Vorgeschlagene Änderungen in diesem Ordner: {{count}}",
     "openFolderNote": "{{path}} – Klick öffnet die Ordnernotiz, der Pfeil klappt auf und zu",
     "expandFolder": "Aufklappen",
-    "collapseFolder": "Zuklappen"
+    "collapseFolder": "Zuklappen",
+    "moreActions": "Weitere Aktionen",
+    "moveTo": "Verschieben nach…",
+    "selectionCount": "{{count}} ausgewählt"
+  },
+  "moveDialog": {
+    "eyebrow": "Verschieben",
+    "title": "„{{name}}“ verschieben",
+    "titleMultiple": "{{count}} Einträge verschieben",
+    "filterPlaceholder": "Ordner filtern",
+    "listLabel": "Zielordner",
+    "root": "Vault-Wurzel",
+    "noMatch": "Kein Ordner passt.",
+    "confirm": "Verschieben",
+    "moving": "Verschiebt …"
   },
   "toolbar": {
     "formattingLabel": "Formatierungswerkzeuge",

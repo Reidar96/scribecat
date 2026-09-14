@@ -1,26 +1,687 @@
-/* Narrow window layout. Imported after base.css and sidebar.css so these
-   rules win over the ones they override. */
+/* Phone and tablet layouts, and touch. Imported after the component sheets
+   so these rules win over the ones they override.
+
+   Three layouts by width (src/lib/layoutMode.ts holds the same numbers):
+   phone up to 640px, tablet up to 920px, desktop above, where nothing in
+   this file applies. Touch is a separate axis: `pointer: coarse` and
+   `hover: none` decide target sizes and hover replacements regardless of
+   width, because an iPad in landscape is a desktop without a mouse and a
+   narrow desktop window is a phone with one. */
+
+/* --- Zoom --------------------------------------------------------------- */
+
+/* The web build sets --app-zoom (platform/web); the native app zooms the
+   webview itself and never sets it, so the default of 1 leaves the desktop
+   as it was. On narrow viewports the factor scales the document text only:
+   a body-level zoom there fights the viewport meta and the pinch zoom. */
+@media (min-width: 921px) {
+  body {
+    zoom: var(--app-zoom, 1);
+  }
+}
 
 @media (max-width: 920px) {
+  .editor-view__surface {
+    font-size: calc(1rem * var(--document-font-scale, 1) * var(--app-zoom, 1));
+  }
+}
+
+/* --- Tablet and phone: shell, toolbar, header --------------------------- */
+
+@media (max-width: 920px) {
+  /* The on-screen keyboard shrinks the visible area; useViewportHeight keeps
+     --viewport-height at that size so the toolbar stays above the keyboard,
+     and a fixed shell cannot be panned away by Safari. */
+  body {
+    min-height: 0;
+  }
+
+  /* Absolute, not fixed: a fixed shell would be a stacking context, and the
+     dialogs rendered inside it (AppDialogs) would then sit under the sheets
+     they were opened from, whatever their z-index. */
+  .app-shell {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: var(--viewport-height, 100dvh);
+  }
+
   .workspace {
-    padding: 1rem;
+    height: 100%;
+    padding: 0.75rem;
+    padding-left: max(0.75rem, env(safe-area-inset-left));
+    padding-right: max(0.75rem, env(safe-area-inset-right));
   }
 
   .workspace-grid {
-    grid-template-columns: 1fr;
-    gap: 1.25rem;
+    grid-template-columns: clamp(240px, var(--sidebar-width, 320px), 300px) minmax(0, 1fr);
+    gap: 0.75rem;
+  }
+
+  .workspace-grid--zen {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .workspace-resizer {
     display: none;
   }
 
-  .topbar {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
   .sidebar-panel__folder {
     max-width: none;
   }
+
+  /* The implicit `auto` column would grow to the widest child (a long
+     title, the toolbar row) and push the card past the viewport; a track
+     that may shrink to nothing keeps everything at viewport width and lets
+     the title ellipsize and the toolbar scroll. */
+  .detail-panel__card {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 1rem;
+  }
+
+  /* The toolbar moves below the text, one swipeable row: with the keyboard
+     open it then sits right above the keys. The view group (find, details,
+     zoom, zen, options) and the chat button live in the document header's
+     menu and button instead, so they are hidden here with their separator. */
+  .editor-view > .editor-toolbar {
+    order: 10;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    padding: 0.45rem 0.5rem;
+  }
+
+  .editor-view > .editor-toolbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .editor-toolbar__group {
+    flex-wrap: nowrap;
+    flex-shrink: 0;
+  }
+
+  .editor-toolbar__separator {
+    flex-shrink: 0;
+  }
+
+  .editor-toolbar__group--view,
+  .editor-toolbar__separator--view,
+  .editor-toolbar__chat-button {
+    display: none;
+  }
+
+  /* Sheets replace the docked columns; the panels inside fill them. */
+  .mobile-sheet__panel--sidebar .sidebar-panel {
+    height: 100%;
+    border: 0;
+    border-radius: 0;
+    padding-top: max(1rem, env(safe-area-inset-top));
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+
+  .mobile-sheet__panel--sidebar .sidebar-panel::before {
+    border-radius: 0;
+    clip-path: none;
+  }
+
+  .mobile-sheet__panel--sidebar .sidebar-panel__folder-wrap {
+    display: flex;
+    flex-direction: row-reverse;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .mobile-sheet__panel--sidebar .sidebar-panel__folder {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .mobile-sheet__panel--chat .chat-column {
+    height: 100%;
+  }
+
+  .mobile-sheet__panel--chat .chat-panel,
+  .mobile-sheet__panel--chat .chat-overview {
+    border: 0;
+    border-radius: 0;
+  }
+
+  .mobile-sheet__panel--chat .chat-panel__header {
+    padding-top: max(0.6rem, env(safe-area-inset-top));
+  }
+
+  .mobile-sheet__panel--chat .chat-panel__footer {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+
+  .mobile-sheet__panel--details .details-sidebar {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    border-radius: 0;
+    padding-top: max(0.6rem, env(safe-area-inset-top));
+    padding-bottom: max(0.6rem, env(safe-area-inset-bottom));
+  }
+
+  /* Dialogs: the whole width, and the height of what is visible above the
+     keyboard rather than of the screen. */
+  .ai-dialog,
+  .unsaved-dialog {
+    height: var(--viewport-height, 100dvh);
+    bottom: auto;
+    padding: 1rem;
+  }
+
+  .ai-dialog__panel {
+    max-height: 100%;
+  }
+
+  .ai-dialog__panel--settings {
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+  }
+
+  /* Everything hanging off a button must fit a narrow viewport. */
+  .editor-popover,
+  .file-tree-context-menu {
+    max-width: calc(100vw - 1rem);
+  }
+
+  /* The title gives way, the buttons next to it do not. */
+  .detail-panel__title h2 {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 1.25rem;
+  }
+
+  /* The header's save pill is a button here (DocumentPanel). */
+  .detail-panel__status--button {
+    font-family: inherit;
+    line-height: inherit;
+    cursor: pointer;
+    transition: background 160ms ease, color 160ms ease;
+  }
+
+  .detail-panel__status--button:disabled {
+    cursor: default;
+  }
+
+  .detail-panel__status--button.detail-panel__status--dirty {
+    border-color: transparent;
+    background: rgb(var(--accent-rgb));
+    color: #ffffff;
+  }
+
+  .detail-panel__status--button.detail-panel__status--dirty:active {
+    background: rgba(var(--accent-rgb), 0.85);
+  }
+}
+
+/* --- Sheets ------------------------------------------------------------- */
+
+/* Below the dialogs (.ai-dialog 40, .unsaved-dialog 50): settings opened from
+   the sidebar sheet and the delete confirmation from the context menu have to
+   come up in front of the sheet they were opened from. */
+.mobile-sheet {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 30;
+  width: 100%;
+  height: var(--viewport-height, 100dvh);
+  pointer-events: none;
+}
+
+.mobile-sheet__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(var(--backdrop-rgb), 0.45);
+  pointer-events: auto;
+}
+
+.mobile-sheet__panel {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: rgb(var(--surface-strong-rgb));
+  box-shadow: 0 16px 48px rgba(15, 23, 42, 0.22);
+  outline: none;
+  pointer-events: auto;
+}
+
+.dark .mobile-sheet__panel {
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
+}
+
+.mobile-sheet__panel > * {
+  flex: 1;
+  min-height: 0;
+}
+
+.mobile-sheet--left .mobile-sheet__panel {
+  left: 0;
+  width: min(85vw, 360px);
+  border-right: 1px solid rgba(var(--overlay-rgb), 0.1);
+}
+
+.mobile-sheet--right .mobile-sheet__panel {
+  right: 0;
+  width: min(420px, 100%);
+  border-left: 1px solid rgba(var(--overlay-rgb), 0.1);
+}
+
+.mobile-sheet--full .mobile-sheet__panel {
+  left: 0;
+  right: 0;
+  width: 100%;
+}
+
+/* Popovers and the context menu as bottom sheets on the phone (the
+   components drop their inline position in that mode). */
+.editor-popover--sheet,
+.file-tree-context-menu--sheet {
+  position: fixed;
+  top: auto;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  max-width: none;
+  max-height: 80dvh;
+  overflow-y: auto;
+  border-radius: 1rem 1rem 0 0;
+  padding: 0.6rem 0.75rem max(0.6rem, env(safe-area-inset-bottom));
+}
+
+.file-tree-context-menu__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 59;
+  background: rgba(var(--backdrop-rgb), 0.45);
+}
+
+.file-tree-context-menu__title {
+  margin: 0 0 0.4rem;
+  padding: 0.2rem 0.6rem;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: rgba(var(--text-rgb), 0.6);
+}
+
+.editor-popover--sheet.emoji-picker {
+  padding: 0;
+}
+
+.editor-popover--sheet.emoji-picker em-emoji-picker {
+  width: 100%;
+  height: min(60dvh, 435px);
+}
+
+/* The phone-only entries of the document menu. */
+@media (min-width: 641px) {
+  .document-menu__item--phone {
+    display: none;
+  }
+}
+
+/* --- Phone -------------------------------------------------------------- */
+
+@media (max-width: 640px) {
+  .workspace {
+    padding: 0;
+    gap: 0;
+  }
+
+  .workspace::before {
+    display: none;
+  }
+
+  .workspace-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+
+  /* The document is the screen: no card, no rounded frame, no inset. */
+  .detail-panel__card {
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    gap: 0;
+  }
+
+  .detail-panel__card::before {
+    border-radius: 0;
+    clip-path: none;
+  }
+
+  .detail-panel__header {
+    gap: 0.4rem;
+    min-height: 3rem;
+    padding: 0.35rem 0.5rem;
+    padding-top: max(0.35rem, env(safe-area-inset-top));
+    border-bottom: 1px solid rgba(var(--overlay-rgb), 0.1);
+  }
+
+  .detail-panel__header--empty {
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .detail-panel__app-name {
+    font-weight: 600;
+  }
+
+  .detail-panel__title {
+    gap: 0.25rem;
+  }
+
+  .detail-panel__title h2 {
+    font-size: 1.05rem;
+  }
+
+  /* Back and forward are in the document menu on the phone. */
+  .detail-panel__history {
+    display: none;
+  }
+
+  .detail-panel__status-group {
+    gap: 0.3rem;
+  }
+
+  .detail-panel__status {
+    padding: 0.4rem 0.65rem;
+  }
+
+  .detail-panel__ai-chip-message {
+    display: none;
+  }
+
+  .detail-panel__card--empty {
+    justify-content: center;
+    padding: 0 1rem 1rem;
+  }
+
+  .detail-panel__card--empty .detail-panel__eyebrow,
+  .detail-panel__card--empty h2 {
+    text-align: center;
+  }
+
+  .editor-view {
+    gap: 0;
+  }
+
+  .editor-view__feedback,
+  .staged-change-bar {
+    margin: 0.5rem 0.5rem 0;
+  }
+
+  .editor-view__surface {
+    border-radius: 0;
+    padding: 1rem 1rem 1.4rem;
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
+
+  .editor-view > .editor-toolbar {
+    border-width: 1px 0 0;
+    border-radius: 0;
+    padding-bottom: max(0.45rem, env(safe-area-inset-bottom));
+  }
+
+  /* Three classes: zen-mode.css is imported later and sets the same
+     property with two. The top inset clears the exit button. */
+  .app-shell .workspace-grid--zen .editor-view__surface {
+    padding-inline: 1rem;
+    padding-top: 3.5rem;
+  }
+
+  /* Dialogs fill the screen; a centred modal with margins would leave
+     320px of content and put the actions under the keyboard. */
+  .ai-dialog {
+    padding: 0;
+    place-items: stretch;
+  }
+
+  .ai-dialog__panel {
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    border: 0;
+    border-radius: 0;
+    padding: 1rem;
+    padding-top: max(1rem, env(safe-area-inset-top));
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+
+  .ai-dialog__panel--settings {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .ai-dialog__actions {
+    flex-wrap: wrap;
+  }
+
+  /* The login form keeps its rows together instead of stretching them over
+     the whole screen. */
+  .login-view__panel {
+    align-content: start;
+    padding-top: max(3rem, env(safe-area-inset-top));
+  }
+
+  .unsaved-dialog {
+    padding: 0.75rem;
+  }
+
+  .move-dialog__list {
+    max-height: 45vh;
+  }
+
+  .versions-popover {
+    width: auto;
+  }
+}
+
+/* The row's "more" button; shown only for a coarse pointer (below). */
+/* Anchored to the row's top, not its middle: a folder's list item also holds
+   the expanded children, so its middle is not the row's. */
+.file-tree__more {
+  position: absolute;
+  top: 0.125rem;
+  right: 0.25rem;
+  z-index: 1;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: rgba(var(--text-rgb), 0.6);
+}
+
+.file-tree__more svg {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.file-tree__more:active {
+  background: rgba(var(--overlay-rgb), 0.1);
+}
+
+/* --- Touch -------------------------------------------------------------- */
+
+@media (pointer: coarse) {
+  /* Tree rows: the "more" button is the context menu without a right
+     click, and the row itself grows to a finger-sized target. No text
+     selection or link callout on a long press: on Android the long press
+     opens the same menu (contextmenu event), on iOS it would only select
+     the file name. */
+  .file-tree > li,
+  .file-tree__group > li {
+    position: relative;
+  }
+
+  .file-tree__row {
+    min-height: 2.75rem;
+    padding-right: 3rem;
+    -webkit-touch-callout: none;
+    user-select: none;
+  }
+
+  .file-tree__more {
+    display: inline-flex;
+  }
+
+  .detail-panel__status-group button,
+  .detail-panel__sidebar-button,
+  .detail-panel__title-edit-button,
+  .editor-toolbar button,
+  .chat-panel__header-button,
+  .details-sidebar__header button,
+  .zen-exit {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+  }
+
+  /* Six of them have to fit a 240px sidebar next to each other. */
+  .sidebar-panel__actions {
+    gap: 0.4rem;
+  }
+
+  .sidebar-panel__actions button {
+    min-width: 2.25rem;
+    min-height: 2.25rem;
+  }
+
+  .editor-toolbar {
+    gap: 0.4rem;
+  }
+
+  .editor-toolbar__group {
+    gap: 0.35rem;
+  }
+
+  .file-tree-context-menu__item,
+  .editor-popover__item,
+  .move-dialog__item,
+  [data-slot="menu-item"],
+  [data-slot="menu-checkbox-item"],
+  [data-slot="menu-radio-item"] {
+    min-height: 2.75rem;
+  }
+
+  .versions-popover__action,
+  .details-sidebar__item,
+  .details-sidebar__outline-item {
+    min-height: 2.5rem;
+  }
+
+  /* Room between the AI review's buttons and the passage above, where the
+     system's selection handles sit. */
+  .ai-diff-widget__actions {
+    margin-top: 1rem;
+  }
+
+  .ai-diff-widget__actions button {
+    min-height: 2.5rem;
+  }
+}
+
+/* Actions that only appear on hover have no way to appear without one. */
+@media (hover: none) {
+  .code-block-wrapper__actions {
+    opacity: 1;
+  }
+}
+
+/* --- Move-to dialog (all widths) ---------------------------------------- */
+
+.move-dialog__filter {
+  width: 100%;
+  margin-top: 0.9rem;
+  border: 1px solid rgba(var(--overlay-rgb), 0.1);
+  border-radius: 0.75rem;
+  background: rgba(var(--surface-raised-rgb), 0.84);
+  padding: 0.55rem 0.75rem;
+  color: inherit;
+  font: inherit;
+}
+
+.move-dialog__list {
+  display: grid;
+  gap: 0.1rem;
+  max-height: 20rem;
+  margin-top: 0.9rem;
+  overflow-y: auto;
+  border: 1px solid rgba(var(--overlay-rgb), 0.1);
+  border-radius: 0.75rem;
+  padding: 0.3rem;
+  outline: none;
+}
+
+.move-dialog__list:focus-visible {
+  border-color: rgba(var(--accent-rgb), 0.6);
+}
+
+.move-dialog__item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  border: 0;
+  border-radius: 0.5rem;
+  background: transparent;
+  padding: 0.45rem 0.6rem;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.move-dialog__item svg {
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
+  color: rgba(var(--text-rgb), 0.55);
+}
+
+.move-dialog__item:hover {
+  background: rgba(var(--surface-hover-rgb), 0.92);
+}
+
+.move-dialog__item--selected,
+.move-dialog__item--selected:hover {
+  background: rgba(var(--selection-rgb), 0.2);
+}
+
+.move-dialog__item:disabled {
+  cursor: default;
+  opacity: 0.4;
+  background: transparent;
+}
+
+.move-dialog__item-name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.move-dialog__empty {
+  margin: 0;
+  padding: 0.6rem;
+  color: rgba(var(--text-rgb), 0.6);
+  font-size: 0.9rem;
 }
