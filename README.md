@@ -235,8 +235,11 @@ notes — fluently, privately, and for free.
 - Live sync via a native filesystem watcher — changes made outside the app are picked up automatically
 - Safe switching: leaving an unsaved file (or a pending, undecided AI suggestion) prompts you to save, discard, or cancel, with a clear dirty indicator
 
+### 🖥️ Server edition: self-hosted, same app
+Run ScribeDog on your own server (Docker, a Raspberry Pi, a NAS, a small VM) and use it from any browser, phone or tablet, with the same editor, file management, version history and AI features. The desktop app can open that server vault too, with its AI and dictation running on your computer. One password, your folder, no account. Everything is in the **[Server Edition user guide](server/docs/README.md)**: [getting started](server/docs/getting-started.md), [the desktop app as a client](server/docs/desktop-app.md), [security](server/docs/security.md), [FAQ](server/docs/faq.md).
+
 ### 📱 Mobile access & sync
-ScribeDog stores everything as plain `.md` files in a normal folder — so making your notes available on the go is just a matter of putting that folder into a sync service **you** choose. There's no ScribeDog account or server involved.
+ScribeDog stores everything as plain `.md` files in a normal folder — so making your notes available on the go is just a matter of putting that folder into a sync service **you** choose. There's no ScribeDog account or server involved (unless you run the [server edition](server/docs/README.md) yourself, which is the other way to reach your notes from a phone).
 
 - **Privacy-first (recommended):** a self-hosted **[Nextcloud](https://nextcloud.com/)** (or another private cloud) keeps your files on infrastructure you control. On mobile, open and edit them with **Nextcloud Notes** or any Markdown editor that syncs with your provider.
 - **Any other cloud works too:** point OneDrive, iCloud Drive, Dropbox, etc. at your vault folder, then edit on mobile with a compatible Markdown app (e.g. **Obsidian**, **Markor** on Android, **iA Writer**).

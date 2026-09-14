@@ -6,7 +6,7 @@
 #   docker compose up -d --build
 #   open https://localhost/      (or https://<host>/<base path>/)
 #
-# See README.md for the base path, a real domain, and trusting Caddy's local CA.
+# See docs/getting-started.md and docs/configuration.md for the base path, a real domain, and trusting Caddy's local CA.
 
 services:
   scribedog:

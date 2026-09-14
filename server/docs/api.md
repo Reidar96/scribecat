@@ -1,0 +1,80 @@
+# API
+
+Everything the web app and the desktop app do goes through this API, so a
+script or a tool of your own can do the same. All routes live under the base
+path (`/api/...`, or `/anna/api/...` with `SCRIBEDOG_BASE_PATH=/anna`).
+
+## Authentication
+
+Every route except login, session, health and the access-key request needs
+one of two things:
+
+- the **session cookie** a browser gets from `POST /api/auth/login`, or
+- an **access key** in the `Authorization: Bearer sdt_...` header, as the
+  desktop app sends it. Get one from `POST /api/auth/tokens`.
+
+For a script, an access key is the simpler way: request it once with the
+password, keep it somewhere safe, revoke it from the device list when the
+script is retired.
+
+```bash
+# once
+curl -s https://notes.example.com/api/auth/tokens \
+  -H 'content-type: application/json' \
+  -d '{"password":"...","name":"backup script"}'
+# -> {"id":"...","name":"backup script","token":"sdt_...","createdAt":"..."}
+
+# from then on
+curl -s https://notes.example.com/api/files -H 'authorization: Bearer sdt_...'
+```
+
+## Routes
+
+| Method | Route | Purpose |
+| --- | --- | --- |
+| `POST` | `/api/auth/login` | `{ "password": "..." }` sets the session cookie |
+| `POST` | `/api/auth/logout` | clears the cookie |
+| `GET` | `/api/auth/session` | `{ "authenticated": true\|false, "via": "cookie"\|"token" }` |
+| `POST` | `/api/auth/password` | `{ "currentPassword": "...", "newPassword": "..." }`: new password, every other session and every access key ends. Cookie session only. |
+| `POST` | `/api/auth/tokens` | `{ "password": "...", "name": "..." }` issues an access key; the response is the only time the key is shown. Counts toward the login lock. |
+| `GET` | `/api/auth/tokens` | the signed-in devices: id, name, created, last used, `current` for the key making the request; never the keys themselves |
+| `DELETE` | `/api/auth/tokens/:id` | revokes one access key |
+| `GET` | `/api/files` | list of `.md` files with modification times |
+| `GET` | `/api/fs/entries?path=Notes` | directory listing (`path=` for the root) |
+| `GET` | `/api/fs/stat?path=…` | size, times, kind of one entry |
+| `GET` | `/api/fs/exists?path=…` | `{ "exists": true\|false }` |
+| `POST` | `/api/fs/mkdir` | `{ "path": "…", "recursive": true }` |
+| `GET` | `/api/fs/text?path=…` | read a text file |
+| `PUT` | `/api/fs/text` | `{ "path": "…", "content": "…" }` creates or overwrites (parent folder must exist) |
+| `GET` | `/api/fs/file?path=…` | read a binary file (images get their content type) |
+| `PUT` | `/api/fs/file?path=…` | body as `application/octet-stream` creates or overwrites |
+| `POST` | `/api/fs/rename` | `{ "from": "…", "to": "…" }` (files and folders) |
+| `POST` | `/api/fs/remove` | `{ "path": "…", "recursive": true }` (a folder without `recursive` must be empty) |
+| `GET` | `/api/secrets` | which API keys are stored, never their values |
+| `PUT` | `/api/secrets/:id` | `{ "value": "..." }` stores a key (an empty value removes it) |
+| `DELETE` | `/api/secrets/:id` | removes a key |
+| `GET`/`POST` | `/api/llm/request` | forwards one request to the AI provider named in `X-Scribedog-Llm-Url` |
+| `GET` | `/api/events` | WebSocket; sends `{"type":"files-changed"}` when the vault changes on disk. A socket opened with an access key is closed when that key is revoked. |
+| `GET` | `/api/health` | liveness probe |
+
+## Paths
+
+The `/fs` routes are the app's filesystem layer, one call per primitive.
+Paths are relative to the vault and may not point outside it (symlinks
+included) or into `.scribedog/server/`; the vault root, `.scribedog` itself
+and the data-version marker cannot be renamed or removed.
+
+## Errors
+
+Errors come back as JSON: `{ "error": "<code>", "message": "..." }`. The
+codes you will meet: `unauthorized` (401), `invalid_password` (401),
+`too_many_attempts` (429, with `retryAfterSeconds`), `forbidden_origin`
+(403), `not_found` (404), `weak_password` (400).
+
+## Cross-site requests
+
+Requests that change something must come from this instance: the session
+cookie is `SameSite=Lax`, and the server rejects a request whose `Origin` or
+`Referer` names another site. A request with neither header (curl, a script)
+is accepted, and so is one that carries an access key and no cookie; see
+[Security](security.md).
