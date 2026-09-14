@@ -272,7 +272,8 @@
     "agentMaxIterationsHint": "Quantas chamadas de ferramenta um passo pode fazer antes de ser interrompido. Mais alto para pedidos extensos, mais baixo se um modelo andar às voltas.",
     "agentMaxPlanStepsLabel": "Passos por lista de tarefas",
     "agentMaxPlanStepsHint": "Limite máximo para o comprimento de uma lista de tarefas.",
-    "localProviderBrowserHint": "{{provider}} é executado neste dispositivo e o navegador comunica com ele diretamente, por isso tem de aceitar pedidos de {{origin}}: {{instruction}}. Se abrir o ScribeDog através de um endereço público, o navegador também pede uma vez acesso à rede local."
+    "localProviderBrowserHint": "{{provider}} é executado neste dispositivo e o navegador comunica com ele diretamente, por isso tem de aceitar pedidos de {{origin}}: {{instruction}}. Se abrir o ScribeDog através de um endereço público, o navegador também pede uma vez acesso à rede local.",
+    "tabServer": "Servidores"
   },
   "assistants": {
     "defaultName": "ScribeDog (Padrão)",
@@ -387,7 +388,8 @@
       "notesUnchanged": "As tuas notas em si não mudam.",
       "count": "Ficheiros afetados: {{files}}",
       "confirm": "Reconstruir"
-    }
+    },
+    "remoteVault": "A base de conhecimento não está disponível para um cofre num servidor: o índice lê as notas do disco deste computador. Abra o cofre como pasta local no servidor ou use-o sem base de conhecimento."
   },
   "versioningSettings": {
     "scope": "O interruptor vale para toda a aplicação. As versões em si ficam na pasta aberta, em .scribedog.",
@@ -494,7 +496,8 @@
     "noMarkdownFiles": "Nenhum arquivo Markdown encontrado. Abra uma pasta que contenha arquivos `.md`.",
     "dropImportHint": "Largue ficheiros ou pastas — são importados como notas",
     "logout": "Sair",
-    "close": "Fechar a lista de arquivos"
+    "close": "Fechar a lista de arquivos",
+    "addServerVault": "Adicionar cofre de servidor…"
   },
   "fileTree": {
     "treeLabel": "Árvore de arquivos",
@@ -988,11 +991,61 @@
     "wrongCurrentPassword": "A palavra-passe atual está errada.",
     "changeFailed": "Não foi possível alterar a palavra-passe.",
     "changed": "Palavra-passe alterada. Todas as outras sessões terminaram.",
-    "changing": "A alterar …"
+    "changing": "A alterar …",
+    "devices": "Dispositivos com sessão",
+    "devicesHint": "Aplicações de desktop que abriram este cofre com uma chave de acesso. Revogar uma termina a sessão desse dispositivo sem alterar a palavra-passe; alterar a palavra-passe termina todas."
   },
   "platform": {
     "notAvailable": "Este recurso não está disponível nesta edição do ScribeDog.",
     "serverNotYetAvailable": "Esta ação ainda não está disponível na edição para servidor.",
     "pathOutsideVault": "\"{{path}}\" está fora do cofre."
+  },
+  "devices": {
+    "loading": "A carregar…",
+    "none": "Nenhum dispositivo tem uma chave de acesso para este servidor.",
+    "thisDevice": "Este dispositivo",
+    "added": "Adicionado {{date}}",
+    "lastUsed": "último uso {{date}}",
+    "neverUsed": "nunca usado",
+    "revoke": "Revogar",
+    "revoking": "A revogar…",
+    "loadFailed": "Não foi possível carregar a lista de dispositivos.",
+    "revokeFailed": "Não foi possível revogar a chave de acesso."
+  },
+  "remoteVaults": {
+    "eyebrow": "Cofre de servidor",
+    "addTitle": "Adicionar um cofre de servidor",
+    "addDescription": "As notas ficam no servidor; a IA e o ditado continuam a correr neste computador. A palavra-passe é trocada uma vez por uma chave de acesso e não é guardada.",
+    "signInTitle": "Iniciar sessão novamente em {{name}}",
+    "signInDescription": "O servidor já não aceita a chave de acesso deste dispositivo (foi revogada ou a palavra-passe mudou). Introduza a palavra-passe para obter uma nova.",
+    "serverUrl": "Endereço do servidor",
+    "password": "Palavra-passe",
+    "displayName": "Nome",
+    "displayNamePlaceholder": "Mostrado na lista de cofres; por omissão, o nome do servidor",
+    "deviceName": "Este dispositivo",
+    "deviceNameHint": "É assim que este computador aparece na lista de dispositivos do servidor.",
+    "cancel": "Cancelar",
+    "add": "Adicionar",
+    "signIn": "Iniciar sessão",
+    "connecting": "A ligar…",
+    "wrongPassword": "Palavra-passe errada.",
+    "tooManyAttempts": "Demasiadas tentativas falhadas. Tente novamente daqui a pouco.",
+    "unreachable": "Não foi possível contactar o servidor: {{detail}}",
+    "addFailed": "Não foi possível adicionar o servidor.",
+    "invalidUrl": "Introduza o endereço do servidor como URL, por exemplo https://notes.example.com.",
+    "urlMustBeHttps": "O endereço do servidor tem de usar HTTPS; só localhost pode usar HTTP simples.",
+    "unknownServer": "Este servidor não está na lista.",
+    "notSignedIn": "Não há nenhuma chave de acesso guardada para este servidor.",
+    "defaultDeviceName": "ScribeDog desktop",
+    "defaultDeviceNameOn": "ScribeDog em {{os}}",
+    "settingsTitle": "Cofres de servidor",
+    "settingsHint": "Servidores nos quais esta app pode abrir um cofre. Adicione um no menu de cofres da barra lateral. Cada servidor lista os dispositivos com chave de acesso; revogue aí um dispositivo perdido.",
+    "none": "Ainda não foi adicionado nenhum servidor.",
+    "openNow": "Aberto",
+    "showDevices": "Dispositivos",
+    "hideDevices": "Ocultar dispositivos",
+    "disconnect": "Desligar",
+    "disconnecting": "A desligar…",
+    "removeFailed": "Não foi possível remover o servidor."
   }
 }

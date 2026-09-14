@@ -1,5 +1,6 @@
 mod portable;
 mod rag;
+mod remote_vault;
 mod voice;
 mod window_state;
 
@@ -12,7 +13,7 @@ use notify::{Config, Event, RecommendedWatcher, RecursiveMode, Watcher};
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_fs::FsExt;
 
-const FOLDER_FILES_CHANGED_EVENT: &str = "scribedog-folder-files-changed";
+pub(crate) const FOLDER_FILES_CHANGED_EVENT: &str = "scribedog-folder-files-changed";
 
 /// Mirrors VAULT_META_DIR_NAME in src/lib/fileSystem.ts.
 const VAULT_META_DIR_NAME: &str = ".scribedog";
@@ -39,8 +40,8 @@ struct StartupState {
 }
 
 #[derive(Default)]
-struct FolderWatchState {
-    watcher: Mutex<Option<RecommendedWatcher>>,
+pub(crate) struct FolderWatchState {
+    pub(crate) watcher: Mutex<Option<RecommendedWatcher>>,
 }
 
 #[tauri::command]
@@ -96,6 +97,7 @@ fn get_portable_status(app: AppHandle) -> Result<PortableStatus, String> {
 fn watch_folder(
     app: AppHandle,
     folder_watch_state: State<'_, FolderWatchState>,
+    remote_vault_state: State<'_, remote_vault::RemoteVaultState>,
     folder_path: String,
 ) -> Result<(), String> {
     let folder_path = PathBuf::from(folder_path);
@@ -103,6 +105,10 @@ fn watch_folder(
     if !folder_path.is_dir() {
         return Err("Der Ordner konnte nicht überwacht werden.".to_string());
     }
+
+    // Only one vault is open at a time: a server vault's live connection,
+    // if any, ends when a local folder takes over.
+    remote_vault::stop_watch(&remote_vault_state);
 
     let folder_path_for_event = folder_path.to_string_lossy().into_owned();
     let app_handle = app.clone();
@@ -239,7 +245,7 @@ fn check_spellcheck_dictionary(language: String) -> SpellcheckDictionaryStatus {
     }
 }
 
-const KEYRING_SERVICE: &str = "scribedog";
+pub(crate) const KEYRING_SERVICE: &str = "scribedog";
 // Pre-multi-provider versions kept every provider's key under this one
 // account. Each provider now gets its own account (see api_key_entry); this
 // legacy account is only ever read once, to migrate that single leftover key
@@ -330,6 +336,7 @@ pub fn run() {
         .manage(FolderWatchState::default())
         .manage(voice::VoiceState::default())
         .manage(rag::RagState::default())
+        .manage(remote_vault::RemoteVaultState::default())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init());
@@ -390,6 +397,12 @@ pub fn run() {
             check_spellcheck_dictionary,
             store_api_key,
             get_api_key,
+            remote_vault::allow_remote_vault_origin,
+            remote_vault::remote_vault_request,
+            remote_vault::store_remote_vault_token,
+            remote_vault::get_remote_vault_token,
+            remote_vault::delete_remote_vault_token,
+            remote_vault::watch_remote_vault,
             voice::voice_model_status,
             voice::download_voice_model,
             voice::start_voice_recording,

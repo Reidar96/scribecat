@@ -272,7 +272,8 @@
     "agentMaxIterationsHint": "Cuántas llamadas a herramientas puede hacer un paso antes de detenerse. Más alto para peticiones grandes, más bajo si un modelo da vueltas.",
     "agentMaxPlanStepsLabel": "Pasos por lista de tareas",
     "agentMaxPlanStepsHint": "Límite superior de longitud de una lista de tareas.",
-    "localProviderBrowserHint": "{{provider}} se ejecuta en este dispositivo y el navegador se comunica con él directamente, por lo que debe aceptar solicitudes de {{origin}}: {{instruction}}. Si abres ScribeDog desde una dirección pública, el navegador también pedirá una vez acceso a la red local."
+    "localProviderBrowserHint": "{{provider}} se ejecuta en este dispositivo y el navegador se comunica con él directamente, por lo que debe aceptar solicitudes de {{origin}}: {{instruction}}. Si abres ScribeDog desde una dirección pública, el navegador también pedirá una vez acceso a la red local.",
+    "tabServer": "Servidores"
   },
   "assistants": {
     "defaultName": "ScribeDog (Predeterminado)",
@@ -387,7 +388,8 @@
       "notesUnchanged": "Tus notas en sí no cambian.",
       "count": "Archivos afectados: {{files}}",
       "confirm": "Reconstruir"
-    }
+    },
+    "remoteVault": "La base de conocimiento no está disponible para una bóveda en un servidor: el índice lee las notas del disco de este equipo. Abre la bóveda como carpeta local en el servidor o úsala sin base de conocimiento."
   },
   "versioningSettings": {
     "scope": "El interruptor vale para toda la aplicación. Las versiones en sí se guardan en la carpeta abierta, dentro de .scribedog.",
@@ -494,7 +496,8 @@
     "noMarkdownFiles": "No se encontraron archivos Markdown. Abre una carpeta que contenga archivos `.md`.",
     "dropImportHint": "Suelta archivos o carpetas: se importan como notas",
     "logout": "Cerrar sesión",
-    "close": "Cerrar la lista de archivos"
+    "close": "Cerrar la lista de archivos",
+    "addServerVault": "Añadir bóveda de servidor…"
   },
   "fileTree": {
     "treeLabel": "Árbol de archivos",
@@ -988,11 +991,61 @@
     "wrongCurrentPassword": "La contraseña actual es incorrecta.",
     "changeFailed": "No se pudo cambiar la contraseña.",
     "changed": "Contraseña cambiada. Todas las demás sesiones han terminado.",
-    "changing": "Cambiando …"
+    "changing": "Cambiando …",
+    "devices": "Dispositivos conectados",
+    "devicesHint": "Aplicaciones de escritorio que abrieron esta bóveda con una clave de acceso. Revocar una desconecta ese dispositivo sin cambiar la contraseña; cambiar la contraseña los desconecta a todos."
   },
   "platform": {
     "notAvailable": "Esta función no está disponible en esta edición de ScribeDog.",
     "serverNotYetAvailable": "Esta acción aún no está disponible en la edición de servidor.",
     "pathOutsideVault": "«{{path}}» está fuera de la bóveda."
+  },
+  "devices": {
+    "loading": "Cargando…",
+    "none": "Ningún dispositivo tiene una clave de acceso para este servidor.",
+    "thisDevice": "Este dispositivo",
+    "added": "Añadido {{date}}",
+    "lastUsed": "último uso {{date}}",
+    "neverUsed": "nunca usado",
+    "revoke": "Revocar",
+    "revoking": "Revocando…",
+    "loadFailed": "No se pudo cargar la lista de dispositivos.",
+    "revokeFailed": "No se pudo revocar la clave de acceso."
+  },
+  "remoteVaults": {
+    "eyebrow": "Bóveda de servidor",
+    "addTitle": "Añadir una bóveda de servidor",
+    "addDescription": "Tus notas se quedan en el servidor; la IA y el dictado siguen funcionando en este equipo. La contraseña se cambia una vez por una clave de acceso y no se guarda.",
+    "signInTitle": "Iniciar sesión de nuevo en {{name}}",
+    "signInDescription": "El servidor ya no acepta la clave de acceso de este dispositivo (fue revocada o la contraseña cambió). Introduce la contraseña para obtener una nueva.",
+    "serverUrl": "Dirección del servidor",
+    "password": "Contraseña",
+    "displayName": "Nombre",
+    "displayNamePlaceholder": "Se muestra en la lista de bóvedas; por defecto, el nombre del servidor",
+    "deviceName": "Este dispositivo",
+    "deviceNameHint": "Así aparece este equipo en la lista de dispositivos del servidor.",
+    "cancel": "Cancelar",
+    "add": "Añadir",
+    "signIn": "Iniciar sesión",
+    "connecting": "Conectando…",
+    "wrongPassword": "Contraseña incorrecta.",
+    "tooManyAttempts": "Demasiados intentos fallidos. Inténtalo de nuevo en un momento.",
+    "unreachable": "No se pudo contactar con el servidor: {{detail}}",
+    "addFailed": "No se pudo añadir el servidor.",
+    "invalidUrl": "Introduce la dirección del servidor como URL, por ejemplo https://notes.example.com.",
+    "urlMustBeHttps": "La dirección del servidor debe usar HTTPS; solo localhost puede usar HTTP simple.",
+    "unknownServer": "Este servidor no está en la lista.",
+    "notSignedIn": "No hay ninguna clave de acceso guardada para este servidor.",
+    "defaultDeviceName": "ScribeDog de escritorio",
+    "defaultDeviceNameOn": "ScribeDog en {{os}}",
+    "settingsTitle": "Bóvedas de servidor",
+    "settingsHint": "Servidores en los que esta app puede abrir una bóveda. Añade uno desde el menú de bóvedas de la barra lateral. Cada servidor muestra los dispositivos con clave de acceso; revoca allí un dispositivo perdido.",
+    "none": "Aún no se ha añadido ningún servidor.",
+    "openNow": "Abierta",
+    "showDevices": "Dispositivos",
+    "hideDevices": "Ocultar dispositivos",
+    "disconnect": "Desconectar",
+    "disconnecting": "Desconectando…",
+    "removeFailed": "No se pudo eliminar el servidor."
   }
 }

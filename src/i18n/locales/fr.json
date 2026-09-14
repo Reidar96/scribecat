@@ -272,7 +272,8 @@
     "agentMaxIterationsHint": "Nombre maximal d’appels d’outil pour une étape avant interruption. Plus élevé pour de grosses demandes, plus bas si un modèle tourne en rond.",
     "agentMaxPlanStepsLabel": "Étapes par liste de tâches",
     "agentMaxPlanStepsHint": "Limite supérieure de la longueur d’une liste de tâches.",
-    "localProviderBrowserHint": "{{provider}} fonctionne sur cet appareil et le navigateur lui parle directement ; il doit donc accepter les requêtes de {{origin}} : {{instruction}}. Si vous ouvrez ScribeDog via une adresse publique, le navigateur demande aussi une fois l'accès au réseau local."
+    "localProviderBrowserHint": "{{provider}} fonctionne sur cet appareil et le navigateur lui parle directement ; il doit donc accepter les requêtes de {{origin}} : {{instruction}}. Si vous ouvrez ScribeDog via une adresse publique, le navigateur demande aussi une fois l'accès au réseau local.",
+    "tabServer": "Serveurs"
   },
   "assistants": {
     "defaultName": "ScribeDog (Par défaut)",
@@ -387,7 +388,8 @@
       "notesUnchanged": "Vos notes elles-mêmes ne changent pas.",
       "count": "Fichiers concernés : {{files}}",
       "confirm": "Reconstruire"
-    }
+    },
+    "remoteVault": "La base de connaissances n'est pas disponible pour un coffre sur un serveur : l'index lit les notes sur le disque de cet ordinateur. Ouvrez le coffre comme dossier local sur le serveur, ou utilisez-le sans base de connaissances."
   },
   "versioningSettings": {
     "scope": "L'interrupteur vaut pour toute l'application. Les versions elles-mêmes sont conservées dans le dossier ouvert, sous .scribedog.",
@@ -494,7 +496,8 @@
     "noMarkdownFiles": "Aucun fichier Markdown trouvé. Ouvrez un dossier contenant des fichiers `.md`.",
     "dropImportHint": "Déposez des fichiers ou des dossiers — ils sont importés comme notes",
     "logout": "Se déconnecter",
-    "close": "Fermer la liste des fichiers"
+    "close": "Fermer la liste des fichiers",
+    "addServerVault": "Ajouter un coffre serveur…"
   },
   "fileTree": {
     "treeLabel": "Arborescence des fichiers",
@@ -988,11 +991,61 @@
     "wrongCurrentPassword": "Le mot de passe actuel est incorrect.",
     "changeFailed": "Le mot de passe n'a pas pu être changé.",
     "changed": "Mot de passe changé. Toutes les autres sessions ont pris fin.",
-    "changing": "Changement …"
+    "changing": "Changement …",
+    "devices": "Appareils connectés",
+    "devicesHint": "Applications de bureau qui ont ouvert ce coffre avec une clé d'accès. Révoquer une clé déconnecte cet appareil sans changer le mot de passe ; changer le mot de passe les déconnecte tous."
   },
   "platform": {
     "notAvailable": "Cette fonction n'est pas disponible dans cette édition de ScribeDog.",
     "serverNotYetAvailable": "Cette action n'est pas encore disponible dans l'édition serveur.",
     "pathOutsideVault": "« {{path}} » se trouve en dehors du coffre."
+  },
+  "devices": {
+    "loading": "Chargement…",
+    "none": "Aucun appareil ne détient de clé d'accès pour ce serveur.",
+    "thisDevice": "Cet appareil",
+    "added": "Ajouté le {{date}}",
+    "lastUsed": "dernière utilisation {{date}}",
+    "neverUsed": "jamais utilisé",
+    "revoke": "Révoquer",
+    "revoking": "Révocation…",
+    "loadFailed": "La liste des appareils n'a pas pu être chargée.",
+    "revokeFailed": "La clé d'accès n'a pas pu être révoquée."
+  },
+  "remoteVaults": {
+    "eyebrow": "Coffre serveur",
+    "addTitle": "Ajouter un coffre serveur",
+    "addDescription": "Vos notes restent sur le serveur ; l'IA et la dictée continuent de tourner sur cet ordinateur. Le mot de passe est échangé une fois contre une clé d'accès et n'est pas conservé.",
+    "signInTitle": "Se reconnecter à {{name}}",
+    "signInDescription": "Le serveur n'accepte plus la clé d'accès de cet appareil (révoquée, ou mot de passe modifié). Saisissez le mot de passe pour en obtenir une nouvelle.",
+    "serverUrl": "Adresse du serveur",
+    "password": "Mot de passe",
+    "displayName": "Nom",
+    "displayNamePlaceholder": "Affiché dans la liste des coffres ; par défaut, le nom du serveur",
+    "deviceName": "Cet appareil",
+    "deviceNameHint": "C'est ainsi que cet ordinateur apparaît dans la liste des appareils du serveur.",
+    "cancel": "Annuler",
+    "add": "Ajouter",
+    "signIn": "Se connecter",
+    "connecting": "Connexion…",
+    "wrongPassword": "Mot de passe incorrect.",
+    "tooManyAttempts": "Trop de tentatives échouées. Réessayez dans un instant.",
+    "unreachable": "Le serveur est injoignable : {{detail}}",
+    "addFailed": "Le serveur n'a pas pu être ajouté.",
+    "invalidUrl": "Saisissez l'adresse du serveur sous forme d'URL, par exemple https://notes.example.com.",
+    "urlMustBeHttps": "L'adresse du serveur doit utiliser HTTPS ; seul localhost peut utiliser HTTP.",
+    "unknownServer": "Ce serveur n'est pas dans la liste.",
+    "notSignedIn": "Aucune clé d'accès n'est enregistrée pour ce serveur.",
+    "defaultDeviceName": "ScribeDog bureau",
+    "defaultDeviceNameOn": "ScribeDog sur {{os}}",
+    "settingsTitle": "Coffres serveur",
+    "settingsHint": "Serveurs sur lesquels cette application peut ouvrir un coffre. Ajoutez-en un depuis le menu des coffres de la barre latérale. Chaque serveur liste les appareils détenant une clé d'accès ; révoquez-y un appareil perdu.",
+    "none": "Aucun serveur n'a encore été ajouté.",
+    "openNow": "Ouvert",
+    "showDevices": "Appareils",
+    "hideDevices": "Masquer les appareils",
+    "disconnect": "Déconnecter",
+    "disconnecting": "Déconnexion…",
+    "removeFailed": "Le serveur n'a pas pu être supprimé."
   }
 }

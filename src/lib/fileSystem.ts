@@ -1,5 +1,6 @@
 import i18n from "@/i18n";
 import { getVaultStorage, platform } from "@/platform";
+import { activateVaultStorage, isRemoteVaultPath, remoteVaultFor, watchRemoteVault } from "@/lib/remoteVaults";
 import { dirname, join } from "@/platform/paths";
 import { exists, mkdir, readTextFile, remove, rename, stat, writeFile, writeTextFile } from "@/platform/vaultFs";
 import {
@@ -87,8 +88,17 @@ export async function chooseMarkdownFolder(): Promise<string | null> {
   return platform.dialogs.chooseFolder({ title: i18n.t("fileSystem.chooseFolderTitle") });
 }
 
+/**
+ * The first step of every open: installs the storage the vault lives on (a
+ * server, or the platform's own) and, for a local folder, widens the shell's
+ * filesystem scope to it.
+ */
 export async function allowMarkdownFolderAccess(folderPath: string): Promise<void> {
-  await platform.vault.allowFolderAccess(folderPath);
+  await activateVaultStorage(folderPath);
+
+  if (!isRemoteVaultPath(folderPath)) {
+    await platform.vault.allowFolderAccess(folderPath);
+  }
 }
 
 export async function allowFileAccess(filePath: string): Promise<void> {
@@ -96,6 +106,11 @@ export async function allowFileAccess(filePath: string): Promise<void> {
 }
 
 export async function watchMarkdownFolder(folderPath: string): Promise<void> {
+  if (isRemoteVaultPath(folderPath)) {
+    await watchRemoteVault(folderPath);
+    return;
+  }
+
   await platform.vault.watchFolder(folderPath);
 }
 
@@ -242,10 +257,16 @@ export function formatFolderLabel(folderPath: string | null): string {
     return i18n.t("fileSystem.noFolderOpen");
   }
 
-  return platform.vault.displayName(folderPath);
+  return remoteVaultFor(folderPath)?.name ?? platform.vault.displayName(folderPath);
 }
 
 export function getFolderBasename(folderPath: string): string {
+  const remote = remoteVaultFor(folderPath);
+
+  if (remote) {
+    return remote.name;
+  }
+
   return normalizeDisplayPath(folderPath).split("/").pop() ?? folderPath;
 }
 

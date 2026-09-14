@@ -4,7 +4,7 @@ import type { CredentialsStatus, Platform } from "@/platform/types";
 
 import { subscribeToVaultChanges } from "./liveUpdates";
 import { browserLocalModels } from "./localModels";
-import { posixPaths } from "./paths";
+import { posixPaths } from "@/platform/remote/paths";
 import { REMOTE_VAULT_ROOT, remoteVaultStorage } from "./remoteStorage";
 import {
   ApiError,
@@ -77,7 +77,8 @@ export const platform: Platform = {
     knowledgeIndex: false,
     spellcheckDictionary: false,
     session: true,
-    browserLocalModels: true
+    browserLocalModels: true,
+    remoteVaults: false
   },
 
   vaultStorage: remoteVaultStorage,
@@ -198,7 +199,10 @@ export const platform: Platform = {
 
       secretStatus = null;
     },
+    listDevices: () => serverApi.listTokens(),
+    revokeDevice: (id) => serverApi.revokeToken(id),
     onUnauthorized
   },
-  localModels: browserLocalModels
+  localModels: browserLocalModels,
+  remoteVaults: null
 };

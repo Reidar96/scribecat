@@ -93,7 +93,7 @@ export const ALL_VAULT_CAPABILITIES: VaultCapabilities = {
 /**
  * Access to the open vault: notes, the images folder and the `.scribedog/`
  * metadata that lives next to them. Paths are absolute in the platform's own
- * notation; the web platform uses a virtual root (see `web/remoteStorage.ts`).
+ * notation; the web platform uses a virtual root (see `remote/remoteStorage.ts`).
  *
  * `listMarkdownFiles` is a first-class operation rather than something
  * derived from `readDir`, because a remote vault answers it in one round trip
@@ -272,6 +272,50 @@ export type SessionStatus = {
   authenticated: boolean;
 };
 
+/** A device holding an access token for this server; never the token itself. */
+export type SessionDevice = {
+  id: string;
+  name: string;
+  createdAt: string;
+  lastUsedAt: string | null;
+};
+
+export type RemoteRequestInit = {
+  method: string;
+  headers: Record<string, string>;
+  body?: string | Uint8Array;
+};
+
+/**
+ * What the shell provides for opening a vault on a ScribeDog server: the
+ * request path (the webview itself may not talk to an arbitrary host, see
+ * src-tauri/src/remote_vault.rs), the credential store for the access
+ * tokens, and the live-update connection. Desktop only; in the browser the
+ * server is the one origin the page already lives on. The registry of added
+ * servers and the token flow live above this, in lib/remoteVaults.ts.
+ */
+export type RemoteVaultsApi = {
+  /**
+   * Registers a server the user added. The shell refuses requests to any
+   * other origin, the way it refuses files outside the opened folder.
+   */
+  allowServer(origin: string): Promise<void>;
+  /** Sends one request; rejects when the server cannot be reached at all. */
+  fetch(url: string, init: RemoteRequestInit): Promise<Response>;
+  storeToken(vaultRoot: string, token: string): Promise<void>;
+  getToken(vaultRoot: string): Promise<string | null>;
+  deleteToken(vaultRoot: string): Promise<void>;
+  /**
+   * Keeps a live-update connection to the server's event stream and reports
+   * changes through `vault.onFolderFilesChanged` with the vault root as the
+   * folder path, so the watcher hook cannot tell it from a local folder.
+   * Replaces the previous watch, local or remote.
+   */
+  watch(vaultRoot: string, eventsUrl: string, token: string): Promise<void>;
+  /** Fires with the vault root when the live connection is refused for lack of a valid token. */
+  onUnauthorized(handler: (vaultRoot: string) => void): Promise<() => void>;
+};
+
 /**
  * Login/logout against the ScribeDog server. Web only: the desktop app is
  * its own trusted client and has no session.
@@ -289,6 +333,10 @@ export type SessionApi = {
    * new one the server refuses).
    */
   changePassword(currentPassword: string, newPassword: string): Promise<void>;
+  /** The devices (desktop apps) that hold an access token for this server. */
+  listDevices(): Promise<SessionDevice[]>;
+  /** Ends that device's access; its next request is refused. */
+  revokeDevice(id: string): Promise<void>;
   /** Fires when any request is refused for lack of a session. */
   onUnauthorized(handler: () => void): () => void;
 };
@@ -319,6 +367,8 @@ export type PlatformFeatures = {
   spellcheckDictionary: boolean;
   /** Password login/logout. */
   session: boolean;
+  /** Vaults on a ScribeDog server next to local folders (see RemoteVaultsApi). */
+  remoteVaults: boolean;
   /**
    * Local model servers are reached by the browser itself (see
    * LocalModelsApi), so their failures need explaining and the settings a
@@ -355,4 +405,5 @@ export type Platform = {
   knowledgeIndex: KnowledgeIndexApi | null;
   session: SessionApi | null;
   localModels: LocalModelsApi | null;
+  remoteVaults: RemoteVaultsApi | null;
 };

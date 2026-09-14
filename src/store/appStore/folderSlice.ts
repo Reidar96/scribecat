@@ -1,11 +1,13 @@
-import { platform } from "@/platform";
+import { platform, setActiveVaultStorage } from "@/platform";
 import { dirname, join } from "@/platform/paths";
+import { isRemoteVaultPath } from "@/platform/remote/vaultRoot";
 
 import i18n from "@/i18n";
 import {
   addRecentFolderPath,
   allowMarkdownFolderAccess,
   chooseMarkdownFolder,
+  clearLastOpenedFolderPath,
   createMarkdownFolderAtPath,
   createUniqueMarkdownFolder,
   deleteMarkdownFolder,
@@ -25,6 +27,7 @@ import {
 } from "./documents";
 import { toErrorMessage } from "./errors";
 import { buildFileMtimeMap, createLoadedFolderState } from "./folderState";
+import { initialAppData } from "./initialState";
 import {
   currentChildBasenames,
   ensureManualOrderEntry,
@@ -114,8 +117,12 @@ export const createFolderSlice: AppSlice<FolderSlice> = (set, get) => ({
     } catch (error) {
       // The folder may have been moved/deleted since it was last opened — a
       // stale recent-folders entry the user can never successfully pick again
-      // is worse than silently dropping it.
-      removeRecentFolderPath(folderPath);
+      // is worse than silently dropping it. A server vault is different: a
+      // server that is away or refusing the token right now is still the
+      // user's server, and the entry stays.
+      if (!isRemoteVaultPath(folderPath)) {
+        removeRecentFolderPath(folderPath);
+      }
 
       set({
         isLoading: false,
@@ -124,6 +131,11 @@ export const createFolderSlice: AppSlice<FolderSlice> = (set, get) => ({
 
       return false;
     }
+  },
+  closeFolder: () => {
+    setActiveVaultStorage(null);
+    clearLastOpenedFolderPath();
+    set({ ...initialAppData });
   },
   refreshFolderFiles: async () => {
     const { folderPath, fileDocuments, manualOrder, emptyFolderPaths } = get();

@@ -11,6 +11,8 @@ import { relaunch } from "@tauri-apps/plugin-process";
 import { check as checkForUpdate } from "@tauri-apps/plugin-updater";
 
 import { normalizeDisplayPath } from "@/lib/vaultPaths";
+import { joinPosixPath, normalizePosixPath, posixDirname } from "@/platform/remote/paths";
+import { isRemoteVaultPath } from "@/platform/remote/vaultRoot";
 import type {
   Platform,
   PortableStatus,
@@ -20,6 +22,7 @@ import type {
 } from "@/platform/types";
 
 import { localFs, localVaultStorage } from "./fs";
+import { desktopRemoteVaults } from "./remoteVaults";
 
 /** Fired by the Rust file watcher (`watch_folder`) with the watched folder path. */
 export const FOLDER_FILES_CHANGED_EVENT = "scribedog-folder-files-changed";
@@ -51,7 +54,8 @@ export const platform: Platform = {
     knowledgeIndex: true,
     spellcheckDictionary: true,
     session: false,
-    browserLocalModels: false
+    browserLocalModels: false,
+    remoteVaults: true
   },
 
   vaultStorage: localVaultStorage,
@@ -59,10 +63,15 @@ export const platform: Platform = {
   // Delegating lazily (rather than handing the imports over directly) keeps
   // the tests' partial mocks of the Tauri modules working: nothing is touched
   // until it is called.
+  //
+  // A path under a server vault's virtual root is POSIX and stays POSIX:
+  // Tauri's join would turn it into a backslash path on Windows, and the
+  // store would then hold two spellings of the same note (the listing's and
+  // the one it built itself). Everything else is a real path on this machine.
   paths: {
-    join: (...parts) => join(...parts),
-    dirname: (path) => dirname(path),
-    normalize: (path) => normalize(path)
+    join: (...parts) => (isRemoteVaultPath(parts[0] ?? "") ? Promise.resolve(joinPosixPath(...parts)) : join(...parts)),
+    dirname: (path) => (isRemoteVaultPath(path) ? Promise.resolve(posixDirname(path)) : dirname(path)),
+    normalize: (path) => (isRemoteVaultPath(path) ? Promise.resolve(normalizePosixPath(path)) : normalize(path))
   },
 
   vault: {
@@ -159,5 +168,6 @@ export const platform: Platform = {
     call: (command, args) => invoke(command, args)
   },
   session: null,
-  localModels: null
+  localModels: null,
+  remoteVaults: desktopRemoteVaults
 };

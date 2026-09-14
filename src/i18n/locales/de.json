@@ -272,7 +272,8 @@
     "agentMaxIterationsHint": "Wie viele Werkzeug-Aufrufe ein Arbeitsschritt höchstens braucht, bevor abgebrochen wird. Höher bei umfangreichen Aufträgen, niedriger, wenn sich ein Modell verrennt.",
     "agentMaxPlanStepsLabel": "Schritte je Aufgabenliste",
     "agentMaxPlanStepsHint": "Obergrenze für die Länge einer Aufgabenliste.",
-    "localProviderBrowserHint": "{{provider}} läuft auf diesem Gerät, und der Browser spricht es direkt an. Deshalb muss es Anfragen von {{origin}} annehmen: {{instruction}}. Wird ScribeDog über eine öffentliche Adresse geöffnet, fragt der Browser außerdem einmal nach dem Zugriff auf das lokale Netzwerk."
+    "localProviderBrowserHint": "{{provider}} läuft auf diesem Gerät, und der Browser spricht es direkt an. Deshalb muss es Anfragen von {{origin}} annehmen: {{instruction}}. Wird ScribeDog über eine öffentliche Adresse geöffnet, fragt der Browser außerdem einmal nach dem Zugriff auf das lokale Netzwerk.",
+    "tabServer": "Server"
   },
   "assistants": {
     "defaultName": "ScribeDog (Standard)",
@@ -387,7 +388,8 @@
       "notesUnchanged": "Deine Notizen selbst ändern sich dabei nicht.",
       "count": "Betroffene Dateien: {{files}}",
       "confirm": "Neu aufbauen"
-    }
+    },
+    "remoteVault": "Die Wissensbasis ist für ein Vault auf einem Server nicht verfügbar: der Index liest Notizen von der Festplatte dieses Rechners. Öffne das Vault auf dem Server als lokalen Ordner oder nutze es ohne Wissensbasis."
   },
   "versioningSettings": {
     "scope": "Der Schalter gilt für die ganze Anwendung. Die Versionen selbst liegen im jeweils geöffneten Ordner unter .scribedog.",
@@ -494,7 +496,8 @@
     "noMarkdownFiles": "Keine Markdown-Dateien gefunden. Öffne einen Ordner mit `.md` Dateien.",
     "dropImportHint": "Dateien oder Ordner ablegen – sie werden als Notizen importiert",
     "logout": "Abmelden",
-    "close": "Dateiliste schließen"
+    "close": "Dateiliste schließen",
+    "addServerVault": "Server-Vault hinzufügen…"
   },
   "fileTree": {
     "treeLabel": "Dateibaum",
@@ -988,11 +991,61 @@
     "wrongCurrentPassword": "Das aktuelle Passwort ist falsch.",
     "changeFailed": "Das Passwort konnte nicht geändert werden.",
     "changed": "Passwort geändert. Alle anderen Sitzungen wurden beendet.",
-    "changing": "Wird geändert …"
+    "changing": "Wird geändert …",
+    "devices": "Angemeldete Geräte",
+    "devicesHint": "Desktop-Apps, die dieses Vault mit einem Zugriffsschlüssel geöffnet haben. Widerrufen meldet das Gerät ab, ohne das Passwort zu ändern; eine Passwortänderung meldet alle ab."
   },
   "platform": {
     "notAvailable": "Diese Funktion ist in dieser Ausgabe von ScribeDog nicht verfügbar.",
     "serverNotYetAvailable": "Diese Aktion ist in der Server-Edition noch nicht verfügbar.",
     "pathOutsideVault": "„{{path}}“ liegt außerhalb des Vaults."
+  },
+  "devices": {
+    "loading": "Wird geladen…",
+    "none": "Kein Gerät besitzt einen Zugriffsschlüssel für diesen Server.",
+    "thisDevice": "Dieses Gerät",
+    "added": "Hinzugefügt {{date}}",
+    "lastUsed": "zuletzt benutzt {{date}}",
+    "neverUsed": "nie benutzt",
+    "revoke": "Widerrufen",
+    "revoking": "Wird widerrufen…",
+    "loadFailed": "Die Geräteliste konnte nicht geladen werden.",
+    "revokeFailed": "Der Zugriffsschlüssel konnte nicht widerrufen werden."
+  },
+  "remoteVaults": {
+    "eyebrow": "Server-Vault",
+    "addTitle": "Server-Vault hinzufügen",
+    "addDescription": "Die Notizen bleiben auf dem Server; KI und Diktat laufen weiter auf diesem Rechner. Das Passwort wird einmal gegen einen Zugriffsschlüssel getauscht und nicht gespeichert.",
+    "signInTitle": "Erneut bei {{name}} anmelden",
+    "signInDescription": "Der Server akzeptiert den Zugriffsschlüssel dieses Geräts nicht mehr (widerrufen oder Passwort geändert). Gib das Passwort ein, um einen neuen zu erhalten.",
+    "serverUrl": "Server-Adresse",
+    "password": "Passwort",
+    "displayName": "Name",
+    "displayNamePlaceholder": "Wird in der Vault-Liste gezeigt; Standard ist der Servername",
+    "deviceName": "Dieses Gerät",
+    "deviceNameHint": "So erscheint dieser Rechner in der Geräteliste des Servers.",
+    "cancel": "Abbrechen",
+    "add": "Hinzufügen",
+    "signIn": "Anmelden",
+    "connecting": "Verbinde…",
+    "wrongPassword": "Falsches Passwort.",
+    "tooManyAttempts": "Zu viele Fehlversuche. Versuche es gleich noch einmal.",
+    "unreachable": "Der Server ist nicht erreichbar: {{detail}}",
+    "addFailed": "Der Server konnte nicht hinzugefügt werden.",
+    "invalidUrl": "Gib die Server-Adresse als URL ein, zum Beispiel https://notes.example.com.",
+    "urlMustBeHttps": "Die Server-Adresse muss HTTPS verwenden; nur localhost darf einfaches HTTP nutzen.",
+    "unknownServer": "Dieser Server steht nicht in der Liste.",
+    "notSignedIn": "Für diesen Server ist kein Zugriffsschlüssel gespeichert.",
+    "defaultDeviceName": "ScribeDog Desktop",
+    "defaultDeviceNameOn": "ScribeDog auf {{os}}",
+    "settingsTitle": "Server-Vaults",
+    "settingsHint": "Server, auf denen diese App ein Vault öffnen kann. Hinzufügen geht über das Vault-Menü in der Seitenleiste. Jeder Server zeigt die Geräte mit Zugriffsschlüssel; ein verlorenes Gerät widerrufst du dort.",
+    "none": "Noch kein Server hinzugefügt.",
+    "openNow": "Geöffnet",
+    "showDevices": "Geräte",
+    "hideDevices": "Geräte ausblenden",
+    "disconnect": "Verbindung trennen",
+    "disconnecting": "Wird getrennt…",
+    "removeFailed": "Der Server konnte nicht entfernt werden."
   }
 }

@@ -135,3 +135,40 @@ test("a cross-site write is refused", async ({ page }) => {
 
   expect(response.status()).toBe(403);
 });
+
+test("a desktop access token shows up as a device and can be signed out from here", async ({ page }) => {
+  await signIn(page);
+
+  // What the desktop app does when a server vault is added: the password is
+  // traded for a token, which then works on its own, no cookie involved.
+  const deviceName = `E2E laptop ${Date.now()}`;
+  const issued = await page.request.post(`${basePath(page)}/api/auth/tokens`, {
+    data: { password: currentPassword, name: deviceName }
+  });
+  expect(issued.status()).toBe(201);
+  const { id, token } = (await issued.json()) as { id: string; token: string };
+
+  const asDesktop = await page.request.get(`${basePath(page)}/api/files`, {
+    headers: { authorization: `Bearer ${token}`, cookie: "" }
+  });
+  expect(asDesktop.status()).toBe(200);
+
+  await openSettings(page, "Account");
+  const device = page.getByTestId("device-item").filter({ hasText: deviceName });
+  await expect(device).toBeVisible();
+  await expect(device).toContainText("last used");
+
+  // The list never shows the token itself.
+  await expect(page.getByTestId("device-list")).not.toContainText(token.split("_")[2]);
+
+  await device.getByTestId("device-revoke").click();
+  await expect(device).toHaveCount(0);
+
+  // From here on the desktop is out, and only that desktop.
+  const refused = await page.request.get(`${basePath(page)}/api/files`, {
+    headers: { authorization: `Bearer ${token}`, cookie: "" }
+  });
+  expect(refused.status()).toBe(401);
+  expect((await page.request.get(`${basePath(page)}/api/files`)).status()).toBe(200);
+  expect((await page.request.delete(`${basePath(page)}/api/auth/tokens/${id}`)).status()).toBe(404);
+});

@@ -14,6 +14,7 @@ import {
   Import,
   LogOut,
   Plus,
+  Server,
   Settings2,
   Trash2,
   X
@@ -41,6 +42,7 @@ import {
   type DropPayload
 } from "@/lib/dragDrop/droppedSources";
 import { formatFolderLabel, getFolderBasename } from "@/lib/fileSystem";
+import { isRemoteVaultPath, remoteVaultFor } from "@/lib/remoteVaults";
 import { getVaultCapabilities, platform, vaultCapabilityHint } from "@/platform";
 import type { ManualOrderMap, SortMode } from "@/lib/vaultMeta";
 import type { MoveTreeEntryInput } from "@/store/useAppStore";
@@ -62,6 +64,8 @@ type SidebarProps = {
   onOpenFolder: () => void;
   recentFolderPaths: string[];
   onOpenRecentFolder: (folderPath: string) => void;
+  /** "Add server vault…"; absent where the shell cannot reach a server. */
+  onAddRemoteVault?: () => void;
   onCreateFile: () => void;
   onCreateFileRequest: (targetDirectory: string) => void;
   onCreateFolder: () => void;
@@ -111,6 +115,7 @@ export function Sidebar({
   onOpenFolder,
   recentFolderPaths,
   onOpenRecentFolder,
+  onAddRemoteVault,
   onCreateFile,
   onCreateFileRequest,
   onCreateFolder,
@@ -140,6 +145,12 @@ export function Sidebar({
   onClose
 }: SidebarProps) {
   const { t } = useTranslation();
+
+  // A server vault whose entry is gone (forgotten in the settings) has
+  // nothing to open; the recent list is cleaned on forget, this is the net.
+  const recentVaults = recentFolderPaths
+    .map((path) => ({ path, remote: remoteVaultFor(path) }))
+    .filter(({ path, remote }) => remote !== null || !isRemoteVaultPath(path));
   const folderLabel = formatFolderLabel(folderPath);
   const capabilities = getVaultCapabilities();
   const capabilityHint = vaultCapabilityHint();
@@ -407,22 +418,24 @@ export function Sidebar({
               <MenuPortal>
                 <MenuPositioner align="start">
                   <MenuPopup>
-                    {recentFolderPaths.length > 0 ? (
+                    {recentVaults.length > 0 ? (
                       <>
-                        {recentFolderPaths.map((recentFolderPath) => (
+                        {recentVaults.map(({ path, remote }) => (
                           <MenuItem
-                            key={recentFolderPath}
+                            key={path}
                             className="sidebar-panel__recent-folder-item"
-                            title={recentFolderPath}
-                            onClick={() => onOpenRecentFolder(recentFolderPath)}
+                            title={remote ? remote.url : path}
+                            onClick={() => onOpenRecentFolder(path)}
+                            data-testid={remote ? "recent-remote-vault" : undefined}
                           >
-                            {recentFolderPath === folderPath ? (
+                            {path === folderPath ? (
                               <Check className="size-4" aria-hidden="true" />
                             ) : (
                               <span className="size-4" aria-hidden="true" />
                             )}
+                            {remote ? <Server className="size-4 sidebar-panel__recent-folder-kind" aria-hidden="true" /> : null}
                             <span className="sidebar-panel__recent-folder-name">
-                              {getFolderBasename(recentFolderPath)}
+                              {remote ? remote.name : getFolderBasename(path)}
                             </span>
                           </MenuItem>
                         ))}
@@ -433,6 +446,12 @@ export function Sidebar({
                       <FolderOpen className="size-4" aria-hidden="true" />
                       {t("sidebar.browseForFolder")}
                     </MenuItem>
+                    {onAddRemoteVault ? (
+                      <MenuItem onClick={onAddRemoteVault} data-testid="add-remote-vault">
+                        <Server className="size-4" aria-hidden="true" />
+                        {t("sidebar.addServerVault")}
+                      </MenuItem>
+                    ) : null}
                   </MenuPopup>
                 </MenuPositioner>
               </MenuPortal>

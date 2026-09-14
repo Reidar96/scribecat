@@ -220,3 +220,8 @@
 .sidebar-panel__folder--static:hover {
   background: transparent;
 }
+
+.sidebar-panel__recent-folder-kind {
+  flex: none;
+  color: rgba(var(--muted-rgb),0.9);
+}

@@ -271,7 +271,8 @@
     "agentMaxIterationsHint": "一个工作步骤最多可以调用多少次工具，超过就中止。任务大时调高，模型绕圈时调低。",
     "agentMaxPlanStepsLabel": "任务清单的步骤数",
     "agentMaxPlanStepsHint": "任务清单长度的上限。",
-    "localProviderBrowserHint": "{{provider}} 在此设备上运行，浏览器直接与它通信，因此它必须接受来自 {{origin}} 的请求：{{instruction}}。如果通过公网地址打开 ScribeDog，浏览器还会询问一次是否允许访问本地网络。"
+    "localProviderBrowserHint": "{{provider}} 在此设备上运行，浏览器直接与它通信，因此它必须接受来自 {{origin}} 的请求：{{instruction}}。如果通过公网地址打开 ScribeDog，浏览器还会询问一次是否允许访问本地网络。",
+    "tabServer": "服务器"
   },
   "assistants": {
     "defaultName": "ScribeDog (默认)",
@@ -386,7 +387,8 @@
       "notesUnchanged": "你的笔记本身不会因此改变。",
       "count": "涉及的文件：{{files}}",
       "confirm": "重新建立"
-    }
+    },
+    "remoteVault": "知识库不适用于服务器上的保管库：索引从这台电脑的磁盘读取笔记。请在服务器上将保管库作为本地文件夹打开，或在不使用知识库的情况下使用它。"
   },
   "versioningSettings": {
     "scope": "此开关对整个应用程序生效。版本本身保存在当前打开的文件夹的 .scribedog 中。",
@@ -493,7 +495,8 @@
     "noMarkdownFiles": "未找到 Markdown 文件。请打开包含 `.md` 文件的文件夹。",
     "dropImportHint": "拖入文件或文件夹，将作为笔记导入",
     "logout": "退出登录",
-    "close": "关闭文件列表"
+    "close": "关闭文件列表",
+    "addServerVault": "添加服务器保管库…"
   },
   "fileTree": {
     "treeLabel": "文件树",
@@ -987,11 +990,61 @@
     "wrongCurrentPassword": "当前密码不正确。",
     "changeFailed": "无法修改密码。",
     "changed": "密码已修改，其他会话均已结束。",
-    "changing": "正在修改 …"
+    "changing": "正在修改 …",
+    "devices": "已登录的设备",
+    "devicesHint": "使用访问密钥打开过此保管库的桌面应用。撤销某一个只会让该设备退出登录，密码不变；修改密码会让全部设备退出登录。"
   },
   "platform": {
     "notAvailable": "此功能在这个版本的 ScribeDog 中不可用。",
     "serverNotYetAvailable": "此操作在服务器版中暂不可用。",
     "pathOutsideVault": "“{{path}}”位于笔记库之外。"
+  },
+  "devices": {
+    "loading": "加载中…",
+    "none": "没有设备持有此服务器的访问密钥。",
+    "thisDevice": "此设备",
+    "added": "添加于 {{date}}",
+    "lastUsed": "上次使用 {{date}}",
+    "neverUsed": "从未使用",
+    "revoke": "撤销",
+    "revoking": "正在撤销…",
+    "loadFailed": "无法加载设备列表。",
+    "revokeFailed": "无法撤销访问密钥。"
+  },
+  "remoteVaults": {
+    "eyebrow": "服务器保管库",
+    "addTitle": "添加服务器保管库",
+    "addDescription": "笔记保存在服务器上；AI 和听写仍在这台电脑上运行。密码只用于换取一次访问密钥，不会被保存。",
+    "signInTitle": "重新登录 {{name}}",
+    "signInDescription": "服务器不再接受此设备的访问密钥（已被撤销，或密码已更改）。请输入密码以获取新的密钥。",
+    "serverUrl": "服务器地址",
+    "password": "密码",
+    "displayName": "名称",
+    "displayNamePlaceholder": "显示在保管库列表中；默认为服务器名称",
+    "deviceName": "此设备",
+    "deviceNameHint": "这台电脑在服务器设备列表中的显示名称。",
+    "cancel": "取消",
+    "add": "添加",
+    "signIn": "登录",
+    "connecting": "正在连接…",
+    "wrongPassword": "密码错误。",
+    "tooManyAttempts": "失败次数过多，请稍后再试。",
+    "unreachable": "无法连接服务器：{{detail}}",
+    "addFailed": "无法添加服务器。",
+    "invalidUrl": "请以 URL 形式输入服务器地址，例如 https://notes.example.com。",
+    "urlMustBeHttps": "服务器地址必须使用 HTTPS；只有 localhost 可以使用普通 HTTP。",
+    "unknownServer": "此服务器不在列表中。",
+    "notSignedIn": "此服务器没有保存的访问密钥。",
+    "defaultDeviceName": "ScribeDog 桌面版",
+    "defaultDeviceNameOn": "{{os}} 上的 ScribeDog",
+    "settingsTitle": "服务器保管库",
+    "settingsHint": "此应用可以打开保管库的服务器。在侧边栏的保管库菜单中添加。每个服务器会列出持有访问密钥的设备；丢失的设备可在那里撤销。",
+    "none": "尚未添加任何服务器。",
+    "openNow": "已打开",
+    "showDevices": "设备",
+    "hideDevices": "隐藏设备",
+    "disconnect": "断开连接",
+    "disconnecting": "正在断开…",
+    "removeFailed": "无法移除服务器。"
   }
 }

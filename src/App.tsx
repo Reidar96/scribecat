@@ -7,6 +7,7 @@ import type { EditorHandle } from "@/components/Editor";
 import type { SettingsTab } from "@/components/SettingsDialog";
 import { Sidebar } from "@/components/Sidebar";
 import { AppDialogs } from "@/components/app/AppDialogs";
+import { RemoteVaultDialog } from "@/components/remote/RemoteVaultDialog";
 import { DocumentPanel } from "@/components/app/DocumentPanel";
 import { MobileSheet } from "@/components/app/MobileSheet";
 import { ZenMode } from "@/components/app/ZenMode";
@@ -26,6 +27,7 @@ import { useGlobalShortcuts } from "@/hooks/useGlobalShortcuts";
 import { useLayoutMode } from "@/hooks/useLayoutMode";
 import { useMoveTarget } from "@/hooks/useMoveTarget";
 import { useRagIndexAutoUpdate } from "@/hooks/useRagIndexAutoUpdate";
+import { useRemoteVaultDialog } from "@/hooks/useRemoteVaultDialog";
 import {
   SIDEBAR_MAX_WIDTH,
   SIDEBAR_MIN_WIDTH,
@@ -800,6 +802,7 @@ function App() {
 
   useStartupFolder(openFolderAtPath);
   useFolderWatcher(refreshFolderFiles);
+  const remoteVaultDialog = useRemoteVaultDialog({ openVault: openRecentFolderSafely });
 
   // The open note is remembered per vault and per device, and opened again
   // when the vault is next opened (Settings, "reopen the last note"). Only
@@ -881,6 +884,7 @@ function App() {
       onOpenFolder={openFolderSafely}
       recentFolderPaths={getRecentFolderPaths()}
       onOpenRecentFolder={(targetFolderPath) => void openRecentFolderSafely(targetFolderPath)}
+      onAddRemoteVault={platform.features.remoteVaults ? remoteVaultDialog.openAddDialog : undefined}
       onCreateFile={() => void handleCreateFile()}
       onCreateFileRequest={(targetDirectory) => void handleCreateFile(targetDirectory)}
       onCreateFolder={() => void handleCreateFolder()}
@@ -1070,6 +1074,12 @@ function App() {
       ) : null}
 
       {isZenMode ? <ZenMode onExit={exitZenMode} isDirty={isDirty} /> : null}
+
+      <RemoteVaultDialog
+        request={remoteVaultDialog.request}
+        onDone={remoteVaultDialog.handleDone}
+        onCancel={remoteVaultDialog.close}
+      />
 
       <AppDialogs
         isUnsavedDialogOpen={isUnsavedDialogOpen}

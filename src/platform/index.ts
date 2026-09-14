@@ -14,13 +14,21 @@ export type * from "./types";
 export { PlatformUnavailableError, SessionError } from "./errors";
 
 /**
- * The storage of the vault that is open right now. Today that is fixed per
- * platform (a local folder on the desktop, the server's vault in the
- * browser); when the desktop app learns to open a server vault, this is
- * where the choice is made, and nothing above it has to change.
+ * The storage of the vault that is open right now: the platform's own (a
+ * local folder on the desktop, the server's vault in the browser) unless
+ * opening a vault installed another one, which is how the desktop app opens
+ * a server vault (see lib/remoteVaults.ts). Nothing above this call knows
+ * the difference.
  */
+let activeVaultStorage: VaultStorage | null = null;
+
 export function getVaultStorage(): VaultStorage {
-  return platform.vaultStorage;
+  return activeVaultStorage ?? platform.vaultStorage;
+}
+
+/** Installs the storage for the vault being opened; null returns to the platform's own. */
+export function setActiveVaultStorage(storage: VaultStorage | null): void {
+  activeVaultStorage = storage;
 }
 
 /**

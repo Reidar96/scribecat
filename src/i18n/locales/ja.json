@@ -271,7 +271,8 @@
     "agentMaxIterationsHint": "1 つの作業ステップで許されるツール呼び出しの上限です。大きな依頼では増やし、モデルが堂々巡りするなら減らします。",
     "agentMaxPlanStepsLabel": "タスク一覧のステップ数",
     "agentMaxPlanStepsHint": "タスク一覧の長さの上限です。",
-    "localProviderBrowserHint": "{{provider}} はこの端末で動作し、ブラウザーが直接通信します。そのため {{origin}} からのリクエストを受け付ける必要があります: {{instruction}}。公開アドレスから ScribeDog を開いた場合、ブラウザーはローカルネットワークへのアクセスも一度確認します。"
+    "localProviderBrowserHint": "{{provider}} はこの端末で動作し、ブラウザーが直接通信します。そのため {{origin}} からのリクエストを受け付ける必要があります: {{instruction}}。公開アドレスから ScribeDog を開いた場合、ブラウザーはローカルネットワークへのアクセスも一度確認します。",
+    "tabServer": "サーバー"
   },
   "assistants": {
     "defaultName": "ScribeDog (デフォルト)",
@@ -386,7 +387,8 @@
       "notesUnchanged": "ノートそのものは変更されません。",
       "count": "対象のファイル：{{files}}",
       "confirm": "作り直す"
-    }
+    },
+    "remoteVault": "サーバー上の保管庫ではナレッジベースを使えません。インデックスはこのコンピューターのディスクからノートを読み込みます。サーバー側でローカルフォルダーとして開くか、ナレッジベースなしで使ってください。"
   },
   "versioningSettings": {
     "scope": "このスイッチはアプリケーション全体に適用されます。バージョン自体は開いているフォルダーの .scribedog に保存されます。",
@@ -493,7 +495,8 @@
     "noMarkdownFiles": "Markdown ファイルが見つかりません。`.md` ファイルを含むフォルダーを開いてください。",
     "dropImportHint": "ファイルやフォルダーをドロップするとノートとしてインポートされます",
     "logout": "サインアウト",
-    "close": "ファイル一覧を閉じる"
+    "close": "ファイル一覧を閉じる",
+    "addServerVault": "サーバー保管庫を追加…"
   },
   "fileTree": {
     "treeLabel": "ファイルツリー",
@@ -987,11 +990,61 @@
     "wrongCurrentPassword": "現在のパスワードが違います。",
     "changeFailed": "パスワードを変更できませんでした。",
     "changed": "パスワードを変更しました。ほかのセッションはすべて終了しました。",
-    "changing": "変更中 …"
+    "changing": "変更中 …",
+    "devices": "サインイン中のデバイス",
+    "devicesHint": "アクセスキーでこの保管庫を開いたデスクトップアプリです。取り消すとそのデバイスだけがサインアウトされ、パスワードは変わりません。パスワードを変更するとすべてがサインアウトされます。"
   },
   "platform": {
     "notAvailable": "この機能は、このエディションの ScribeDog では利用できません。",
     "serverNotYetAvailable": "この操作は、サーバー版ではまだ利用できません。",
     "pathOutsideVault": "「{{path}}」は保管庫の外にあります。"
+  },
+  "devices": {
+    "loading": "読み込み中…",
+    "none": "このサーバーのアクセスキーを持つデバイスはありません。",
+    "thisDevice": "このデバイス",
+    "added": "追加 {{date}}",
+    "lastUsed": "最終使用 {{date}}",
+    "neverUsed": "未使用",
+    "revoke": "取り消す",
+    "revoking": "取り消し中…",
+    "loadFailed": "デバイス一覧を読み込めませんでした。",
+    "revokeFailed": "アクセスキーを取り消せませんでした。"
+  },
+  "remoteVaults": {
+    "eyebrow": "サーバー保管庫",
+    "addTitle": "サーバー保管庫を追加",
+    "addDescription": "ノートはサーバーに置かれ、AIと音声入力はこのコンピューターで動き続けます。パスワードは一度だけアクセスキーと交換され、保存されません。",
+    "signInTitle": "{{name}} に再度サインイン",
+    "signInDescription": "サーバーがこのデバイスのアクセスキーを受け付けなくなりました（取り消されたか、パスワードが変更されました）。パスワードを入力して新しいキーを取得してください。",
+    "serverUrl": "サーバーのアドレス",
+    "password": "パスワード",
+    "displayName": "名前",
+    "displayNamePlaceholder": "保管庫一覧に表示されます。既定はサーバー名",
+    "deviceName": "このデバイス",
+    "deviceNameHint": "サーバーのデバイス一覧でこのコンピューターがこう表示されます。",
+    "cancel": "キャンセル",
+    "add": "追加",
+    "signIn": "サインイン",
+    "connecting": "接続中…",
+    "wrongPassword": "パスワードが違います。",
+    "tooManyAttempts": "失敗回数が多すぎます。しばらくしてからもう一度お試しください。",
+    "unreachable": "サーバーに接続できません: {{detail}}",
+    "addFailed": "サーバーを追加できませんでした。",
+    "invalidUrl": "サーバーのアドレスを URL で入力してください。例: https://notes.example.com",
+    "urlMustBeHttps": "サーバーのアドレスは HTTPS である必要があります。平文の HTTP は localhost のみ使えます。",
+    "unknownServer": "このサーバーは一覧にありません。",
+    "notSignedIn": "このサーバーのアクセスキーは保存されていません。",
+    "defaultDeviceName": "ScribeDog デスクトップ",
+    "defaultDeviceNameOn": "{{os}} の ScribeDog",
+    "settingsTitle": "サーバー保管庫",
+    "settingsHint": "このアプリが保管庫を開けるサーバーです。追加はサイドバーの保管庫メニューから行います。各サーバーにはアクセスキーを持つデバイスが表示され、紛失したデバイスはそこで取り消せます。",
+    "none": "まだサーバーが追加されていません。",
+    "openNow": "開いています",
+    "showDevices": "デバイス",
+    "hideDevices": "デバイスを隠す",
+    "disconnect": "接続を解除",
+    "disconnecting": "解除中…",
+    "removeFailed": "サーバーを削除できませんでした。"
   }
 }

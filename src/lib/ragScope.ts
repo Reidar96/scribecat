@@ -10,6 +10,7 @@
 import { platform } from "@/platform";
 
 import { getRelativeDisplayPath } from "@/lib/fileSystem";
+import { isRemoteVaultPath } from "@/platform/remote/vaultRoot";
 import { isFileIncluded, type RagFolderSelection } from "@/lib/ragConfig";
 import { useAppStore } from "@/store/useAppStore";
 import { useRagSettingsStore } from "@/store/useRagSettingsStore";
@@ -28,16 +29,23 @@ export type RagScope = {
  * the vault's consent switch. Only the settings tab passes false, so it can
  * still report and delete what was stored while the feature is switched off.
  *
- * Null as well wherever the shell has no index (the browser). The consent
- * switch lives in the vault's rag.json, so a vault that was prepared on the
- * desktop arrives with it switched on; without this check the agent would be
- * offered search tools that can only ever fail there.
+ * Null as well wherever the shell has no index (the browser), or where the
+ * index cannot reach the vault (a server vault opened on the desktop: the
+ * index reads notes from disk). The consent switch lives in the vault's
+ * rag.json, so a vault that was prepared on the desktop arrives with it
+ * switched on; without this check the agent would be offered search tools
+ * that can only ever fail there.
  */
 export function currentScope({ requireEnabled = true }: { requireEnabled?: boolean } = {}): RagScope | null {
   const { folderPath, filePaths } = useAppStore.getState();
   const { config } = useRagSettingsStore.getState();
 
-  if (!folderPath || !platform.features.knowledgeIndex || (requireEnabled && !config.enabled)) {
+  if (
+    !folderPath ||
+    !platform.features.knowledgeIndex ||
+    isRemoteVaultPath(folderPath) ||
+    (requireEnabled && !config.enabled)
+  ) {
     return null;
   }
 

@@ -12,6 +12,7 @@ import { getRelativeDisplayPath } from "@/lib/fileSystem";
 import { buildRagFolderTree, collectFolderPaths, countIncludedFiles } from "@/lib/ragConfig";
 import { clearVaultSearchCache } from "@/lib/ragSearch";
 import { useAiSettingsStore, type AiProvider } from "@/store/useAiSettingsStore";
+import { isRemoteVaultPath } from "@/lib/remoteVaults";
 import { useAppStore } from "@/store/useAppStore";
 import { useRagEmbeddingStore, type RagSearchMode } from "@/store/useRagEmbeddingStore";
 import { useRagSettingsStore } from "@/store/useRagSettingsStore";
@@ -97,6 +98,12 @@ export function RagSettings({ pendingProvider }: RagSettingsProps) {
   // The scope header above this panel already says "open a folder first".
   if (folderPath === null) {
     return null;
+  }
+
+  // The index lives in the app process and reads the notes from disk; a
+  // vault on a server is out of its reach (see lib/ragScope.ts).
+  if (isRemoteVaultPath(folderPath)) {
+    return <p className="rag-settings__hint">{t("ragSettings.remoteVault")}</p>;
   }
 
   return (

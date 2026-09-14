@@ -45,6 +45,8 @@ export type AppData = {
 export type FolderSlice = {
   openFolder: () => Promise<boolean>;
   openFolderAtPath: (folderPath: string) => Promise<boolean>;
+  /** Closes the open vault without opening another; the app shows the empty state. */
+  closeFolder: () => void;
   refreshFolderFiles: () => Promise<boolean>;
   createNewFolder: (targetDirectory?: string, insertAfterBasename?: string | null) => Promise<string | null>;
   /** Creates a folder at exactly this path (see createFileAtPath for the why). */

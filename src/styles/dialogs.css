@@ -1213,3 +1213,96 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+/* Server vaults: the add/sign-in dialog, the device list (browser account
+   tab and desktop server tab) and the list of servers on the desktop. */
+
+.remote-vault-dialog__panel {
+  width: min(100%, 30rem);
+}
+
+.remote-vault-dialog__fields {
+  display: grid;
+  gap: 0.85rem;
+  margin-top: 1rem;
+}
+
+.remote-vault-dialog__fields .ai-dialog__field small {
+  font-size: 0.78rem;
+}
+
+.device-list__items,
+.remote-vault-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.device-list__item,
+.remote-vault-list__row {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  border: 1px solid rgba(var(--overlay-rgb),0.08);
+  border-radius: 0.9rem;
+  background: rgba(var(--surface-rgb),0.74);
+  padding: 0.65rem 0.85rem;
+}
+
+.device-list__icon,
+.remote-vault-list__icon {
+  flex: none;
+  color: rgba(var(--muted-rgb),0.9);
+}
+
+.device-list__text,
+.remote-vault-list__text {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.device-list__name,
+.remote-vault-list__name {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.device-list__badge {
+  font-size: 0.7rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+  background: rgba(var(--accent-rgb),0.14);
+  color: rgba(var(--text-rgb),0.8);
+}
+
+.device-list__meta,
+.remote-vault-list__url {
+  font-size: 0.78rem;
+  color: rgba(var(--text-rgb),0.6);
+  overflow-wrap: anywhere;
+}
+
+.remote-vault-list__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  justify-content: flex-end;
+}
+
+.remote-vault-list__devices {
+  margin: 0.5rem 0 0.25rem 1.5rem;
+}
+
+.device-list .ai-dialog__error {
+  margin-top: 0.5rem;
+}

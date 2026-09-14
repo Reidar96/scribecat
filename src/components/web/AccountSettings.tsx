@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 
+import { DeviceList } from "@/components/remote/DeviceList";
 import { Button } from "@/components/ui/button";
 import { platform, SessionError } from "@/platform";
 
@@ -12,6 +13,10 @@ import { platform, SessionError } from "@/platform";
  * so tokens issued before stop verifying) and re-encrypts the stored API keys
  * under the new password, which is why the form says both out loud rather
  * than leaving the user to find out on the next device.
+ *
+ * Below the form: the devices that hold an access token for this server
+ * (desktop apps that opened this vault), each of which can be signed out on
+ * its own without touching the password.
  */
 export function AccountSettings() {
   const { t } = useTranslation();
@@ -118,6 +123,15 @@ export function AccountSettings() {
         <Button type="submit" disabled={!canSubmit} data-testid="change-password">
           {isSaving ? t("account.changing") : t("account.changePassword")}
         </Button>
+      </div>
+
+      <h3 className="ai-dialog__field--full">{t("account.devices")}</h3>
+      <p className="ai-dialog__field--full ai-dialog__model-hint">{t("account.devicesHint")}</p>
+      <div className="ai-dialog__field--full">
+        <DeviceList
+          load={() => platform.session?.listDevices() ?? Promise.resolve([])}
+          revoke={(id) => platform.session?.revokeDevice(id) ?? Promise.resolve()}
+        />
       </div>
     </form>
   );
