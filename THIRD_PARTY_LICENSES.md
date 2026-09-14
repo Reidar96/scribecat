@@ -8185,6 +8185,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 | bitflags | 1.3.2 | MIT/Apache-2.0 |
 | bitflags | 2.13.0 | MIT OR Apache-2.0 |
 | block-buffer | 0.10.4 | MIT OR Apache-2.0 |
+| block-buffer | 0.12.1 | MIT OR Apache-2.0 |
 | brotli | 8.0.4 | BSD-3-Clause AND MIT |
 | brotli-decompressor | 5.0.3 | BSD-3-Clause/MIT |
 | bs58 | 0.5.1 | MIT/Apache-2.0 |
@@ -8203,6 +8204,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 | chrono | 0.4.45 | MIT OR Apache-2.0 |
 | clang-sys | 1.8.1 | Apache-2.0 |
 | cmake | 0.1.58 | MIT OR Apache-2.0 |
+| const-oid | 0.10.2 | Apache-2.0 OR MIT |
 | cookie | 0.18.1 | MIT OR Apache-2.0 |
 | cookie_store | 0.22.1 | MIT OR Apache-2.0 |
 | cpal | 0.15.3 | Apache-2.0 |
@@ -8212,6 +8214,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 | crossbeam-channel | 0.5.15 | MIT OR Apache-2.0 |
 | crossbeam-utils | 0.8.21 | MIT OR Apache-2.0 |
 | crypto-common | 0.1.7 | MIT OR Apache-2.0 |
+| crypto-common | 0.2.2 | MIT OR Apache-2.0 |
 | cssparser | 0.36.0 | MPL-2.0 |
 | cssparser-macros | 0.6.1 | MPL-2.0 |
 | ctor | 0.8.0 | Apache-2.0 OR MIT |
@@ -8220,11 +8223,13 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 | darling_core | 0.23.0 | MIT |
 | darling_macro | 0.23.0 | MIT |
 | dasp_sample | 0.11.0 | MIT OR Apache-2.0 |
+| data-encoding | 2.11.1 | MIT |
 | data-url | 0.3.2 | MIT OR Apache-2.0 |
 | deranged | 0.5.8 | MIT OR Apache-2.0 |
 | derive_more | 2.1.1 | MIT |
 | derive_more-impl | 2.1.1 | MIT |
 | digest | 0.10.7 | MIT OR Apache-2.0 |
+| digest | 0.11.3 | MIT OR Apache-2.0 |
 | dirs | 6.0.0 | MIT OR Apache-2.0 |
 | dirs-sys | 0.5.0 | MIT OR Apache-2.0 |
 | displaydoc | 0.2.6 | MIT OR Apache-2.0 |
@@ -8272,6 +8277,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 | http-body | 1.0.1 | MIT |
 | http-body-util | 0.1.3 | MIT |
 | httparse | 1.10.1 | MIT OR Apache-2.0 |
+| hybrid-array | 0.4.15 | MIT OR Apache-2.0 |
 | hyper | 1.10.1 | MIT |
 | hyper-rustls | 0.27.9 | Apache-2.0 OR ISC OR MIT |
 | hyper-util | 0.1.20 | MIT |
@@ -8360,11 +8366,13 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 | rustc_version | 0.4.1 | MIT OR Apache-2.0 |
 | rustc-hash | 2.1.3 | Apache-2.0 OR MIT |
 | rustls | 0.23.41 | Apache-2.0 OR ISC OR MIT |
+| rustls-native-certs | 0.8.4 | Apache-2.0 OR ISC OR MIT |
 | rustls-pki-types | 1.15.0 | MIT OR Apache-2.0 |
 | rustls-platform-verifier | 0.7.0 | MIT OR Apache-2.0 |
 | rustls-webpki | 0.103.13 | ISC |
 | ryu | 1.0.23 | Apache-2.0 OR BSL-1.0 |
 | same-file | 1.0.6 | Unlicense/MIT |
+| schannel | 0.1.29 | MIT |
 | schemars | 0.8.22 | MIT |
 | schemars | 0.9.0 | MIT |
 | schemars | 1.2.1 | MIT |
@@ -8386,6 +8394,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 | serialize-to-javascript | 0.1.2 | MIT OR Apache-2.0 |
 | serialize-to-javascript-impl | 0.1.2 | MIT OR Apache-2.0 |
 | servo_arc | 0.4.3 | MIT OR Apache-2.0 |
+| sha1 | 0.11.0 | MIT OR Apache-2.0 |
 | sha2 | 0.10.9 | MIT OR Apache-2.0 |
 | shlex | 1.3.0 | MIT OR Apache-2.0 |
 | shlex | 2.0.1 | MIT OR Apache-2.0 |
@@ -8436,6 +8445,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 | tokio | 1.52.3 | MIT |
 | tokio-macros | 2.7.0 | MIT |
 | tokio-rustls | 0.26.4 | MIT OR Apache-2.0 |
+| tokio-tungstenite | 0.30.0 | MIT |
 | tokio-util | 0.7.18 | MIT |
 | toml | 0.9.12+spec-1.1.0 | MIT OR Apache-2.0 |
 | toml | 1.1.2+spec-1.1.0 | MIT OR Apache-2.0 |
@@ -8452,6 +8462,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 | tracing-core | 0.1.36 | MIT |
 | tray-icon | 0.24.1 | MIT OR Apache-2.0 |
 | try-lock | 0.2.5 | MIT |
+| tungstenite | 0.30.0 | MIT OR Apache-2.0 |
 | typeid | 1.0.3 | MIT OR Apache-2.0 |
 | typenum | 1.20.1 | MIT OR Apache-2.0 |
 | unic-char-property | 0.9.0 | MIT/Apache-2.0 |
