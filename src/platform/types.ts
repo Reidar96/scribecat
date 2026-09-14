@@ -238,6 +238,36 @@ export type KnowledgeIndexApi = {
   call<T>(command: string, args?: Record<string, unknown>): Promise<T>;
 };
 
+/**
+ * Why a request to a model server on the user's own machine failed, as far
+ * as the browser can tell. Every one of these surfaces as the same
+ * "Failed to fetch"; the console knows more, the page does not, so this is
+ * pieced together from a permission query and a probe (see
+ * web/localModels.ts).
+ *
+ * - "permission": the browser refused to reach the local network for this
+ *   site (Chrome's local network access permission was denied).
+ * - "cors": the server answered but does not accept requests from this
+ *   page's origin; the user has to allow the origin on the server side.
+ * - "unreachable": nothing answered, or the browser asked for permission
+ *   and got no answer, which looks the same from here.
+ */
+export type LocalEndpointDiagnosis = "ok" | "permission" | "cors" | "unreachable";
+
+/**
+ * A model running on the device the browser runs on (Ollama, Jan.ai, LM
+ * Studio). Web only: on the desktop the app process talks to it directly and
+ * none of the browser's rules apply. In the browser the tab talks to it,
+ * which is what makes "localhost" the user's own machine again rather than
+ * the server, at the price of the browser's local network rules and the
+ * server's CORS policy.
+ */
+export type LocalModelsApi = {
+  /** The page's origin, which the local server has to allow. */
+  origin: string;
+  diagnose(provider: string, apiUrl: string): Promise<LocalEndpointDiagnosis>;
+};
+
 export type SessionStatus = {
   authenticated: boolean;
 };
@@ -289,6 +319,12 @@ export type PlatformFeatures = {
   spellcheckDictionary: boolean;
   /** Password login/logout. */
   session: boolean;
+  /**
+   * Local model servers are reached by the browser itself (see
+   * LocalModelsApi), so their failures need explaining and the settings a
+   * note about what the server has to allow.
+   */
+  browserLocalModels: boolean;
 };
 
 export type Platform = {
@@ -318,4 +354,5 @@ export type Platform = {
   updater: UpdaterApi | null;
   knowledgeIndex: KnowledgeIndexApi | null;
   session: SessionApi | null;
+  localModels: LocalModelsApi | null;
 };

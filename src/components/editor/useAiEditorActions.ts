@@ -6,7 +6,7 @@ import type { Editor as TipTapEditor } from "@tiptap/react";
 import { checkGrammar, streamAiMarkdown, type AiActionMode, type AiCheckIssue } from "@/lib/aiClient";
 import { updateAiDiffWidget } from "@/lib/aiDiffWidget";
 import { updateAiStreamWidget } from "@/lib/aiStreamWidget";
-import { formatAiError } from "@/lib/editor/errorMessages";
+import { describeAiError } from "@/lib/localEndpointHint";
 import { normalizeEscapedCheckboxes } from "@/lib/editor/markdownNormalize";
 import { getSelectionMarkdown } from "@/lib/editor/markdownStorage";
 import { completeMarkdownForContext, insertMarkdownStructured } from "@/lib/editor/structuredInsert";
@@ -395,7 +395,7 @@ export function useAiEditorActions({
           showAiDiff(activeEditor, streamedMarkdown, false);
         }
       } else {
-        setAiStatus({ kind: "error", message: formatAiError(error, t) });
+        setAiStatus({ kind: "error", message: await describeAiError(error, aiSettings) });
       }
     } finally {
       hideWidget();
@@ -432,7 +432,7 @@ export function useAiEditorActions({
       if (abortController.signal.aborted) {
         setAiStatus(null);
       } else {
-        setAiStatus({ kind: "error", message: formatAiError(error, t) });
+        setAiStatus({ kind: "error", message: await describeAiError(error, aiSettings) });
       }
     } finally {
       setIsAiLoading(false);

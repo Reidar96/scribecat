@@ -265,7 +265,8 @@
     "agentMaxIterationsLabel": "1 ステップあたりのツール呼び出し回数",
     "agentMaxIterationsHint": "1 つの作業ステップで許されるツール呼び出しの上限です。大きな依頼では増やし、モデルが堂々巡りするなら減らします。",
     "agentMaxPlanStepsLabel": "タスク一覧のステップ数",
-    "agentMaxPlanStepsHint": "タスク一覧の長さの上限です。"
+    "agentMaxPlanStepsHint": "タスク一覧の長さの上限です。",
+    "localProviderBrowserHint": "{{provider}} はこの端末で動作し、ブラウザーが直接通信します。そのため {{origin}} からのリクエストを受け付ける必要があります: {{instruction}}。公開アドレスから ScribeDog を開いた場合、ブラウザーはローカルネットワークへのアクセスも一度確認します。"
   },
   "assistants": {
     "defaultName": "ScribeDog (デフォルト)",
@@ -739,7 +740,13 @@
     "noUsableText": "AI から利用可能なテキストが返されませんでした。",
     "invalidCheckResponse": "AI の応答をスペル・文法の問題リストとして読み取れませんでした。",
     "embeddingsMalformed": "意味による検索に使える応答がサービスから返りませんでした。",
-    "embeddingsUnsupported": "{{provider}} は意味による検索に対応していません。別のサービスを選んでください。"
+    "embeddingsUnsupported": "{{provider}} は意味による検索に対応していません。別のサービスを選んでください。",
+    "localOriginOllama": "環境変数 OLLAMA_ORIGINS={{origin}} を設定して Ollama を起動する",
+    "localOriginJan": "Jan の Settings、Local API Server で Trusted Hosts に {{host}} を追加する",
+    "localOriginLmStudio": "LM Studio のサーバー設定で CORS を有効にする",
+    "localBrowserPermission": "ブラウザーがこのページからお使いの端末の {{url}} へのアクセスを許可しませんでした。ブラウザーでこのサイトにローカルネットワークへのアクセスを許可し（Chrome と Edge は一度だけ確認します。設定はサイトの設定にあります）、もう一度お試しください。",
+    "localBrowserCors": "{{url}} の {{server}} は動作していますが、このページ（{{origin}}）からのリクエストを受け付けていません。許可するには: {{instruction}}。その後もう一度お試しください。",
+    "localBrowserUnreachable": "{{url}} から応答がありませんでした。{{server}} がこの端末で API サーバーを有効にして動作しているか、また、ブラウザーが確認した場合はローカルネットワークへのアクセスを許可したかを確認してください。"
   },
   "store": {
     "folderLoadError": "フォルダーを読み込めませんでした。",

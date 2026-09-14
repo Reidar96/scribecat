@@ -50,7 +50,8 @@ export const platform: Platform = {
     portableMode: true,
     knowledgeIndex: true,
     spellcheckDictionary: true,
-    session: false
+    session: false,
+    browserLocalModels: false
   },
 
   vaultStorage: localVaultStorage,
@@ -157,5 +158,6 @@ export const platform: Platform = {
   knowledgeIndex: {
     call: (command, args) => invoke(command, args)
   },
-  session: null
+  session: null,
+  localModels: null
 };

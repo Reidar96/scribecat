@@ -265,7 +265,8 @@
     "agentMaxIterationsLabel": "每个工作步骤的工具调用次数",
     "agentMaxIterationsHint": "一个工作步骤最多可以调用多少次工具，超过就中止。任务大时调高，模型绕圈时调低。",
     "agentMaxPlanStepsLabel": "任务清单的步骤数",
-    "agentMaxPlanStepsHint": "任务清单长度的上限。"
+    "agentMaxPlanStepsHint": "任务清单长度的上限。",
+    "localProviderBrowserHint": "{{provider}} 在此设备上运行，浏览器直接与它通信，因此它必须接受来自 {{origin}} 的请求：{{instruction}}。如果通过公网地址打开 ScribeDog，浏览器还会询问一次是否允许访问本地网络。"
   },
   "assistants": {
     "defaultName": "ScribeDog (默认)",
@@ -739,7 +740,13 @@
     "noUsableText": "AI 未返回可用的文本。",
     "invalidCheckResponse": "无法将 AI 响应解析为拼写/语法问题列表。",
     "embeddingsMalformed": "该服务没有返回可用于语义搜索的结果。",
-    "embeddingsUnsupported": "{{provider}} 不提供语义搜索。请选择其他服务。"
+    "embeddingsUnsupported": "{{provider}} 不提供语义搜索。请选择其他服务。",
+    "localOriginOllama": "使用环境变量 OLLAMA_ORIGINS={{origin}} 启动 Ollama",
+    "localOriginJan": "在 Jan 的 Settings、Local API Server 中，将 {{host}} 添加到 Trusted Hosts",
+    "localOriginLmStudio": "在 LM Studio 的服务器设置中启用 CORS",
+    "localBrowserPermission": "浏览器不允许此页面访问你设备上的 {{url}}。请在浏览器中允许此站点访问本地网络（Chrome 和 Edge 会询问一次；开关在站点设置中），然后重试。",
+    "localBrowserCors": "{{url}} 上的 {{server}} 正在运行，但不接受来自此页面（{{origin}}）的请求。允许方法：{{instruction}}。然后重试。",
+    "localBrowserUnreachable": "{{url}} 没有响应。请确认 {{server}} 正在此设备上运行且已开启 API 服务器，并且在浏览器询问时已允许访问本地网络。"
   },
   "store": {
     "folderLoadError": "无法加载该文件夹。",

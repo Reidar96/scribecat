@@ -266,7 +266,8 @@
     "agentMaxIterationsLabel": "Llamadas a herramientas por paso",
     "agentMaxIterationsHint": "Cuántas llamadas a herramientas puede hacer un paso antes de detenerse. Más alto para peticiones grandes, más bajo si un modelo da vueltas.",
     "agentMaxPlanStepsLabel": "Pasos por lista de tareas",
-    "agentMaxPlanStepsHint": "Límite superior de longitud de una lista de tareas."
+    "agentMaxPlanStepsHint": "Límite superior de longitud de una lista de tareas.",
+    "localProviderBrowserHint": "{{provider}} se ejecuta en este dispositivo y el navegador se comunica con él directamente, por lo que debe aceptar solicitudes de {{origin}}: {{instruction}}. Si abres ScribeDog desde una dirección pública, el navegador también pedirá una vez acceso a la red local."
   },
   "assistants": {
     "defaultName": "ScribeDog (Predeterminado)",
@@ -740,7 +741,13 @@
     "noUsableText": "La IA no devolvió ningún texto utilizable.",
     "invalidCheckResponse": "No se pudo leer la respuesta de la IA como una lista de problemas ortográficos/gramaticales.",
     "embeddingsMalformed": "El servicio no devolvió una respuesta utilizable para la búsqueda por significado.",
-    "embeddingsUnsupported": "{{provider}} no ofrece búsqueda por significado. Elige otro servicio."
+    "embeddingsUnsupported": "{{provider}} no ofrece búsqueda por significado. Elige otro servicio.",
+    "localOriginOllama": "inicia Ollama con la variable de entorno OLLAMA_ORIGINS={{origin}}",
+    "localOriginJan": "en Jan, en Settings, Local API Server, añade {{host}} a Trusted Hosts",
+    "localOriginLmStudio": "en LM Studio, activa CORS en la configuración del servidor",
+    "localBrowserPermission": "El navegador no permitió que esta página accediera a {{url}} en tu dispositivo. Permite a este sitio el acceso a la red local en el navegador (Chrome y Edge lo preguntan una vez; el ajuste está en la configuración del sitio) y vuelve a intentarlo.",
+    "localBrowserCors": "{{server}} en {{url}} está en marcha, pero no acepta solicitudes de esta página ({{origin}}). Para permitirlo: {{instruction}}. Después vuelve a intentarlo.",
+    "localBrowserUnreachable": "Nada respondió en {{url}}. Comprueba que {{server}} se está ejecutando en este dispositivo con su servidor API activado, y que permitiste el acceso a la red local si el navegador lo preguntó."
   },
   "store": {
     "folderLoadError": "No se pudo cargar la carpeta.",

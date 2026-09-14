@@ -12,8 +12,9 @@ instance.
 > changing the password, brute-force protection), the cloud AI providers
 > (rewrite, insert, grammar check, and the chat with its vault agent: staged
 > proposals, review, checkpoints and undo), with the API keys stored encrypted
-> on the server. Not there yet: the knowledge base (vault search index) and
-> local AI models. Features that only exist natively (local folders, import
+> on the server, and local models running on the device you browse from (see
+> AI below for what that needs). Not there yet: the knowledge base (vault
+> search index). Features that only exist natively (local folders, import
 > from local files, export to a local folder, the image file picker,
 > dictation, the updater) are hidden.
 
@@ -164,9 +165,38 @@ The knowledge base (the vault search index with embeddings) is desktop only
 for now: its index lives in the desktop app's native process. The agent's
 own `search_files` and `read_file` tools do not need it.
 
-Local models (Ollama, Jan.ai, LM Studio) are not available in the browser yet.
-On a server "localhost" is the container, not your machine, and reaching a
-model on your own device from a web page is a separate piece of work.
+### A model on your own device
+
+Ollama, Jan.ai and LM Studio work too, with one difference to the desktop
+app: the *browser* talks to them, not the server. "localhost" in the API URL
+is therefore the device you are sitting at, not the server, and the model
+server there has to accept requests from a web page. Two things decide
+whether that works, and the app tells you which one is in the way when a
+request fails.
+
+**The model server has to allow this page's origin.** Browsers only let a
+page call another server if that server says so (CORS), and the local model
+servers only say so for pages served from localhost unless told otherwise.
+The settings dialog shows the exact origin to allow (`https://<host>` as you
+open ScribeDog, with the port if it is not 443):
+
+| Server | What to do |
+| --- | --- |
+| Ollama | Start it with `OLLAMA_ORIGINS=https://<host>` in its environment (on Windows, set the variable in the user's environment and restart Ollama from the tray). Without it Ollama refuses the page (403). |
+| Jan.ai | Settings, Local API Server: keep CORS on and add `<host>` (host name and port, no scheme) to *Trusted Hosts*. |
+| LM Studio | In the server settings, enable CORS. |
+
+**Over a public address, the browser asks once.** Chrome and Edge (since 142)
+treat a page loaded from the internet reaching into your local network as
+something you have to allow: a prompt appears on the first request, and the
+answer is remembered per site (it is in the site settings if you want to
+change it). Pages loaded from a home network address are not asked. Firefox
+has no such prompt. Safari has not been tested.
+
+Everything else is as on the desktop: the AI settings live in the browser, so
+each device keeps its own. A phone without a model server simply picks a
+cloud provider in its own settings; the API key is stored once on the server
+and works from every device.
 
 ## Where your data is
 

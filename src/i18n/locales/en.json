@@ -266,7 +266,8 @@
     "agentMaxIterationsLabel": "Tool calls per work step",
     "agentMaxIterationsHint": "How many tool calls one work step may take before it is stopped. Higher for large requests, lower when a model runs in circles.",
     "agentMaxPlanStepsLabel": "Steps per task list",
-    "agentMaxPlanStepsHint": "Upper bound on how long a task list may get."
+    "agentMaxPlanStepsHint": "Upper bound on how long a task list may get.",
+    "localProviderBrowserHint": "{{provider}} runs on this device and the browser talks to it directly, so it has to accept requests from {{origin}}: {{instruction}}. When you open ScribeDog through a public address, the browser also asks once for local network access."
   },
   "assistants": {
     "defaultName": "ScribeDog (Default)",
@@ -740,7 +741,13 @@
     "noUsableText": "The AI did not return any usable text.",
     "invalidCheckResponse": "The AI response could not be read as a list of spelling/grammar issues.",
     "embeddingsMalformed": "The service did not return anything usable for meaning search.",
-    "embeddingsUnsupported": "{{provider}} does not offer meaning search. Choose a different service."
+    "embeddingsUnsupported": "{{provider}} does not offer meaning search. Choose a different service.",
+    "localOriginOllama": "start Ollama with the environment variable OLLAMA_ORIGINS={{origin}}",
+    "localOriginJan": "in Jan under Settings, Local API Server, add {{host}} to Trusted Hosts",
+    "localOriginLmStudio": "in LM Studio, enable CORS in the server settings",
+    "localBrowserPermission": "The browser did not allow this page to reach {{url}} on your device. Allow local network access for this site in the browser (Chrome and Edge ask once; the switch is in the site settings), then try again.",
+    "localBrowserCors": "{{server}} at {{url}} is running but does not accept requests from this page ({{origin}}). To allow it: {{instruction}}. Then try again.",
+    "localBrowserUnreachable": "Nothing answered at {{url}}. Check that {{server}} is running on this device with its API server switched on, and that you allowed local network access if the browser asked."
   },
   "store": {
     "folderLoadError": "The folder could not be loaded.",

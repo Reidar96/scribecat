@@ -23,8 +23,29 @@ const MODEL = "mock-model";
 /** Everything the tests may want to know afterwards, reset per test. */
 const state = {
   requests: [],
-  aborted: 0
+  aborted: 0,
+  // The mock also stands in for a model server on the user's own machine,
+  // which the browser reaches directly (see localModel.spec.ts). Whether it
+  // accepts the page's origin is what a real Ollama or Jan decides by
+  // configuration, so the tests can switch it.
+  cors: true
 };
+
+/** CORS headers for a browser calling the mock directly; none for the proxy (no Origin). */
+function corsHeaders(request) {
+  const origin = request.headers.origin;
+
+  if (!origin || !state.cors) {
+    return {};
+  }
+
+  return {
+    "access-control-allow-origin": origin,
+    "access-control-allow-methods": "GET, POST, OPTIONS",
+    "access-control-allow-headers": request.headers["access-control-request-headers"] ?? "content-type, authorization",
+    vary: "Origin"
+  };
+}
 
 function readBody(request) {
   return new Promise((resolve, reject) => {
@@ -35,9 +56,9 @@ function readBody(request) {
   });
 }
 
-function sendJson(response, status, payload) {
+function sendJson(response, status, payload, extraHeaders = {}) {
   const body = JSON.stringify(payload);
-  response.writeHead(status, { "content-type": "application/json", "content-length": Buffer.byteLength(body) });
+  response.writeHead(status, { "content-type": "application/json", "content-length": Buffer.byteLength(body), ...extraHeaders });
   response.end(body);
 }
 
@@ -190,7 +211,8 @@ async function streamAnswer(request, response, answer) {
   response.writeHead(200, {
     "content-type": "text/event-stream",
     "cache-control": "no-cache",
-    connection: "keep-alive"
+    connection: "keep-alive",
+    ...corsHeaders(request)
   });
 
   const send = (chunk) => {
@@ -276,15 +298,27 @@ const server = createServer(async (request, response) => {
   if (url.pathname === "/__mock/reset") {
     state.requests = [];
     state.aborted = 0;
+    state.cors = true;
     return sendJson(response, 200, { ok: true });
   }
 
+  if (url.pathname === "/__mock/cors") {
+    state.cors = url.searchParams.get("enabled") !== "false";
+    return sendJson(response, 200, { cors: state.cors });
+  }
+
+  // The browser's preflight, when it calls the mock directly.
+  if (request.method === "OPTIONS") {
+    response.writeHead(state.cors ? 204 : 403, corsHeaders(request));
+    return response.end();
+  }
+
   if (url.pathname === "/v1/models") {
-    return sendJson(response, 200, { object: "list", data: [{ id: MODEL, object: "model" }] });
+    return sendJson(response, 200, { object: "list", data: [{ id: MODEL, object: "model" }] }, corsHeaders(request));
   }
 
   if (url.pathname !== "/v1/chat/completions" || request.method !== "POST") {
-    return sendJson(response, 404, { error: { message: `no such route: ${request.method} ${url.pathname}` } });
+    return sendJson(response, 404, { error: { message: `no such route: ${request.method} ${url.pathname}` } }, corsHeaders(request));
   }
 
   let body;
@@ -300,6 +334,8 @@ const server = createServer(async (request, response) => {
     stream: body.stream === true,
     tools: (body.tools ?? []).map((tool) => tool.function?.name ?? tool.name),
     authorization: request.headers.authorization ?? null,
+    // Set when the browser called directly; the proxy sends no Origin.
+    origin: request.headers.origin ?? null,
     lastRole: body.messages?.[body.messages.length - 1]?.role ?? null,
     scenario: scenarioFor(body.messages ?? []).name
   });
@@ -311,7 +347,7 @@ const server = createServer(async (request, response) => {
     return streamAnswer(request, response, answer);
   }
 
-  return sendJson(response, 200, completion(answer));
+  return sendJson(response, 200, completion(answer), corsHeaders(request));
 });
 
 server.listen(PORT, () => {

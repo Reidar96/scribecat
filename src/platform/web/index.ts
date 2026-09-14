@@ -3,6 +3,7 @@ import { secretRef } from "@/platform/secretRef";
 import type { CredentialsStatus, Platform } from "@/platform/types";
 
 import { subscribeToVaultChanges } from "./liveUpdates";
+import { browserLocalModels } from "./localModels";
 import { posixPaths } from "./paths";
 import { REMOTE_VAULT_ROOT, remoteVaultStorage } from "./remoteStorage";
 import {
@@ -75,7 +76,8 @@ export const platform: Platform = {
     portableMode: false,
     knowledgeIndex: false,
     spellcheckDictionary: false,
-    session: true
+    session: true,
+    browserLocalModels: true
   },
 
   vaultStorage: remoteVaultStorage,
@@ -194,5 +196,6 @@ export const platform: Platform = {
       secretStatus = null;
     },
     onUnauthorized
-  }
+  },
+  localModels: browserLocalModels
 };

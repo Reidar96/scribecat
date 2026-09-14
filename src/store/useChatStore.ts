@@ -54,7 +54,7 @@ import {
   writeSessions,
   type ChatSession
 } from "@/lib/chatSessions";
-import { formatAiError } from "@/lib/editor/errorMessages";
+import { describeAiError } from "@/lib/localEndpointHint";
 import { useAiSettingsStore, type AiSettings } from "@/store/useAiSettingsStore";
 import { getSelectedAssistant, useAssistantsStore } from "@/store/useAssistantsStore";
 
@@ -1175,7 +1175,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           // now — but an error the user never sees is worse than one that
           // arrives in the wrong place, and openSession clears it on the next
           // navigation.
-          error: formatAiError(error, i18n.t)
+          error: await describeAiError(error, aiSettings)
         });
       }
     } finally {

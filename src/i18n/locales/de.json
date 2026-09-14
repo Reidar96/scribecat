@@ -266,7 +266,8 @@
     "agentMaxIterationsLabel": "Werkzeug-Aufrufe je Arbeitsschritt",
     "agentMaxIterationsHint": "Wie viele Werkzeug-Aufrufe ein Arbeitsschritt höchstens braucht, bevor abgebrochen wird. Höher bei umfangreichen Aufträgen, niedriger, wenn sich ein Modell verrennt.",
     "agentMaxPlanStepsLabel": "Schritte je Aufgabenliste",
-    "agentMaxPlanStepsHint": "Obergrenze für die Länge einer Aufgabenliste."
+    "agentMaxPlanStepsHint": "Obergrenze für die Länge einer Aufgabenliste.",
+    "localProviderBrowserHint": "{{provider}} läuft auf diesem Gerät, und der Browser spricht es direkt an. Deshalb muss es Anfragen von {{origin}} annehmen: {{instruction}}. Wird ScribeDog über eine öffentliche Adresse geöffnet, fragt der Browser außerdem einmal nach dem Zugriff auf das lokale Netzwerk."
   },
   "assistants": {
     "defaultName": "ScribeDog (Standard)",
@@ -740,7 +741,13 @@
     "noUsableText": "Die KI hat keinen verwertbaren Text geliefert.",
     "invalidCheckResponse": "Die KI-Antwort konnte nicht als Liste von Rechtschreib-/Grammatikproblemen gelesen werden.",
     "embeddingsMalformed": "Der Dienst hat keine verwertbare Antwort für die Bedeutungssuche geliefert.",
-    "embeddingsUnsupported": "{{provider}} bietet keine Bedeutungssuche an. Wähle einen anderen Dienst."
+    "embeddingsUnsupported": "{{provider}} bietet keine Bedeutungssuche an. Wähle einen anderen Dienst.",
+    "localOriginOllama": "Ollama mit der Umgebungsvariable OLLAMA_ORIGINS={{origin}} starten",
+    "localOriginJan": "in Jan unter Settings, Local API Server, {{host}} zu Trusted Hosts hinzufügen",
+    "localOriginLmStudio": "in LM Studio in den Servereinstellungen CORS einschalten",
+    "localBrowserPermission": "Der Browser hat dieser Seite den Zugriff auf {{url}} auf deinem Gerät nicht erlaubt. Erlaube dieser Seite im Browser den Zugriff auf das lokale Netzwerk (Chrome und Edge fragen einmal; der Schalter steht in den Website-Einstellungen) und versuche es erneut.",
+    "localBrowserCors": "{{server}} unter {{url}} läuft, nimmt aber keine Anfragen von dieser Seite ({{origin}}) an. Zum Freigeben: {{instruction}}. Danach erneut versuchen.",
+    "localBrowserUnreachable": "Unter {{url}} hat nichts geantwortet. Prüfe, ob {{server}} auf diesem Gerät läuft und sein API-Server eingeschaltet ist, und ob du den Zugriff auf das lokale Netzwerk erlaubt hast, falls der Browser gefragt hat."
   },
   "store": {
     "folderLoadError": "Der Ordner konnte nicht geladen werden.",

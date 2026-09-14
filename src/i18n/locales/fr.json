@@ -266,7 +266,8 @@
     "agentMaxIterationsLabel": "Appels d’outil par étape de travail",
     "agentMaxIterationsHint": "Nombre maximal d’appels d’outil pour une étape avant interruption. Plus élevé pour de grosses demandes, plus bas si un modèle tourne en rond.",
     "agentMaxPlanStepsLabel": "Étapes par liste de tâches",
-    "agentMaxPlanStepsHint": "Limite supérieure de la longueur d’une liste de tâches."
+    "agentMaxPlanStepsHint": "Limite supérieure de la longueur d’une liste de tâches.",
+    "localProviderBrowserHint": "{{provider}} fonctionne sur cet appareil et le navigateur lui parle directement ; il doit donc accepter les requêtes de {{origin}} : {{instruction}}. Si vous ouvrez ScribeDog via une adresse publique, le navigateur demande aussi une fois l'accès au réseau local."
   },
   "assistants": {
     "defaultName": "ScribeDog (Par défaut)",
@@ -740,7 +741,13 @@
     "noUsableText": "L'IA n'a renvoyé aucun texte utilisable.",
     "invalidCheckResponse": "La réponse de l'IA n'a pas pu être lue comme une liste de problèmes d'orthographe/de grammaire.",
     "embeddingsMalformed": "Le service n'a renvoyé aucune réponse exploitable pour la recherche par sens.",
-    "embeddingsUnsupported": "{{provider}} ne propose pas la recherche par sens. Choisissez un autre service."
+    "embeddingsUnsupported": "{{provider}} ne propose pas la recherche par sens. Choisissez un autre service.",
+    "localOriginOllama": "démarrer Ollama avec la variable d'environnement OLLAMA_ORIGINS={{origin}}",
+    "localOriginJan": "dans Jan, sous Settings, Local API Server, ajouter {{host}} aux Trusted Hosts",
+    "localOriginLmStudio": "dans LM Studio, activer CORS dans les paramètres du serveur",
+    "localBrowserPermission": "Le navigateur n'a pas autorisé cette page à joindre {{url}} sur votre appareil. Autorisez ce site à accéder au réseau local dans le navigateur (Chrome et Edge le demandent une fois ; le réglage se trouve dans les paramètres du site), puis réessayez.",
+    "localBrowserCors": "{{server}} à l'adresse {{url}} fonctionne mais n'accepte pas les requêtes de cette page ({{origin}}). Pour l'autoriser : {{instruction}}. Puis réessayez.",
+    "localBrowserUnreachable": "Rien n'a répondu à l'adresse {{url}}. Vérifiez que {{server}} fonctionne sur cet appareil avec son serveur API activé, et que vous avez autorisé l'accès au réseau local si le navigateur l'a demandé."
   },
   "store": {
     "folderLoadError": "Le dossier n'a pas pu être chargé.",

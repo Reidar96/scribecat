@@ -50,6 +50,7 @@ import {
 } from "@/store/useAiSettingsStore";
 import { persistLanguage, type SupportedLanguage } from "@/i18n";
 import { useUpdateSettingsStore } from "@/store/useUpdateSettingsStore";
+import { describeAiError, localOriginInstruction } from "@/lib/localEndpointHint";
 import { isWindowsPlatform } from "@/lib/platform";
 import { platform } from "@/platform";
 import { isSecretRef } from "@/platform/secretRef";
@@ -429,7 +430,11 @@ export function SettingsDialog({
       }
 
       setAvailableModels([]);
-      setModelsError(error instanceof Error ? error.message : t("settingsDialog.modelsLoadError"));
+      setModelsError(
+        error instanceof Error
+          ? await describeAiError(error, { provider: providerToUse, apiUrl: apiUrlToUse })
+          : t("settingsDialog.modelsLoadError")
+      );
     } finally {
       if (modelsRequestIdRef.current === requestId) {
         setIsLoadingModels(false);
@@ -777,6 +782,23 @@ export function SettingsDialog({
                       <p>
                         {t(ragEnabled ? "settingsDialog.cloudProviderNoticeRag" : "settingsDialog.cloudProviderNotice", {
                           provider: PROVIDER_DISPLAY_NAME[provider]
+                        })}
+                      </p>
+                    </div>
+                  ) : null}
+
+                  {/* In the browser the tab itself talks to a local model server,
+                      so the server has to accept this page's origin, which the
+                      user has to set up once. Said here, where the URL is entered,
+                      not only after the first failed request. */}
+                  {!isCloudProvider(provider) && platform.localModels ? (
+                    <div className="ai-dialog__field--full ai-dialog__notice ai-dialog__notice--info" role="note">
+                      <Info className="ai-dialog__notice-icon" aria-hidden="true" />
+                      <p>
+                        {t("settingsDialog.localProviderBrowserHint", {
+                          provider: PROVIDER_DISPLAY_NAME[provider],
+                          origin: platform.localModels.origin,
+                          instruction: localOriginInstruction(provider, platform.localModels.origin)
                         })}
                       </p>
                     </div>
