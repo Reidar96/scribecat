@@ -1,6 +1,7 @@
 
 import { buildApp } from "./app.js";
 import { AuthSetupError, openAuthStore } from "./auth/authStore.js";
+import { openTokenStore, TokenStoreError } from "./auth/tokenStore.js";
 import { ConfigError, loadConfig } from "./config.js";
 import { openSecretStore } from "./secrets/secretStore.js";
 import { DataVersionError, ensureDataVersion } from "./vault/dataVersion.js";
@@ -34,12 +35,14 @@ async function main(): Promise<void> {
   });
 
   const secrets = openSecretStore(vault.realPath);
+  const tokens = await openTokenStore({ vaultPath: vault.realPath, log: bootLog });
   const watcher = createVaultWatcher(vault.realPath, bootLog);
 
   const app = await buildApp({
     config,
     authStore,
     secrets,
+    tokens,
     vault,
     watcher,
     webDistDir: config.webDistDir,
@@ -75,7 +78,7 @@ async function main(): Promise<void> {
 }
 
 main().catch((error: unknown) => {
-  if (error instanceof ConfigError || error instanceof AuthSetupError || error instanceof DataVersionError) {
+  if (error instanceof ConfigError || error instanceof AuthSetupError || error instanceof TokenStoreError || error instanceof DataVersionError) {
     console.error(`[scribedog] ${error.message}`);
   } else {
     console.error("[scribedog] failed to start", error);

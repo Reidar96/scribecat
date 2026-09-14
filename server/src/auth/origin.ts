@@ -1,5 +1,8 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 
+import { bearerToken } from "./guard.js";
+import { SESSION_COOKIE_NAME } from "./session.js";
+
 /**
  * CSRF protection, second half.
  *
@@ -15,6 +18,12 @@ import type { FastifyReply, FastifyRequest } from "fastify";
  * cross-site-request forgery in the first place, while insisting on the header
  * would break every non-browser client for no gain. A header that *is* there
  * and points somewhere else is refused, no matter how it got there.
+ *
+ * A request that proves itself with an access token in the Authorization
+ * header and carries no session cookie is not a forgery case at all: a
+ * browser attaches cookies on its own, but never a custom header, so a
+ * cross-site page cannot make a request look like this. Such requests skip
+ * the check (the token itself is still verified by the session guard).
  */
 
 const STATE_CHANGING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
@@ -74,7 +83,15 @@ function isAllowedOrigin(request: FastifyRequest, allowedOrigins: readonly strin
   return (self !== null && claimed === self) || allowedOrigins.includes(claimed);
 }
 
+function isTokenOnlyRequest(request: FastifyRequest): boolean {
+  return bearerToken(request) !== null && request.cookies[SESSION_COOKIE_NAME] === undefined;
+}
+
 function needsOriginCheck(request: FastifyRequest): boolean {
+  if (isTokenOnlyRequest(request)) {
+    return false;
+  }
+
   if (STATE_CHANGING_METHODS.has(request.method.toUpperCase())) {
     return true;
   }

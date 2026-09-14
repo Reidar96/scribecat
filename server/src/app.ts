@@ -8,6 +8,7 @@ import { createLoginThrottle } from "./auth/loginThrottle.js";
 import { createOriginGuard } from "./auth/origin.js";
 import { authRoutes } from "./auth/routes.js";
 import type { SessionConfig } from "./auth/session.js";
+import type { TokenStore } from "./auth/tokenStore.js";
 import type { ServerConfig } from "./config.js";
 import { llmRoutes } from "./llm/proxyRoutes.js";
 import { secretRoutes } from "./secrets/routes.js";
@@ -23,6 +24,8 @@ export type AppDependencies = {
   authStore: AuthStore;
   /** Encrypted API-key storage; the AI routes and the login both use it. */
   secrets: SecretStore;
+  /** Personal access tokens for clients without a browser (the desktop app). */
+  tokens: TokenStore;
   vault: Vault;
   /** Change signal for the live file list; omitted in tests that do not need it. */
   watcher?: VaultWatcher;
@@ -41,7 +44,7 @@ const BODY_LIMIT = 64 * 1024 * 1024;
  * instances behind one port there is no right answer for it.
  */
 export async function buildApp(deps: AppDependencies): Promise<FastifyInstance> {
-  const { config, authStore, secrets, vault } = deps;
+  const { config, authStore, secrets, tokens, vault } = deps;
 
   // Fastify's own types do not take the hop count proxy-addr supports, so the
   // number is expressed as the predicate it stands for: trust the first n
@@ -65,7 +68,7 @@ export async function buildApp(deps: AppDependencies): Promise<FastifyInstance> 
     secure: config.cookieSecure
   };
 
-  const requireSession = createRequireSession(authStore, session);
+  const requireSession = createRequireSession(authStore, session, tokens);
   const throttle = createLoginThrottle({
     maxAttempts: config.loginMaxAttempts,
     lockSeconds: config.loginLockSeconds,
@@ -86,7 +89,7 @@ export async function buildApp(deps: AppDependencies): Promise<FastifyInstance> 
       // lives under the base path like everything else.
       scoped.get("/api/health", async () => ({ ok: true }));
 
-      await scoped.register(authRoutes, { authStore, session, secrets, throttle, requireSession, prefix: "/api/auth" });
+      await scoped.register(authRoutes, { authStore, session, secrets, throttle, tokens, requireSession, prefix: "/api/auth" });
       await scoped.register(fileRoutes, { vault, requireSession, prefix: "/api" });
       await scoped.register(secretRoutes, { secrets, authStore, session, requireSession, prefix: "/api" });
       await scoped.register(llmRoutes, {
@@ -99,7 +102,7 @@ export async function buildApp(deps: AppDependencies): Promise<FastifyInstance> 
       });
 
       if (deps.watcher) {
-        await scoped.register(eventRoutes, { watcher: deps.watcher, requireSession, prefix: "/api" });
+        await scoped.register(eventRoutes, { watcher: deps.watcher, tokens, requireSession, prefix: "/api" });
       }
 
       if (deps.webDistDir) {

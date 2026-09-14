@@ -7,6 +7,7 @@ import type { FastifyInstance } from "fastify";
 import { buildApp } from "../src/app.js";
 import { openAuthStore, type AuthStore } from "../src/auth/authStore.js";
 import { SESSION_COOKIE_NAME } from "../src/auth/session.js";
+import { openTokenStore, type TokenStore } from "../src/auth/tokenStore.js";
 import { loadConfig, type ServerConfig } from "../src/config.js";
 import { KEY_COOKIE_NAME } from "../src/secrets/keyCookie.js";
 import { openSecretStore, type SecretStore } from "../src/secrets/secretStore.js";
@@ -23,6 +24,7 @@ export type TestContext = {
   vault: Vault;
   authStore: AuthStore;
   secrets: SecretStore;
+  tokens: TokenStore;
   app: FastifyInstance;
   /** Only when created with `watch: true`. */
   watcher: VaultWatcher | null;
@@ -59,11 +61,13 @@ export async function createTestContext(
   const vault = await openVault(config.vaultPath);
   const authStore = await openAuthStore({ vaultPath: vault.realPath, initPassword: config.initPassword, log: silentLog });
   const secrets = openSecretStore(vault.realPath);
+  const tokens = await openTokenStore({ vaultPath: vault.realPath, log: silentLog });
   const watcher = options.watch ? createVaultWatcher(vault.realPath, silentLog) : null;
   const app = await buildApp({
     config,
     authStore,
     secrets,
+    tokens,
     vault,
     watcher: watcher ?? undefined,
     webDistDir: options.webDistDir
@@ -75,6 +79,7 @@ export async function createTestContext(
     vault,
     authStore,
     secrets,
+    tokens,
     app,
     watcher,
     async login(password = TEST_PASSWORD) {

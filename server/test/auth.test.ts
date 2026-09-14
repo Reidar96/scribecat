@@ -197,7 +197,8 @@ describe("auth routes", () => {
 
     expect((await context.app.inject({ method: "GET", url: "/api/files", headers: { cookie } })).statusCode).toBe(200);
     expect((await context.app.inject({ method: "GET", url: "/api/auth/session", headers: { cookie } })).json()).toEqual({
-      authenticated: true
+      authenticated: true,
+      via: "cookie"
     });
   });
 
