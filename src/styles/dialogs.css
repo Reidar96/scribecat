@@ -1219,6 +1219,36 @@
   margin-bottom: 0.35rem;
 }
 
+/* Settings stored with the open folder (.scribedog) rather than with the app,
+   in the General tab below the app-wide rows. The rule above and the titled
+   header carrying the folder's name are what tell them apart: a switch that
+   changes with the vault must look like it belongs to the vault. */
+.ai-dialog__vault-group {
+  grid-column: 1 / -1;
+  margin: 0.8rem 0.2rem 0;
+  border-top: 1px solid rgba(var(--overlay-rgb), 0.12);
+  padding-top: 1.1rem;
+}
+
+.ai-dialog__vault-group-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  font-size: 0.86rem;
+  font-weight: 500;
+  color: rgba(var(--text-rgb), 0.86);
+}
+
+.ai-dialog__vault-group-title svg {
+  flex-shrink: 0;
+  color: rgba(var(--text-rgb), 0.6);
+}
+
+.ai-dialog__vault-group-grid {
+  margin-top: 0.75rem;
+}
+
 /* One line per setting saying which model class it realistically needs. A
    switch without it is unfinished — see AgentSettingsSection. */
 .ai-dialog__hint {

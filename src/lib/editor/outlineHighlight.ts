@@ -4,6 +4,8 @@ import { Decoration, DecorationSet, type EditorView } from "@tiptap/pm/view";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import type { Editor } from "@tiptap/react";
 
+import { HEADING_NUMBER_ATTRIBUTE } from "@/lib/editor/headingNumbering";
+
 // Marks the heading a details-panel outline jump landed on, so the reader can
 // find it in the text before their eyes catch up with the scroll. Cleared the
 // moment the editor gets real focus again (typing or clicking back in) — see
@@ -75,6 +77,20 @@ function placeOverlay(view: EditorView, overlay: HTMLElement, pos: number | null
     return;
   }
 
+  // The automatic number is a ::before (headingNumbering.ts), which no range
+  // over the child nodes can measure — it starts at the heading's content
+  // edge, so the box is stretched left to that edge and covers number and
+  // title together, the way the outline row in the details panel does.
+  let left = text.left;
+
+  if (heading.hasAttribute(HEADING_NUMBER_ATTRIBUTE)) {
+    const box = heading.getBoundingClientRect();
+    const paddingLeft = Number.parseFloat(getComputedStyle(heading).paddingLeft) || 0;
+    left = Math.min(left, box.left + heading.clientLeft + paddingLeft);
+  }
+
+  const width = text.right - left;
+
   // The widget sits inside view.dom, which is the overlay's containing block
   // (position: relative in editor-content.css), so viewport coordinates are
   // translated into that box, border excluded.
@@ -84,9 +100,9 @@ function placeOverlay(view: EditorView, overlay: HTMLElement, pos: number | null
   const inflateY = INFLATE_Y_REM * rem;
 
   overlay.hidden = false;
-  overlay.style.left = `${text.left - surface.left - view.dom.clientLeft - inflateX}px`;
+  overlay.style.left = `${left - surface.left - view.dom.clientLeft - inflateX}px`;
   overlay.style.top = `${text.top - surface.top - view.dom.clientTop - inflateY}px`;
-  overlay.style.width = `${text.width + inflateX * 2}px`;
+  overlay.style.width = `${width + inflateX * 2}px`;
   overlay.style.height = `${text.height + inflateY * 2}px`;
 }
 

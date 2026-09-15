@@ -16,6 +16,8 @@
 //     subsetting throws. WOFF2 is still used for on-screen rendering, where no
 //     subsetting happens — see loadStyles below.
 
+import type { HeadingNumberingSettings } from "@/lib/editor/headingNumbers";
+
 export const APP_FONT_IDS = [
   "system",
   "lato",
@@ -200,10 +202,15 @@ export function getFontScale(sizePt: number): number {
   return clampFontSizePt(sizePt) / DEFAULT_FONT_SIZE_PT;
 }
 
-/** Font family plus body size — what the editor and every renderer need. */
+/**
+ * Font family plus body size — what the editor and every renderer need.
+ * Heading numbering rides along because it is the same kind of setting: one
+ * app-wide choice the editor shows and every export has to reproduce.
+ */
 export type DocumentStyle = {
   fontId: AppFontId;
   fontSizePt: number;
+  headingNumbering?: HeadingNumberingSettings;
 };
 
 export const DEFAULT_DOCUMENT_STYLE: DocumentStyle = {

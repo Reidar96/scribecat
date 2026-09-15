@@ -8,10 +8,11 @@ pnpm-debug.log*
 lerna-debug.log*
 
 TEMP
-DOCS
+/DOCS
 
 node_modules
 dist
+dist-web
 dist-ssr
 *.local
 

@@ -170,6 +170,9 @@ export function DetailsOutlineSection({
                       : "details-sidebar__item-label details-sidebar__item-label--muted"
                   }
                 >
+                  {heading.number && (
+                    <span className="details-sidebar__outline-number">{heading.number}</span>
+                  )}
                   {heading.title || t("detailsPanel.untitledHeading")}
                 </span>
               </button>

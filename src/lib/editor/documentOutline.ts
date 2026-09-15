@@ -1,11 +1,19 @@
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 
+import {
+  computeHeadingNumbers,
+  stripUnnumberedMarker,
+  type HeadingNumberingSettings
+} from "@/lib/editor/headingNumbers";
+
 export type OutlineHeading = {
   /** Position of the heading node in the document, the anchor a jump lands on. */
   pos: number;
   level: number;
   /** Plain text of the heading, "" for an empty one. */
   title: string;
+  /** Automatic number ("1.2.") once numberOutline ran; absent when it gets none. */
+  number?: string;
 };
 
 export const OUTLINE_DEPTH_MIN = 1;
@@ -48,6 +56,25 @@ export function hasHeading(doc: ProseMirrorNode): boolean {
   });
 
   return found;
+}
+
+/**
+ * Attaches the automatic numbers and hides the `{-}` marker from the titles.
+ * Runs on the complete list, before any depth filter: a number depends on
+ * every heading above it, listed or not. A no-op while numbering is off.
+ */
+export function numberOutline(headings: OutlineHeading[], settings: HeadingNumberingSettings): OutlineHeading[] {
+  if (!settings.enabled) {
+    return headings;
+  }
+
+  const numbers = computeHeadingNumbers(headings, settings);
+
+  return headings.map((heading, index) => {
+    const number = numbers[index];
+    const title = stripUnnumberedMarker(heading.title);
+    return number === null ? { ...heading, title } : { ...heading, title, number };
+  });
 }
 
 export function filterHeadingsByDepth(headings: OutlineHeading[], maxDepth: number): OutlineHeading[] {
@@ -105,7 +132,12 @@ export function sameOutline(a: OutlineHeading[], b: OutlineHeading[]): boolean {
 
   return a.every((heading, index) => {
     const other = b[index];
-    return heading.pos === other.pos && heading.level === other.level && heading.title === other.title;
+    return (
+      heading.pos === other.pos &&
+      heading.level === other.level &&
+      heading.title === other.title &&
+      heading.number === other.number
+    );
   });
 }
 

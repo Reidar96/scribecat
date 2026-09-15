@@ -11,6 +11,12 @@ import {
   type AppFontId
 } from "@/lib/fonts";
 import { clampOutlineDepth, OUTLINE_DEPTH_MAX } from "@/lib/editor/documentOutline";
+import {
+  DEFAULT_HEADING_NUMBERING,
+  normalizeHeadingNumberingSettings,
+  type HeadingNumberingSettings
+} from "@/lib/editor/headingNumbers";
+import { readHeadingNumbering, writeHeadingNumbering } from "@/lib/vaultMeta";
 
 export const SPELLCHECK_STORAGE_KEY = "scribedog-spellcheck-enabled";
 export const DETAILS_PANEL_STORAGE_KEY = "scribedog-details-panel-visible";
@@ -199,6 +205,18 @@ type EditorSettingsState = {
   /** Deepest heading level the details panel's outline lists, 1..6. */
   outlineMaxDepth: number;
   setOutlineMaxDepth: (depth: number) => void;
+  /**
+   * Automatic "1.2." numbering of headings, shared by the editor, the outline
+   * and every export; computed from structure, never written into the note.
+   * Unlike the rest of this store it belongs to the open vault
+   * (.scribedog/heading-numbering.json, see lib/vaultMeta), so it is the
+   * defaults while no vault is open and reloads with every vault switch.
+   */
+  headingNumbering: HeadingNumberingSettings;
+  /** Vault the current headingNumbering was read from; writes go there. */
+  headingNumberingVaultPath: string | null;
+  loadHeadingNumbering: (folderPath: string | null) => Promise<void>;
+  setHeadingNumbering: (patch: Partial<HeadingNumberingSettings>) => void;
   /** Sections of the details panel the user folded away; app-wide like the panel itself. */
   collapsedDetailsSections: DetailsSectionId[];
   setDetailsSectionCollapsed: (id: DetailsSectionId, collapsed: boolean) => void;
@@ -233,7 +251,7 @@ void ensureFontStylesLoaded(initialFontId);
 applyDocumentFont(initialFontId);
 applyDocumentFontScale(initialFontSizePt);
 
-export const useEditorSettingsStore = create<EditorSettingsState>((set) => ({
+export const useEditorSettingsStore = create<EditorSettingsState>((set, get) => ({
   spellcheckEnabled: getStoredSpellcheckEnabled(),
   setSpellcheckEnabled: (enabled: boolean) => {
     persistSpellcheckEnabled(enabled);
@@ -263,6 +281,35 @@ export const useEditorSettingsStore = create<EditorSettingsState>((set) => ({
     const clamped = clampOutlineDepth(depth);
     persistOutlineMaxDepth(clamped);
     set({ outlineMaxDepth: clamped });
+  },
+  headingNumbering: DEFAULT_HEADING_NUMBERING,
+  headingNumberingVaultPath: null,
+  loadHeadingNumbering: async (folderPath: string | null) => {
+    // The path is recorded before the read so a change made while it is in
+    // flight lands in the right vault, and a read that comes back after the
+    // vault has changed again is dropped.
+    set({ headingNumberingVaultPath: folderPath, headingNumbering: DEFAULT_HEADING_NUMBERING });
+
+    if (!folderPath) {
+      return;
+    }
+
+    const settings = await readHeadingNumbering(folderPath);
+
+    if (get().headingNumberingVaultPath === folderPath) {
+      set({ headingNumbering: settings });
+    }
+  },
+  setHeadingNumbering: (patch: Partial<HeadingNumberingSettings>) => {
+    const state = get();
+    const next = normalizeHeadingNumberingSettings({ ...state.headingNumbering, ...patch });
+    set({ headingNumbering: next });
+
+    if (state.headingNumberingVaultPath) {
+      writeHeadingNumbering(state.headingNumberingVaultPath, next).catch((error: unknown) => {
+        console.error("Failed to save heading numbering:", error);
+      });
+    }
   },
   collapsedDetailsSections: getStoredCollapsedDetailsSections(),
   setDetailsSectionCollapsed: (id: DetailsSectionId, collapsed: boolean) => {

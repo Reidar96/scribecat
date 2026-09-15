@@ -6,8 +6,14 @@ import { buildFileTree, type FileTreeNode } from "@/lib/fileTree";
 import { DEFAULT_DOCUMENT_STYLE, type DocumentStyle } from "@/lib/fonts";
 import type { ManualOrderMap, SortMode } from "@/lib/vaultMeta";
 
+import { numberExportBlockLists, numberExportBlocks } from "./headingNumbers";
 import { collectImageSrcs, loadExportImages, type ExportImageMap } from "./imageAssets";
-import { compileManuscript, type ManuscriptOptions, type ManuscriptSource } from "./manuscript";
+import {
+  compileManuscript,
+  type CompiledManuscript,
+  type ManuscriptOptions,
+  type ManuscriptSource
+} from "./manuscript";
 import { parseMarkdownToBlocks, type ExportBlock } from "./markdownModel";
 
 /** Formats available when every note becomes its own file. */
@@ -108,10 +114,14 @@ type RenderedExport = { bytes?: Uint8Array; text?: string };
 async function renderBlocksAs(
   format: ExportFormat,
   title: string,
-  blocks: ExportBlock[],
+  sourceBlocks: ExportBlock[],
   images: ExportImageMap,
   style: DocumentStyle
 ): Promise<RenderedExport> {
+  // Numbered once here, so every format below — and a merged manuscript,
+  // whose chapters share one sequence — gets the same numbers as the editor.
+  const blocks = numberExportBlocks(sourceBlocks, style.headingNumbering);
+
   switch (format) {
     case "html": {
       const { renderHtmlDocument } = await import("./htmlExport");
@@ -526,9 +536,19 @@ export async function exportMergedNotes(input: MergedExportInput): Promise<Expor
     format === "epub"
       ? await (async () => {
           const { renderEpubDocument } = await import("./epubExport");
+          // EPUB renders chapter by chapter, so the numbering runs over all of
+          // them at once and hands each chapter its own numbered slice back.
+          const chapterBlocks = numberExportBlockLists(
+            manuscript.chapters.map((chapter) => chapter.blocks),
+            style.headingNumbering
+          );
+          const numberedManuscript: CompiledManuscript = {
+            ...manuscript,
+            chapters: manuscript.chapters.map((chapter, index) => ({ ...chapter, blocks: chapterBlocks[index] }))
+          };
           return {
             bytes: renderEpubDocument(
-              manuscript,
+              numberedManuscript,
               {
                 title: documentTitle,
                 author: manuscriptOptions.author.trim(),

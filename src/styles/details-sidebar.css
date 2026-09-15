@@ -277,6 +277,14 @@ button.details-sidebar__outline-item:hover {
   outline: none;
 }
 
+/* Automatic heading number in front of the title, same muted tone as in the
+   editor so both read as the same generated label. */
+.details-sidebar__outline-number {
+  margin-right: 0.4em;
+  color: rgba(var(--text-rgb), 0.62);
+  font-variant-numeric: tabular-nums;
+}
+
 .details-sidebar__item-label--muted {
   color: rgba(var(--muted-rgb),0.9);
   font-style: italic;

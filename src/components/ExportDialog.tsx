@@ -30,6 +30,7 @@ import {
   type ManuscriptOptions
 } from "@/lib/export/manuscript";
 import type { MarkdownFileRecord } from "@/lib/fileSystem";
+import type { DocumentStyle } from "@/lib/fonts";
 import { readManuscriptSettings, writeManuscriptSettings } from "@/lib/vaultMeta";
 import { useAppStore } from "@/store/useAppStore";
 import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
@@ -82,6 +83,8 @@ export function ExportDialog({
   const folderPath = useAppStore((state) => state.folderPath);
   const fontId = useEditorSettingsStore((state) => state.fontId);
   const fontSizePt = useEditorSettingsStore((state) => state.fontSizePt);
+  const headingNumbering = useEditorSettingsStore((state) => state.headingNumbering);
+  const documentStyle: DocumentStyle = { fontId, fontSizePt, headingNumbering };
 
   const [format, setFormat] = useState<ExportFormat>("pdf");
   const [name, setName] = useState("");
@@ -249,7 +252,7 @@ export function ExportDialog({
         manuscriptOptions: isManuscript
           ? manuscriptOptions
           : { ...MERGE_ONLY_OPTIONS, title: baseName },
-        style: { fontId, fontSizePt },
+        style: documentStyle,
         language: i18n.resolvedLanguage ?? i18n.language
       });
 
@@ -277,7 +280,7 @@ export function ExportDialog({
           manuscriptOptions: isManuscript
             ? manuscriptOptions
             : { ...MERGE_ONLY_OPTIONS, title: baseName },
-          style: { fontId, fontSizePt },
+          style: documentStyle,
           language: i18n.resolvedLanguage ?? i18n.language
         });
 
@@ -295,7 +298,7 @@ export function ExportDialog({
         baseName,
         readMarkdown,
         onConflict: resolveConflict,
-        style: { fontId, fontSizePt }
+        style: documentStyle
       });
     }
 
@@ -308,7 +311,7 @@ export function ExportDialog({
         readMarkdown,
         onConflict: resolveConflict,
         onProgress: setProgress,
-        style: { fontId, fontSizePt }
+        style: documentStyle
       });
     }
 
@@ -320,7 +323,7 @@ export function ExportDialog({
       readMarkdown,
       onConflict: resolveConflict,
       onProgress: setProgress,
-      style: { fontId, fontSizePt }
+      style: documentStyle
     });
   };
 

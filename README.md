@@ -196,6 +196,7 @@ notes — fluently, privately, and for free.
 - **Emoji picker** with search, including keywords in your local language
 - **Reorder lines** — `Alt+Shift+↑`/`↓` moves the current line or list item up or down
 - **Spell check as you type** — optional red-underline spell checking powered by your operating system's built-in spellchecker (toggle it in the toolbar options; on Linux it uses your installed Hunspell/enchant dictionaries)
+- **Automatic heading numbering** (off by default, switched on per folder in the settings and stored in its `.scribedog` folder) — headings get `1.`, `1.1.`, `1.1.1.` in the editor, the outline, and every export and print. The numbers come from the document structure and are never written into the file, so reordering sections never needs a renumbering pass; choose whether numbering starts at heading 1 or 2 and how deep it goes. A heading ending in `{-}` or `{.unnumbered}` (the Pandoc convention) stays unnumbered together with everything below it
 - Files are saved as clean, diff-friendly Markdown — fully portable to any other tool
 
 ### 🔗 Linked notes — connect your vault

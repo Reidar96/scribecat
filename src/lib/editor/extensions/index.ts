@@ -8,6 +8,7 @@ import { Markdown } from "tiptap-markdown";
 import { AiDiffWidget } from "@/lib/aiDiffWidget";
 import { AiStreamWidget } from "@/lib/aiStreamWidget";
 import { AiSuggestionWidget } from "@/lib/aiSuggestionWidget";
+import { HeadingNumbering } from "@/lib/editor/headingNumbering";
 import { InactiveSelection } from "@/lib/inactiveSelection";
 import { OutlineHighlight } from "@/lib/editor/outlineHighlight";
 import { SearchHighlight } from "@/lib/searchHighlight";
@@ -62,6 +63,7 @@ export function buildEditorExtensions(): Extensions {
     AiSuggestionWidget,
     SearchHighlight,
     OutlineHighlight,
+    HeadingNumbering,
     InactiveSelection
   ];
 }

@@ -6,6 +6,7 @@ import {
   collectHeadings,
   filterHeadingsByDepth,
   headingIndexAtViewportTop,
+  numberOutline,
   sameOutline,
   type OutlineHeading
 } from "@/lib/editor/documentOutline";
@@ -32,6 +33,7 @@ const VIEWPORT_TOP_OFFSET_PX = 32;
  */
 export function useDocumentOutline(editor: TipTapEditor | null): DocumentOutline {
   const maxDepth = useEditorSettingsStore((state) => state.outlineMaxDepth);
+  const numbering = useEditorSettingsStore((state) => state.headingNumbering);
   const [headings, setHeadings] = useState<OutlineHeading[]>([]);
   const [activeIndex, setActiveIndex] = useState(-1);
 
@@ -50,7 +52,10 @@ export function useDocumentOutline(editor: TipTapEditor | null): DocumentOutline
     };
 
     const refreshHeadings = () => {
-      const next = filterHeadingsByDepth(collectHeadings(editor.state.doc), maxDepth);
+      const next = filterHeadingsByDepth(
+        numberOutline(collectHeadings(editor.state.doc), numbering),
+        maxDepth
+      );
 
       if (!sameOutline(current, next)) {
         current = next;
@@ -121,7 +126,7 @@ export function useDocumentOutline(editor: TipTapEditor | null): DocumentOutline
         cancelAnimationFrame(frame);
       }
     };
-  }, [editor, maxDepth]);
+  }, [editor, maxDepth, numbering]);
 
   return { headings, activeIndex };
 }

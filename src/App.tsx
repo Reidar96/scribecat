@@ -315,6 +315,13 @@ function App() {
     useNavigationHistoryStore.getState().reset();
   }, [folderPath]);
 
+  // Heading numbering is a property of the vault, not of the app: it is read
+  // from the vault's .scribedog folder here and falls back to "off" while no
+  // vault is open.
+  useEffect(() => {
+    void useEditorSettingsStore.getState().loadHeadingNumbering(folderPath);
+  }, [folderPath]);
+
   // The single writer of the navigation history: whichever way a note ends up
   // open — sidebar, a link in the text, the backlinks panel, a search hit, a
   // freshly created file — it is recorded here exactly once. A back/forward

@@ -69,6 +69,25 @@
   box-shadow: inset 3px 0 0 rgba(var(--accent-rgb), 0.85);
 }
 
+/* Automatic heading numbers (src/lib/editor/headingNumbering.ts): a
+   ::before painted from a decoration attribute, so the number is never in
+   the DOM text — a caret at the start of the title lands after it and a copy
+   never takes it along. Slightly muted so it reads as generated, not typed.
+   The `{-}` marker that opts a heading out is real text and is dimmed the
+   same way, so it shows as "understood" without being hidden. */
+.editor-view__surface [data-heading-number]::before {
+  content: attr(data-heading-number) "\00a0";
+  color: rgba(var(--text-rgb), 0.62);
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+  pointer-events: none;
+}
+
+.editor-view__surface .heading-unnumbered-marker {
+  color: rgba(var(--muted-rgb), 0.7);
+  font-weight: 400;
+}
+
 .editor-view__surface h1 {
   font-size: clamp(1.55rem, 1.9vw, 1.95rem);
   line-height: 1.1;

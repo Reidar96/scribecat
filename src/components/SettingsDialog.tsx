@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { AlertTriangle, Eye, EyeOff, Info, RefreshCw, RotateCcw } from "lucide-react";
+import { AlertTriangle, Eye, EyeOff, FolderOpen, Info, RefreshCw, RotateCcw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { ShortcutsSettings } from "@/components/ShortcutsSettings";
 import { VersioningSettings } from "@/components/VersioningSettings";
 import type { Assistant } from "@/store/useAssistantsStore";
 import { useRagSettingsStore } from "@/store/useRagSettingsStore";
+import { getFolderBasename } from "@/lib/fileSystem";
 import { getPortableStatus, type PortableMode } from "@/lib/portable";
 
 import {
@@ -28,6 +29,7 @@ import {
   getFontScale
 } from "@/lib/fonts";
 import { OUTLINE_DEPTH_MAX, OUTLINE_DEPTH_MIN } from "@/lib/editor/documentOutline";
+import { HEADING_NUMBERING_DEPTH_MAX } from "@/lib/editor/headingNumbers";
 import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
 import {
   AGENT_MAX_ITERATIONS_MAX,
@@ -347,6 +349,9 @@ export function SettingsDialog({
   const setTheme = useThemeStore((state) => state.setTheme);
   const outlineMaxDepth = useEditorSettingsStore((state) => state.outlineMaxDepth);
   const setOutlineMaxDepth = useEditorSettingsStore((state) => state.setOutlineMaxDepth);
+  const headingNumbering = useEditorSettingsStore((state) => state.headingNumbering);
+  const setHeadingNumbering = useEditorSettingsStore((state) => state.setHeadingNumbering);
+  const headingNumberingVaultPath = useEditorSettingsStore((state) => state.headingNumberingVaultPath);
   const accentColor = useAccentColorStore((state) => state.accentColor);
   const setAccentColor = useAccentColorStore((state) => state.setAccentColor);
   const resetAccentColor = useAccentColorStore((state) => state.resetAccentColor);
@@ -697,6 +702,78 @@ export function SettingsDialog({
                     <span>{t("settingsDialog.checkForUpdates")}</span>
                   </label>
                 )}
+
+                {/* Settings that live in the open folder's .scribedog rather
+                    than in the app, set apart from the rows above so a switch
+                    that "resets" on a vault change reads as belonging to the
+                    folder, not as a bug. */}
+                <section className="ai-dialog__vault-group" aria-labelledby="settings-vault-group-title">
+                  <h3 id="settings-vault-group-title" className="ai-dialog__vault-group-title">
+                    <FolderOpen size={15} aria-hidden="true" />
+                    {headingNumberingVaultPath === null
+                      ? t("settingsDialog.vaultSectionNoVault")
+                      : t("settingsDialog.vaultSection", {
+                          name: getFolderBasename(headingNumberingVaultPath)
+                        })}
+                  </h3>
+                  <div className="ai-dialog__grid ai-dialog__vault-group-grid">
+                    <label className="ai-dialog__switch">
+                      <input
+                        type="checkbox"
+                        checked={headingNumbering.enabled}
+                        disabled={headingNumberingVaultPath === null}
+                        onChange={(event) => setHeadingNumbering({ enabled: event.target.checked })}
+                      />
+                      <span>{t("settingsDialog.headingNumbering")}</span>
+                    </label>
+                    <p className="ai-dialog__hint">
+                      {headingNumberingVaultPath === null
+                        ? t("settingsDialog.headingNumberingNoVault")
+                        : t("settingsDialog.headingNumberingHint")}
+                    </p>
+
+                    {headingNumbering.enabled && (
+                      <>
+                        <label className="ai-dialog__field">
+                          <span>{t("settingsDialog.headingNumberingStart")}</span>
+                          <select
+                            value={headingNumbering.startLevel}
+                            onChange={(event) =>
+                              setHeadingNumbering({ startLevel: event.target.value === "1" ? 1 : 2 })
+                            }
+                          >
+                            <option value={1}>{t("settingsDialog.headingNumberingStartLevel", { level: 1 })}</option>
+                            <option value={2}>{t("settingsDialog.headingNumberingStartLevel", { level: 2 })}</option>
+                          </select>
+                          <span className="ai-dialog__model-hint">
+                            {t("settingsDialog.headingNumberingStartHint")}
+                          </span>
+                        </label>
+
+                        <label className="ai-dialog__field">
+                          <span>{t("settingsDialog.headingNumberingDepth")}</span>
+                          <select
+                            value={headingNumbering.maxDepth}
+                            onChange={(event) =>
+                              setHeadingNumbering({ maxDepth: Number.parseInt(event.target.value, 10) })
+                            }
+                          >
+                            {Array.from(
+                              { length: HEADING_NUMBERING_DEPTH_MAX - headingNumbering.startLevel + 1 },
+                              (_, offset) => headingNumbering.startLevel + offset
+                            ).map((level) => (
+                              <option key={level} value={level}>
+                                {level === HEADING_NUMBERING_DEPTH_MAX
+                                  ? t("settingsDialog.outlineDepthAll")
+                                  : t("settingsDialog.outlineDepthUpTo", { level })}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      </>
+                    )}
+                  </div>
+                </section>
               </div>
 
               {portableMode === "on" ? (

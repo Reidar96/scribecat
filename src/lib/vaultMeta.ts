@@ -1,6 +1,11 @@
 import { join } from "@tauri-apps/api/path";
 import { exists, mkdir, readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
 
+import {
+  DEFAULT_HEADING_NUMBERING,
+  normalizeHeadingNumberingSettings,
+  type HeadingNumberingSettings
+} from "@/lib/editor/headingNumbers";
 import { VAULT_META_DIR_NAME } from "@/lib/fileSystem";
 
 export type SortMode = "name" | "modified" | "manual";
@@ -11,6 +16,7 @@ export type ManualOrderMap = Record<string, string[]>;
 const SORT_MODE_FILE_NAME = "sort-mode.json";
 const ORDER_FILE_NAME = "order.json";
 const MANUSCRIPT_FILE_NAME = "manuscript.json";
+const HEADING_NUMBERING_FILE_NAME = "heading-numbering.json";
 const SORT_MODES: SortMode[] = ["name", "modified", "manual"];
 
 /**
@@ -129,6 +135,38 @@ export async function writeManuscriptSettings(
   await mkdir(dirPath, { recursive: true });
   await writeTextFile(
     await join(dirPath, MANUSCRIPT_FILE_NAME),
+    JSON.stringify(settings, null, 2)
+  );
+}
+
+/**
+ * Automatic heading numbering, per vault like the manuscript settings: whether
+ * headings carry numbers is a property of the documents in a folder (a report
+ * vault wants them, a notes vault does not), and it travels with the folder
+ * to every machine that opens it, unlike a localStorage preference.
+ */
+export async function readHeadingNumbering(folderPath: string): Promise<HeadingNumberingSettings> {
+  try {
+    const filePath = await join(await vaultMetaDirPath(folderPath), HEADING_NUMBERING_FILE_NAME);
+
+    if (!(await exists(filePath))) {
+      return DEFAULT_HEADING_NUMBERING;
+    }
+
+    return normalizeHeadingNumberingSettings(JSON.parse(await readTextFile(filePath)));
+  } catch {
+    return DEFAULT_HEADING_NUMBERING;
+  }
+}
+
+export async function writeHeadingNumbering(
+  folderPath: string,
+  settings: HeadingNumberingSettings
+): Promise<void> {
+  const dirPath = await vaultMetaDirPath(folderPath);
+  await mkdir(dirPath, { recursive: true });
+  await writeTextFile(
+    await join(dirPath, HEADING_NUMBERING_FILE_NAME),
     JSON.stringify(settings, null, 2)
   );
 }

@@ -1,5 +1,7 @@
+import { numberExportBlocks } from "@/lib/export/headingNumbers";
 import { collectImageSrcs, loadExportImages } from "@/lib/export/imageAssets";
 import { parseMarkdownToBlocks } from "@/lib/export/markdownModel";
+import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
 
 // Prints the rendered Markdown content only — never the raw source and never
 // the app chrome (toolbar, sidebar, scrollbars). The blocks are rendered via
@@ -10,7 +12,11 @@ import { parseMarkdownToBlocks } from "@/lib/export/markdownModel";
 // scope window.print() to an iframe's contentWindow, which printed the app
 // UI instead of the note.
 export async function printMarkdown(markdown: string, markdownFilePath: string | null): Promise<void> {
-  const blocks = parseMarkdownToBlocks(markdown);
+  // Same numbering the editor shows, so the paper matches the screen.
+  const blocks = numberExportBlocks(
+    parseMarkdownToBlocks(markdown),
+    useEditorSettingsStore.getState().headingNumbering
+  );
 
   const [images, { renderHtmlBody }] = await Promise.all([
     markdownFilePath ? loadExportImages(markdownFilePath, collectImageSrcs(blocks)) : Promise.resolve(new Map()),
