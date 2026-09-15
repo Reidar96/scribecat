@@ -1,3 +1,5 @@
+import { getNoteDisplayName } from "@/lib/folderNotes";
+
 import { collectImageSrcs, loadExportImages, type ExportImageMap } from "./imageAssets";
 import { parseMarkdownToBlocks, type ExportBlock, type InlineRun } from "./markdownModel";
 
@@ -142,8 +144,7 @@ function plainText(runs: InlineRun[]): string {
 }
 
 export function getFileBaseName(relativePath: string): string {
-  const fileName = relativePath.replace(/\\/g, "/").split("/").pop() ?? relativePath;
-  return fileName.replace(/\.md$/i, "");
+  return getNoteDisplayName(relativePath);
 }
 
 /**

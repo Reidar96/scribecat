@@ -64,6 +64,7 @@ type SidebarProps = {
   onCreateFolder: () => void;
   onImportRequest: () => void;
   onSelectFilePath: (filePath: string) => Promise<void>;
+  onOpenFolderNote: (folderPath: string) => Promise<void>;
   onDeleteFileRequest: (filePath: string) => void;
   onDeleteFolderRequest: (folderPath: string) => void;
   onDeleteMultipleRequest: (entries: BatchEntry[]) => void;
@@ -107,6 +108,7 @@ export function Sidebar({
   onCreateFolder,
   onImportRequest,
   onSelectFilePath,
+  onOpenFolderNote,
   onDeleteFileRequest,
   onDeleteFolderRequest,
   onDeleteMultipleRequest,
@@ -470,6 +472,7 @@ export function Sidebar({
             fileMtimeMs={fileMtimeMs}
             emptyFolderMtimeMs={emptyFolderMtimeMs}
             onSelectFilePath={onSelectFilePath}
+            onOpenFolderNote={onOpenFolderNote}
             onCreateFileRequest={onCreateFileRequest}
             onDeleteFileRequest={onDeleteFileRequest}
             onDeleteFolderRequest={onDeleteFolderRequest}

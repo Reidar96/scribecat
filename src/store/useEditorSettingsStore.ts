@@ -16,7 +16,12 @@ import {
   normalizeHeadingNumberingSettings,
   type HeadingNumberingSettings
 } from "@/lib/editor/headingNumbers";
-import { readHeadingNumbering, writeHeadingNumbering } from "@/lib/vaultMeta";
+import {
+  readFolderNotesEnabled,
+  readHeadingNumbering,
+  writeFolderNotesEnabled,
+  writeHeadingNumbering
+} from "@/lib/vaultMeta";
 
 export const SPELLCHECK_STORAGE_KEY = "scribedog-spellcheck-enabled";
 export const DETAILS_PANEL_STORAGE_KEY = "scribedog-details-panel-visible";
@@ -225,6 +230,15 @@ type EditorSettingsState = {
    */
   paperSurface: boolean;
   setPaperSurface: (enabled: boolean) => void;
+  /**
+   * Folder notes (see lib/folderNotes.ts): clicking a folder's name opens the
+   * folder's own note. Controls only what the tree offers — the note files
+   * themselves stay on disk, in the search and in the history whether this
+   * is on or off, so switching it off never loses anything. Per vault like
+   * headingNumbering (.scribedog/folder-notes.json), loaded by the same call.
+   */
+  folderNotesEnabled: boolean;
+  setFolderNotesEnabled: (enabled: boolean) => void;
   /** Details sidebar next to the document, toggled from the toolbar. */
   detailsPanelVisible: boolean;
   setDetailsPanelVisible: (visible: boolean) => void;
@@ -239,8 +253,9 @@ type EditorSettingsState = {
    * defaults while no vault is open and reloads with every vault switch.
    */
   headingNumbering: HeadingNumberingSettings;
-  /** Vault the current headingNumbering was read from; writes go there. */
+  /** Vault the current headingNumbering and folderNotesEnabled were read from; writes go there. */
   headingNumberingVaultPath: string | null;
+  /** Loads every per-vault setting of this store (heading numbering, folder notes). */
   loadHeadingNumbering: (folderPath: string | null) => Promise<void>;
   setHeadingNumbering: (patch: Partial<HeadingNumberingSettings>) => void;
   /** Sections of the details panel the user folded away; app-wide like the panel itself. */
@@ -302,6 +317,17 @@ export const useEditorSettingsStore = create<EditorSettingsState>((set, get) => 
     persistPaperSurface(enabled);
     set({ paperSurface: enabled });
   },
+  folderNotesEnabled: false,
+  setFolderNotesEnabled: (enabled: boolean) => {
+    const vaultPath = get().headingNumberingVaultPath;
+    set({ folderNotesEnabled: enabled });
+
+    if (vaultPath) {
+      writeFolderNotesEnabled(vaultPath, enabled).catch((error: unknown) => {
+        console.error("Failed to save folder notes setting:", error);
+      });
+    }
+  },
   detailsPanelVisible: getStoredDetailsPanelVisible(),
   setDetailsPanelVisible: (visible: boolean) => {
     persistDetailsPanelVisible(visible);
@@ -319,16 +345,23 @@ export const useEditorSettingsStore = create<EditorSettingsState>((set, get) => 
     // The path is recorded before the read so a change made while it is in
     // flight lands in the right vault, and a read that comes back after the
     // vault has changed again is dropped.
-    set({ headingNumberingVaultPath: folderPath, headingNumbering: DEFAULT_HEADING_NUMBERING });
+    set({
+      headingNumberingVaultPath: folderPath,
+      headingNumbering: DEFAULT_HEADING_NUMBERING,
+      folderNotesEnabled: false
+    });
 
     if (!folderPath) {
       return;
     }
 
-    const settings = await readHeadingNumbering(folderPath);
+    const [settings, folderNotesEnabled] = await Promise.all([
+      readHeadingNumbering(folderPath),
+      readFolderNotesEnabled(folderPath)
+    ]);
 
     if (get().headingNumberingVaultPath === folderPath) {
-      set({ headingNumbering: settings });
+      set({ headingNumbering: settings, folderNotesEnabled });
     }
   },
   setHeadingNumbering: (patch: Partial<HeadingNumberingSettings>) => {

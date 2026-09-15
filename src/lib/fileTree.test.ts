@@ -130,3 +130,49 @@ describe("getAncestorFolderPaths", () => {
     expect(getAncestorFolderPaths("c.md")).toEqual([]);
   });
 });
+
+describe("buildFileTree with folder notes", () => {
+  it("attaches a folder note to its folder instead of listing it as a child", () => {
+    const tree = buildFileTree([
+      record("Rezepte/.scribedog-foldernote.md", 50),
+      record("Rezepte/Kuchen.md", 10)
+    ]);
+
+    const rezepte = folder(tree, "Rezepte");
+
+    expect(names(rezepte.children)).toEqual(["Kuchen.md"]);
+    expect(rezepte.folderNotePath).toBe("/vault/Rezepte/.scribedog-foldernote.md");
+    expect(rezepte.folderNoteMtimeMs).toBe(50);
+  });
+
+  it("keeps a folder visible whose only file is its note", () => {
+    const tree = buildFileTree([record("Leer/.scribedog-foldernote.md")]);
+
+    expect(names(tree)).toEqual(["Leer"]);
+    expect(folder(tree, "Leer").children).toEqual([]);
+  });
+
+  it("counts the note's mtime into the folder's effective mtime", () => {
+    const tree = buildFileTree([
+      record("Rezepte/.scribedog-foldernote.md", 500),
+      record("Rezepte/Kuchen.md", 10)
+    ]);
+
+    expect(getNodeMtimeMs(folder(tree, "Rezepte"))).toBe(500);
+  });
+
+  it("leaves a note directly in the vault root as an ordinary file", () => {
+    const tree = buildFileTree([record(".scribedog-foldernote.md"), record("a.md")]);
+
+    expect(names(tree)).toEqual([".scribedog-foldernote.md", "a.md"]);
+  });
+
+  it("keeps folder notes out of the manual-order child lists", () => {
+    const byParent = getChildBasenamesByParent([
+      record("Rezepte/.scribedog-foldernote.md"),
+      record("Rezepte/Kuchen.md")
+    ]);
+
+    expect(byParent.get("Rezepte")).toEqual(["Kuchen.md"]);
+  });
+});

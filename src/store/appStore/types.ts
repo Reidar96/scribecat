@@ -56,6 +56,13 @@ export type FolderSlice = {
 /** Selecting, editing, saving and mutating individual files. */
 export type FileSlice = {
   selectFilePath: (filePath: string) => Promise<boolean>;
+  /**
+   * Opens a folder's own note (lib/folderNotes.ts). Reads the file when it
+   * exists; otherwise starts an empty in-memory document at the note's path,
+   * which saveSelectedFile writes to disk on the first save — so enabling the
+   * feature never litters a vault with empty files.
+   */
+  openFolderNote: (folderPath: string) => Promise<boolean>;
   updateSelectedFileContent: (markdown: string) => void;
   adoptCanonicalFileContent: (filePath: string, markdown: string) => void;
   discardSelectedFileChanges: () => boolean;

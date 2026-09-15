@@ -93,6 +93,19 @@
   height: 0.85rem;
 }
 
+/* With folder notes on, the row opens the note and the chevron alone toggles
+   the folder — it gets its own hover so the two targets read as two. */
+.file-tree__chevron--toggle {
+  border-radius: 0.3rem;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.file-tree__chevron--toggle:hover {
+  background: rgba(var(--overlay-rgb),0.14);
+  color: rgba(var(--text-rgb),0.95);
+}
+
 .file-tree__name {
   min-width: 0;
   flex: 1;

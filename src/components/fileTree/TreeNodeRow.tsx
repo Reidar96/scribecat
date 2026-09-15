@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 import { vaultPathKey } from "@/lib/chat/vaultStaging";
 import { carriesExternalFiles } from "@/lib/dragDrop/droppedSources";
 import { FILE_LINK_DRAG_MIME } from "@/lib/editor/fileLinks";
-import { getNodeMtimeMs, type FileTreeNode } from "@/lib/fileTree";
+import { getNodeMtimeMs, type FileTreeFolderNode, type FileTreeNode } from "@/lib/fileTree";
 import type { SortMode } from "@/lib/vaultMeta";
 import { DROP_DIRECTORY_ATTRIBUTE, useImportDropStore } from "@/store/useImportDropStore";
 import { useSearchStore } from "@/store/useSearchStore";
@@ -48,6 +48,15 @@ type TreeNodeRowProps = {
   selectedFilePath: string | null;
   selectedKeys: Set<string>;
   dirtyFilePaths: string[];
+  /**
+   * Folder notes (lib/folderNotes.ts). With them on, a folder row is also the
+   * row of the folder's note: the name opens it, the chevron toggles, and the
+   * open/unsaved markers of the note land here. Both sets hold relative folder
+   * paths, computed once in FileTree.
+   */
+  folderNotesEnabled: boolean;
+  activeFolderNotePath: string | null;
+  dirtyFolderNotePaths: Set<string>;
   activeKey: string | null;
   renamingTarget: RenamingTarget | null;
   renameDraft: string;
@@ -56,6 +65,8 @@ type TreeNodeRowProps = {
   dragSourceKeys: string[];
   dropIndicator: DropIndicator | null;
   onRowClick: (node: FileTreeNode, event: React.MouseEvent) => void;
+  /** The chevron's own click, once the row itself opens the note. */
+  onToggleFolder: (node: FileTreeFolderNode) => void;
   onRowContextMenu: (node: FileTreeNode, x: number, y: number) => void;
   onRenameDraftChange: (value: string) => void;
   onCommitRename: () => void;
@@ -81,6 +92,9 @@ export function TreeNodeRow({
   selectedFilePath,
   selectedKeys,
   dirtyFilePaths,
+  folderNotesEnabled,
+  activeFolderNotePath,
+  dirtyFolderNotePaths,
   activeKey,
   renamingTarget,
   renameDraft,
@@ -89,6 +103,7 @@ export function TreeNodeRow({
   dragSourceKeys,
   dropIndicator,
   onRowClick,
+  onToggleFolder,
   onRowContextMenu,
   onRenameDraftChange,
   onCommitRename,
@@ -113,6 +128,14 @@ export function TreeNodeRow({
   // ancestor up to the root matches, which would wash out the whole sidebar.
   const folderMatchCount =
     node.kind === "folder" ? folderMatchCounts[node.relativePath] ?? 0 : 0;
+  // Hits in the folder's own note. They are part of the collapsed sum above;
+  // expanded, they would be the one count nowhere on screen, so the row shows
+  // them on its own then.
+  const folderNoteMatchCount = useSearchStore((state) =>
+    node.kind === "folder" && node.folderNotePath
+      ? state.fileMatchCounts[node.folderNotePath] ?? 0
+      : 0
+  );
   // The paw. On a folder it is cumulative over the subtree and only shown while
   // the folder is collapsed — expanded, the files carry their own, and the same
   // marker repeated on every ancestor would say nothing.
@@ -219,6 +242,9 @@ export function TreeNodeRow({
   if (node.kind === "folder") {
     const isExpanded = expandedFolderPaths.has(node.relativePath);
     const isRenaming = renamingTarget?.kind === "folder" && renamingTarget.relativePath === node.relativePath;
+    const isNoteActive = folderNotesEnabled && activeFolderNotePath === node.relativePath;
+    const isNoteDirty = folderNotesEnabled && dirtyFolderNotePaths.has(node.relativePath);
+    const shownMatchCount = isExpanded ? folderNoteMatchCount : folderMatchCount;
 
     return (
       <li role="none">
@@ -259,9 +285,11 @@ export function TreeNodeRow({
             type="button"
             role="treeitem"
             aria-expanded={isExpanded}
-            aria-selected={isMultiSelected}
+            aria-selected={isNoteActive || isMultiSelected}
             className={cn(
               "file-tree__row file-tree__row--folder",
+              folderNotesEnabled && "file-tree__row--folder-note",
+              isNoteActive && "file-tree__row--active",
               isMultiSelected && "file-tree__row--selected",
               isDragSource && "file-tree__row--drag-source",
               activeDropPosition === "above" && "file-tree__row--drop-above",
@@ -270,7 +298,11 @@ export function TreeNodeRow({
               isImportDropTarget && "file-tree__row--drop-import"
             )}
             style={{ paddingLeft }}
-            title={node.relativePath}
+            title={
+              folderNotesEnabled
+                ? t("fileTree.openFolderNote", { path: node.relativePath })
+                : node.relativePath
+            }
             {...{ [DROP_DIRECTORY_ATTRIBUTE]: dropDirectory }}
             tabIndex={tabIndex}
             ref={(element) => registerItemRef(key, element)}
@@ -281,18 +313,40 @@ export function TreeNodeRow({
             }}
             {...dragHandlers}
           >
-            <span className="file-tree__chevron" aria-hidden="true">
+            {/* A span, not a nested button (invalid inside the row's button):
+                its click is stopped before it reaches the row, which with
+                folder notes on would open the note instead of toggling. */}
+            <span
+              className={cn(
+                "file-tree__chevron",
+                folderNotesEnabled && "file-tree__chevron--toggle"
+              )}
+              aria-hidden="true"
+              title={
+                folderNotesEnabled
+                  ? t(isExpanded ? "fileTree.collapseFolder" : "fileTree.expandFolder")
+                  : undefined
+              }
+              onClick={
+                folderNotesEnabled
+                  ? (event) => {
+                      event.stopPropagation();
+                      onToggleFolder(node);
+                    }
+                  : undefined
+              }
+            >
               {isExpanded ? <ChevronDown /> : <ChevronRight />}
             </span>
             {isExpanded ? <FolderOpen aria-hidden="true" /> : <Folder aria-hidden="true" />}
             <span className="file-tree__name">{node.name}</span>
-            {!isExpanded && folderMatchCount > 0 ? (
+            {shownMatchCount > 0 ? (
               <span
                 className="file-tree__search-badge file-tree__search-badge--folder"
-                title={t("findReplace.folderMatchBadge", { count: folderMatchCount })}
-                aria-label={t("findReplace.folderMatchBadge", { count: folderMatchCount })}
+                title={t("findReplace.folderMatchBadge", { count: shownMatchCount })}
+                aria-label={t("findReplace.folderMatchBadge", { count: shownMatchCount })}
               >
-                {folderMatchCount}
+                {shownMatchCount}
               </span>
             ) : null}
             {!isExpanded && folderStagedCount > 0 ? (
@@ -304,6 +358,13 @@ export function TreeNodeRow({
               </PawPrint>
             ) : null}
             {modifiedLabel ? <span className="file-tree__mtime">{modifiedLabel}</span> : null}
+            {isNoteDirty ? (
+              <span
+                className="sidebar-panel__item-dirty"
+                title={t("fileTree.unsavedChanges")}
+                aria-label={t("fileTree.unsavedChanges")}
+              />
+            ) : null}
           </button>
         )}
 
@@ -323,6 +384,9 @@ export function TreeNodeRow({
                 selectedFilePath={selectedFilePath}
                 selectedKeys={selectedKeys}
                 dirtyFilePaths={dirtyFilePaths}
+                folderNotesEnabled={folderNotesEnabled}
+                activeFolderNotePath={activeFolderNotePath}
+                dirtyFolderNotePaths={dirtyFolderNotePaths}
                 activeKey={activeKey}
                 renamingTarget={renamingTarget}
                 renameDraft={renameDraft}
@@ -331,6 +395,7 @@ export function TreeNodeRow({
                 dragSourceKeys={dragSourceKeys}
                 dropIndicator={dropIndicator}
                 onRowClick={onRowClick}
+                onToggleFolder={onToggleFolder}
                 onRowContextMenu={onRowContextMenu}
                 onRenameDraftChange={onRenameDraftChange}
                 onCommitRename={onCommitRename}

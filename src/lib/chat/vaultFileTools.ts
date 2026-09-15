@@ -2,6 +2,7 @@ import { join } from "@tauri-apps/api/path";
 
 import { decodeEscapedLineBreaks } from "@/lib/editor/markdownNormalize";
 import { getRelativeDisplayPath, readMarkdownFile } from "@/lib/fileSystem";
+import { getFolderNoteFolderPath, isFolderNotePath } from "@/lib/folderNotes";
 import { useAppStore } from "@/store/useAppStore";
 import { useStagedChangesStore } from "@/store/useStagedChangesStore";
 
@@ -342,8 +343,14 @@ async function listFiles(): Promise<FileToolResult> {
   const shown = all.slice(0, MAX_LISTED_FILES);
   const lines = shown.map((relativePath) => {
     const marker = stagedKeys.has(vaultPathKey(relativePath)) ? "  [change already proposed]" : "";
+    // The reserved file name is identical in every folder; without the label a
+    // model sees a dozen near-identical paths and mixes them up.
+    const folderNote =
+      isFolderNotePath(relativePath) && getFolderNoteFolderPath(relativePath)
+        ? `  [folder note of "${getFolderNoteFolderPath(relativePath)}"]`
+        : "";
 
-    return `${relativePath}${marker}`;
+    return `${relativePath}${folderNote}${marker}`;
   });
 
   const cutOff =

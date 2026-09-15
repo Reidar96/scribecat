@@ -4,6 +4,7 @@ import { join } from "@tauri-apps/api/path";
 
 import { getRelativeDisplayPath } from "@/lib/fileSystem";
 import type { FileTreeNode } from "@/lib/fileTree";
+import { getFolderNoteFolderPath, isFolderNotePath } from "@/lib/folderNotes";
 
 import { getNodeKey, getTopLevelSelection } from "./treeNavigation";
 import type { BatchEntry } from "./types";
@@ -118,7 +119,14 @@ export function useTreeSelection({
       return;
     }
 
-    setActiveKey(`file:${getRelativeDisplayPath(folderPath, selectedFilePath)}`);
+    const relativePath = getRelativeDisplayPath(folderPath, selectedFilePath);
+
+    // A folder note has no row of its own; the folder row stands in for it.
+    setActiveKey(
+      isFolderNotePath(relativePath) && getFolderNoteFolderPath(relativePath)
+        ? `folder:${getFolderNoteFolderPath(relativePath)}`
+        : `file:${relativePath}`
+    );
   }, [folderPath, selectedFilePath]);
 
   // Falls back to the first visible entry if the active one drops out of the

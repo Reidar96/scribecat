@@ -17,6 +17,7 @@ const SORT_MODE_FILE_NAME = "sort-mode.json";
 const ORDER_FILE_NAME = "order.json";
 const MANUSCRIPT_FILE_NAME = "manuscript.json";
 const HEADING_NUMBERING_FILE_NAME = "heading-numbering.json";
+const FOLDER_NOTES_FILE_NAME = "folder-notes.json";
 const SORT_MODES: SortMode[] = ["name", "modified", "manual"];
 
 /**
@@ -168,5 +169,37 @@ export async function writeHeadingNumbering(
   await writeTextFile(
     await join(dirPath, HEADING_NUMBERING_FILE_NAME),
     JSON.stringify(settings, null, 2)
+  );
+}
+
+/**
+ * Folder notes (lib/folderNotes.ts), per vault for the same reason: the notes
+ * themselves are files in the folder, so the switch that makes them reachable
+ * belongs next to them — a vault that is synced or carried to another machine
+ * brings its way of working along, and one vault's outliner habit never leaks
+ * into a documentation vault where a click on a folder should just unfold it.
+ */
+export async function readFolderNotesEnabled(folderPath: string): Promise<boolean> {
+  try {
+    const filePath = await join(await vaultMetaDirPath(folderPath), FOLDER_NOTES_FILE_NAME);
+
+    if (!(await exists(filePath))) {
+      return false;
+    }
+
+    const parsed: unknown = JSON.parse(await readTextFile(filePath));
+
+    return typeof parsed === "object" && parsed !== null && (parsed as { enabled?: unknown }).enabled === true;
+  } catch {
+    return false;
+  }
+}
+
+export async function writeFolderNotesEnabled(folderPath: string, enabled: boolean): Promise<void> {
+  const dirPath = await vaultMetaDirPath(folderPath);
+  await mkdir(dirPath, { recursive: true });
+  await writeTextFile(
+    await join(dirPath, FOLDER_NOTES_FILE_NAME),
+    JSON.stringify({ enabled }, null, 2)
   );
 }

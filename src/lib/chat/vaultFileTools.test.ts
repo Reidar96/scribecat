@@ -363,6 +363,32 @@ describe("list_files and read_file", () => {
     expect(result?.retryable).toBe(true);
     expect(result?.content).toContain("list_files");
   });
+
+  // The reserved name is the same in every folder; the label is what keeps a
+  // model from confusing the folder notes of "Rezepte" and "Reisen".
+  it("labels folder notes with the folder they belong to", async () => {
+    addFile("Rezepte/.scribedog-foldernote.md", "Übersicht");
+    addFile("Rezepte/Kuchen.md", "k");
+
+    const result = await executeFileTool("list_files", {});
+
+    expect(result?.content).toContain('Rezepte/.scribedog-foldernote.md  [folder note of "Rezepte"]');
+    expect(result?.content).toMatch(/^Rezepte\/Kuchen\.md$/m);
+  });
+
+  it("reads and edits a folder note like any other note", async () => {
+    addFile("Rezepte/.scribedog-foldernote.md", "Übersicht der Rezepte");
+
+    const read = await executeFileTool("read_file", { path: "Rezepte/.scribedog-foldernote.md" });
+    expect(read?.content).toContain("Übersicht der Rezepte");
+
+    const edit = await executeFileTool("edit_file", {
+      path: "Rezepte/.scribedog-foldernote.md",
+      old_text: "Übersicht",
+      new_text: "Sammlung"
+    });
+    expect(edit?.content).toContain("OK");
+  });
 });
 
 it("answers null for a tool that is not a file tool", async () => {

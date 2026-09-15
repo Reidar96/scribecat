@@ -11,6 +11,7 @@ import {
 import { DetailsSection } from "@/components/editor/DetailsSection";
 import { getFileLinkLabel } from "@/lib/editor/fileLinks";
 import { getRelativeDisplayPath, readMarkdownFile } from "@/lib/fileSystem";
+import { describeNotePath } from "@/lib/folderNotes";
 import { useAppStore } from "@/store/useAppStore";
 
 type DetailsLinksSectionProps = {
@@ -90,7 +91,9 @@ export function DetailsLinksSection({
   }, [filePath, vaultFilePaths, refreshId]);
 
   const relativeLabel = (targetPath: string) =>
-    folderPath ? getRelativeDisplayPath(folderPath, targetPath) : targetPath;
+    describeNotePath(folderPath ? getRelativeDisplayPath(folderPath, targetPath) : targetPath, (folder) =>
+      t("app.folderNoteLabel", { path: folder })
+    );
 
   return (
     <>

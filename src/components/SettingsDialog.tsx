@@ -11,6 +11,8 @@ import { VersioningSettings } from "@/components/VersioningSettings";
 import type { Assistant } from "@/store/useAssistantsStore";
 import { useRagSettingsStore } from "@/store/useRagSettingsStore";
 import { getFolderBasename } from "@/lib/fileSystem";
+import { countFolderNotes } from "@/lib/folderNotes";
+import { useAppStore } from "@/store/useAppStore";
 import { getPortableStatus, type PortableMode } from "@/lib/portable";
 
 import {
@@ -354,6 +356,11 @@ export function SettingsDialog({
   const headingNumbering = useEditorSettingsStore((state) => state.headingNumbering);
   const setHeadingNumbering = useEditorSettingsStore((state) => state.setHeadingNumbering);
   const headingNumberingVaultPath = useEditorSettingsStore((state) => state.headingNumberingVaultPath);
+  const folderNotesEnabled = useEditorSettingsStore((state) => state.folderNotesEnabled);
+  const setFolderNotesEnabled = useEditorSettingsStore((state) => state.setFolderNotesEnabled);
+  // Folder notes written while the feature was on stay on disk after it is
+  // switched off; the counter is what tells the user they are still there.
+  const hiddenFolderNoteCount = useAppStore((state) => countFolderNotes(state.filePaths));
   const accentColor = useAccentColorStore((state) => state.accentColor);
   const setAccentColor = useAccentColorStore((state) => state.setAccentColor);
   const resetAccentColor = useAccentColorStore((state) => state.resetAccentColor);
@@ -839,6 +846,35 @@ export function SettingsDialog({
 
                     )}
 
+                    <label className="ai-dialog__switch">
+                      <input
+                        type="checkbox"
+                        checked={folderNotesEnabled}
+                        disabled={headingNumberingVaultPath === null}
+                        onChange={(event) => setFolderNotesEnabled(event.target.checked)}
+                      />
+                      <span>{t("settingsDialog.folderNotes")}</span>
+                    </label>
+                    <p className="ai-dialog__hint">
+                      {headingNumberingVaultPath === null
+                        ? t("settingsDialog.folderNotesNoVault")
+                        : t("settingsDialog.folderNotesHint")}
+                    </p>
+                    {!folderNotesEnabled && hiddenFolderNoteCount > 0 ? (
+                      <div className="ai-dialog__field--full ai-dialog__notice ai-dialog__notice--info" role="note">
+                        <Info className="ai-dialog__notice-icon" aria-hidden="true" />
+                        <p>
+                          {t("settingsDialog.folderNotesHidden", { count: hiddenFolderNoteCount })}{" "}
+                          <button
+                            type="button"
+                            className="ai-dialog__link"
+                            onClick={() => setFolderNotesEnabled(true)}
+                          >
+                            {t("settingsDialog.folderNotesEnableNow")}
+                          </button>
+                        </p>
+                      </div>
+                    ) : null}
                   </div>
                 </section>
               </div>

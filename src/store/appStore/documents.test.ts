@@ -71,4 +71,23 @@ describe("pruneDocumentsToCurrentFolder", () => {
 
     expect(pruneDocumentsToCurrentFolder(documents, [], OPEN)).toEqual({});
   });
+
+  it("keeps an unwritten folder note while it is the open document", () => {
+    const note = "D:/Vault/Misc/.scribedog-foldernote.md";
+    const documents = { [note]: { content: "", baseContent: "" } };
+
+    expect(pruneDocumentsToCurrentFolder(documents, [], note)).toEqual(documents);
+  });
+
+  it("drops a clean unwritten folder note once another document is open", () => {
+    const note = "D:/Vault/Misc/.scribedog-foldernote.md";
+    const documents = {
+      [note]: { content: "", baseContent: "" },
+      [OPEN]: { content: "text", baseContent: "text" }
+    };
+
+    expect(pruneDocumentsToCurrentFolder(documents, [OPEN], OPEN)).toEqual({
+      [OPEN]: { content: "text", baseContent: "text" }
+    });
+  });
 });

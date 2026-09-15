@@ -2,6 +2,8 @@ import { useState } from "react";
 import { join } from "@tauri-apps/api/path";
 
 import type { BatchEntry } from "@/components/FileTree";
+import { getRelativeDisplayPath } from "@/lib/fileSystem";
+import { getFolderNoteFolderPath, isFolderNotePath } from "@/lib/folderNotes";
 
 export type DeleteTarget =
   | { kind: "file" | "folder"; path: string }
@@ -58,6 +60,22 @@ export function useDeleteTarget({
     }
 
     if (!folderPath) {
+      return;
+    }
+
+    // An open folder note has the folder row as its row in the tree. Deleting
+    // from the toolbar then means the note that is on screen, not the folder
+    // with everything in it — the folder itself is deleted from its own
+    // context menu, where the choice is explicit.
+    if (
+      fileTreeSelection.length === 1 &&
+      fileTreeSelection[0].kind === "folder" &&
+      selectedFilePath &&
+      isFolderNotePath(selectedFilePath) &&
+      getFolderNoteFolderPath(getRelativeDisplayPath(folderPath, selectedFilePath)) ===
+        fileTreeSelection[0].path
+    ) {
+      requestDeleteFile(selectedFilePath);
       return;
     }
 

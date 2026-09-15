@@ -1,4 +1,5 @@
 import { ABSOLUTE_URL_PATTERN, getRelativeDisplayPath } from "@/lib/fileSystem";
+import { getNoteDisplayName } from "@/lib/folderNotes";
 
 /**
  * Links between two notes of the same vault are plain relative Markdown links
@@ -35,10 +36,9 @@ function toPathKey(path: string): string {
   return toPosixPath(path).toLowerCase();
 }
 
-/** File name without the ".md" extension — the default text of a file link. */
+/** File name without the ".md" extension (a folder note: its folder's name) — the default text of a file link. */
 export function getFileLinkLabel(filePath: string): string {
-  const fileName = toPosixPath(filePath).split("/").pop() ?? filePath;
-  return fileName.replace(/\.md$/i, "");
+  return getNoteDisplayName(filePath);
 }
 
 /**

@@ -230,6 +230,7 @@ notes — fluently, privately, and for free.
 - Open any folder and ScribeDog finds every `.md` file inside it, shown as a file tree in the sidebar
 - Create, rename, and delete files and folders directly from the sidebar
 - **Flexible sorting** — order the file tree by name, last modified, or switch to manual mode and drag and drop files and folders into your own order
+- **Folder notes** (off by default, switched on per folder in the settings and stored in its `.scribedog` folder) — every folder gets a text of its own, the way a node in Trilium or Notion is both a folder and a page: click the folder's name to open it, the arrow expands the folder. The note is a plain `.scribedog-foldernote.md` inside the folder, created on the first save, so it moves, renames and deletes together with the folder, even when you do that in Explorer or Finder; search, versions, export (as the folder's introduction chapter) and the AI chat treat it like any other note. Switching the feature off only hides the affordance, the files stay
 - Sidebar preferences (sort mode, manual order) are remembered per folder in a small hidden `.scribedog` metadata directory inside the vault
 - Live sync via a native filesystem watcher — changes made outside the app are picked up automatically
 - Safe switching: leaving an unsaved file (or a pending, undecided AI suggestion) prompts you to save, discard, or cancel, with a clear dirty indicator

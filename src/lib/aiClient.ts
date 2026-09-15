@@ -1601,7 +1601,7 @@ const FILE_TOOL_SPECS = [
   {
     name: "list_files",
     description:
-      "List every note in the vault with its path. Call this first when you need to work on files other than the open document — it is how you learn which paths exist. Never guess a path.",
+      "List every note in the vault with its path. Call this first when you need to work on files other than the open document — it is how you learn which paths exist. Never guess a path. A path ending in .scribedog-foldernote.md is a folder's own note (the folder's overview text, shown when the user clicks the folder); it is a normal note otherwise.",
     parameters: { type: "object", properties: {}, required: [] }
   },
   {

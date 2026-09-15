@@ -129,7 +129,10 @@ export function buildFolderMatchCounts(
         continue;
       }
 
-      const subtotal = visit(node.children);
+      // The folder's own note counts towards the folder, it has no row of
+      // its own to carry the badge.
+      const subtotal =
+        visit(node.children) + (node.folderNotePath ? fileMatchCounts[node.folderNotePath] ?? 0 : 0);
 
       if (subtotal > 0) {
         result[node.relativePath] = subtotal;

@@ -1,4 +1,5 @@
 import { readMarkdownFile } from "@/lib/fileSystem";
+import { isFolderNotePath } from "@/lib/folderNotes";
 
 import { normalizePathKey } from "./pathUtils";
 import { stagedOnlyPathKeys } from "./stagedPaths";
@@ -21,15 +22,31 @@ export function pruneDocumentsToCurrentFolder(
   // this one, which is the whole distinction.
   const stagedOnly = stagedOnlyPathKeys();
   const isStagedOnly = (filePath: string) => stagedOnly.has(normalizePathKey(filePath));
+  // A folder note that has not been written yet is the same case, but only
+  // while it is the one on screen: opened from the tree, empty and clean, and
+  // nothing on disk until the first save. Unselected and clean it is dropped
+  // like any other — reopening the folder starts it empty again anyway.
+  const isOpenUnwrittenFolderNote = (filePath: string) =>
+    filePath === selectedFilePath && isFolderNotePath(filePath);
   const nextDocuments: Record<string, FileDocumentState> = {};
 
   for (const [filePath, document] of Object.entries(fileDocuments)) {
-    if (filePathSet.has(filePath) || isDocumentDirty(document) || isStagedOnly(filePath)) {
+    if (
+      filePathSet.has(filePath) ||
+      isDocumentDirty(document) ||
+      isStagedOnly(filePath) ||
+      isOpenUnwrittenFolderNote(filePath)
+    ) {
       nextDocuments[filePath] = document;
     }
   }
 
-  if (selectedFilePath && !filePathSet.has(selectedFilePath) && !isStagedOnly(selectedFilePath)) {
+  if (
+    selectedFilePath &&
+    !filePathSet.has(selectedFilePath) &&
+    !isStagedOnly(selectedFilePath) &&
+    !isOpenUnwrittenFolderNote(selectedFilePath)
+  ) {
     const selectedDocument = nextDocuments[selectedFilePath];
 
     if (!selectedDocument || !isDocumentDirty(selectedDocument)) {

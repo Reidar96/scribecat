@@ -3,6 +3,7 @@ import { exists, mkdir, writeFile, writeTextFile } from "@tauri-apps/plugin-fs";
 
 import { allowMarkdownFolderAccess, listMarkdownFiles, type MarkdownFileRecord } from "@/lib/fileSystem";
 import { buildFileTree, type FileTreeNode } from "@/lib/fileTree";
+import { getNoteDisplayName } from "@/lib/folderNotes";
 import { DEFAULT_DOCUMENT_STYLE, type DocumentStyle } from "@/lib/fonts";
 import type { ManualOrderMap, SortMode } from "@/lib/vaultMeta";
 
@@ -256,8 +257,10 @@ async function writeExportRecords(input: ExportRecordsInput): Promise<ExportOutc
 
   for (const [index, record] of records.entries()) {
     const relativeSegments = record.relativePath.split("/");
-    const noteFileName = relativeSegments.pop() ?? record.relativePath;
-    const baseName = sanitizeExportName(noteFileName.replace(/\.md$/i, ""));
+    relativeSegments.pop();
+    // A folder note is exported into its folder under the folder's name
+    // ("Rezepte/Rezepte.html"), not under the reserved file name.
+    const baseName = sanitizeExportName(getNoteDisplayName(record.relativePath));
     const targetFileName = `${baseName}.${format}`;
 
     onProgress?.({
@@ -439,10 +442,19 @@ export function collectOrderedRecords(
   const tree = buildFileTree(records, [], { sortMode, manualOrder });
   const ordered: MarkdownFileRecord[] = [];
   const byRelativePath = new Map(records.map((record) => [record.relativePath, record]));
+  const byFilePath = new Map(records.map((record) => [record.filePath, record]));
 
   const visit = (nodes: FileTreeNode[]) => {
     for (const node of nodes) {
       if (node.kind === "folder") {
+        // The folder's own note is not among its children; it is the
+        // folder's introduction and comes before them.
+        const folderNote = node.folderNotePath ? byFilePath.get(node.folderNotePath) : undefined;
+
+        if (folderNote) {
+          ordered.push(folderNote);
+        }
+
         visit(node.children);
         continue;
       }
@@ -573,6 +585,5 @@ export async function countExportableNotes(sourceFolderPath: string): Promise<nu
 }
 
 export function getDefaultExportBaseName(path: string): string {
-  const fileName = path.replace(/\\/g, "/").replace(/\/+$/, "").split("/").pop() ?? path;
-  return fileName.replace(/\.md$/i, "");
+  return getNoteDisplayName(path.replace(/[\\/]+$/, ""));
 }

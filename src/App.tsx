@@ -35,6 +35,12 @@ import { useWebviewZoom } from "@/hooks/useWebviewZoom";
 import { useWindowReveal } from "@/hooks/useWindowReveal";
 import { useZenMode } from "@/hooks/useZenMode";
 import { getFolderBasename, getRecentFolderPaths, getRelativeDisplayPath } from "@/lib/fileSystem";
+import {
+  describeNotePath,
+  getFolderNoteFolderPath,
+  getFolderNotePath,
+  isFolderNotePath
+} from "@/lib/folderNotes";
 import { clearVaultSearchCache } from "@/lib/ragSearch";
 import { findStepIndex } from "@/lib/navigationHistory";
 import { printMarkdown } from "@/lib/print";
@@ -63,7 +69,10 @@ import "./App.css";
 function App() {
   const { t } = useTranslation();
   const [pendingNavigation, setPendingNavigation] = useState<
-    { type: "file"; filePath: string } | { type: "folder"; folderPath: string | null } | null
+    | { type: "file"; filePath: string }
+    | { type: "folderNote"; folderPath: string }
+    | { type: "folder"; folderPath: string | null }
+    | null
   >(null);
   // Set right before a back/forward step so the history effect below moves the
   // position instead of recording the target as a new entry. Cleared once it is
@@ -113,6 +122,7 @@ function App() {
   const fileError = useAppStore((state) => state.fileError);
   const saveError = useAppStore((state) => state.saveError);
   const selectFilePath = useAppStore((state) => state.selectFilePath);
+  const openFolderNote = useAppStore((state) => state.openFolderNote);
   const updateSelectedFileContent = useAppStore(
     (state) => state.updateSelectedFileContent
   );
@@ -158,10 +168,22 @@ function App() {
     [fileDocuments]
   );
 
-  const selectedFileLabel =
+  const selectedRelativePath =
     folderPath && selectedFilePath
       ? getRelativeDisplayPath(folderPath, selectedFilePath)
       : null;
+  // A folder note is titled after its folder — the file name is the same for
+  // every folder and says nothing — and renaming the title renames the folder.
+  const isSelectedFolderNote =
+    selectedRelativePath !== null &&
+    isFolderNotePath(selectedRelativePath) &&
+    getFolderNoteFolderPath(selectedRelativePath) !== "";
+  const selectedFileLabel =
+    selectedRelativePath === null
+      ? null
+      : isSelectedFolderNote
+        ? getFolderNoteFolderPath(selectedRelativePath)
+        : selectedRelativePath;
 
   const selectedFileDirectoryLabel = selectedFileLabel
     ? selectedFileLabel.slice(0, selectedFileLabel.lastIndexOf("/") + 1)
@@ -171,6 +193,12 @@ function App() {
         .slice(selectedFileLabel.lastIndexOf("/") + 1)
         .replace(/\.md$/i, "")
     : "";
+
+  /** A note's path the way the UI names it: folder notes by their folder. */
+  const labelNotePath = (filePath: string) =>
+    describeNotePath(folderPath ? getRelativeDisplayPath(folderPath, filePath) : filePath, (folder) =>
+      t("app.folderNoteLabel", { path: folder })
+    );
 
   // A note the agent has proposed into existence is not on disk either, but it
   // was never removed — it has not been applied yet. Without this it opens
@@ -187,8 +215,13 @@ function App() {
       )
     );
 
+  // A folder note is on disk only once it has been saved with content; until
+  // then it is an empty document that was never removed.
   const isSelectedFileMissing =
-    selectedFilePath !== null && !filePaths.includes(selectedFilePath) && !isSelectedFileStaged;
+    selectedFilePath !== null &&
+    !filePaths.includes(selectedFilePath) &&
+    !isSelectedFileStaged &&
+    !isSelectedFolderNote;
 
   const { sidebarWidth, isResizingSidebar, handleResizeStart, handleResizeKeyDown } =
     useSidebarWidth();
@@ -213,7 +246,14 @@ function App() {
     startTitleRename,
     commitTitleRename,
     cancelTitleRename
-  } = useTitleRename({ selectedFilePath, selectedFileBaseName, renameSelectedFile });
+  } = useTitleRename({
+    selectedFilePath,
+    selectedFileBaseName,
+    renameSelectedFile: (newBaseName) =>
+      isSelectedFolderNote && selectedFilePath
+        ? renameFolderPath(getFolderNoteFolderPath(selectedFilePath), newBaseName)
+        : renameSelectedFile(newBaseName)
+  });
 
   const {
     deleteTarget,
@@ -254,19 +294,21 @@ function App() {
   };
 
   const deleteTargetLabel =
-    deleteTarget && deleteTarget.kind !== "multiple" && folderPath
-      ? getRelativeDisplayPath(folderPath, deleteTarget.path)
-      : deleteTarget && deleteTarget.kind !== "multiple"
-        ? deleteTarget.path
-        : null;
+    deleteTarget && deleteTarget.kind !== "multiple"
+      ? deleteTarget.kind === "file"
+        ? labelNotePath(deleteTarget.path)
+        : folderPath
+          ? getRelativeDisplayPath(folderPath, deleteTarget.path)
+          : deleteTarget.path
+      : null;
 
   const pendingTargetLabel = pendingNavigation
     ? pendingNavigation.type === "file"
-      ? folderPath
-        ? getRelativeDisplayPath(folderPath, pendingNavigation.filePath)
-        : pendingNavigation.filePath
-      : (pendingNavigation.folderPath ? getFolderBasename(pendingNavigation.folderPath) : null) ??
-        t("app.pendingTargetOtherFolder")
+      ? labelNotePath(pendingNavigation.filePath)
+      : pendingNavigation.type === "folderNote"
+        ? labelNotePath(getFolderNotePath(pendingNavigation.folderPath))
+        : (pendingNavigation.folderPath ? getFolderBasename(pendingNavigation.folderPath) : null) ??
+          t("app.pendingTargetOtherFolder")
     : null;
 
   const openFolderSafely = async () => {
@@ -306,6 +348,22 @@ function App() {
     useStagedChangesStore.getState().seedCreatedDocument(filePath);
 
     await selectFilePath(filePath);
+  };
+
+  // Same guard for a folder's note (the tree hands over the folder, the store
+  // resolves the note inside it).
+  const openFolderNoteSafely = async (targetFolderPath: string) => {
+    if (selectedFilePath && getFolderNotePath(targetFolderPath) === selectedFilePath) {
+      return;
+    }
+
+    if (selectedFilePath && (isDirty || isAiActionPending)) {
+      setPendingNavigation({ type: "folderNote", folderPath: targetFolderPath });
+      setIsUnsavedDialogOpen(true);
+      return;
+    }
+
+    await openFolderNote(targetFolderPath);
   };
 
   // Opening a different vault has nothing to do with the previous one's
@@ -357,9 +415,7 @@ function App() {
       return null;
     }
 
-    const targetPath = navigationHistory.entries[stepIndex];
-
-    return folderPath ? getRelativeDisplayPath(folderPath, targetPath) : targetPath;
+    return labelNotePath(navigationHistory.entries[stepIndex]);
   };
 
   const navigateHistory = (stepIndex: number | null) => {
@@ -515,6 +571,11 @@ function App() {
 
     if (nextNavigation.type === "file") {
       await selectFilePath(nextNavigation.filePath);
+      return;
+    }
+
+    if (nextNavigation.type === "folderNote") {
+      await openFolderNote(nextNavigation.folderPath);
       return;
     }
 
@@ -730,6 +791,7 @@ function App() {
             onCreateFolder={() => void handleCreateFolder()}
             onImportRequest={() => void requestImportFiles()}
             onSelectFilePath={selectFilePathSafely}
+            onOpenFolderNote={openFolderNoteSafely}
             onDeleteFileRequest={requestDeleteFile}
             onDeleteFolderRequest={requestDeleteFolder}
             onDeleteMultipleRequest={requestDeleteMultiple}
@@ -775,6 +837,7 @@ function App() {
             selectedFilePath={selectedFilePath}
             selectedFileLabel={selectedFileLabel}
             selectedFileDirectoryLabel={selectedFileDirectoryLabel}
+            isSelectedFolderNote={isSelectedFolderNote}
             folderPath={folderPath}
             selectedFileContent={selectedFileContent}
             appVersion={appVersion}

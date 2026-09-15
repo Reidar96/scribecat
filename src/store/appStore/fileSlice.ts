@@ -11,6 +11,7 @@ import {
   writeMarkdownFile
 } from "@/lib/fileSystem";
 import { readVersionContent } from "@/lib/fileVersions";
+import { getFolderNotePath, isFolderNotePath } from "@/lib/folderNotes";
 
 import { isDocumentDirty } from "./documents";
 import { toErrorMessage } from "./errors";
@@ -27,6 +28,7 @@ import {
   getBasename,
   insertFilePathSorted,
   INVALID_FILE_NAME_CHARS,
+  isPathInsideFolder,
   normalizePathKey
 } from "./pathUtils";
 import type { AppSlice, FileSlice } from "./types";
@@ -115,6 +117,30 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
 
       return false;
     }
+  },
+  openFolderNote: async (targetFolderPath: string) => {
+    const notePath = getFolderNotePath(targetFolderPath);
+    const { filePaths, fileDocuments } = get();
+    // The list is the authority on how the path is spelled (separators,
+    // case); the note is looked up through it rather than opened blind.
+    const knownPath = filePaths.find(
+      (path) => normalizePathKey(path) === normalizePathKey(notePath)
+    );
+
+    if (knownPath) {
+      return get().selectFilePath(knownPath);
+    }
+
+    if (!fileDocuments[notePath]) {
+      set({
+        fileDocuments: {
+          ...fileDocuments,
+          [notePath]: { content: "", baseContent: "" }
+        }
+      });
+    }
+
+    return get().selectFilePath(notePath);
   },
   updateSelectedFileContent: (markdown: string) => {
     const { selectedFilePath, selectedFileBaseContent, fileDocuments } = get();
@@ -210,6 +236,12 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
     set({ isSaving: true, saveError: null });
 
     try {
+      // A folder note is written into its folder on the first save; the
+      // folder can still be one the agent has only proposed so far.
+      if (isFolderNotePath(selectedFilePath)) {
+        await createMarkdownFolderAtPath(await dirname(selectedFilePath));
+      }
+
       await writeMarkdownFile(selectedFilePath, selectedFileContent);
 
       snapshotFileVersion(folderPath, selectedFilePath, selectedFileContent);
@@ -229,8 +261,20 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
         currentState.selectedFilePath === selectedFilePath
           ? currentState.selectedFileContent ?? selectedFileContent
           : currentDocument?.content ?? selectedFileContent;
+      // The first save of a folder note (or of a note deleted outside the
+      // app while it was open) is what brings the file into existence, so
+      // the list learns about it here rather than on the next watcher tick.
+      const isKnown = currentState.filePaths.some(
+        (path) => normalizePathKey(path) === normalizePathKey(selectedFilePath)
+      );
 
       set({
+        ...(isKnown
+          ? {}
+          : {
+              filePaths: insertFilePathSorted(currentState.filePaths, selectedFilePath),
+              fileMtimeMs: { ...currentState.fileMtimeMs, [selectedFilePath]: Date.now() }
+            }),
         fileDocuments: {
           ...currentState.fileDocuments,
           [selectedFilePath]: {
@@ -587,8 +631,16 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
     try {
       const contentBeforeDelete =
         fileDocuments[filePath]?.baseContent ?? (await readMarkdownFile(filePath).catch(() => ""));
+      // A folder note that was opened but never saved has nothing on disk;
+      // "deleting" it only closes the empty document.
+      const isUnwrittenFolderNote =
+        isFolderNotePath(filePath) &&
+        !get().filePaths.some((path) => normalizePathKey(path) === normalizePathKey(filePath));
 
-      await deleteMarkdownFile(filePath);
+      if (!isUnwrittenFolderNote) {
+        await deleteMarkdownFile(filePath);
+      }
+
       deleteFileVersionHistory(folderPath, filePath);
 
       if (folderPath) {
@@ -600,6 +652,8 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
 
       const isSelected = selectedFilePath === filePath;
       const currentState = get();
+      const nextFilePaths = currentState.filePaths.filter((path) => path !== filePath);
+      let nextEmptyFolderPaths = currentState.emptyFolderPaths;
 
       let nextManualOrder = currentState.manualOrder;
 
@@ -609,10 +663,26 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
 
         nextManualOrder = removeManualOrderEntry(nextManualOrder, parentRelativePath, getBasename(filePath));
         persistManualOrderIfChanged(folderPath, currentState.manualOrder, nextManualOrder);
+
+        // Deleting a folder's note clears the folder's text, it does not
+        // delete the folder — but the note may have been the only file that
+        // put the folder in the tree, so the folder is kept as an empty one.
+        const isFolderNowEmpty =
+          isFolderNotePath(filePath) &&
+          parentRelativePath !== "" &&
+          !nextFilePaths.some((path) => isPathInsideFolder(path, parentDirectory)) &&
+          !nextEmptyFolderPaths.some(
+            (path) => normalizePathKey(path) === normalizePathKey(parentDirectory)
+          );
+
+        if (isFolderNowEmpty) {
+          nextEmptyFolderPaths = [...nextEmptyFolderPaths, parentDirectory];
+        }
       }
 
       set({
-        filePaths: currentState.filePaths.filter((path) => path !== filePath),
+        filePaths: nextFilePaths,
+        emptyFolderPaths: nextEmptyFolderPaths,
         fileDocuments: nextDocuments,
         selectedFilePath: isSelected ? null : currentState.selectedFilePath,
         selectedFileContent: isSelected ? null : currentState.selectedFileContent,

@@ -12,6 +12,7 @@ import {
   type ReplaceFileGroup
 } from "@/components/ReplaceConfirmDialog";
 import { getRelativeDisplayPath, readMarkdownFile } from "@/lib/fileSystem";
+import { describeNotePath } from "@/lib/folderNotes";
 import { updateSearchHighlight } from "@/lib/searchHighlight";
 import {
   applyTextReplacements,
@@ -63,6 +64,10 @@ export function FindReplacePanel({
   onRequestFileOpen
 }: FindReplacePanelProps) {
   const { t } = useTranslation();
+  const labelNotePath = (rootPath: string, filePath: string) =>
+    describeNotePath(getRelativeDisplayPath(rootPath, filePath), (folder) =>
+      t("app.folderNoteLabel", { path: folder })
+    );
   const open = useSearchStore((state) => state.isPanelOpen);
   const focusRequestId = useSearchStore((state) => state.focusRequestId);
   const query = useSearchStore((state) => state.query);
@@ -207,7 +212,7 @@ export function FindReplacePanel({
         if (matches.length > 0) {
           results.push({
             filePath: path,
-            fileLabel: getRelativeDisplayPath(folderPath, path),
+            fileLabel: labelNotePath(folderPath, path),
             content,
             matches
           });
@@ -389,7 +394,7 @@ export function FindReplacePanel({
         filePath: filePath ?? "",
         fileLabel:
           folderPath && filePath
-            ? getRelativeDisplayPath(folderPath, filePath)
+            ? labelNotePath(folderPath, filePath)
             : t("findReplace.currentFile"),
         items: docMatches.map((match, index) => ({
           id: `doc:${index}`,

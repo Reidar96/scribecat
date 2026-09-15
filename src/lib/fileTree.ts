@@ -1,4 +1,5 @@
 import type { MarkdownFileRecord } from "@/lib/fileSystem";
+import { isFolderNotePath } from "@/lib/folderNotes";
 import type { ManualOrderMap, SortMode } from "@/lib/vaultMeta";
 
 const TREE_EXPANSION_STORAGE_KEY_PREFIX = "scribedog:treeExpansion:";
@@ -18,6 +19,14 @@ export type FileTreeFolderNode = {
   children: FileTreeNode[];
   /** Most recent mtime among all (recursively) contained files, used both as the "modified" sort key and for display. */
   effectiveMtimeMs: number;
+  /**
+   * Absolute path of the folder's own note (see lib/folderNotes.ts), set only
+   * when the file exists on disk. Every folder logically has one — the row
+   * offers it regardless — this is what says whether opening it reads a file
+   * or starts an empty document.
+   */
+  folderNotePath?: string;
+  folderNoteMtimeMs?: number;
 };
 
 export type FileTreeNode = FileTreeFileNode | FileTreeFolderNode;
@@ -59,7 +68,7 @@ function computeEffectiveMtimes(
   folder: FileTreeFolderNode,
   ownMtimeByRelativePath: Record<string, number>
 ): number {
-  let maxMtime = -Infinity;
+  let maxMtime = folder.folderNoteMtimeMs ?? -Infinity;
 
   for (const child of folder.children) {
     maxMtime = Math.max(
@@ -175,6 +184,17 @@ export function buildFileTree(
     const parent = parentRelativePath
       ? ensureFolderNode(root, folders, parentRelativePath)
       : root;
+
+    // A folder note is the folder's own text, not one of its children: it is
+    // attached to the folder row instead of listed under it, whether or not
+    // the feature is switched on — with it off the file would otherwise show
+    // up as a cryptically named sibling. The vault root has no row to attach
+    // to, so a note directly in the root stays an ordinary file.
+    if (parentRelativePath && isFolderNotePath(record.relativePath)) {
+      parent.folderNotePath = record.filePath;
+      parent.folderNoteMtimeMs = record.mtimeMs;
+      continue;
+    }
 
     parent.children.push({
       kind: "file",

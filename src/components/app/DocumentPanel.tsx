@@ -1,5 +1,5 @@
 import type { RefObject } from "react";
-import { ArrowLeft, ArrowRight, Pencil, Square } from "lucide-react";
+import { ArrowLeft, ArrowRight, FolderOpen, Pencil, Square } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,8 @@ type DocumentPanelProps = {
   selectedFilePath: string | null;
   selectedFileLabel: string | null;
   selectedFileDirectoryLabel: string;
+  /** The open note is a folder's note: titled after the folder, renaming renames the folder. */
+  isSelectedFolderNote: boolean;
   folderPath: string | null;
   selectedFileContent: string | null;
   appVersion: string | null;
@@ -59,6 +61,7 @@ export function DocumentPanel({
   selectedFilePath,
   selectedFileLabel,
   selectedFileDirectoryLabel,
+  isSelectedFolderNote,
   folderPath,
   selectedFileContent,
   appVersion,
@@ -184,20 +187,31 @@ export function DocumentPanel({
                         onCancelTitleRename();
                       }
                     }}
-                    aria-label={t("app.fileNameLabel")}
+                    aria-label={t(isSelectedFolderNote ? "app.folderNameLabel" : "app.fileNameLabel")}
                     spellCheck={false}
                   />
-                  <span className="detail-panel__title-suffix">.md</span>
+                  {isSelectedFolderNote ? null : (
+                    <span className="detail-panel__title-suffix">.md</span>
+                  )}
                 </h2>
               ) : (
                 <>
                   <h2>{selectedFileLabel}</h2>
+                  {isSelectedFolderNote ? (
+                    <span
+                      className="detail-panel__title-badge"
+                      title={t("app.folderNoteBadgeHint")}
+                    >
+                      <FolderOpen size={12} aria-hidden="true" />
+                      {t("app.folderNoteBadge")}
+                    </span>
+                  ) : null}
                   <button
                     type="button"
                     className="detail-panel__title-edit-button"
                     onClick={onStartTitleRename}
-                    aria-label={t("app.renameFile")}
-                    title={t("app.renameFile")}
+                    aria-label={t(isSelectedFolderNote ? "app.renameFolder" : "app.renameFile")}
+                    title={t(isSelectedFolderNote ? "app.renameFolder" : "app.renameFile")}
                   >
                     <Pencil size={14} />
                   </button>

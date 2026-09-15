@@ -10,9 +10,11 @@ import {
   vaultPathKey
 } from "@/lib/chat/vaultStaging";
 import { getRelativeDisplayPath, type MarkdownFileRecord } from "@/lib/fileSystem";
-import { buildFileTree, type FileTreeNode } from "@/lib/fileTree";
+import { buildFileTree, type FileTreeFolderNode, type FileTreeNode } from "@/lib/fileTree";
+import { getFolderNoteFolderPath, isFolderNotePath } from "@/lib/folderNotes";
 import type { ManualOrderMap, SortMode } from "@/lib/vaultMeta";
 import type { MoveTreeEntryInput } from "@/store/useAppStore";
+import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
 import { useSearchStore } from "@/store/useSearchStore";
 import { useStagedChangesStore } from "@/store/useStagedChangesStore";
 
@@ -48,6 +50,8 @@ type FileTreeProps = {
   fileMtimeMs: Record<string, number>;
   emptyFolderMtimeMs: Record<string, number>;
   onSelectFilePath: (filePath: string) => Promise<void>;
+  /** Absolute folder path; the store resolves the note inside it. */
+  onOpenFolderNote: (folderPath: string) => Promise<void>;
   onCreateFileRequest: (targetDirectory: string) => void;
   onDeleteFileRequest: (filePath: string) => void;
   onDeleteFolderRequest: (folderPath: string) => void;
@@ -76,6 +80,7 @@ export function FileTree({
   fileMtimeMs,
   emptyFolderMtimeMs,
   onSelectFilePath,
+  onOpenFolderNote,
   onCreateFileRequest,
   onDeleteFileRequest,
   onDeleteFolderRequest,
@@ -99,6 +104,9 @@ export function FileTree({
   const lastHandledFolderRenameRequestIdRef = useRef<number | undefined>(undefined);
 
   const stagedChanges = useStagedChangesStore((state) => state.changes);
+  // Folder notes on: a click on a folder's name opens its note and only the
+  // chevron toggles it. Off: the whole row toggles, as it always has.
+  const folderNotesEnabled = useEditorSettingsStore((state) => state.folderNotesEnabled);
 
   // What the agent has proposed, indexed the way the rows need it.
   //
@@ -191,6 +199,29 @@ export function FileTree({
 
   const nodeContextByKey = useMemo(() => buildNodeContextMap(treeNodes), [treeNodes]);
 
+  // The open note and the unsaved ones, translated to the folder rows that
+  // stand in for them when they are folder notes (relative folder paths).
+  const activeFolderNotePath = useMemo(() => {
+    if (!selectedFilePath) {
+      return null;
+    }
+
+    const relativePath = getRelativeDisplayPath(folderPath, selectedFilePath);
+
+    return isFolderNotePath(relativePath) ? getFolderNoteFolderPath(relativePath) || null : null;
+  }, [folderPath, selectedFilePath]);
+
+  const dirtyFolderNotePaths = useMemo(
+    () =>
+      new Set(
+        dirtyFilePaths
+          .map((filePath) => getRelativeDisplayPath(folderPath, filePath))
+          .filter(isFolderNotePath)
+          .map(getFolderNoteFolderPath)
+      ),
+    [folderPath, dirtyFilePaths]
+  );
+
   const folderMatchCounts = useMemo(
     () => buildFolderMatchCounts(treeNodes, fileMatchCounts),
     [treeNodes, fileMatchCounts]
@@ -262,7 +293,14 @@ export function FileTree({
       return;
     }
 
-    expandAncestorsOf(getRelativeDisplayPath(folderPath, selectedFilePath));
+    const relativePath = getRelativeDisplayPath(folderPath, selectedFilePath);
+
+    // Opening a folder's note reveals the folder, not its contents: the
+    // ancestors of the folder are expanded, the folder itself is left as it is
+    // — a click on the name is not a request to unfold it.
+    expandAncestorsOf(
+      isFolderNotePath(relativePath) ? getFolderNoteFolderPath(relativePath) : relativePath
+    );
   }, [folderPath, selectedFilePath, expandAncestorsOf]);
 
   // After creating a new folder (sidebar button), switch straight into
@@ -283,6 +321,27 @@ export function FileTree({
     expandAncestorsOf(relativePath);
     startFolderRename(relativePath);
   }, [pendingFolderRename, folderPath, expandAncestorsOf, startFolderRename]);
+
+  // While a project-wide search is running, opening a collapsed folder that
+  // carries hits unfolds its whole matching subtree at once — the badge only
+  // says "something below matches", so one click has to get the user there
+  // instead of one level per click. Collapsing stays a plain toggle.
+  const toggleFolderNode = (node: FileTreeFolderNode) => {
+    const matchingFolderPaths =
+      expandedFolderPaths.has(node.relativePath) || !folderMatchCounts[node.relativePath]
+        ? []
+        : collectMatchingFolderPaths(node, folderMatchCounts);
+
+    if (matchingFolderPaths.length > 0) {
+      expandFolders(matchingFolderPaths);
+    } else {
+      toggleFolder(node.relativePath);
+    }
+  };
+
+  const openFolderNoteOf = (node: FileTreeFolderNode) => {
+    void join(folderPath, node.relativePath).then(onOpenFolderNote);
+  };
 
   const handleRowClick = (node: FileTreeNode, event: React.MouseEvent) => {
     const key = getNodeKey(node);
@@ -324,19 +383,12 @@ export function FileTree({
       // click for the context menu below), it just does not happen as a side
       // effect of every expand/collapse, or the folder would stay marked
       // long after the click that opened it.
-      // While a project-wide search is running, opening a collapsed folder that
-      // carries hits unfolds its whole matching subtree at once — the badge only
-      // says "something below matches", so one click has to get the user there
-      // instead of one level per click. Collapsing stays a plain toggle.
-      const matchingFolderPaths =
-        expandedFolderPaths.has(node.relativePath) || !folderMatchCounts[node.relativePath]
-          ? []
-          : collectMatchingFolderPaths(node, folderMatchCounts);
-
-      if (matchingFolderPaths.length > 0) {
-        expandFolders(matchingFolderPaths);
+      // With folder notes on, the name opens the folder's note instead and the
+      // chevron (its own click target in the row) is what toggles.
+      if (folderNotesEnabled) {
+        openFolderNoteOf(node);
       } else {
-        toggleFolder(node.relativePath);
+        toggleFolderNode(node);
       }
     } else {
       setSelectedKeys(new Set([key]));
@@ -383,6 +435,57 @@ export function FileTree({
       if (nextNode.kind === "file") {
         void onSelectFilePath(nextNode.filePath);
       }
+      return;
+    }
+
+    // Left/right on a folder unfold and fold it, the way every tree control
+    // does — and with folder notes on this is the only keyboard way to, since
+    // Enter/Space on the row then open the note. On an expanded folder, right
+    // steps into the first child; left on a collapsed folder or a file climbs
+    // to the parent.
+    if ((event.key === "ArrowRight" || event.key === "ArrowLeft") && activeKey) {
+      const activeNode = flatNodes.find((node) => getNodeKey(node) === activeKey);
+
+      if (!activeNode) {
+        return;
+      }
+
+      event.preventDefault();
+
+      const moveTo = (targetKey: string) => {
+        focusItem(targetKey);
+        setActiveKey(targetKey);
+        setSelectedKeys(new Set([targetKey]));
+        setRangeFocusKey(null);
+      };
+      const isExpandedFolder =
+        activeNode.kind === "folder" && expandedFolderPaths.has(activeNode.relativePath);
+
+      if (event.key === "ArrowRight") {
+        if (activeNode.kind !== "folder") {
+          return;
+        }
+
+        if (!isExpandedFolder) {
+          toggleFolder(activeNode.relativePath);
+        } else if (activeNode.children[0]) {
+          moveTo(getNodeKey(activeNode.children[0]));
+        }
+
+        return;
+      }
+
+      if (isExpandedFolder) {
+        toggleFolder(activeNode.relativePath);
+        return;
+      }
+
+      const parentRelativePath = nodeContextByKey.get(activeKey)?.parentRelativePath;
+
+      if (parentRelativePath) {
+        moveTo(`folder:${parentRelativePath}`);
+      }
+
       return;
     }
 
@@ -490,6 +593,9 @@ export function FileTree({
             selectedFilePath={selectedFilePath}
             selectedKeys={selectedKeys}
             dirtyFilePaths={dirtyFilePaths}
+            folderNotesEnabled={folderNotesEnabled}
+            activeFolderNotePath={activeFolderNotePath}
+            dirtyFolderNotePaths={dirtyFolderNotePaths}
             activeKey={activeKey}
             renamingTarget={renamingTarget}
             renameDraft={renameDraft}
@@ -498,6 +604,7 @@ export function FileTree({
             dragSourceKeys={dragSourceKeys}
             dropIndicator={dropIndicator}
             onRowClick={handleRowClick}
+            onToggleFolder={toggleFolderNode}
             onRowContextMenu={handleRowContextMenu}
             onRenameDraftChange={setRenameDraft}
             onCommitRename={() => void commitRename()}
