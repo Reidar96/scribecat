@@ -662,6 +662,13 @@
     "stagedPreviewAccept": "適用",
     "stagedPreviewDiscard": "破棄"
   },
+  "editorContextMenu": {
+    "aiEdit": "AIで書き直す",
+    "copyFormatted": "書式付きでテキストをコピー",
+    "copyMarkdown": "Markdownとしてテキストをコピー",
+    "copyPlainText": "テキストのみコピー",
+    "copyFailed": "クリップボードにコピーできませんでした。"
+  },
   "aiDiffWidget": {
     "resultLabel": "AI の結果",
     "suggestionLabel": "AI の提案",

@@ -662,6 +662,13 @@
     "stagedPreviewAccept": "Appliquer",
     "stagedPreviewDiscard": "Rejeter"
   },
+  "editorContextMenu": {
+    "aiEdit": "Réécrire avec l’IA",
+    "copyFormatted": "Copier le texte avec la mise en forme",
+    "copyMarkdown": "Copier le texte en Markdown",
+    "copyPlainText": "Copier le texte seul",
+    "copyFailed": "Impossible de copier dans le presse-papiers."
+  },
   "aiDiffWidget": {
     "resultLabel": "Résultat de l'IA",
     "suggestionLabel": "Suggestion de l'IA",

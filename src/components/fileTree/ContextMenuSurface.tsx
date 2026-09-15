@@ -7,18 +7,19 @@ type ContextMenuSurfaceProps = {
   x: number;
   y: number;
   onClick?: MouseEventHandler<HTMLDivElement>;
+  onMouseDown?: MouseEventHandler<HTMLDivElement>;
   children: ReactNode;
 };
 
 /**
- * Renders the file-tree row context menu into document.body at the click
- * coordinates, then clamps it back inside the viewport after mount. Menu
- * height varies with `contextMenu.kind` (single file/folder vs. multi-select),
- * so a fixed size estimate isn't enough — a right-click near the bottom or
- * right edge of the window would otherwise open the menu partly or fully
- * off-screen.
+ * Renders a context menu (file-tree rows, the editor selection) into
+ * document.body at the click coordinates, then clamps it back inside the
+ * viewport after mount. Menu height varies with its entries (single
+ * file/folder vs. multi-select), so a fixed size estimate isn't enough — a
+ * right-click near the bottom or right edge of the window would otherwise
+ * open the menu partly or fully off-screen.
  */
-export function ContextMenuSurface({ x, y, onClick, children }: ContextMenuSurfaceProps) {
+export function ContextMenuSurface({ x, y, onClick, onMouseDown, children }: ContextMenuSurfaceProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ top: y, left: x });
 
@@ -42,6 +43,7 @@ export function ContextMenuSurface({ x, y, onClick, children }: ContextMenuSurfa
       role="menu"
       style={{ top: position.top, left: position.left }}
       onClick={onClick}
+      onMouseDown={onMouseDown}
     >
       {children}
     </div>,

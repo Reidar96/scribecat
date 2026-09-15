@@ -672,6 +672,13 @@
     "stagedPreviewAccept": "Применить",
     "stagedPreviewDiscard": "Отклонить"
   },
+  "editorContextMenu": {
+    "aiEdit": "Переработать с помощью ИИ",
+    "copyFormatted": "Копировать текст с форматированием",
+    "copyMarkdown": "Копировать текст как Markdown",
+    "copyPlainText": "Копировать только текст",
+    "copyFailed": "Не удалось скопировать в буфер обмена."
+  },
   "aiDiffWidget": {
     "resultLabel": "Результат ИИ",
     "suggestionLabel": "Предложение ИИ",

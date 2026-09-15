@@ -662,6 +662,13 @@
     "stagedPreviewAccept": "Aplicar",
     "stagedPreviewDiscard": "Descartar"
   },
+  "editorContextMenu": {
+    "aiEdit": "Reescribir con IA",
+    "copyFormatted": "Copiar texto con formato",
+    "copyMarkdown": "Copiar texto como Markdown",
+    "copyPlainText": "Copiar solo el texto",
+    "copyFailed": "No se pudo copiar al portapapeles."
+  },
   "aiDiffWidget": {
     "resultLabel": "Resultado de la IA",
     "suggestionLabel": "Sugerencia de IA",

@@ -672,6 +672,13 @@
     "stagedPreviewAccept": "Застосувати",
     "stagedPreviewDiscard": "Відхилити"
   },
+  "editorContextMenu": {
+    "aiEdit": "Переробити за допомогою ШІ",
+    "copyFormatted": "Копіювати текст із форматуванням",
+    "copyMarkdown": "Копіювати текст як Markdown",
+    "copyPlainText": "Копіювати лише текст",
+    "copyFailed": "Не вдалося скопіювати до буфера обміну."
+  },
   "aiDiffWidget": {
     "resultLabel": "Результат ШІ",
     "suggestionLabel": "Пропозиція ШІ",

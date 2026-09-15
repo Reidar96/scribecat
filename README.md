@@ -81,6 +81,7 @@ notes — fluently, privately, and for free.
 | 🎙️ Voice input | Offline dictation into the document or straight into an AI prompt | `Ctrl+Shift+W` / `Ctrl+Shift+E` |
 | 🧩 Custom assistants | Named, reusable system prompts for the AI chat, switchable in-panel | Chat panel dropdown |
 | ✍️ WYSIWYG editing | Headings, tables, images, lists, code blocks, emoji, spell check | — |
+| 📋 Copy as you need it | Copy a selection with formatting, as Markdown source, or as plain text | Right-click · `Ctrl+C` · `Ctrl+Alt+C` · `Ctrl+Shift+C` |
 | 🔗 Linked notes | Link notes by drag, dialog, or `[[`; links & backlinks in the details panel; back/forward history | `Ctrl+L` · `Ctrl+Shift+D` · `Alt+←`/`Alt+→` |
 | 🔍 Details panel | Live outline to jump between headings, links and backlinks, word count, reading time and edit dates | `Ctrl+Shift+D` / toolbar |
 | 📥 Import | Bring in Word, PDF, HTML, or images (via AI OCR) as clean Markdown | Sidebar import |
@@ -91,7 +92,7 @@ notes — fluently, privately, and for free.
 | 🔒 Privacy first | No telemetry, bring-your-own-key cloud AI, tightly scoped filesystem access | — |
 
 ### 🤖 AI-assisted writing — local by default, cloud if you want it
-- Select any text, press `Ctrl+E` (or right-click), type a prompt, and watch the model rewrite or insert content **live** into your document
+- Select any text, press `Ctrl+E` (or right-click → *Rewrite with AI*), type a prompt, and watch the model rewrite or insert content **live** into your document
 - Works out of the box with **Ollama**, **Jan.ai**, and **LM Studio** (local) as well as **OpenAI**, **Anthropic**, and **Mistral** (cloud, bring your own key)
 - Optional toggles to include the whole document as context and to preserve formatting
 - Model "thinking"/reasoning output is filtered automatically — only the final answer touches your document

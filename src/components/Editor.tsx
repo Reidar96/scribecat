@@ -17,6 +17,7 @@ import { VoiceRecordingBanner } from "@/components/VoiceRecordingBanner";
 import { Toolbar } from "@/components/Toolbar";
 import { FileLinkSuggestionPopover } from "@/components/editor/FileLinkSuggestionPopover";
 import { DetailsPanel } from "@/components/editor/DetailsPanel";
+import { SelectionContextMenu, type SelectionContextMenuState } from "@/components/editor/SelectionContextMenu";
 import { StagedChangeBar } from "@/components/editor/StagedChangeBar";
 import {
   DETAILS_PANEL_MAX_WIDTH,
@@ -26,6 +27,7 @@ import {
 import { useAiEditorActions } from "@/components/editor/useAiEditorActions";
 import { useEditorDictation } from "@/components/editor/useEditorDictation";
 import { useFileLinkSuggestion } from "@/components/editor/useFileLinkSuggestion";
+import { useContextMenuState } from "@/components/fileTree/useContextMenuState";
 import {
   acceptAllAiSuggestions,
   addAiSuggestion,
@@ -68,6 +70,11 @@ import { moveLine, moveListItem, toggleTaskItemChecked } from "@/lib/editor/list
 import { normalizeEscapedCheckboxes } from "@/lib/editor/markdownNormalize";
 import { normalizePastedSlice } from "@/lib/editor/pasteNormalize";
 import { getEditorMarkdown, getSelectionMarkdown } from "@/lib/editor/markdownStorage";
+import {
+  copySelectionAsMarkdown,
+  copySelectionAsPlainText,
+  copySelectionFormatted
+} from "@/lib/editor/selectionClipboard";
 import { findTextRange } from "@/lib/editor/textSearch";
 import {
   allowFileAccess,
@@ -80,6 +87,7 @@ import {
 import { updateSearchHighlight } from "@/lib/searchHighlight";
 import { printMarkdown } from "@/lib/print";
 import { couldBeShortcut } from "@/lib/shortcuts/binding";
+import { matchFixedEditorShortcut } from "@/lib/shortcuts/fixed";
 import { isRetiredDefault, matchShortcut } from "@/lib/shortcuts/resolve";
 import { useAppStore } from "@/store/useAppStore";
 import { useChatStore } from "@/store/useChatStore";
@@ -227,6 +235,53 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     isDiffActive: ai.isDiffActive,
     isBusyForDictation: ai.isBusyForDictation
   });
+  const { contextMenu: selectionMenu, setContextMenu: setSelectionMenu } =
+    useContextMenuState<SelectionContextMenuState>();
+
+  // Clipboard failures (a webview without clipboard permission, a browser
+  // blocking the API) are reported on the editor's shared feedback channel,
+  // no dialog for a copy that did not happen.
+  const reportCopyResult = (copied: boolean) => {
+    if (!copied) {
+      ai.setAiStatus({ kind: "error", message: t("editorContextMenu.copyFailed") });
+    }
+  };
+
+  const copySelection = (variant: "formatted" | "markdown" | "plainText") => {
+    const currentEditor = editorRef.current;
+
+    if (!currentEditor) {
+      return;
+    }
+
+    if (variant === "formatted") {
+      reportCopyResult(copySelectionFormatted(currentEditor));
+      return;
+    }
+
+    const copy = variant === "markdown" ? copySelectionAsMarkdown : copySelectionAsPlainText;
+    void copy(currentEditor).then(reportCopyResult);
+  };
+
+  // Right-click on a selection offers the AI rewrite next to the three ways of
+  // copying; without a selection there is nothing to copy, so the AI dialog
+  // opens directly in insert mode as before.
+  const handleEditorContextMenu = (event: React.MouseEvent<HTMLDivElement>) => {
+    const currentEditor = editorRef.current;
+
+    if (!currentEditor) {
+      return;
+    }
+
+    event.preventDefault();
+
+    if (currentEditor.state.selection.empty) {
+      ai.openAiDraftFromSelection();
+      return;
+    }
+
+    setSelectionMenu({ x: event.clientX, y: event.clientY });
+  };
 
   // Panel visibility (and the whole search state) lives in useSearchStore
   // so it survives the per-file remount of this component during
@@ -1087,6 +1142,22 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
           return false;
         }
 
+        // The copy combos are fixed on purpose (lib/shortcuts/fixed.ts), so
+        // they are settled before the remappable registry gets a look. Only
+        // a selection is copied: with nothing selected the keystrokes stay
+        // with the browser, which keeps Ctrl+C native in every other focus.
+        const fixedShortcut = matchFixedEditorShortcut(event);
+
+        if (fixedShortcut) {
+          if (view.state.selection.empty || fixedShortcut === "copyFormatted") {
+            return false;
+          }
+
+          event.preventDefault();
+          copySelection(fixedShortcut === "copyMarkdown" ? "markdown" : "plainText");
+          return true;
+        }
+
         // Everything below is user-remappable, so the combo is looked up
         // instead of compared inline. getState() keeps a rebind effective
         // without recreating the editor.
@@ -1441,7 +1512,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
               <EditorContent
                 editor={editor}
                 className="editor-view__content"
-                onContextMenu={ai.handleAiContextMenu}
+                onContextMenu={handleEditorContextMenu}
               />
             </ScrollArea>
 
@@ -1502,6 +1573,19 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         onRemove={handleLinkRemove}
         onCancel={() => setLinkDialog(null)}
       />
+
+      {selectionMenu ? (
+        <SelectionContextMenu
+          x={selectionMenu.x}
+          y={selectionMenu.y}
+          canAiEdit={Boolean(editor?.isEditable) && !ai.isDiffActive()}
+          onAiEdit={ai.openAiDraftFromSelection}
+          onCopyFormatted={() => copySelection("formatted")}
+          onCopyMarkdown={() => copySelection("markdown")}
+          onCopyPlainText={() => copySelection("plainText")}
+          onClose={() => setSelectionMenu(null)}
+        />
+      ) : null}
 
       <AiRewriteDialog
         open={ai.aiDraft !== null}

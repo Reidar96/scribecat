@@ -135,15 +135,6 @@ export function useAiEditorActions({
     openAiDraft("insert", from, to, "", "");
   };
 
-  const handleAiContextMenu = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (!editorRef.current) {
-      return;
-    }
-
-    event.preventDefault();
-    openAiDraftFromSelection();
-  };
-
   // Shows the diff widget for a result against the tracked original — used
   // while a rewrite is still streaming (isStreaming: true, actions disabled,
   // updated on every chunk), once a generation finishes, and when a
@@ -577,7 +568,6 @@ export function useAiEditorActions({
     voiceStartRequestId,
     setVoiceStartRequestId,
     openAiDraftFromSelection,
-    handleAiContextMenu,
     runAiDraft,
     closeAiDraft,
     runAiGrammarCheck,

@@ -662,6 +662,13 @@
     "stagedPreviewAccept": "Übernehmen",
     "stagedPreviewDiscard": "Verwerfen"
   },
+  "editorContextMenu": {
+    "aiEdit": "Mit KI überarbeiten",
+    "copyFormatted": "Text mit Formatierung kopieren",
+    "copyMarkdown": "Text als Markdown kopieren",
+    "copyPlainText": "Nur Text kopieren",
+    "copyFailed": "Kopieren in die Zwischenablage nicht möglich."
+  },
   "aiDiffWidget": {
     "resultLabel": "KI-Ergebnis",
     "suggestionLabel": "KI-Vorschlag",

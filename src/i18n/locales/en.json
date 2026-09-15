@@ -662,6 +662,13 @@
     "stagedPreviewAccept": "Apply",
     "stagedPreviewDiscard": "Discard"
   },
+  "editorContextMenu": {
+    "aiEdit": "Rewrite with AI",
+    "copyFormatted": "Copy text with formatting",
+    "copyMarkdown": "Copy text as Markdown",
+    "copyPlainText": "Copy text only",
+    "copyFailed": "Could not copy to the clipboard."
+  },
   "aiDiffWidget": {
     "resultLabel": "AI result",
     "suggestionLabel": "AI suggestion",

@@ -12,6 +12,7 @@ import {
   type ShortcutActionId,
   type ShortcutCategory
 } from "@/lib/shortcuts/definitions";
+import { findFixedConflict } from "@/lib/shortcuts/fixed";
 import { findConflict, isCustomBinding, resolveBinding } from "@/lib/shortcuts/resolve";
 import { useShortcutsStore } from "@/store/useShortcutsStore";
 
@@ -40,6 +41,16 @@ const FIXED_SHORTCUTS: { id: string; keys: KeyToken[]; descriptionKey: string }[
     descriptionKey: "shortcutsDialog.items.indentDecrease"
   },
   { id: "copy", keys: [{ mod: "ctrl" }, { literal: "C" }], descriptionKey: "shortcutsDialog.items.copy" },
+  {
+    id: "copyMarkdown",
+    keys: [{ mod: "ctrl" }, { mod: "alt" }, { literal: "C" }],
+    descriptionKey: "editorContextMenu.copyMarkdown"
+  },
+  {
+    id: "copyPlainText",
+    keys: [{ mod: "ctrl" }, { mod: "shift" }, { literal: "C" }],
+    descriptionKey: "editorContextMenu.copyPlainText"
+  },
   { id: "paste", keys: [{ mod: "ctrl" }, { literal: "V" }], descriptionKey: "shortcutsDialog.items.paste" },
   { id: "undo", keys: [{ mod: "ctrl" }, { literal: "Z" }], descriptionKey: "shortcutsDialog.items.undo" },
   { id: "redo", keys: [{ mod: "ctrl" }, { literal: "Y" }], descriptionKey: "shortcutsDialog.items.redo" },
@@ -64,7 +75,7 @@ function formatKeyCombo(t: TFunction, tokens: KeyToken[]): string {
 
 type RecordingError =
   | { kind: "needsModifier" }
-  | { kind: "conflict"; conflictingAction: ShortcutActionId };
+  | { kind: "conflict"; conflictingLabelKey: string };
 
 /**
  * The "Shortcuts" settings tab. Like fonts, assistants and versioning, its
@@ -117,10 +128,22 @@ export function ShortcutsSettings() {
         return;
       }
 
+      // The copy combos are not in the registry (they cannot be moved), so
+      // the registry's conflict check alone would let a user take them over.
+      const fixedConflict = findFixedConflict(binding);
+
+      if (fixedConflict) {
+        setRecordingError({ kind: "conflict", conflictingLabelKey: fixedConflict.labelKey });
+        return;
+      }
+
       const conflictingAction = findConflict(overrides, recordingId, binding);
 
       if (conflictingAction) {
-        setRecordingError({ kind: "conflict", conflictingAction });
+        setRecordingError({
+          kind: "conflict",
+          conflictingLabelKey: SHORTCUT_DEFINITIONS_BY_ID.get(conflictingAction)!.descriptionKey
+        });
         return;
       }
 
@@ -137,10 +160,7 @@ export function ShortcutsSettings() {
     isCustomBinding(overrides, definition.id)
   );
 
-  const conflictLabel =
-    recordingError?.kind === "conflict"
-      ? t(SHORTCUT_DEFINITIONS_BY_ID.get(recordingError.conflictingAction)!.descriptionKey)
-      : "";
+  const conflictLabel = recordingError?.kind === "conflict" ? t(recordingError.conflictingLabelKey) : "";
 
   const renderCategory = (category: ShortcutCategory) => {
     const definitions = SHORTCUT_DEFINITIONS.filter((definition) => definition.category === category);

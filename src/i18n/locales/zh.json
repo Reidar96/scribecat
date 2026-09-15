@@ -662,6 +662,13 @@
     "stagedPreviewAccept": "应用",
     "stagedPreviewDiscard": "放弃"
   },
+  "editorContextMenu": {
+    "aiEdit": "用 AI 改写",
+    "copyFormatted": "复制带格式的文本",
+    "copyMarkdown": "以 Markdown 形式复制文本",
+    "copyPlainText": "仅复制文本",
+    "copyFailed": "无法复制到剪贴板。"
+  },
   "aiDiffWidget": {
     "resultLabel": "AI 结果",
     "suggestionLabel": "AI 建议",
