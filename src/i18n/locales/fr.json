@@ -162,6 +162,8 @@
     "themeSystem": "Système",
     "themeLight": "Clair",
     "themeDark": "Sombre",
+    "paperSurface": "Page claire dans le thème sombre",
+    "paperSurfaceHint": "Garde le document sur une page blanc papier pendant que la barre latérale, les barres d'outils et le chat restent sombres, pour que les notes longues ou riches en mise en page se lisent comme une page imprimée. Fonctionne aussi avec le thème système : il décide entre clair et sombre, cette option décide seulement de l'aspect de la page en mode sombre. Sans effet dans le thème clair.",
     "accentColor": "Couleur d'accent",
     "accentColorHex": "Valeur hexadécimale de la couleur d'accent",
     "accentColorHint": "S'applique à tous les dossiers et persiste après un redémarrage.",

@@ -242,7 +242,7 @@ ScribeDog stores everything as plain `.md` files in a normal folder — so makin
 > **Note — sync the whole folder, not just `.md`:** ScribeDog keeps embedded images in an `images/` subfolder and links them **relatively**. Some mobile Markdown apps don't resolve these relative paths, so **inline images may not display on mobile** even though the text syncs fine. Also make sure your sync client includes subfolders (`images/`) and the hidden `.scribedog` folder, and avoid editing the same file on two devices at once to prevent sync conflicts.
 
 ### 🎨 Comfortable to use
-- Light and dark theme
+- Light and dark theme, plus an optional paper-white page inside the dark UI for judging long or layout-heavy documents
 
   <img src="src/assets/scribe-dog-light-theme.png" alt="ScribeDog light theme" width="700">
 

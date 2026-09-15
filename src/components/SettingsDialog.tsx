@@ -347,6 +347,8 @@ export function SettingsDialog({
   const [activeTab, setActiveTab] = useState<SettingsTab>("general");
   const theme = useThemeStore((state) => state.theme);
   const setTheme = useThemeStore((state) => state.setTheme);
+  const paperSurface = useEditorSettingsStore((state) => state.paperSurface);
+  const setPaperSurface = useEditorSettingsStore((state) => state.setPaperSurface);
   const outlineMaxDepth = useEditorSettingsStore((state) => state.outlineMaxDepth);
   const setOutlineMaxDepth = useEditorSettingsStore((state) => state.setOutlineMaxDepth);
   const headingNumbering = useEditorSettingsStore((state) => state.headingNumbering);
@@ -630,6 +632,16 @@ export function SettingsDialog({
                   </select>
                 </label>
 
+                <label className="ai-dialog__switch">
+                  <input
+                    type="checkbox"
+                    checked={paperSurface}
+                    onChange={(event) => setPaperSurface(event.target.checked)}
+                  />
+                  <span>{t("settingsDialog.paperSurface")}</span>
+                </label>
+                <p className="ai-dialog__hint">{t("settingsDialog.paperSurfaceHint")}</p>
+
                 <label className="ai-dialog__field">
                   <span>{t("settingsDialog.accentColor")}</span>
                   <div className="accent-color-setting">
@@ -717,61 +729,116 @@ export function SettingsDialog({
                         })}
                   </h3>
                   <div className="ai-dialog__grid ai-dialog__vault-group-grid">
-                    <label className="ai-dialog__switch">
-                      <input
-                        type="checkbox"
-                        checked={headingNumbering.enabled}
-                        disabled={headingNumberingVaultPath === null}
-                        onChange={(event) => setHeadingNumbering({ enabled: event.target.checked })}
-                      />
-                      <span>{t("settingsDialog.headingNumbering")}</span>
-                    </label>
-                    <p className="ai-dialog__hint">
-                      {headingNumberingVaultPath === null
-                        ? t("settingsDialog.headingNumberingNoVault")
-                        : t("settingsDialog.headingNumberingHint")}
-                    </p>
-
-                    {headingNumbering.enabled && (
-                      <>
-                        <label className="ai-dialog__field">
-                          <span>{t("settingsDialog.headingNumberingStart")}</span>
-                          <select
-                            value={headingNumbering.startLevel}
-                            onChange={(event) =>
-                              setHeadingNumbering({ startLevel: event.target.value === "1" ? 1 : 2 })
-                            }
-                          >
-                            <option value={1}>{t("settingsDialog.headingNumberingStartLevel", { level: 1 })}</option>
-                            <option value={2}>{t("settingsDialog.headingNumberingStartLevel", { level: 2 })}</option>
-                          </select>
-                          <span className="ai-dialog__model-hint">
-                            {t("settingsDialog.headingNumberingStartHint")}
-                          </span>
-                        </label>
-
-                        <label className="ai-dialog__field">
-                          <span>{t("settingsDialog.headingNumberingDepth")}</span>
-                          <select
-                            value={headingNumbering.maxDepth}
-                            onChange={(event) =>
-                              setHeadingNumbering({ maxDepth: Number.parseInt(event.target.value, 10) })
-                            }
-                          >
-                            {Array.from(
-                              { length: HEADING_NUMBERING_DEPTH_MAX - headingNumbering.startLevel + 1 },
-                              (_, offset) => headingNumbering.startLevel + offset
-                            ).map((level) => (
-                              <option key={level} value={level}>
-                                {level === HEADING_NUMBERING_DEPTH_MAX
-                                  ? t("settingsDialog.outlineDepthAll")
-                                  : t("settingsDialog.outlineDepthUpTo", { level })}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                      </>
-                    )}
+                    <label className="ai-dialog__switch">
+
+                      <input
+
+                        type="checkbox"
+
+                        checked={headingNumbering.enabled}
+
+                        disabled={headingNumberingVaultPath === null}
+
+                        onChange={(event) => setHeadingNumbering({ enabled: event.target.checked })}
+
+                      />
+
+                      <span>{t("settingsDialog.headingNumbering")}</span>
+
+                    </label>
+
+                    <p className="ai-dialog__hint">
+
+                      {headingNumberingVaultPath === null
+
+                        ? t("settingsDialog.headingNumberingNoVault")
+
+                        : t("settingsDialog.headingNumberingHint")}
+
+                    </p>
+
+
+
+                    {headingNumbering.enabled && (
+
+                      <>
+
+                        <label className="ai-dialog__field">
+
+                          <span>{t("settingsDialog.headingNumberingStart")}</span>
+
+                          <select
+
+                            value={headingNumbering.startLevel}
+
+                            onChange={(event) =>
+
+                              setHeadingNumbering({ startLevel: event.target.value === "1" ? 1 : 2 })
+
+                            }
+
+                          >
+
+                            <option value={1}>{t("settingsDialog.headingNumberingStartLevel", { level: 1 })}</option>
+
+                            <option value={2}>{t("settingsDialog.headingNumberingStartLevel", { level: 2 })}</option>
+
+                          </select>
+
+                          <span className="ai-dialog__model-hint">
+
+                            {t("settingsDialog.headingNumberingStartHint")}
+
+                          </span>
+
+                        </label>
+
+
+
+                        <label className="ai-dialog__field">
+
+                          <span>{t("settingsDialog.headingNumberingDepth")}</span>
+
+                          <select
+
+                            value={headingNumbering.maxDepth}
+
+                            onChange={(event) =>
+
+                              setHeadingNumbering({ maxDepth: Number.parseInt(event.target.value, 10) })
+
+                            }
+
+                          >
+
+                            {Array.from(
+
+                              { length: HEADING_NUMBERING_DEPTH_MAX - headingNumbering.startLevel + 1 },
+
+                              (_, offset) => headingNumbering.startLevel + offset
+
+                            ).map((level) => (
+
+                              <option key={level} value={level}>
+
+                                {level === HEADING_NUMBERING_DEPTH_MAX
+
+                                  ? t("settingsDialog.outlineDepthAll")
+
+                                  : t("settingsDialog.outlineDepthUpTo", { level })}
+
+                              </option>
+
+                            ))}
+
+                          </select>
+
+                        </label>
+
+                      </>
+
+                    )}
+
                   </div>
                 </section>
               </div>

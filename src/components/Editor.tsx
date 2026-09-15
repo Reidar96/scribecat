@@ -92,6 +92,10 @@ import { useShortcutsStore } from "@/store/useShortcutsStore";
 // handler share this list, so both accept exactly the same files.
 const EDITOR_IMAGE_EXTENSIONS = ["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp"];
 
+// Marks the surface as a light page inside the dark UI; tokens.css and the
+// dark variant in App.css key off this exact name.
+const PAPER_SURFACE_CLASS = "editor-view__surface--paper";
+
 type EditorProps = {
   markdown: string;
   onMarkdownChange: (markdown: string) => void;
@@ -165,6 +169,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   const editorRef = useRef<TipTapEditor | null>(null);
   const lastSyncedMarkdownRef = useRef(markdown);
   const spellcheckEnabled = useEditorSettingsStore((state) => state.spellcheckEnabled);
+  const paperSurface = useEditorSettingsStore((state) => state.paperSurface);
   const detailsPanelVisible = useEditorSettingsStore((state) => state.detailsPanelVisible);
   const setDetailsPanelVisible = useEditorSettingsStore((state) => state.setDetailsPanelVisible);
   const {
@@ -1195,7 +1200,10 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         return true;
       },
       attributes: {
-        class: "editor-view__surface prose dark:prose-invert max-w-none",
+        class: cn(
+          "editor-view__surface prose dark:prose-invert max-w-none",
+          paperSurface && PAPER_SURFACE_CLASS
+        ),
         spellcheck: String(spellcheckEnabled)
       }
     }
@@ -1211,6 +1219,10 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   useEffect(() => {
     editor?.view.dom.setAttribute("spellcheck", String(spellcheckEnabled));
   }, [editor, spellcheckEnabled]);
+
+  useEffect(() => {
+    editor?.view.dom.classList.toggle(PAPER_SURFACE_CLASS, paperSurface);
+  }, [editor, paperSurface]);
 
   // A focus request from outside (file tree: Tab) moves focus into the editor
   // with the cursor at the document start, so navigation can continue with

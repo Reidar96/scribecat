@@ -162,6 +162,8 @@
     "themeSystem": "System",
     "themeLight": "Light",
     "themeDark": "Dark",
+    "paperSurface": "Light page in the dark theme",
+    "paperSurfaceHint": "Keeps the document a paper-white page while the sidebar, toolbars and chat stay dark, so long or layout-heavy notes read like a printed page. Also with the system theme: it decides light or dark, this decides what the page looks like when it is dark. No effect in the light theme.",
     "accentColor": "Accent color",
     "accentColorHex": "Accent color hex value",
     "accentColorHint": "Applies across all folders and persists across restarts.",

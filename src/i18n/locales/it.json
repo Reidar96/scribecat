@@ -162,6 +162,8 @@
     "themeSystem": "Sistema",
     "themeLight": "Chiaro",
     "themeDark": "Scuro",
+    "paperSurface": "Pagina chiara nel tema scuro",
+    "paperSurfaceHint": "Mantiene il documento su una pagina bianca come la carta mentre barra laterale, barre degli strumenti e chat restano scure, così le note lunghe o ricche di layout si leggono come una pagina stampata. Vale anche con il tema di sistema: quello decide tra chiaro e scuro, questa opzione solo l'aspetto della pagina quando è scuro. Nessun effetto nel tema chiaro.",
     "accentColor": "Colore d'accento",
     "accentColorHex": "Valore esadecimale del colore d'accento",
     "accentColorHint": "Si applica a tutte le cartelle e persiste dopo il riavvio.",

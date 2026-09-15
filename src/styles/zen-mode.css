@@ -40,6 +40,12 @@
   background: transparent;
 }
 
+/* With the paper option the column keeps its page: a white sheet in the
+   dark window is the whole point of the setting (editor-content.css). */
+.dark .workspace-grid--zen .editor-view__surface--paper {
+  background: rgb(var(--surface-rgb));
+}
+
 /* Persistent exit control, always visible in the top-left corner. */
 .zen-exit {
   position: fixed;

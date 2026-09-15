@@ -4,7 +4,11 @@
 @plugin "@tailwindcss/typography";
 @import "@fontsource-variable/geist";
 
-@custom-variant dark (&:is(.dark *));
+/* The paper editing surface (issue #49, tokens.css) is a light island inside
+   the dark UI, so the dark variant stops at it: the surface's own
+   dark:prose-invert and the dark: utilities of anything rendered into it
+   (the AI review widget and its buttons) fall back to their light form. */
+@custom-variant dark (&:is(.dark *):not(.editor-view__surface--paper, .editor-view__surface--paper *));
 
 /* Component styles, split by concern. The order is load-bearing: tokens
    first, then layout, then components, with the sheets that override

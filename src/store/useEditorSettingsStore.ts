@@ -29,6 +29,7 @@ export const ZOOM_STORAGE_KEY = "scribedog-zoom-level";
 export const ZEN_WIDTH_STORAGE_KEY = "scribedog-zen-width";
 export const FONT_STORAGE_KEY = "scribedog-font-id";
 export const FONT_SIZE_STORAGE_KEY = "scribedog-font-size-pt";
+export const PAPER_SURFACE_STORAGE_KEY = "scribedog-paper-surface";
 
 // Zoom level is an offset in percent relative to normal size (0 = 100%).
 export const ZOOM_MIN = -30;
@@ -154,6 +155,22 @@ function persistCollapsedDetailsSections(ids: DetailsSectionId[]): void {
   }
 }
 
+function getStoredPaperSurface(): boolean {
+  try {
+    return window.localStorage.getItem(PAPER_SURFACE_STORAGE_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
+function persistPaperSurface(enabled: boolean): void {
+  try {
+    window.localStorage.setItem(PAPER_SURFACE_STORAGE_KEY, String(enabled));
+  } catch {
+    // localStorage may be unavailable in some environments.
+  }
+}
+
 function getStoredFontId(): AppFontId {
   try {
     return resolveFontId(window.localStorage.getItem(FONT_STORAGE_KEY));
@@ -199,6 +216,15 @@ type EditorSettingsState = {
   /** Document body size in points; travels into every export. */
   fontSizePt: number;
   setFontSizePt: (sizePt: number) => void;
+  /**
+   * Keep the editing surface a white page while the UI is dark (issue #49).
+   * A switch next to the theme rather than a fourth theme, so it composes
+   * with "system": the OS still decides light or dark, this only decides
+   * what the document looks like when the answer is dark. No effect in the
+   * light theme, where the page is light anyway.
+   */
+  paperSurface: boolean;
+  setPaperSurface: (enabled: boolean) => void;
   /** Details sidebar next to the document, toggled from the toolbar. */
   detailsPanelVisible: boolean;
   setDetailsPanelVisible: (visible: boolean) => void;
@@ -270,6 +296,11 @@ export const useEditorSettingsStore = create<EditorSettingsState>((set, get) => 
     persistFontSizePt(clamped);
     set({ fontSizePt: clamped });
     applyDocumentFontScale(clamped);
+  },
+  paperSurface: getStoredPaperSurface(),
+  setPaperSurface: (enabled: boolean) => {
+    persistPaperSurface(enabled);
+    set({ paperSurface: enabled });
   },
   detailsPanelVisible: getStoredDetailsPanelVisible(),
   setDetailsPanelVisible: (visible: boolean) => {

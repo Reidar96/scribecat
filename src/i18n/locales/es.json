@@ -162,6 +162,8 @@
     "themeSystem": "Sistema",
     "themeLight": "Claro",
     "themeDark": "Oscuro",
+    "paperSurface": "Página clara en el tema oscuro",
+    "paperSurfaceHint": "Mantiene el documento como una página blanca mientras la barra lateral, las barras de herramientas y el chat siguen oscuros, para que las notas largas o con mucho diseño se lean como una página impresa. También con el tema del sistema: este decide entre claro y oscuro, esta opción solo cómo se ve la página cuando es oscuro. Sin efecto en el tema claro.",
     "accentColor": "Color de acento",
     "accentColorHex": "Valor hexadecimal del color de acento",
     "accentColorHint": "Se aplica a todas las carpetas y se conserva tras reiniciar.",

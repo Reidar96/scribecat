@@ -162,6 +162,8 @@
     "themeSystem": "System",
     "themeLight": "Hell",
     "themeDark": "Dunkel",
+    "paperSurface": "Helle Seite im dunklen Design",
+    "paperSurfaceHint": "Lässt das Dokument eine papierweiße Seite bleiben, während Seitenleiste, Werkzeugleisten und Chat dunkel bleiben, damit lange oder layoutlastige Notizen wie eine gedruckte Seite wirken. Auch mit dem System-Design: Es entscheidet über hell oder dunkel, diese Option nur darüber, wie die Seite bei dunkel aussieht. Im hellen Design ohne Wirkung.",
     "accentColor": "Akzentfarbe",
     "accentColorHex": "Hex-Wert der Akzentfarbe",
     "accentColorHint": "Gilt ordnerübergreifend für die ganze App und bleibt über Neustarts hinweg erhalten.",

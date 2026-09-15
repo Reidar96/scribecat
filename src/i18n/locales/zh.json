@@ -162,6 +162,8 @@
     "themeSystem": "跟随系统",
     "themeLight": "浅色",
     "themeDark": "深色",
+    "paperSurface": "深色主题下的浅色页面",
+    "paperSurfaceHint": "侧边栏、工具栏和聊天保持深色，文档则保持为纸白色页面，这样长篇或版式复杂的笔记读起来像打印的页面。跟随系统主题时同样有效：由系统决定浅色还是深色，此选项只决定深色时页面的样子。在浅色主题下没有效果。",
     "accentColor": "强调色",
     "accentColorHex": "强调色的十六进制值",
     "accentColorHint": "适用于所有文件夹，并在重启后保留。",

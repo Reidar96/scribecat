@@ -30,6 +30,15 @@
   font-size: calc(1rem * var(--document-font-scale, 1));
 }
 
+/* Paper option (issue #49): the document stays a white page while the rest
+   of the UI is dark. The light palette itself is repainted onto this class
+   in tokens.css; here only the surface changes, because the translucent
+   tint above would read as grey over the dark body, not as paper. Applied
+   unconditionally by the editor, so it is inert in the light theme. */
+.dark .editor-view__surface--paper {
+  background: rgb(var(--surface-rgb));
+}
+
 /* Selection highlight the app paints itself while the focus sits somewhere else
    (typically the AI chat input) — see src/lib/inactiveSelection.ts. Deliberately
    a little softer than the native selection so the difference between "selected"
