@@ -167,7 +167,7 @@ export function ShortcutsSettings() {
 
     return (
       <section key={category} className="shortcuts-section">
-        <h4 className="shortcuts-section__title">{t(`shortcutsDialog.categories.${category}`)}</h4>
+        <h5 className="settings-section__title">{t(`shortcutsDialog.categories.${category}`)}</h5>
         <ul className="shortcuts-list">
           {definitions.map((definition) => {
             const isRecording = recordingId === definition.id;
@@ -234,7 +234,7 @@ export function ShortcutsSettings() {
       {SHORTCUT_CATEGORY_ORDER.map(renderCategory)}
 
       <section className="shortcuts-section">
-        <h4 className="shortcuts-section__title">{t("shortcutsDialog.categories.fixed")}</h4>
+        <h5 className="settings-section__title">{t("shortcutsDialog.categories.fixed")}</h5>
         <ul className="shortcuts-list">
           {FIXED_SHORTCUTS.map((shortcut) => (
             <li key={shortcut.id} className="shortcuts-list__item">

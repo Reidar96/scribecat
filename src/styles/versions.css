@@ -81,14 +81,6 @@
 
 /* Versioning settings tab */
 
-.versioning-settings__hint {
-  grid-column: 1 / -1;
-  margin: 0.1rem 0.6rem 0.9rem;
-  color: rgba(var(--text-rgb),0.68);
-  font-size: 0.82rem;
-  line-height: 1.45;
-}
-
 .versioning-settings__footer {
   display: flex;
   flex-wrap: wrap;
@@ -101,8 +93,8 @@
 }
 
 .versioning-settings__count {
-  color: rgba(var(--muted-rgb),1);
-  font-size: 0.82rem;
+  color: var(--dialog-hint);
+  font-size: var(--dialog-hint-size);
 }
 
 /* The diff needs far more horizontal room than the settings dialogs, and its

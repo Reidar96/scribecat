@@ -1,18 +1,23 @@
 import { useEffect, useRef, useState } from "react";
-import { AlertTriangle, Eye, EyeOff, FolderOpen, Info, RefreshCw, RotateCcw } from "lucide-react";
+import { AlertTriangle, Eye, EyeOff, Info, RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import { AssistantsSettings } from "@/components/AssistantsSettings";
 import { LicensesDialog } from "@/components/LicensesDialog";
 import { RagSettings } from "@/components/RagSettings";
+import { AppearanceSettings } from "@/components/settings/AppearanceSettings";
+import { InfoPopover } from "@/components/settings/InfoPopover";
+import { SettingRow } from "@/components/settings/SettingRow";
+import { SettingsNav } from "@/components/settings/SettingsNav";
+import { SettingsPage } from "@/components/settings/SettingsPage";
+import { SELF_SAVING_TABS, type SettingsTab } from "@/components/settings/settingsTabs";
+import { VaultScopeHeader } from "@/components/settings/VaultScopeHeader";
+import { VaultSettings } from "@/components/settings/VaultSettings";
 import { ShortcutsSettings } from "@/components/ShortcutsSettings";
 import { VersioningSettings } from "@/components/VersioningSettings";
 import type { Assistant } from "@/store/useAssistantsStore";
 import { useRagSettingsStore } from "@/store/useRagSettingsStore";
-import { getFolderBasename } from "@/lib/fileSystem";
-import { countFolderNotes } from "@/lib/folderNotes";
-import { useAppStore } from "@/store/useAppStore";
 import { getPortableStatus, type PortableMode } from "@/lib/portable";
 
 import {
@@ -30,8 +35,6 @@ import {
   FONT_SIZE_PT_STEP,
   getFontScale
 } from "@/lib/fonts";
-import { OUTLINE_DEPTH_MAX, OUTLINE_DEPTH_MIN } from "@/lib/editor/documentOutline";
-import { HEADING_NUMBERING_DEPTH_MAX } from "@/lib/editor/headingNumbers";
 import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
 import {
   AGENT_MAX_ITERATIONS_MAX,
@@ -45,17 +48,11 @@ import {
   type AiSettings
 } from "@/store/useAiSettingsStore";
 import { persistLanguage, type SupportedLanguage } from "@/i18n";
-import { type Theme, useThemeStore } from "@/store/useThemeStore";
-import { DEFAULT_ACCENT_COLOR, useAccentColorStore } from "@/store/useAccentColorStore";
-import { isValidHexColor } from "@/lib/color";
 import { useUpdateSettingsStore } from "@/store/useUpdateSettingsStore";
 import { isWindowsPlatform } from "@/lib/platform";
 import { useAppVersion } from "@/hooks/useAppVersion";
 
-export type SettingsTab = "general" | "shortcuts" | "fonts" | "ai" | "assistants" | "rag" | "versioning";
-
-/** Tabs whose settings apply through their own store, without the Save button. */
-const SELF_SAVING_TABS: SettingsTab[] = ["shortcuts", "fonts", "assistants", "rag", "versioning"];
+export type { SettingsTab } from "@/components/settings/settingsTabs";
 
 /** The agent's own settings, split off so the dialog can reset them as one. */
 type AgentSettings = Pick<
@@ -111,7 +108,9 @@ function AgentSettingsSection({
 
   return (
     <details className="ai-dialog__section">
-      <summary>{t("settingsDialog.agentSection")}</summary>
+      <summary>
+        <h5 className="settings-section__title">{t("settingsDialog.agentSection")}</h5>
+      </summary>
 
       {/* Only for the local providers: the capabilities below ask more of a
           model than a rewrite does, and a small local model is where they
@@ -124,30 +123,44 @@ function AgentSettingsSection({
         </div>
       ) : null}
 
+      {/* The model-class line stays visible under every switch here (not
+          behind the (i) like elsewhere): it is part of the switch, not
+          documentation — see the note above. */}
       <div className="ai-dialog__grid">
-        <label className="ai-dialog__switch">
+        <SettingRow
+          layout="switch"
+          label={t("settingsDialog.agentFileAccessLabel")}
+          hint={t("settingsDialog.agentFileAccessHint")}
+        >
           <input
             type="checkbox"
             checked={value.agentFileAccess}
             onChange={(event) => onChange({ agentFileAccess: event.target.checked })}
           />
-          <span>{t("settingsDialog.agentFileAccessLabel")}</span>
-        </label>
-        <p className="ai-dialog__hint">{t("settingsDialog.agentFileAccessHint")}</p>
+        </SettingRow>
 
-        <label className="ai-dialog__switch">
+        <SettingRow
+          layout="switch"
+          label={t("settingsDialog.agentAllowDeleteLabel")}
+          hint={t("settingsDialog.agentAllowDeleteHint")}
+        >
           <input
             type="checkbox"
             checked={value.agentAllowDelete}
             disabled={!value.agentFileAccess}
             onChange={(event) => onChange({ agentAllowDelete: event.target.checked })}
           />
-          <span>{t("settingsDialog.agentAllowDeleteLabel")}</span>
-        </label>
-        <p className="ai-dialog__hint">{t("settingsDialog.agentAllowDeleteHint")}</p>
+        </SettingRow>
 
-        <label className="ai-dialog__field">
-          <span>{t("settingsDialog.agentPlanningLabel")}</span>
+        <SettingRow
+          full
+          label={t("settingsDialog.agentPlanningLabel")}
+          hint={
+            value.agentPlanning === "model"
+              ? t("settingsDialog.agentPlanningModelHint")
+              : t("settingsDialog.agentPlanningAutoHint")
+          }
+        >
           <select
             value={value.agentPlanning}
             onChange={(event) => onChange({ agentPlanning: event.target.value as AgentPlanningMode })}
@@ -156,36 +169,37 @@ function AgentSettingsSection({
             <option value="auto">{t("settingsDialog.agentPlanningAuto")}</option>
             <option value="model">{t("settingsDialog.agentPlanningModel")}</option>
           </select>
-        </label>
-        <p className="ai-dialog__hint">
-          {value.agentPlanning === "model"
-            ? t("settingsDialog.agentPlanningModelHint")
-            : t("settingsDialog.agentPlanningAutoHint")}
-        </p>
+        </SettingRow>
 
-        <label className="ai-dialog__switch">
+        <SettingRow
+          layout="switch"
+          label={t("settingsDialog.agentMultiEditLabel")}
+          hint={t("settingsDialog.agentMultiEditHint")}
+        >
           <input
             type="checkbox"
             checked={value.agentMultiEdit}
             disabled={!value.agentFileAccess}
             onChange={(event) => onChange({ agentMultiEdit: event.target.checked })}
           />
-          <span>{t("settingsDialog.agentMultiEditLabel")}</span>
-        </label>
-        <p className="ai-dialog__hint">{t("settingsDialog.agentMultiEditHint")}</p>
+        </SettingRow>
 
-        <label className="ai-dialog__switch">
+        <SettingRow
+          layout="switch"
+          label={t("settingsDialog.agentCompactContextLabel")}
+          hint={t("settingsDialog.agentCompactContextHint")}
+        >
           <input
             type="checkbox"
             checked={value.agentCompactContext}
             onChange={(event) => onChange({ agentCompactContext: event.target.checked })}
           />
-          <span>{t("settingsDialog.agentCompactContextLabel")}</span>
-        </label>
-        <p className="ai-dialog__hint">{t("settingsDialog.agentCompactContextHint")}</p>
+        </SettingRow>
 
-        <label className="ai-dialog__field">
-          <span>{t("settingsDialog.agentMaxIterationsLabel")}</span>
+        <SettingRow
+          label={t("settingsDialog.agentMaxIterationsLabel")}
+          hint={t("settingsDialog.agentMaxIterationsHint")}
+        >
           <input
             type="number"
             min={AGENT_MAX_ITERATIONS_MIN}
@@ -203,11 +217,12 @@ function AgentSettingsSection({
               })
             }
           />
-        </label>
-        <p className="ai-dialog__hint">{t("settingsDialog.agentMaxIterationsHint")}</p>
+        </SettingRow>
 
-        <label className="ai-dialog__field">
-          <span>{t("settingsDialog.agentMaxPlanStepsLabel")}</span>
+        <SettingRow
+          label={t("settingsDialog.agentMaxPlanStepsLabel")}
+          hint={t("settingsDialog.agentMaxPlanStepsHint")}
+        >
           <input
             type="number"
             min={AGENT_MAX_PLAN_STEPS_MIN}
@@ -225,8 +240,7 @@ function AgentSettingsSection({
               })
             }
           />
-        </label>
-        <p className="ai-dialog__hint">{t("settingsDialog.agentMaxPlanStepsHint")}</p>
+        </SettingRow>
       </div>
     </details>
   );
@@ -252,8 +266,14 @@ function FontSetting() {
 
   return (
     <div className="font-setting">
-      <span className="font-setting__label">{t("settingsDialog.font")}</span>
-      <p className="font-setting__hint">{t("settingsDialog.fontHint")}</p>
+      {/* Two settings, not two areas: labelled like every other setting row,
+          since a section heading right under the page title "Fonts" would
+          say the same word twice. */}
+      <div className="font-setting__head">
+        <span className="font-setting__label">{t("settingsDialog.font")}</span>
+        <InfoPopover text={t("settingsDialog.fontHint")} />
+      </div>
+      <p className="font-setting__hint">{t("settingsDialog.fontShort")}</p>
 
       <div className="font-setting__options" role="radiogroup" aria-label={t("settingsDialog.font")}>
         {APP_FONT_IDS.map((id) => {
@@ -339,32 +359,14 @@ function clampContextLength(value: string) {
 
 export function SettingsDialog({
   open,
-  initialTab = "general",
+  initialTab = "application",
   settings,
   onSave,
   onClose,
   onAssistantEditRequest
 }: SettingsDialogProps) {
   const { t, i18n } = useTranslation();
-  const [activeTab, setActiveTab] = useState<SettingsTab>("general");
-  const theme = useThemeStore((state) => state.theme);
-  const setTheme = useThemeStore((state) => state.setTheme);
-  const paperSurface = useEditorSettingsStore((state) => state.paperSurface);
-  const setPaperSurface = useEditorSettingsStore((state) => state.setPaperSurface);
-  const outlineMaxDepth = useEditorSettingsStore((state) => state.outlineMaxDepth);
-  const setOutlineMaxDepth = useEditorSettingsStore((state) => state.setOutlineMaxDepth);
-  const headingNumbering = useEditorSettingsStore((state) => state.headingNumbering);
-  const setHeadingNumbering = useEditorSettingsStore((state) => state.setHeadingNumbering);
-  const headingNumberingVaultPath = useEditorSettingsStore((state) => state.headingNumberingVaultPath);
-  const folderNotesEnabled = useEditorSettingsStore((state) => state.folderNotesEnabled);
-  const setFolderNotesEnabled = useEditorSettingsStore((state) => state.setFolderNotesEnabled);
-  // Folder notes written while the feature was on stay on disk after it is
-  // switched off; the counter is what tells the user they are still there.
-  const hiddenFolderNoteCount = useAppStore((state) => countFolderNotes(state.filePaths));
-  const accentColor = useAccentColorStore((state) => state.accentColor);
-  const setAccentColor = useAccentColorStore((state) => state.setAccentColor);
-  const resetAccentColor = useAccentColorStore((state) => state.resetAccentColor);
-  const [accentColorInput, setAccentColorInput] = useState(accentColor);
+  const [activeTab, setActiveTab] = useState<SettingsTab>("application");
   const checkForUpdatesEnabled = useUpdateSettingsStore((state) => state.checkForUpdatesEnabled);
   const setCheckForUpdatesEnabled = useUpdateSettingsStore(
     (state) => state.setCheckForUpdatesEnabled
@@ -443,10 +445,6 @@ export function SettingsDialog({
   }, [open, settings, initialTab]);
 
   useEffect(() => {
-    setAccentColorInput(accentColor);
-  }, [accentColor]);
-
-  useEffect(() => {
     if (!open) {
       return;
     }
@@ -511,590 +509,292 @@ export function SettingsDialog({
       >
         <h3 id="settings-title">{t("settingsDialog.title")}</h3>
 
-        <div className="ai-dialog__tabs" role="tablist" aria-label={t("settingsDialog.tabsAriaLabel")}>
-          <button
-            type="button"
-            role="tab"
-            id="settings-tab-general"
-            aria-selected={activeTab === "general"}
-            aria-controls="settings-panel-general"
-            className={
-              activeTab === "general" ? "ai-dialog__tab ai-dialog__tab--active" : "ai-dialog__tab"
-            }
-            onClick={() => setActiveTab("general")}
-          >
-            {t("settingsDialog.tabGeneral")}
-          </button>
-          <button
-            type="button"
-            role="tab"
-            id="settings-tab-shortcuts"
-            aria-selected={activeTab === "shortcuts"}
-            aria-controls="settings-panel-shortcuts"
-            className={
-              activeTab === "shortcuts" ? "ai-dialog__tab ai-dialog__tab--active" : "ai-dialog__tab"
-            }
-            onClick={() => setActiveTab("shortcuts")}
-          >
-            {t("settingsDialog.tabShortcuts")}
-          </button>
-          <button
-            type="button"
-            role="tab"
-            id="settings-tab-fonts"
-            aria-selected={activeTab === "fonts"}
-            aria-controls="settings-panel-fonts"
-            className={
-              activeTab === "fonts" ? "ai-dialog__tab ai-dialog__tab--active" : "ai-dialog__tab"
-            }
-            onClick={() => setActiveTab("fonts")}
-          >
-            {t("settingsDialog.tabFonts")}
-          </button>
-          <button
-            type="button"
-            role="tab"
-            id="settings-tab-ai"
-            aria-selected={activeTab === "ai"}
-            aria-controls="settings-panel-ai"
-            className={activeTab === "ai" ? "ai-dialog__tab ai-dialog__tab--active" : "ai-dialog__tab"}
-            onClick={() => setActiveTab("ai")}
-          >
-            {t("settingsDialog.tabAi")}
-          </button>
-          <button
-            type="button"
-            role="tab"
-            id="settings-tab-assistants"
-            aria-selected={activeTab === "assistants"}
-            aria-controls="settings-panel-assistants"
-            className={
-              activeTab === "assistants" ? "ai-dialog__tab ai-dialog__tab--active" : "ai-dialog__tab"
-            }
-            onClick={() => setActiveTab("assistants")}
-          >
-            {t("settingsDialog.tabAssistants")}
-          </button>
-          <button
-            type="button"
-            role="tab"
-            id="settings-tab-rag"
-            aria-selected={activeTab === "rag"}
-            aria-controls="settings-panel-rag"
-            className={activeTab === "rag" ? "ai-dialog__tab ai-dialog__tab--active" : "ai-dialog__tab"}
-            onClick={() => setActiveTab("rag")}
-          >
-            {t("settingsDialog.tabRag")}
-          </button>
-          <button
-            type="button"
-            role="tab"
-            id="settings-tab-versioning"
-            aria-selected={activeTab === "versioning"}
-            aria-controls="settings-panel-versioning"
-            className={
-              activeTab === "versioning" ? "ai-dialog__tab ai-dialog__tab--active" : "ai-dialog__tab"
-            }
-            onClick={() => setActiveTab("versioning")}
-          >
-            {t("settingsDialog.tabVersioning")}
-          </button>
-        </div>
+        {/* Navigation on the left, the active panel on the right. Only the
+            panel scrolls: the title above and the actions below stay put,
+            so the way out of the dialog is on screen whatever entry is open
+            and however long it is. */}
+        <div className="settings-body">
+          <SettingsNav activeTab={activeTab} onSelect={setActiveTab} />
 
-        {/* The scrolling region. Everything above it (title and tabs) and
-            the actions below stay put, so the way out of the dialog is on
-            screen whatever tab is open and however long it is. */}
-        <div className="ai-dialog__scroll">
-          {activeTab === "general" ? (
-            <div id="settings-panel-general" role="tabpanel" aria-labelledby="settings-tab-general">
-              <div className="ai-dialog__grid">
-                <label className="ai-dialog__field">
-                  <span>{t("settingsDialog.language")}</span>
-                  <select
-                    value={i18n.resolvedLanguage ?? i18n.language}
-                    onChange={(event) => handleLanguageChange(event.target.value as SupportedLanguage)}
-                  >
-                    <option value="de">{t("settingsDialog.languageGerman")}</option>
-                    <option value="en">{t("settingsDialog.languageEnglish")}</option>
-                    <option value="fr">{t("settingsDialog.languageFrench")}</option>
-                    <option value="es">{t("settingsDialog.languageSpanish")}</option>
-                    <option value="zh">{t("settingsDialog.languageChinese")}</option>
-                    <option value="ja">{t("settingsDialog.languageJapanese")}</option>
-                    <option value="pt">{t("settingsDialog.languagePortuguese")}</option>
-                    <option value="ru">{t("settingsDialog.languageRussian")}</option>
-                    <option value="it">{t("settingsDialog.languageItalian")}</option>
-                    <option value="uk">{t("settingsDialog.languageUkrainian")}</option>
-                  </select>
-                </label>
-
-                <label className="ai-dialog__field">
-                  <span>{t("settingsDialog.theme")}</span>
-                  <select
-                    value={theme}
-                    onChange={(event) => setTheme(event.target.value as Theme)}
-                  >
-                    <option value="system">{t("settingsDialog.themeSystem")}</option>
-                    <option value="light">{t("settingsDialog.themeLight")}</option>
-                    <option value="dark">{t("settingsDialog.themeDark")}</option>
-                  </select>
-                </label>
-
-                <label className="ai-dialog__switch">
-                  <input
-                    type="checkbox"
-                    checked={paperSurface}
-                    onChange={(event) => setPaperSurface(event.target.checked)}
-                  />
-                  <span>{t("settingsDialog.paperSurface")}</span>
-                </label>
-                <p className="ai-dialog__hint">{t("settingsDialog.paperSurfaceHint")}</p>
-
-                <label className="ai-dialog__field">
-                  <span>{t("settingsDialog.accentColor")}</span>
-                  <div className="accent-color-setting">
-                    <input
-                      type="color"
-                      className="accent-color-setting__swatch"
-                      value={accentColor}
-                      onChange={(event) => setAccentColor(event.target.value)}
-                      aria-label={t("settingsDialog.accentColor")}
-                    />
-                    <input
-                      type="text"
-                      className="accent-color-setting__hex"
-                      value={accentColorInput}
-                      onChange={(event) => {
-                        const nextValue = event.target.value;
-                        setAccentColorInput(nextValue);
-                        if (isValidHexColor(nextValue)) {
-                          setAccentColor(nextValue);
-                        }
-                      }}
-                      onBlur={() => setAccentColorInput(accentColor)}
-                      spellCheck={false}
-                      maxLength={7}
-                      aria-label={t("settingsDialog.accentColorHex")}
-                    />
-                    <button
-                      type="button"
-                      className="ai-dialog__model-refresh"
-                      onClick={resetAccentColor}
-                      disabled={accentColor.toLowerCase() === DEFAULT_ACCENT_COLOR}
-                      aria-label={t("settingsDialog.accentColorReset")}
-                      title={t("settingsDialog.accentColorReset")}
+          <div className="ai-dialog__scroll">
+            {activeTab === "application" ? (
+              <SettingsPage tab="application">
+                <div className="ai-dialog__grid">
+                  <SettingRow label={t("settingsDialog.language")}>
+                    <select
+                      value={i18n.resolvedLanguage ?? i18n.language}
+                      onChange={(event) => handleLanguageChange(event.target.value as SupportedLanguage)}
                     >
-                      <RotateCcw size={16} />
-                    </button>
+                      <option value="de">{t("settingsDialog.languageGerman")}</option>
+                      <option value="en">{t("settingsDialog.languageEnglish")}</option>
+                      <option value="fr">{t("settingsDialog.languageFrench")}</option>
+                      <option value="es">{t("settingsDialog.languageSpanish")}</option>
+                      <option value="zh">{t("settingsDialog.languageChinese")}</option>
+                      <option value="ja">{t("settingsDialog.languageJapanese")}</option>
+                      <option value="pt">{t("settingsDialog.languagePortuguese")}</option>
+                      <option value="ru">{t("settingsDialog.languageRussian")}</option>
+                      <option value="it">{t("settingsDialog.languageItalian")}</option>
+                      <option value="uk">{t("settingsDialog.languageUkrainian")}</option>
+                    </select>
+                  </SettingRow>
+
+                  {isWindowsPlatform() ? (
+                    <SettingRow
+                      layout="switch"
+                      label={t("settingsDialog.checkForUpdates")}
+                      hint={t("settingsDialog.checkForUpdatesShort")}
+                      info={t("settingsDialog.checkForUpdatesHint")}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checkForUpdatesEnabled}
+                        onChange={(event) => setCheckForUpdatesEnabled(event.target.checked)}
+                      />
+                    </SettingRow>
+                  ) : null}
+                </div>
+
+                {portableMode === "on" ? (
+                  <div className="ai-dialog__notice ai-dialog__notice--info" role="note">
+                    <Info className="ai-dialog__notice-icon" aria-hidden="true" />
+                    <p>{t("settingsDialog.portableMode", { path: portableConfigDir })}</p>
                   </div>
-                  <span className="ai-dialog__model-hint">{t("settingsDialog.accentColorHint")}</span>
-                </label>
+                ) : null}
 
-                <label className="ai-dialog__field">
-                  <span>{t("settingsDialog.outlineDepth")}</span>
-                  <select
-                    value={outlineMaxDepth}
-                    onChange={(event) => setOutlineMaxDepth(Number.parseInt(event.target.value, 10))}
+                {portableMode === "readOnly" ? (
+                  <div className="ai-dialog__notice" role="note">
+                    <AlertTriangle className="ai-dialog__notice-icon" aria-hidden="true" />
+                    <p>{t("settingsDialog.portableReadOnly")}</p>
+                  </div>
+                ) : null}
+
+                <p className="ai-dialog__version">
+                  {appVersion ? (
+                    <>
+                      {t("settingsDialog.version", { version: appVersion })}
+                      {" · "}
+                    </>
+                  ) : null}
+                  <button
+                    type="button"
+                    className="ai-dialog__link"
+                    onClick={() => setLicensesOpen(true)}
                   >
-                    {Array.from(
-                      { length: OUTLINE_DEPTH_MAX - OUTLINE_DEPTH_MIN + 1 },
-                      (_, offset) => OUTLINE_DEPTH_MIN + offset
-                    ).map((level) => (
-                      <option key={level} value={level}>
-                        {level === OUTLINE_DEPTH_MAX
-                          ? t("settingsDialog.outlineDepthAll")
-                          : level === OUTLINE_DEPTH_MIN
-                            ? t("settingsDialog.outlineDepthTop")
-                            : t("settingsDialog.outlineDepthUpTo", { level })}
-                      </option>
-                    ))}
-                  </select>
-                  <span className="ai-dialog__model-hint">{t("settingsDialog.outlineDepthHint")}</span>
-                </label>
+                    {t("settingsDialog.openSourceLicenses")}
+                  </button>
+                </p>
+              </SettingsPage>
+            ) : activeTab === "appearance" ? (
+              <SettingsPage tab="appearance">
+                <AppearanceSettings />
+              </SettingsPage>
+            ) : activeTab === "fonts" ? (
+              <SettingsPage tab="fonts">
+                <FontSetting />
+              </SettingsPage>
+            ) : activeTab === "shortcuts" ? (
+              <SettingsPage tab="shortcuts">
+                <ShortcutsSettings />
+              </SettingsPage>
+            ) : activeTab === "assistants" ? (
+              <SettingsPage tab="assistants">
+                <AssistantsSettings onEditRequest={onAssistantEditRequest} />
+              </SettingsPage>
+            ) : activeTab === "rag" ? (
+              <SettingsPage tab="rag">
+                <VaultScopeHeader />
+                <RagSettings pendingProvider={provider} />
+              </SettingsPage>
+            ) : activeTab === "versioning" ? (
+              <SettingsPage tab="versioning">
+                <VersioningSettings />
+              </SettingsPage>
+            ) : activeTab === "vault" ? (
+              <SettingsPage tab="vault">
+                <VaultSettings />
+              </SettingsPage>
+            ) : (
+              <SettingsPage tab="ai">
+                {/* Two areas on this page: the connection to the model, and
+                    the agent's capabilities folded away below. */}
+                <h5 className="settings-section__title">{t("settingsDialog.connectionSection")}</h5>
 
-                {isWindowsPlatform() && (
-                  <label className="ai-dialog__switch">
+                <div className="ai-dialog__grid">
+                  <SettingRow label={t("settingsDialog.provider")}>
+                    <select
+                      value={provider}
+                      onChange={(event) => {
+                        const nextProvider = event.target.value as AiProvider;
+                        const nextApiUrl = PROVIDER_DEFAULT_API_URL[nextProvider];
+
+                        // The model list is per provider and gets reloaded; the model
+                        // field itself is left untouched so briefly checking out another
+                        // provider doesn't discard an already-set model (see Toolbar.tsx
+                        // for the fix against mixed model lists from multiple providers).
+                        // The API key, unlike the model, is stored per provider (see
+                        // useAiSettingsStore) — leaving the previous provider's key
+                        // showing here would risk it being saved under the new
+                        // provider on Save, so it's cleared until the new provider's
+                        // own stored key (if any) has loaded.
+                        const requestId = ++apiKeyRequestIdRef.current;
+
+                        setProvider(nextProvider);
+                        setApiUrl(nextApiUrl);
+                        setApiKey("");
+                        setAvailableModels([]);
+                        setModelsError(null);
+
+                        void loadApiKeyForProvider(nextProvider).then((storedApiKey) => {
+                          if (apiKeyRequestIdRef.current !== requestId) {
+                            return;
+                          }
+
+                          setApiKey(storedApiKey);
+                          void loadModels(nextProvider, nextApiUrl, storedApiKey);
+                        });
+                      }}
+                    >
+                      {AI_PROVIDERS.map((providerOption) => (
+                        <option key={providerOption} value={providerOption}>
+                          {PROVIDER_DISPLAY_NAME[providerOption]}
+                        </option>
+                      ))}
+                    </select>
+                  </SettingRow>
+
+                  <SettingRow label={t("settingsDialog.apiUrl")}>
                     <input
-                      type="checkbox"
-                      checked={checkForUpdatesEnabled}
-                      onChange={(event) => setCheckForUpdatesEnabled(event.target.checked)}
+                      type="url"
+                      value={apiUrl}
+                      onChange={(event) => setApiUrl(event.target.value)}
+                      onBlur={() => void loadModels(provider, apiUrl, apiKey)}
+                      placeholder={PROVIDER_DEFAULT_API_URL[provider]}
                     />
-                    <span>{t("settingsDialog.checkForUpdates")}</span>
-                  </label>
-                )}
+                  </SettingRow>
 
-                {/* Settings that live in the open folder's .scribedog rather
-                    than in the app, set apart from the rows above so a switch
-                    that "resets" on a vault change reads as belonging to the
-                    folder, not as a bug. */}
-                <section className="ai-dialog__vault-group" aria-labelledby="settings-vault-group-title">
-                  <h3 id="settings-vault-group-title" className="ai-dialog__vault-group-title">
-                    <FolderOpen size={15} aria-hidden="true" />
-                    {headingNumberingVaultPath === null
-                      ? t("settingsDialog.vaultSectionNoVault")
-                      : t("settingsDialog.vaultSection", {
-                          name: getFolderBasename(headingNumberingVaultPath)
-                        })}
-                  </h3>
-                  <div className="ai-dialog__grid ai-dialog__vault-group-grid">
-                    <label className="ai-dialog__switch">
-
-                      <input
-
-                        type="checkbox"
-
-                        checked={headingNumbering.enabled}
-
-                        disabled={headingNumberingVaultPath === null}
-
-                        onChange={(event) => setHeadingNumbering({ enabled: event.target.checked })}
-
-                      />
-
-                      <span>{t("settingsDialog.headingNumbering")}</span>
-
-                    </label>
-
-                    <p className="ai-dialog__hint">
-
-                      {headingNumberingVaultPath === null
-
-                        ? t("settingsDialog.headingNumberingNoVault")
-
-                        : t("settingsDialog.headingNumberingHint")}
-
-                    </p>
-
-
-
-                    {headingNumbering.enabled && (
-
-                      <>
-
-                        <label className="ai-dialog__field">
-
-                          <span>{t("settingsDialog.headingNumberingStart")}</span>
-
-                          <select
-
-                            value={headingNumbering.startLevel}
-
-                            onChange={(event) =>
-
-                              setHeadingNumbering({ startLevel: event.target.value === "1" ? 1 : 2 })
-
-                            }
-
-                          >
-
-                            <option value={1}>{t("settingsDialog.headingNumberingStartLevel", { level: 1 })}</option>
-
-                            <option value={2}>{t("settingsDialog.headingNumberingStartLevel", { level: 2 })}</option>
-
-                          </select>
-
-                          <span className="ai-dialog__model-hint">
-
-                            {t("settingsDialog.headingNumberingStartHint")}
-
-                          </span>
-
-                        </label>
-
-
-
-                        <label className="ai-dialog__field">
-
-                          <span>{t("settingsDialog.headingNumberingDepth")}</span>
-
-                          <select
-
-                            value={headingNumbering.maxDepth}
-
-                            onChange={(event) =>
-
-                              setHeadingNumbering({ maxDepth: Number.parseInt(event.target.value, 10) })
-
-                            }
-
-                          >
-
-                            {Array.from(
-
-                              { length: HEADING_NUMBERING_DEPTH_MAX - headingNumbering.startLevel + 1 },
-
-                              (_, offset) => headingNumbering.startLevel + offset
-
-                            ).map((level) => (
-
-                              <option key={level} value={level}>
-
-                                {level === HEADING_NUMBERING_DEPTH_MAX
-
-                                  ? t("settingsDialog.outlineDepthAll")
-
-                                  : t("settingsDialog.outlineDepthUpTo", { level })}
-
-                              </option>
-
-                            ))}
-
-                          </select>
-
-                        </label>
-
-                      </>
-
-                    )}
-
-                    <label className="ai-dialog__switch">
-                      <input
-                        type="checkbox"
-                        checked={folderNotesEnabled}
-                        disabled={headingNumberingVaultPath === null}
-                        onChange={(event) => setFolderNotesEnabled(event.target.checked)}
-                      />
-                      <span>{t("settingsDialog.folderNotes")}</span>
-                    </label>
-                    <p className="ai-dialog__hint">
-                      {headingNumberingVaultPath === null
-                        ? t("settingsDialog.folderNotesNoVault")
-                        : t("settingsDialog.folderNotesHint")}
-                    </p>
-                    {!folderNotesEnabled && hiddenFolderNoteCount > 0 ? (
-                      <div className="ai-dialog__field--full ai-dialog__notice ai-dialog__notice--info" role="note">
-                        <Info className="ai-dialog__notice-icon" aria-hidden="true" />
-                        <p>
-                          {t("settingsDialog.folderNotesHidden", { count: hiddenFolderNoteCount })}{" "}
+                  {isCloudProvider(provider) ? (
+                    <SettingRow full label={t("settingsDialog.apiKey")} hint={t("settingsDialog.apiKeyShort")}>
+                      {({ id, describedBy }) => (
+                        <div className="ai-dialog__model-field">
+                          <input
+                            id={id}
+                            type={showApiKey ? "text" : "password"}
+                            value={apiKey}
+                            autoComplete="off"
+                            onChange={(event) => setApiKey(event.target.value)}
+                            onBlur={() => void loadModels(provider, apiUrl, apiKey)}
+                            placeholder={t("settingsDialog.apiKeyPlaceholder")}
+                            aria-describedby={describedBy}
+                          />
                           <button
                             type="button"
-                            className="ai-dialog__link"
-                            onClick={() => setFolderNotesEnabled(true)}
+                            className="ai-dialog__model-refresh"
+                            onClick={() => setShowApiKey((value) => !value)}
+                            aria-label={t(showApiKey ? "settingsDialog.hideApiKey" : "settingsDialog.showApiKey")}
+                            title={t(showApiKey ? "settingsDialog.hideApiKey" : "settingsDialog.showApiKey")}
                           >
-                            {t("settingsDialog.folderNotesEnableNow")}
+                            {showApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
                           </button>
-                        </p>
-                      </div>
-                    ) : null}
-                  </div>
-                </section>
-              </div>
-
-              {portableMode === "on" ? (
-                <p className="ai-dialog__model-hint">
-                  {t("settingsDialog.portableMode", { path: portableConfigDir })}
-                </p>
-              ) : null}
-
-              {portableMode === "readOnly" ? (
-                <div className="ai-dialog__notice">
-                  <AlertTriangle className="ai-dialog__notice-icon" aria-hidden="true" />
-                  <p>{t("settingsDialog.portableReadOnly")}</p>
-                </div>
-              ) : null}
-
-              <p className="ai-dialog__version">
-                {appVersion ? (
-                  <>
-                    {t("settingsDialog.version", { version: appVersion })}
-                    {" · "}
-                  </>
-                ) : null}
-                <button
-                  type="button"
-                  className="ai-dialog__link"
-                  onClick={() => setLicensesOpen(true)}
-                >
-                  {t("settingsDialog.openSourceLicenses")}
-                </button>
-              </p>
-            </div>
-          ) : activeTab === "shortcuts" ? (
-            <div id="settings-panel-shortcuts" role="tabpanel" aria-labelledby="settings-tab-shortcuts">
-              <ShortcutsSettings />
-            </div>
-          ) : activeTab === "fonts" ? (
-            <div id="settings-panel-fonts" role="tabpanel" aria-labelledby="settings-tab-fonts">
-              <FontSetting />
-            </div>
-          ) : activeTab === "versioning" ? (
-            <div id="settings-panel-versioning" role="tabpanel" aria-labelledby="settings-tab-versioning">
-              <VersioningSettings />
-            </div>
-          ) : activeTab === "rag" ? (
-            <div id="settings-panel-rag" role="tabpanel" aria-labelledby="settings-tab-rag">
-              <RagSettings pendingProvider={provider} />
-            </div>
-          ) : activeTab === "assistants" ? (
-            <div id="settings-panel-assistants" role="tabpanel" aria-labelledby="settings-tab-assistants">
-              <AssistantsSettings onEditRequest={onAssistantEditRequest} />
-            </div>
-          ) : (
-            <div id="settings-panel-ai" role="tabpanel" aria-labelledby="settings-tab-ai">
-              <div className="ai-dialog__grid">
-                <label className="ai-dialog__field">
-                  <span>{t("settingsDialog.provider")}</span>
-                  <select
-                    value={provider}
-                    onChange={(event) => {
-                      const nextProvider = event.target.value as AiProvider;
-                      const nextApiUrl = PROVIDER_DEFAULT_API_URL[nextProvider];
-
-                      // The model list is per provider and gets reloaded; the model
-                      // field itself is left untouched so briefly checking out another
-                      // provider doesn't discard an already-set model (see Toolbar.tsx
-                      // for the fix against mixed model lists from multiple providers).
-                      // The API key, unlike the model, is stored per provider (see
-                      // useAiSettingsStore) — leaving the previous provider's key
-                      // showing here would risk it being saved under the new
-                      // provider on Save, so it's cleared until the new provider's
-                      // own stored key (if any) has loaded.
-                      const requestId = ++apiKeyRequestIdRef.current;
-
-                      setProvider(nextProvider);
-                      setApiUrl(nextApiUrl);
-                      setApiKey("");
-                      setAvailableModels([]);
-                      setModelsError(null);
-
-                      void loadApiKeyForProvider(nextProvider).then((storedApiKey) => {
-                        if (apiKeyRequestIdRef.current !== requestId) {
-                          return;
-                        }
-
-                        setApiKey(storedApiKey);
-                        void loadModels(nextProvider, nextApiUrl, storedApiKey);
-                      });
-                    }}
-                  >
-                    {AI_PROVIDERS.map((providerOption) => (
-                      <option key={providerOption} value={providerOption}>
-                        {PROVIDER_DISPLAY_NAME[providerOption]}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className="ai-dialog__field">
-                  <span>{t("settingsDialog.apiUrl")}</span>
-                  <input
-                    type="url"
-                    value={apiUrl}
-                    onChange={(event) => setApiUrl(event.target.value)}
-                    onBlur={() => void loadModels(provider, apiUrl, apiKey)}
-                    placeholder={PROVIDER_DEFAULT_API_URL[provider]}
-                  />
-                </label>
-
-                {isCloudProvider(provider) ? (
-                  <label className="ai-dialog__field ai-dialog__field--full">
-                    <span>{t("settingsDialog.apiKey")}</span>
-                    <div className="ai-dialog__model-field">
-                      <input
-                        type={showApiKey ? "text" : "password"}
-                        value={apiKey}
-                        autoComplete="off"
-                        onChange={(event) => setApiKey(event.target.value)}
-                        onBlur={() => void loadModels(provider, apiUrl, apiKey)}
-                        placeholder={t("settingsDialog.apiKeyPlaceholder")}
-                      />
-                      <button
-                        type="button"
-                        className="ai-dialog__model-refresh"
-                        onClick={() => setShowApiKey((value) => !value)}
-                        aria-label={t(showApiKey ? "settingsDialog.hideApiKey" : "settingsDialog.showApiKey")}
-                        title={t(showApiKey ? "settingsDialog.hideApiKey" : "settingsDialog.showApiKey")}
-                      >
-                        {showApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
-                      </button>
-                    </div>
-                    <span className="ai-dialog__model-hint">{t("settingsDialog.apiKeyHint")}</span>
-                  </label>
-                ) : null}
-
-                {isCloudProvider(provider) ? (
-                  <div className="ai-dialog__field--full ai-dialog__notice" role="note">
-                    <AlertTriangle className="ai-dialog__notice-icon" aria-hidden="true" />
-                    <p>
-                      {t(ragEnabled ? "settingsDialog.cloudProviderNoticeRag" : "settingsDialog.cloudProviderNotice", {
-                        provider: PROVIDER_DISPLAY_NAME[provider]
-                      })}
-                    </p>
-                  </div>
-                ) : null}
-
-                <label className="ai-dialog__field">
-                  <span>{t("settingsDialog.model")}</span>
-                  <div className="ai-dialog__model-field">
-                    {availableModels.length > 0 ? (
-                      <select value={model} onChange={(event) => setModel(event.target.value)}>
-                        {!availableModels.includes(model) && model ? (
-                          <option value={model}>{model}</option>
-                        ) : null}
-                        {availableModels.map((availableModel) => (
-                          <option key={availableModel} value={availableModel}>
-                            {availableModel}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <input
-                        type="text"
-                        value={model}
-                        onChange={(event) => setModel(event.target.value)}
-                        placeholder={t("settingsDialog.modelPlaceholder")}
-                      />
-                    )}
-                    <button
-                      type="button"
-                      className="ai-dialog__model-refresh"
-                      onClick={() => void loadModels(provider, apiUrl, apiKey)}
-                      disabled={isLoadingModels}
-                      aria-label={t("settingsDialog.refreshModels")}
-                      title={t("settingsDialog.refreshModels")}
-                    >
-                      <RefreshCw
-                        size={16}
-                        className={isLoadingModels ? "ai-dialog__model-refresh-icon--spinning" : undefined}
-                      />
-                    </button>
-                  </div>
-                  {modelsError ? (
-                    <span className="ai-dialog__model-hint ai-dialog__model-hint--error">{modelsError}</span>
-                  ) : isLoadingModels ? (
-                    <span className="ai-dialog__model-hint">{t("settingsDialog.loadingModels")}</span>
+                        </div>
+                      )}
+                    </SettingRow>
                   ) : null}
-                </label>
 
-                <label className="ai-dialog__field">
-                  <span>{t("settingsDialog.contextLength")}</span>
-                  <input
-                    type="number"
-                    min={1}
-                    step={1}
-                    value={contextLength}
-                    onChange={(event) => setContextLength(event.target.value)}
-                  />
-                </label>
+                  {isCloudProvider(provider) ? (
+                    <div className="ai-dialog__field--full ai-dialog__notice" role="note">
+                      <AlertTriangle className="ai-dialog__notice-icon" aria-hidden="true" />
+                      <p>
+                        {t(ragEnabled ? "settingsDialog.cloudProviderNoticeRag" : "settingsDialog.cloudProviderNotice", {
+                          provider: PROVIDER_DISPLAY_NAME[provider]
+                        })}
+                      </p>
+                    </div>
+                  ) : null}
 
-                <label className="ai-dialog__field">
-                  <span>{t("settingsDialog.thinking")}</span>
-                  <select
-                    value={thinkingMode}
-                    onChange={(event) => setThinkingMode(event.target.value === "off" ? "off" : "default")}
+                  <SettingRow
+                    label={t("settingsDialog.model")}
+                    hint={
+                      modelsError ? (
+                        <span className="ai-dialog__model-hint--error">{modelsError}</span>
+                      ) : isLoadingModels ? (
+                        t("settingsDialog.loadingModels")
+                      ) : undefined
+                    }
                   >
-                    <option value="default">{t("settingsDialog.thinkingOn")}</option>
-                    <option value="off">{t("settingsDialog.thinkingOff")}</option>
-                  </select>
-                </label>
-              </div>
+                    {({ id, describedBy }) => (
+                      <div className="ai-dialog__model-field">
+                        {availableModels.length > 0 ? (
+                          <select
+                            id={id}
+                            value={model}
+                            onChange={(event) => setModel(event.target.value)}
+                            aria-describedby={describedBy}
+                          >
+                            {!availableModels.includes(model) && model ? (
+                              <option value={model}>{model}</option>
+                            ) : null}
+                            {availableModels.map((availableModel) => (
+                              <option key={availableModel} value={availableModel}>
+                                {availableModel}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <input
+                            id={id}
+                            type="text"
+                            value={model}
+                            onChange={(event) => setModel(event.target.value)}
+                            placeholder={t("settingsDialog.modelPlaceholder")}
+                            aria-describedby={describedBy}
+                          />
+                        )}
+                        <button
+                          type="button"
+                          className="ai-dialog__model-refresh"
+                          onClick={() => void loadModels(provider, apiUrl, apiKey)}
+                          disabled={isLoadingModels}
+                          aria-label={t("settingsDialog.refreshModels")}
+                          title={t("settingsDialog.refreshModels")}
+                        >
+                          <RefreshCw
+                            size={16}
+                            className={isLoadingModels ? "ai-dialog__model-refresh-icon--spinning" : undefined}
+                          />
+                        </button>
+                      </div>
+                    )}
+                  </SettingRow>
 
-              <AgentSettingsSection
-                value={agent}
-                provider={provider}
-                onChange={(patch) => setAgent((current) => ({ ...current, ...patch }))}
-              />
-            </div>
-          )}
+                  <SettingRow label={t("settingsDialog.contextLength")} hint={t("settingsDialog.contextLengthShort")}>
+                    <input
+                      type="number"
+                      min={1}
+                      step={1}
+                      value={contextLength}
+                      onChange={(event) => setContextLength(event.target.value)}
+                    />
+                  </SettingRow>
+
+                  <SettingRow label={t("settingsDialog.thinking")} hint={t("settingsDialog.thinkingShort")}>
+                    <select
+                      value={thinkingMode}
+                      onChange={(event) => setThinkingMode(event.target.value === "off" ? "off" : "default")}
+                    >
+                      <option value="default">{t("settingsDialog.thinkingOn")}</option>
+                      <option value="off">{t("settingsDialog.thinkingOff")}</option>
+                    </select>
+                  </SettingRow>
+                </div>
+
+                <AgentSettingsSection
+                  value={agent}
+                  provider={provider}
+                  onChange={(patch) => setAgent((current) => ({ ...current, ...patch }))}
+                />
+              </SettingsPage>
+            )}
+          </div>
         </div>
 
         {/* Fonts, assistants, versioning and the knowledge base save themselves

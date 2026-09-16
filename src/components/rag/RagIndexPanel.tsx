@@ -71,7 +71,7 @@ export function RagIndexPanel({
 
   return (
     <div className="rag-settings__index">
-      <span className="rag-settings__section-title">{t("ragSettings.index.title")}</span>
+      <h5 className="settings-section__title">{t("ragSettings.index.title")}</h5>
 
       {/* Stored data from another model is not used for anything — saying so
           beats letting the user wonder why meaning search finds nothing. */}

@@ -1,0 +1,416 @@
+/* The settings dialog's own layout: the navigation column on the left, the
+   setting rows with their two-tier hints, the (i) popover and the header
+   over folder-scoped settings. The dialog frame itself (.ai-dialog__panel,
+   the scroll region, the actions) stays in dialogs.css. */
+
+/* Column left, panel right. Only the panel scrolls; the title above and the
+   actions below keep their place, so the way out of the dialog is on screen
+   whatever entry is open. */
+.settings-body {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  gap: 1.6rem;
+  margin-top: 1rem;
+}
+
+.settings-nav {
+  flex: 0 0 11.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  padding: 0.6rem 1.1rem 0.6rem 0;
+  border-right: 1px solid rgba(var(--overlay-rgb), 0.1);
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.settings-nav__group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.settings-nav__group-title {
+  margin: 0 0 0.35rem 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: rgba(var(--muted-rgb), 0.9);
+}
+
+.settings-nav__item {
+  appearance: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.05rem;
+  width: 100%;
+  min-width: 0;
+  border: none;
+  border-radius: 0.65rem;
+  background: transparent;
+  padding: 0.45rem 0.75rem;
+  color: rgba(var(--text-rgb), 0.7);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+  line-height: 1.3;
+  text-align: left;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.settings-nav__item:hover {
+  background: rgba(var(--overlay-rgb), 0.06);
+  color: rgba(var(--text-rgb), 0.9);
+}
+
+.settings-nav__item:focus-visible {
+  outline: 2px solid rgba(var(--accent-rgb), 0.6);
+  outline-offset: -2px;
+}
+
+.settings-nav__item--active {
+  background: rgba(var(--overlay-rgb), 0.09);
+  color: rgba(var(--text-rgb), 0.96);
+}
+
+.settings-nav__item-label {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+/* The folder's name under "Open folder": which folder the entry stands for. */
+.settings-nav__item-sub {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.74rem;
+  font-weight: 400;
+  color: var(--dialog-hint);
+}
+
+/* The heading of the open entry, level with the first group title in the
+   column. The first block under it brings its own top margin (grid, intro,
+   scope header), so the heading only needs a little below. */
+.settings-page__title {
+  margin: 0.55rem 0 0.15rem;
+  font-size: 1.2rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--dialog-heading);
+}
+
+/* One area within an entry (a shortcut category, the search mode, the
+   agent): set at label size, told apart from a label by weight and colour
+   alone, and clearly below the page title. Sentence case — capitals are
+   the navigation column's own signal for its groups and mean nothing
+   inside a page. */
+.settings-section__title {
+  margin: 0;
+  font-size: var(--dialog-label-size);
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--dialog-heading);
+}
+
+/* The first area heading on a page sits at the same distance from the page
+   title as any other first block. */
+.settings-page__title + .settings-section__title {
+  margin-top: 1rem;
+}
+
+/* Inside the agent's <summary>: inline, or the disclosure marker loses its
+   line. */
+.ai-dialog__section > summary > .settings-section__title {
+  display: inline;
+}
+
+/* One setting: label, control, one visible line, the rest behind the (i). */
+.setting-row {
+  display: grid;
+  gap: 0.4rem;
+  min-width: 0;
+  color: var(--dialog-label);
+}
+
+/* Grid items refuse to shrink below their content by default; a compound
+   control (swatch + hex field + reset) would push the column wider than
+   the grid and hand the panel a horizontal scrollbar. */
+.setting-row > * {
+  min-width: 0;
+}
+
+.setting-row--full {
+  grid-column: 1 / -1;
+}
+
+.setting-row__head {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.setting-row__label {
+  font-size: var(--dialog-label-size);
+  cursor: default;
+}
+
+.setting-row--switch .setting-row__head {
+  gap: 0.65rem;
+}
+
+.setting-row--switch .setting-row__label {
+  cursor: pointer;
+}
+
+.setting-row--switch input[type="checkbox"] {
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  accent-color: rgb(var(--accent-rgb));
+}
+
+.setting-row--switch input[type="checkbox"]:disabled + .setting-row__label {
+  color: rgba(var(--text-rgb), 0.5);
+  cursor: default;
+}
+
+.setting-row > input:not([type="checkbox"]),
+.setting-row > select,
+.setting-row .ai-dialog__model-field input,
+.setting-row .ai-dialog__model-field select,
+.setting-row .accent-color-setting__hex {
+  width: 100%;
+  border: 1px solid rgba(var(--overlay-rgb), 0.1);
+  border-radius: 0.9rem;
+  background: rgba(var(--surface-raised-rgb), 0.84);
+  padding: 0.8rem 0.9rem;
+  color: inherit;
+  font: inherit;
+}
+
+.setting-row > select,
+.setting-row .ai-dialog__model-field select {
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20' fill='none' stroke='rgb(100,116,139)' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 8 4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.95rem center;
+  background-size: 0.9rem;
+  padding-right: 2.75rem;
+}
+
+.setting-row > input:not([type="checkbox"]):focus,
+.setting-row > select:focus,
+.setting-row .ai-dialog__model-field input:focus,
+.setting-row .ai-dialog__model-field select:focus,
+.setting-row .accent-color-setting__hex:focus {
+  outline: none;
+  border-color: rgba(var(--overlay-rgb), 0.24);
+  box-shadow: 0 0 0 3px rgba(var(--overlay-rgb), 0.08);
+}
+
+.setting-row > input:disabled,
+.setting-row > select:disabled {
+  opacity: 0.55;
+}
+
+.setting-row .accent-color-setting__swatch {
+  width: 2.4rem;
+  height: 2.4rem;
+  flex-shrink: 0;
+  border: 1px solid rgba(var(--overlay-rgb), 0.1);
+  border-radius: 0.6rem;
+  padding: 0.15rem;
+  background: rgba(var(--surface-raised-rgb), 0.84);
+  cursor: pointer;
+}
+
+.setting-row .accent-color-setting__hex {
+  width: auto;
+  flex: 1;
+  min-width: 0;
+}
+
+/* The one visible line: what the setting does. Under a checkbox it lines up
+   with the label, not with the box. */
+.setting-row__hint {
+  margin: 0;
+  font-size: var(--dialog-hint-size);
+  line-height: 1.45;
+  color: var(--dialog-hint);
+}
+
+.setting-row--switch .setting-row__hint {
+  margin-left: calc(1rem + 0.65rem);
+}
+
+/* Switch rows sit a little apart from each other; a field row already has
+   its control as spacing. */
+.setting-row--switch {
+  margin: 0.2rem 0;
+}
+
+/* The (i) behind a label. Quiet until hovered — it is an offer, not a
+   warning — and shown as a real control for keyboard and touch. */
+.info-popover__trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.4rem;
+  height: 1.4rem;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  padding: 0;
+  color: var(--dialog-hint);
+  cursor: help;
+  transition: color 120ms ease, background 120ms ease;
+}
+
+.info-popover__trigger svg {
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+.info-popover__trigger:hover,
+.info-popover__trigger[aria-expanded="true"] {
+  color: rgba(var(--text-rgb), 0.9);
+  background: rgba(var(--overlay-rgb), 0.08);
+}
+
+.info-popover__trigger:focus-visible {
+  outline: 2px solid rgba(var(--accent-rgb), 0.6);
+  outline-offset: 1px;
+  color: rgba(var(--text-rgb), 0.9);
+}
+
+.info-popover {
+  position: fixed;
+  z-index: 60;
+  width: max-content;
+  max-width: min(24rem, calc(100vw - 1rem));
+  border: 1px solid rgba(var(--overlay-rgb), 0.12);
+  border-radius: 0.75rem;
+  background: rgba(var(--surface-rgb), 0.98);
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.14);
+  padding: 0.7rem 0.85rem;
+  color: rgba(var(--text-rgb), 0.86);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.dark .info-popover {
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.45);
+}
+
+/* Over settings that live in the open folder's .scribedog (the knowledge
+   base, the folder's own page): which folder, and that other folders have
+   their own. */
+.settings-scope {
+  margin: 1rem 0 0.25rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid rgba(var(--overlay-rgb), 0.1);
+  border-radius: 0.9rem;
+  background: rgba(var(--surface-rgb), 0.6);
+}
+
+.settings-scope__title {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  font-size: var(--dialog-label-size);
+  font-weight: 600;
+  color: var(--dialog-heading);
+  overflow-wrap: anywhere;
+}
+
+.settings-scope__title svg {
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
+  color: rgba(var(--text-rgb), 0.6);
+}
+
+.settings-scope__hint {
+  margin: 0.3rem 0 0;
+  font-size: var(--dialog-intro-size);
+  line-height: 1.5;
+  color: var(--dialog-intro);
+}
+
+/* The knowledge base panel brings its own top margin; under the header it
+   only needs a little. */
+.ai-dialog__version {
+  margin-top: 1.6rem;
+}
+
+.settings-scope + .rag-settings .rag-settings__intro {
+  margin-top: 0.4rem;
+}
+
+/* A one-line note at the top of a panel (the versioning switch is app-wide
+   while its neighbours are per folder). */
+.settings-intro {
+  margin: 1rem 0 0;
+  font-size: var(--dialog-intro-size);
+  line-height: 1.5;
+  color: var(--dialog-intro);
+}
+
+/* The document font panel: label and (i) on one line. */
+.font-setting__head {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+/* A narrow window turns the column into a strip above the panel. Rare for
+   a desktop app, so this only has to stay usable, not pretty: the group
+   titles and the folder name go, the entries wrap. */
+@media (max-width: 700px) {
+  .settings-body {
+    flex-direction: column;
+    gap: 0.8rem;
+  }
+
+  .settings-nav {
+    flex: 0 0 auto;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    padding: 0 0 0.6rem;
+    border-right: none;
+    border-bottom: 1px solid rgba(var(--overlay-rgb), 0.1);
+    overflow-y: visible;
+  }
+
+  .settings-nav__group {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+
+  .settings-nav__group-title,
+  .settings-nav__item-sub {
+    display: none;
+  }
+
+  .settings-nav__item {
+    width: auto;
+    padding: 0.35rem 0.6rem;
+    font-size: 0.85rem;
+  }
+
+  .setting-row--switch .setting-row__hint {
+    margin-left: 0;
+  }
+}

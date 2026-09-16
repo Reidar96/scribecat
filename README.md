@@ -148,7 +148,7 @@ notes — fluently, privately, and for free.
 - **A whole folder isn't attached** — the chat only takes individual files; drop a folder onto the **sidebar** instead to import it, then attach or ask about the notes from there
 
 ### 🕓 Document versions — undo across saves
-- Turn on **version history** in the Versioning settings tab, and every save silently snapshots the file's previous content first — saves that don't actually change anything don't create a duplicate snapshot
+- Turn on **version history** under *Settings → Versioning*, and every save silently snapshots the file's previous content first — saves that don't actually change anything don't create a duplicate snapshot
 - Open the **version history** popover from the document header to see every snapshot with its timestamp
 
   <img src="src/assets/scribe-dog-document-versions.png" alt="ScribeDog version history popover" width="300">
@@ -197,7 +197,7 @@ notes — fluently, privately, and for free.
 - **Emoji picker** with search, including keywords in your local language
 - **Reorder lines** — `Alt+Shift+↑`/`↓` moves the current line or list item up or down
 - **Spell check as you type** — optional red-underline spell checking powered by your operating system's built-in spellchecker (toggle it in the toolbar options; on Linux it uses your installed Hunspell/enchant dictionaries)
-- **Automatic heading numbering** (off by default, switched on per folder in the settings and stored in its `.scribedog` folder) — headings get `1.`, `1.1.`, `1.1.1.` in the editor, the outline, and every export and print. The numbers come from the document structure and are never written into the file, so reordering sections never needs a renumbering pass; choose whether numbering starts at heading 1 or 2 and how deep it goes. A heading ending in `{-}` or `{.unnumbered}` (the Pandoc convention) stays unnumbered together with everything below it
+- **Automatic heading numbering** (off by default, switched on per folder under *Settings → Open folder* and stored in its `.scribedog` folder) — headings get `1.`, `1.1.`, `1.1.1.` in the editor, the outline, and every export and print. The numbers come from the document structure and are never written into the file, so reordering sections never needs a renumbering pass; choose whether numbering starts at heading 1 or 2 and how deep it goes. A heading ending in `{-}` or `{.unnumbered}` (the Pandoc convention) stays unnumbered together with everything below it
 - Files are saved as clean, diff-friendly Markdown — fully portable to any other tool
 
 ### 🔗 Linked notes — connect your vault
@@ -230,7 +230,7 @@ notes — fluently, privately, and for free.
 - Open any folder and ScribeDog finds every `.md` file inside it, shown as a file tree in the sidebar
 - Create, rename, and delete files and folders directly from the sidebar
 - **Flexible sorting** — order the file tree by name, last modified, or switch to manual mode and drag and drop files and folders into your own order
-- **Folder notes** (off by default, switched on per folder in the settings and stored in its `.scribedog` folder) — every folder gets a text of its own, the way a node in Trilium or Notion is both a folder and a page: click the folder's name to open it, the arrow expands the folder. The note is a plain `.scribedog-foldernote.md` inside the folder, created on the first save, so it moves, renames and deletes together with the folder, even when you do that in Explorer or Finder; search, versions, export (as the folder's introduction chapter) and the AI chat treat it like any other note. Switching the feature off only hides the affordance, the files stay
+- **Folder notes** (off by default, switched on per folder under *Settings → Open folder* and stored in its `.scribedog` folder) — every folder gets a text of its own, the way a node in Trilium or Notion is both a folder and a page: click the folder's name to open it, the arrow expands the folder. The note is a plain `.scribedog-foldernote.md` inside the folder, created on the first save, so it moves, renames and deletes together with the folder, even when you do that in Explorer or Finder; search, versions, export (as the folder's introduction chapter) and the AI chat treat it like any other note. Switching the feature off only hides the affordance, the files stay
 - Sidebar preferences (sort mode, manual order) are remembered per folder in a small hidden `.scribedog` metadata directory inside the vault
 - Live sync via a native filesystem watcher — changes made outside the app are picked up automatically
 - Safe switching: leaving an unsaved file (or a pending, undecided AI suggestion) prompts you to save, discard, or cancel, with a clear dirty indicator
@@ -252,6 +252,7 @@ ScribeDog stores everything as plain `.md` files in a normal folder — so makin
 - One-click formatting toolbar with active-state highlighting
 - Built-in keyboard shortcuts cheat sheet (`Ctrl+#`) — and **every shortcut in it can be remapped**: click a key combination, press the one you want, and it's saved right away (conflicts are caught before they're assigned)
 - Window size and maximized state are remembered across restarts
+- Settings are grouped by what they belong to (*Application*, *AI*, *Folder*); every setting carries a one-line hint, with the longer explanation behind an (i) next to its label, and the entries that live in the open folder say so at the top
 - Launch ScribeDog on a folder from the command line or (on Windows) via the Explorer context menu
 
 ### 🔒 Privacy first

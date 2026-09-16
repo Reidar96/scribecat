@@ -80,7 +80,7 @@ function App() {
   const navigationIntentRef = useRef<{ filePath: string; index: number } | null>(null);
   const [isUnsavedDialogOpen, setIsUnsavedDialogOpen] = useState(false);
   const [isAiSettingsOpen, setIsAiSettingsOpen] = useState(false);
-  const [settingsInitialTab, setSettingsInitialTab] = useState<SettingsTab>("general");
+  const [settingsInitialTab, setSettingsInitialTab] = useState<SettingsTab>("application");
   const [versionDiffTarget, setVersionDiffTarget] = useState<VersionDiffTarget | null>(null);
   const [isRestoringVersion, setIsRestoringVersion] = useState(false);
   // Wrapped in an object so "create new assistant" (assistant: null) is
@@ -805,7 +805,7 @@ function App() {
             onMoveEntry={moveTreeEntry}
             onSetSortMode={(mode) => void setSortMode(mode)}
             onAiSettingsRequest={() => {
-              setSettingsInitialTab("general");
+              setSettingsInitialTab("application");
               setIsAiSettingsOpen(true);
             }}
             onRequestEditorFocus={() => setEditorFocusRequestId((id) => id + 1)}

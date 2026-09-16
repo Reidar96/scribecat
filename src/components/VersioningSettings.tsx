@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { SettingRow } from "@/components/settings/SettingRow";
 import { Button } from "@/components/ui/button";
 import {
   countAllVersions,
@@ -110,20 +111,27 @@ export function VersioningSettings() {
 
   return (
     <>
+      {/* The one entry in the folder group that is not per folder: the
+          switch is app-wide, only the versions themselves live in the
+          folder. Said up front, because the neighbouring entries say the
+          opposite. */}
+      <p className="settings-intro">{t("versioningSettings.scope")}</p>
+
       <div className="ai-dialog__grid">
-        <label className="ai-dialog__switch ai-dialog__field--full">
+        <SettingRow
+          layout="switch"
+          label={t("versioningSettings.enable")}
+          hint={t("versioningSettings.enableShort")}
+          info={t("versioningSettings.enableHint")}
+        >
           <input
             type="checkbox"
             checked={versioningEnabled}
             onChange={(event) => setVersioningEnabled(event.target.checked)}
           />
-          <span>{t("versioningSettings.enable")}</span>
-        </label>
+        </SettingRow>
 
-        <p className="versioning-settings__hint">{t("versioningSettings.enableHint")}</p>
-
-        <label className="ai-dialog__field">
-          <span>{t("versioningSettings.maxVersions")}</span>
+        <SettingRow label={t("versioningSettings.maxVersions")} hint={t("versioningSettings.maxVersionsShort")}>
           <input
             type="number"
             min={MAX_VERSIONS_PER_FILE_MIN}
@@ -133,8 +141,7 @@ export function VersioningSettings() {
             onChange={(event) => setMaxVersionsDraft(event.target.value)}
             onBlur={commitMaxVersions}
           />
-          <span className="ai-dialog__model-hint">{t("versioningSettings.maxVersionsHint")}</span>
-        </label>
+        </SettingRow>
       </div>
 
       <div className="versioning-settings__footer">

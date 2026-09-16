@@ -9,15 +9,15 @@
 
 .rag-settings__intro {
   margin: 1rem 0 0.5rem 0;
-  color: rgba(var(--text-rgb), 0.82);
-  font-size: 0.86rem;
+  color: var(--dialog-intro);
+  font-size: var(--dialog-intro-size);
   line-height: 1.5;
 }
 
 .rag-settings__hint {
   margin: 0.4rem 0;
-  color: rgba(var(--muted-rgb), 1);
-  font-size: 0.85rem;
+  color: var(--dialog-hint);
+  font-size: var(--dialog-hint-size);
   line-height: 1.5;
 }
 
@@ -69,17 +69,18 @@
   width: 100%;
 }
 
+/* Labels the tree the way a setting row labels its control. */
 .rag-settings__folders-label {
   display: block;
   margin-bottom: 0.4rem;
-  font-size: 0.82rem;
-  font-weight: 600;
+  font-size: var(--dialog-label-size);
+  color: var(--dialog-label);
 }
 
 .rag-settings__count {
   margin: 0;
-  color: rgba(var(--muted-rgb), 1);
-  font-size: 0.82rem;
+  color: var(--dialog-hint);
+  font-size: var(--dialog-hint-size);
 }
 
 .rag-settings__error {
@@ -104,11 +105,6 @@
   width: 100%;
   border-top: 1px solid rgba(var(--overlay-rgb), 0.12);
   padding-top: 0.9rem;
-}
-
-.rag-settings__section-title {
-  font-size: 0.82rem;
-  font-weight: 600;
 }
 
 .rag-settings__mode-options {
@@ -137,13 +133,14 @@
 }
 
 .rag-settings__mode-option strong {
-  font-size: 0.85rem;
-  font-weight: 600;
+  font-size: var(--dialog-label-size);
+  font-weight: 500;
+  color: var(--dialog-label);
 }
 
 .rag-settings__mode-hint {
-  color: rgba(var(--muted-rgb), 1);
-  font-size: 0.8rem;
+  color: var(--dialog-hint);
+  font-size: var(--dialog-hint-size);
   line-height: 1.45;
 }
 
@@ -172,7 +169,7 @@
 }
 
 .rag-rebuild__count {
-  color: rgba(var(--muted-rgb), 1);
+  color: var(--dialog-hint);
   font-variant-numeric: tabular-nums;
 }
 
@@ -218,7 +215,7 @@
   border-radius: 0.25rem;
   background: none;
   cursor: pointer;
-  color: rgba(var(--muted-rgb), 1);
+  color: var(--dialog-hint);
 }
 
 .rag-tree__twisty svg {
@@ -264,7 +261,7 @@
   flex: none;
   margin-left: auto;
   padding-left: 0.5rem;
-  color: rgba(var(--muted-rgb), 1);
+  color: var(--dialog-hint);
   font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
 }

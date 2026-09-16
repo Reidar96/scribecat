@@ -146,7 +146,7 @@ export function RagConnectionSettings({ includedFileCount }: { includedFileCount
 
   return (
     <div className="rag-settings__connection">
-      <span className="rag-settings__section-title">{t("ragSettings.connection.title")}</span>
+      <h5 className="settings-section__title">{t("ragSettings.connection.title")}</h5>
       <p className="rag-settings__hint">{t("ragSettings.connection.hint")}</p>
 
       <div className="ai-dialog__grid">
@@ -201,7 +201,7 @@ export function RagConnectionSettings({ includedFileCount }: { includedFileCount
                 {showApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
-            <span className="ai-dialog__model-hint">{t("settingsDialog.apiKeyHint")}</span>
+            <span className="ai-dialog__model-hint">{t("settingsDialog.apiKeyShort")}</span>
           </label>
         ) : null}
 

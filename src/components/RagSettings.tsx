@@ -94,8 +94,9 @@ export function RagSettings({ pendingProvider }: RagSettingsProps) {
     void clearVaultSearchCache();
   };
 
+  // The scope header above this panel already says "open a folder first".
   if (folderPath === null) {
-    return <p className="rag-settings__hint">{t("ragSettings.noFolder")}</p>;
+    return null;
   }
 
   return (
@@ -170,7 +171,7 @@ export function RagSettings({ pendingProvider }: RagSettingsProps) {
             it: what is read is the question the user has first, and it is the
             same question for both search modes. */}
         <div className="rag-settings__mode">
-          <span className="rag-settings__section-title">{t("ragSettings.mode.title")}</span>
+          <h5 className="settings-section__title">{t("ragSettings.mode.title")}</h5>
 
           <div role="radiogroup" aria-label={t("ragSettings.mode.title")} className="rag-settings__mode-options">
             {(["keyword", "semantic"] as RagSearchMode[]).map((mode) => (
