@@ -26,7 +26,20 @@ export function getSelectionMarkdown(editor: TipTapEditor, from: number, to: num
   }
 
   try {
-    return serializer.serialize(editor.state.doc.slice(from, to).content).trim();
+    const content = editor.state.doc.slice(from, to).content;
+
+    // A range inside a single block comes back as bare inline nodes, and the
+    // serializer applies marks while rendering a *block*: handed the inline
+    // nodes straight it writes their text and drops the bold, the link, the
+    // code span. Wrapping them in a paragraph inside a document node is what
+    // puts them back where the marks are rendered. Block content already
+    // arrives as blocks and goes through unchanged.
+    const inlineContent = content.firstChild?.isInline === true;
+    const serializable = inlineContent
+      ? editor.schema.topNodeType.create(null, editor.schema.nodes.paragraph.create(null, content))
+      : content;
+
+    return serializer.serialize(serializable).trim();
   } catch {
     return "";
   }
