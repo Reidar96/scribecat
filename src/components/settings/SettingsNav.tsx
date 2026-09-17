@@ -103,6 +103,7 @@ export function SettingsNav({ activeTab, onSelect }: SettingsNavProps) {
                 type="button"
                 role="tab"
                 id={settingsTabId(tab)}
+                data-testid={settingsTabId(tab)}
                 aria-selected={isActive}
                 aria-controls={settingsPanelId(tab)}
                 tabIndex={isActive ? 0 : -1}

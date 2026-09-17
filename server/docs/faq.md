@@ -102,6 +102,13 @@ Not by ScribeDog: they are plain Markdown on purpose. Use full-disk
 encryption or gocryptfs below the folder if the box's location calls for it.
 API keys and password are protected (encrypted, hashed).
 
+**What is the `.scribedog-foldernote.md` file in some of my folders?**
+A folder note: the folder's own text, written once you turn folder notes on
+under Settings → Open folder. It is a normal Markdown file, so search,
+version history and backups treat it like any other note; only the file tree
+shows it on the folder row. Switching the setting off leaves the files where
+they are.
+
 **Will images show up on my phone?**
 Yes: the web app resolves the relative image paths itself, unlike some
 third-party Markdown apps used with a sync folder.

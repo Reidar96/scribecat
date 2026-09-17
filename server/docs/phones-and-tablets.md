@@ -28,6 +28,11 @@ On a touch screen every row in the file tree has a "…" button for its menu
 (a long press works on Android too), and **Move to…** in that menu does what
 dragging does with a mouse.
 
+Selecting text brings up the system's own menu, with its copy entry, as in
+any other app. The editor's own selection menu (the AI rewrite and the three
+ways of copying) belongs to the right mouse button; on touch the paw button
+in the toolbar is the way to the AI rewrite.
+
 ## Like an app
 
 Add the site to the home screen (Chrome: "Add to Home screen", Safari: share
