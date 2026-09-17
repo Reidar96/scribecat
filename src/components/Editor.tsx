@@ -73,7 +73,8 @@ import { getEditorMarkdown, getSelectionMarkdown } from "@/lib/editor/markdownSt
 import {
   copySelectionAsMarkdown,
   copySelectionAsPlainText,
-  copySelectionFormatted
+  copySelectionFormatted,
+  type SelectionRange
 } from "@/lib/editor/selectionClipboard";
 import { findTextRange } from "@/lib/editor/textSearch";
 import {
@@ -124,6 +125,14 @@ export type EditorHandle = {
   printDocument: () => void;
   getMarkdown: () => string;
   getSelectionText: () => string;
+  /**
+   * The selected range, for a caller that is about to take the focus away:
+   * ProseMirror collapses its selection when the editor is blurred, so the
+   * document header's menu keeps the range from before it opened and hands
+   * it back to `copyRange`.
+   */
+  getSelectionRange: () => SelectionRange | null;
+  copyRange: (range: SelectionRange, variant: "markdown" | "plainText") => void;
   listImageSources: () => string[];
   listPendingProposals: () => string[];
   acceptPendingProposals: () => number;
@@ -662,6 +671,29 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     return currentEditor ? selectionText(currentEditor) : "";
   };
 
+  const getSelectionRange = (): SelectionRange | null => {
+    const currentEditor = editorRef.current;
+
+    if (!currentEditor) {
+      return null;
+    }
+
+    const { from, to, empty } = currentEditor.state.selection;
+
+    return empty ? null : { from, to };
+  };
+
+  const copyRange = (range: SelectionRange, variant: "markdown" | "plainText") => {
+    const currentEditor = editorRef.current;
+
+    if (!currentEditor) {
+      return;
+    }
+
+    const copy = variant === "markdown" ? copySelectionAsMarkdown : copySelectionAsPlainText;
+    void copy(currentEditor, range).then(reportCopyResult);
+  };
+
   const syncChatSelection = (currentEditor: TipTapEditor) => {
     useChatStore.getState().setEditorSelection(selectionText(currentEditor));
   };
@@ -988,6 +1020,8 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       printDocument,
       getMarkdown,
       getSelectionText,
+      getSelectionRange,
+      copyRange,
       listImageSources,
       listPendingProposals,
       acceptPendingProposals,

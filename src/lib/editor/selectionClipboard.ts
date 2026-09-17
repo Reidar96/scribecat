@@ -45,15 +45,30 @@ async function writeClipboardText(text: string): Promise<boolean> {
   return copyViaCommand((data) => data.setData("text/plain", text));
 }
 
-function selectionRange(editor: TipTapEditor): { from: number; to: number } | null {
+export type SelectionRange = { from: number; to: number };
+
+/**
+ * The range to copy: the live selection, or an explicit one a caller kept
+ * hold of. The document header's menu needs the second form — opening it
+ * moves the focus out of the editor, and ProseMirror collapses its selection
+ * when that happens, so the range is taken before the menu is on screen.
+ */
+function selectionRange(editor: TipTapEditor, range?: SelectionRange): SelectionRange | null {
+  if (range) {
+    return range.from === range.to ? null : range;
+  }
+
   const { from, to, empty } = editor.state.selection;
 
   return empty ? null : { from, to };
 }
 
 /** The selection as markdown source (`**bold**`, `- item`, …). */
-export async function copySelectionAsMarkdown(editor: TipTapEditor): Promise<boolean> {
-  const range = selectionRange(editor);
+export async function copySelectionAsMarkdown(
+  editor: TipTapEditor,
+  explicitRange?: SelectionRange
+): Promise<boolean> {
+  const range = selectionRange(editor, explicitRange);
 
   if (!range) {
     return false;
@@ -67,8 +82,11 @@ export async function copySelectionAsMarkdown(editor: TipTapEditor): Promise<boo
 }
 
 /** The selection as bare text, without formatting or markdown syntax. */
-export async function copySelectionAsPlainText(editor: TipTapEditor): Promise<boolean> {
-  const range = selectionRange(editor);
+export async function copySelectionAsPlainText(
+  editor: TipTapEditor,
+  explicitRange?: SelectionRange
+): Promise<boolean> {
+  const range = selectionRange(editor, explicitRange);
 
   if (!range) {
     return false;

@@ -29,9 +29,12 @@ On a touch screen every row in the file tree has a "…" button for its menu
 dragging does with a mouse.
 
 Selecting text brings up the system's own menu, with its copy entry, as in
-any other app. The editor's own selection menu (the AI rewrite and the three
-ways of copying) belongs to the right mouse button; on touch the paw button
-in the toolbar is the way to the AI rewrite.
+any other app; that copy is the one that keeps the formatting. The editor's
+own selection menu behind the right mouse button stays closed on touch, since
+a long press is how a word gets selected there, so the two other ways of
+copying are in the header's menu instead: **Copy text as Markdown** and **Copy
+text only**, both greyed out while nothing is selected. The paw button in the
+toolbar is the way to the AI rewrite.
 
 ## Like an app
 

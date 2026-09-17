@@ -1,19 +1,22 @@
-import type { RefObject } from "react";
+import { useState, type RefObject } from "react";
 import {
   ArrowLeft,
   ArrowRight,
   EllipsisVertical,
+  FileCode,
   Focus,
   History,
   PanelRight,
   Printer,
   Search,
+  Type,
   ZoomIn,
   ZoomOut
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import type { EditorHandle } from "@/components/Editor";
+import type { SelectionRange } from "@/lib/editor/selectionClipboard";
 import { Button } from "@/components/ui/button";
 import {
   Menu,
@@ -45,8 +48,10 @@ type DocumentMenuProps = {
  * the desktop, where that group is hidden to keep the bottom toolbar to one
  * swipeable row, plus what the phone header has no room for (back/forward,
  * versions). Every entry is a shortcut's only visible trigger on a touch
- * screen, which is why none of them is left out. Hidden at desktop width
- * (responsive.css); the phone-only entries are hidden on the tablet.
+ * screen, which is why none of them is left out, and by the same rule the two
+ * ways of copying a selection that the system's own copy button does not
+ * cover. Hidden at desktop width (responsive.css); the phone-only entries are
+ * hidden on the tablet.
  */
 export function DocumentMenu({
   editorHandleRef,
@@ -60,6 +65,10 @@ export function DocumentMenu({
 }: DocumentMenuProps) {
   const { t } = useTranslation();
   const openFindPanel = useSearchStore((state) => state.openPanel);
+  // Taken as the menu opens, because that is the last moment the editor still
+  // has the selection: the focus moves into the popup and ProseMirror
+  // collapses its selection when the editor is blurred.
+  const [copyRange, setCopyRange] = useState<SelectionRange | null>(null);
   const detailsSheetOpen = useEditorSettingsStore((state) => state.detailsSheetOpen);
   const setDetailsSheetOpen = useEditorSettingsStore((state) => state.setDetailsSheetOpen);
   const spellcheckEnabled = useEditorSettingsStore((state) => state.spellcheckEnabled);
@@ -68,7 +77,11 @@ export function DocumentMenu({
   const setZoomLevel = useEditorSettingsStore((state) => state.setZoomLevel);
 
   return (
-    <Menu>
+    <Menu
+      onOpenChange={(open) => {
+        setCopyRange(open ? (editorHandleRef.current?.getSelectionRange() ?? null) : null);
+      }}
+    >
       <MenuTrigger
         render={
           <Button
@@ -114,6 +127,29 @@ export function DocumentMenu({
               </MenuItem>
             ) : null}
             <div className="editor-toolbar__menu-separator document-menu__item--phone" role="separator" />
+
+            {/* The only selection-scoped entries here. On a touch screen the
+                right mouse button's selection menu is deliberately not opened
+                by a long press, since that is how a word gets selected there,
+                so these fixed shortcuts would have no visible trigger at all.
+                "Copy with formatting" is left out: that is what the system's
+                own copy button on the selection already puts on the clipboard,
+                and unlike these two it would need the editor's focus back. */}
+            <MenuItem
+              disabled={copyRange === null}
+              onClick={() => copyRange && editorHandleRef.current?.copyRange(copyRange, "markdown")}
+            >
+              <FileCode className="size-4" />
+              {t("editorContextMenu.copyMarkdown")}
+            </MenuItem>
+            <MenuItem
+              disabled={copyRange === null}
+              onClick={() => copyRange && editorHandleRef.current?.copyRange(copyRange, "plainText")}
+            >
+              <Type className="size-4" />
+              {t("editorContextMenu.copyPlainText")}
+            </MenuItem>
+            <div className="editor-toolbar__menu-separator" role="separator" />
 
             <MenuItem onClick={() => openFindPanel()}>
               <Search className="size-4" />

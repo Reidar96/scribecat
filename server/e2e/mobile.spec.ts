@@ -146,6 +146,47 @@ test.describe("phone (Pixel 7)", () => {
     expect(saved).toContain("**");
   });
 
+  // The three ways of copying are fixed shortcuts, and on touch the selection
+  // menu behind the right mouse button stays closed on purpose (a long press
+  // is how a word gets selected there), so the document menu is their only
+  // trigger. What this really checks is that opening that menu does not take
+  // the selection with it: the two entries read it out of the editor state.
+  test("the document menu copies the selection as Markdown and as bare text", async ({ page, context }) => {
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+    await signIn(page);
+    await writeOnServer(page, NOTE, "# Roadmap\n\nA line with **bold** in it.\n");
+    await openNote(page, NOTE);
+
+    const menu = page.getByTestId("document-menu");
+    const asMarkdown = page.getByRole("menuitem", { name: "Copy text as Markdown" });
+    const textOnly = page.getByRole("menuitem", { name: "Copy text only" });
+
+    // Nothing selected: both entries are there but refuse.
+    await menu.tap();
+    await expect(asMarkdown).toBeDisabled();
+    await expect(textOnly).toBeDisabled();
+    await page.keyboard.press("Escape");
+    await expect(asMarkdown).toBeHidden();
+
+    const editor = page.locator(".ProseMirror");
+    await editor.locator("p").first().tap();
+    await expect(editor).toHaveClass(/ProseMirror-focused/);
+    await page.keyboard.press("Home");
+    await page.keyboard.press("Shift+End");
+
+    await menu.tap();
+    await asMarkdown.tap();
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toContain("**bold**");
+
+    // Still selected afterwards, so the second variant needs no new selection.
+    await menu.tap();
+    await textOnly.tap();
+
+    const bare = await page.evaluate(() => navigator.clipboard.readText());
+    expect(bare).toContain("bold");
+    expect(bare).not.toContain("**");
+  });
+
   test("the row's more button opens the context menu as a sheet; Move to… moves the note", async ({ page }) => {
     await signIn(page);
     await writeOnServer(page, NOTE, SEED);
