@@ -209,6 +209,7 @@
     "vaultScopeHint": "这些设置保存在 {{name}}/.scribedog 中，仅对该文件夹生效。其他文件夹有各自的设置。",
     "vaultScopeNoFolderHint": "请先打开一个文件夹再使用这些设置：它们随文件夹保存，而不是随应用程序保存。",
     "reopenLastNote": "启动时重新打开上次的笔记",
+    "reopenLastNoteShort": "按文件夹和设备分别记住上次打开的是哪条笔记。",
     "accentColorReset": "重置",
     "checkForUpdates": "检查更新",
     "checkForUpdatesShort": "启动时向 GitHub 查询一次是否有更新的版本。",

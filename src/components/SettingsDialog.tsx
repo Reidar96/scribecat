@@ -586,7 +586,11 @@ export function SettingsDialog({
                     </select>
                   </SettingRow>
 
-                  <SettingRow layout="switch" label={t("settingsDialog.reopenLastNote")}>
+                  <SettingRow
+                    layout="switch"
+                    label={t("settingsDialog.reopenLastNote")}
+                    hint={t("settingsDialog.reopenLastNoteShort")}
+                  >
                     <input
                       type="checkbox"
                       checked={reopenLastNote}

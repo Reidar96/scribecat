@@ -209,6 +209,7 @@
     "vaultScopeHint": "これらの設定は {{name}}/.scribedog に保存され、そのフォルダーにだけ適用されます。他のフォルダーには別の設定があります。",
     "vaultScopeNoFolderHint": "これらの設定を使うにはフォルダーを開いてください。設定はアプリケーションではなくフォルダーに保存されます。",
     "reopenLastNote": "起動時に最後のノートを再び開く",
+    "reopenLastNoteShort": "どのノートが開いていたかを、フォルダーごと・デバイスごとに記憶します。",
     "accentColorReset": "リセット",
     "checkForUpdates": "アップデートを確認",
     "checkForUpdatesShort": "起動時に一度だけ GitHub に新しいバージョンがあるか確認します。",

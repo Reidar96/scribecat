@@ -210,6 +210,7 @@
     "vaultScopeHint": "Estas definições são guardadas em {{name}}/.scribedog e valem só aí. As outras pastas têm as suas.",
     "vaultScopeNoFolderHint": "Abra uma pasta para usar estas definições: são guardadas com a pasta, não com a aplicação.",
     "reopenLastNote": "Reabrir a última nota ao iniciar",
+    "reopenLastNoteShort": "Guarda, para cada pasta e cada dispositivo, que nota estava aberta.",
     "accentColorReset": "Redefinir",
     "checkForUpdates": "Verificar atualizações",
     "checkForUpdatesShort": "Pergunta uma vez ao GitHub, no arranque, se existe uma versão mais recente.",

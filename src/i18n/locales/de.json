@@ -210,6 +210,7 @@
     "vaultScopeHint": "Diese Einstellungen werden in {{name}}/.scribedog gespeichert und gelten nur dort. Andere Ordner haben ihre eigenen.",
     "vaultScopeNoFolderHint": "Öffne einen Ordner, um diese Einstellungen zu verwenden: Sie werden mit dem Ordner gespeichert, nicht mit der Anwendung.",
     "reopenLastNote": "Zuletzt geöffnete Notiz beim Start wieder öffnen",
+    "reopenLastNoteShort": "Merkt sich pro Ordner und pro Gerät, welche Notiz offen war.",
     "accentColorReset": "Zurücksetzen",
     "checkForUpdates": "Auf Updates prüfen",
     "checkForUpdatesShort": "Fragt beim Start einmal bei GitHub nach einer neueren Version.",
