@@ -523,6 +523,7 @@
     "expandFolder": "Aufklappen",
     "collapseFolder": "Zuklappen",
     "moreActions": "Weitere Aktionen",
+    "duplicate": "Duplizieren",
     "moveTo": "Verschieben nach…",
     "selectionCount": "{{count}} ausgewählt"
   },
@@ -787,6 +788,7 @@
     "fileLoadError": "Die Datei konnte nicht geladen werden.",
     "fileSaveError": "Die Datei konnte nicht gespeichert werden.",
     "fileCreateError": "Die Datei konnte nicht angelegt werden.",
+    "fileDuplicateError": "Die Datei konnte nicht dupliziert werden.",
     "folderCreateError": "Der Ordner konnte nicht angelegt werden.",
     "invalidFileName": "Ungültiger Name.",
     "fileAlreadyExists": "Eine Datei mit diesem Namen existiert bereits.",
@@ -799,7 +801,8 @@
     "versionRestoreError": "Die Version konnte nicht wiederhergestellt werden.",
     "folderDeleteError": "Der Ordner konnte nicht gelöscht werden.",
     "newFileBaseName": "Neue Datei",
-    "newFolderBaseName": "Neuer Ordner"
+    "newFolderBaseName": "Neuer Ordner",
+    "duplicateSuffix": "Kopie"
   },
   "updateNotification": {
     "title": "Update {{version}} verfügbar",

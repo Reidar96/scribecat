@@ -523,6 +523,7 @@
     "expandFolder": "Expand",
     "collapseFolder": "Collapse",
     "moreActions": "More actions",
+    "duplicate": "Duplicate",
     "moveTo": "Move to…",
     "selectionCount": "{{count}} selected"
   },
@@ -787,6 +788,7 @@
     "fileLoadError": "The file could not be loaded.",
     "fileSaveError": "The file could not be saved.",
     "fileCreateError": "The file could not be created.",
+    "fileDuplicateError": "The file could not be duplicated.",
     "folderCreateError": "The folder could not be created.",
     "invalidFileName": "Invalid name.",
     "fileAlreadyExists": "A file with this name already exists.",
@@ -799,7 +801,8 @@
     "versionRestoreError": "The version could not be restored.",
     "folderDeleteError": "The folder could not be deleted.",
     "newFileBaseName": "New file",
-    "newFolderBaseName": "New folder"
+    "newFolderBaseName": "New folder",
+    "duplicateSuffix": "Copy"
   },
   "updateNotification": {
     "title": "Update {{version}} available",

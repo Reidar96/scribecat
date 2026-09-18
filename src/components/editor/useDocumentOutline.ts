@@ -81,9 +81,14 @@ export function useDocumentOutline(editor: TipTapEditor | null): DocumentOutline
           return;
         }
 
-        // Scrolled to the very end, the last sections can never reach the top
-        // edge; the reader is in the last one.
-        if (container.scrollTop + container.clientHeight >= container.scrollHeight - 1) {
+        // Scrolled to (or within a heading-detection-width of) the very end,
+        // the last heading can never clear the viewport-top threshold below —
+        // its own scroll-margin-top (editor-content.css) plus DPI/zoom
+        // rounding can leave it a few px short of the exact max, so a 1px
+        // tolerance here missed it and left the outline showing the section
+        // above as active even though a jump had already landed on the last
+        // one. The reader is in the last section either way.
+        if (container.scrollTop + container.clientHeight >= container.scrollHeight - VIEWPORT_TOP_OFFSET_PX) {
           setActiveIndex(current.length - 1);
           return;
         }

@@ -412,6 +412,90 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
       return null;
     }
   },
+  // Copies a file next to itself, named after it with a localized "(Copy)"
+  // suffix and numbered on collision — mirrors createNewFile's placement
+  // logic but anchors the manual-order insert on the source file instead of
+  // the current selection, and seeds the content from what's on screen when
+  // the source is the open, possibly-unsaved document.
+  duplicateFile: async (filePath: string) => {
+    const { folderPath, filePaths, fileDocuments, emptyFolderPaths } = get();
+
+    if (!folderPath) {
+      return null;
+    }
+
+    try {
+      const targetDirectory = await dirname(filePath);
+      const sourceBasename = getBasename(filePath);
+      const extensionIndex = sourceBasename.lastIndexOf(".");
+      const sourceStem =
+        extensionIndex === -1 ? sourceBasename : sourceBasename.slice(0, extensionIndex);
+      const extension = extensionIndex === -1 ? "" : sourceBasename.slice(extensionIndex);
+      const copySuffix = i18n.t("store.duplicateSuffix");
+
+      const existingPathKeys = new Set(filePaths.map(normalizePathKey));
+      let newFilePath = await join(targetDirectory, `${sourceStem} (${copySuffix})${extension}`);
+      let suffix = 2;
+
+      while (existingPathKeys.has(normalizePathKey(newFilePath))) {
+        newFilePath = await join(
+          targetDirectory,
+          `${sourceStem} (${copySuffix} ${suffix})${extension}`
+        );
+        suffix += 1;
+      }
+
+      const content = fileDocuments[filePath]?.content ?? (await readMarkdownFile(filePath));
+
+      await writeMarkdownFile(newFilePath, content);
+      snapshotFileVersion(folderPath, newFilePath, content);
+
+      const parentRelativePath = getRelativeDisplayPath(folderPath, targetDirectory);
+      const currentManualOrder = get().manualOrder;
+      const seededManualOrder = ensureManualOrderEntry(
+        currentManualOrder,
+        parentRelativePath,
+        currentChildBasenames(folderPath, filePaths, emptyFolderPaths, parentRelativePath)
+      );
+      const insertIndex = resolveManualOrderInsertIndex(
+        seededManualOrder,
+        parentRelativePath,
+        sourceBasename
+      );
+      const nextManualOrder = insertManualOrderEntry(
+        seededManualOrder,
+        parentRelativePath,
+        getBasename(newFilePath),
+        insertIndex
+      );
+      persistManualOrderIfChanged(folderPath, currentManualOrder, nextManualOrder);
+
+      set({
+        filePaths: insertFilePathSorted(filePaths, newFilePath),
+        manualOrder: nextManualOrder,
+        fileDocuments: {
+          ...fileDocuments,
+          [newFilePath]: { content, baseContent: content }
+        },
+        selectedFilePath: newFilePath,
+        selectedFileContent: content,
+        selectedFileBaseContent: content,
+        isFileLoading: false,
+        isSaving: false,
+        isDirty: false,
+        fileError: null,
+        saveError: null
+      });
+
+      return newFilePath;
+    } catch (error) {
+      set({
+        fileError: toErrorMessage(error, i18n.t("store.fileDuplicateError"))
+      });
+
+      return null;
+    }
+  },
   // Creating a file the agent named, as part of applying a batch of staged
   // changes. Deliberately not createNewFile with a rename afterwards: that
   // would select the file, write an empty version first, and produce a rename

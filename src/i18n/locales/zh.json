@@ -522,6 +522,7 @@
     "expandFolder": "展开",
     "collapseFolder": "折叠",
     "moreActions": "更多操作",
+    "duplicate": "创建副本",
     "moveTo": "移动到…",
     "selectionCount": "已选择 {{count}} 项"
   },
@@ -786,6 +787,7 @@
     "fileLoadError": "无法加载该文件。",
     "fileSaveError": "无法保存该文件。",
     "fileCreateError": "无法创建该文件。",
+    "fileDuplicateError": "无法复制该文件。",
     "folderCreateError": "无法创建该文件夹。",
     "invalidFileName": "名称无效。",
     "fileAlreadyExists": "已存在同名文件。",
@@ -798,7 +800,8 @@
     "versionRestoreError": "无法恢复该版本。",
     "folderDeleteError": "无法删除该文件夹。",
     "newFileBaseName": "新建文件",
-    "newFolderBaseName": "新建文件夹"
+    "newFolderBaseName": "新建文件夹",
+    "duplicateSuffix": "副本"
   },
   "updateNotification": {
     "title": "有可用更新 {{version}}",

@@ -147,6 +147,7 @@ function App() {
   const saveSelectedFile = useAppStore((state) => state.saveSelectedFile);
   const restoreFileVersion = useAppStore((state) => state.restoreFileVersion);
   const createNewFile = useAppStore((state) => state.createNewFile);
+  const duplicateFile = useAppStore((state) => state.duplicateFile);
   const registerImportedFiles = useAppStore((state) => state.registerImportedFiles);
   const createNewFolder = useAppStore((state) => state.createNewFolder);
   const emptyFolderPaths = useAppStore((state) => state.emptyFolderPaths);
@@ -915,6 +916,7 @@ function App() {
         setIsSidebarSheetOpen(false);
       }}
       onDeleteFileRequest={requestDeleteFile}
+      onDuplicateFileRequest={(filePath) => void duplicateFile(filePath)}
       onDeleteFolderRequest={requestDeleteFolder}
       onDeleteMultipleRequest={requestDeleteMultiple}
       onDeleteToolbarRequest={requestDeleteFromToolbar}

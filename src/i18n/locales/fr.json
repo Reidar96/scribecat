@@ -523,6 +523,7 @@
     "expandFolder": "Déplier",
     "collapseFolder": "Replier",
     "moreActions": "Autres actions",
+    "duplicate": "Dupliquer",
     "moveTo": "Déplacer vers…",
     "selectionCount": "{{count}} sélectionnés"
   },
@@ -787,6 +788,7 @@
     "fileLoadError": "Le fichier n'a pas pu être chargé.",
     "fileSaveError": "Le fichier n'a pas pu être enregistré.",
     "fileCreateError": "Le fichier n'a pas pu être créé.",
+    "fileDuplicateError": "Le fichier n'a pas pu être dupliqué.",
     "folderCreateError": "Le dossier n'a pas pu être créé.",
     "invalidFileName": "Nom invalide.",
     "fileAlreadyExists": "Un fichier portant ce nom existe déjà.",
@@ -799,7 +801,8 @@
     "versionRestoreError": "La version n'a pas pu être restaurée.",
     "folderDeleteError": "Le dossier n'a pas pu être supprimé.",
     "newFileBaseName": "Nouveau fichier",
-    "newFolderBaseName": "Nouveau dossier"
+    "newFolderBaseName": "Nouveau dossier",
+    "duplicateSuffix": "Copie"
   },
   "updateNotification": {
     "title": "Mise à jour {{version}} disponible",

@@ -522,6 +522,7 @@
     "expandFolder": "展開",
     "collapseFolder": "折りたたむ",
     "moreActions": "その他の操作",
+    "duplicate": "複製",
     "moveTo": "移動先…",
     "selectionCount": "{{count}} 件を選択中"
   },
@@ -786,6 +787,7 @@
     "fileLoadError": "ファイルを読み込めませんでした。",
     "fileSaveError": "ファイルを保存できませんでした。",
     "fileCreateError": "ファイルを作成できませんでした。",
+    "fileDuplicateError": "ファイルを複製できませんでした。",
     "folderCreateError": "フォルダーを作成できませんでした。",
     "invalidFileName": "名前が無効です。",
     "fileAlreadyExists": "この名前のファイルはすでに存在します。",
@@ -798,7 +800,8 @@
     "versionRestoreError": "バージョンを復元できませんでした。",
     "folderDeleteError": "フォルダーを削除できませんでした。",
     "newFileBaseName": "新規ファイル",
-    "newFolderBaseName": "新規フォルダー"
+    "newFolderBaseName": "新規フォルダー",
+    "duplicateSuffix": "コピー"
   },
   "updateNotification": {
     "title": "アップデート {{version}} が利用可能です",

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { BookOpen, Download, FileDown, FilePlus, FolderArchive, FolderInput, Pencil, Printer, Trash2 } from "lucide-react";
+import { BookOpen, Copy, Download, FileDown, FilePlus, FolderArchive, FolderInput, Pencil, Printer, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { getVaultCapabilities, platform, vaultCapabilityHint } from "@/platform";
 import { dirname, join } from "@/platform/paths";
@@ -58,6 +58,7 @@ type FileTreeProps = {
   onOpenFolderNote: (folderPath: string) => Promise<void>;
   onCreateFileRequest: (targetDirectory: string) => void;
   onDeleteFileRequest: (filePath: string) => void;
+  onDuplicateFileRequest: (filePath: string) => void;
   onDeleteFolderRequest: (folderPath: string) => void;
   onExportFileRequest: (filePath: string, mode: ExportMode) => void;
   onExportFolderRequest: (folderPath: string, mode: ExportMode) => void;
@@ -93,6 +94,7 @@ export function FileTree({
   onOpenFolderNote,
   onCreateFileRequest,
   onDeleteFileRequest,
+  onDuplicateFileRequest,
   onDeleteFolderRequest,
   onExportFileRequest,
   onExportFolderRequest,
@@ -821,6 +823,23 @@ export function FileTree({
                 <Pencil aria-hidden="true" />
                 {t("fileTree.rename")}
               </button>
+
+              {contextMenu.kind === "file" ? (
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="file-tree-context-menu__item"
+                  disabled={!capabilities.create}
+                  title={capabilities.create ? undefined : capabilityHint}
+                  onClick={() => {
+                    onDuplicateFileRequest(contextMenu.filePath);
+                    setContextMenu(null);
+                  }}
+                >
+                  <Copy aria-hidden="true" />
+                  {t("fileTree.duplicate")}
+                </button>
+              ) : null}
 
               <button
                 type="button"

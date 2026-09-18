@@ -523,6 +523,7 @@
     "expandFolder": "Espandi",
     "collapseFolder": "Comprimi",
     "moreActions": "Altre azioni",
+    "duplicate": "Duplica",
     "moveTo": "Sposta in…",
     "selectionCount": "{{count}} selezionati"
   },
@@ -787,6 +788,7 @@
     "fileLoadError": "Impossibile caricare il file.",
     "fileSaveError": "Impossibile salvare il file.",
     "fileCreateError": "Impossibile creare il file.",
+    "fileDuplicateError": "Impossibile duplicare il file.",
     "folderCreateError": "Impossibile creare la cartella.",
     "invalidFileName": "Nome non valido.",
     "fileAlreadyExists": "Esiste già un file con questo nome.",
@@ -799,7 +801,8 @@
     "versionRestoreError": "Impossibile ripristinare la versione.",
     "folderDeleteError": "Impossibile eliminare la cartella.",
     "newFileBaseName": "Nuovo file",
-    "newFolderBaseName": "Nuova cartella"
+    "newFolderBaseName": "Nuova cartella",
+    "duplicateSuffix": "Copia"
   },
   "updateNotification": {
     "title": "Aggiornamento {{version}} disponibile",
