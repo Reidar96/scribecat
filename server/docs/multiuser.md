@@ -9,11 +9,10 @@ compose file for that: two ready-made slots, `PERSON1` and `PERSON2`
 (`anna`/`bob` by default), as a starting template.
 
 Starting here right away, even for a single person, saves you the later move
-described below. Renaming a person is a single line in `.env`
-(`PERSON1_BASE_PATH`): that is the one place their URL-facing name lives,
-and it drives both `docker-compose.yml` and the Caddyfile without editing
-either. It does not rename the data folder, though: that stays e.g.
-`anna-data` until you also change `PERSON1_DATA_DIR` yourself. Adding or
+described below. To rename a person, change `PERSON1_BASE_PATH` in `.env`
+(the one place their URL-facing name lives, driving both
+`docker-compose.yml` and the Caddyfile without editing either) and, if you
+want the data folder renamed to match, `PERSON1_DATA_DIR` too. Adding or
 removing a person still means copying or deleting a numbered block by hand
 in `docker-compose.yml` and the Caddyfile (not a single command), but it is
 copying a number, not renaming strings across three files, and the
@@ -48,12 +47,13 @@ your first `docker compose up`:
 - `PERSON1_INIT_PASSWORD` and `PERSON2_INIT_PASSWORD`: eight characters or
   more each, or that instance rejects it and keeps restarting.
 - `PERSON1_BASE_PATH` and `PERSON2_BASE_PATH`: where each instance
-  answers, e.g. `/anna`. Change these, and only these, to rename a person.
-- `PERSON1_DATA_DIR` and `PERSON2_DATA_DIR`: the data folder name, `anna-data`
-  and `bob-data` by default. Only worth changing to match a folder you
-  already have (see [Moving an existing single instance
-  here](#moving-an-existing-single-instance-here)) or to keep it in step with
-  a renamed `BASE_PATH`.
+  answers, e.g. `/anna`. Change these to rename a person.
+- `PERSON1_DATA_DIR` and `PERSON2_DATA_DIR`: the data folder name,
+  `anna-data` and `bob-data` by default. Renaming `BASE_PATH` does not
+  rename this too, so change it as well if you want the folder to match
+  (or leave it if you don't care, or are pointing it at a folder you
+  already have, see [Moving an existing single instance
+  here](#moving-an-existing-single-instance-here)).
 - `SCRIBEDOG_SITE_ADDRESS`: the box's LAN IP or host name, not `localhost`,
   unless every person opens the app on this same machine (see
   [Getting started](getting-started.md#install)).
