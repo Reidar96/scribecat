@@ -96,7 +96,7 @@ applies unchanged, one instance at a time:
 
 ## Adding another person later
 
-1. In `docker-compose.yml`:
+1. Open `docker-compose.yml` and:
    - Copy the last `scribedog-<N>` service block, bump the number
      (`scribedog-2` copied becomes `scribedog-3`), and point its
      `SCRIBEDOG_BASE_PATH`, `SCRIBEDOG_INIT_PASSWORD`, `PUID`, `PGID` and
@@ -105,15 +105,15 @@ applies unchanged, one instance at a time:
    - Add `PERSON3_BASE_PATH: ${PERSON3_BASE_PATH:-/PERSON3_UNSET}` to the
      `caddy` service's `environment:` block, next to
      `PERSON1_BASE_PATH` / `PERSON2_BASE_PATH`.
-2. In the Caddyfile, add a matching block next to the existing ones, again
-   just the next number:
+2. Open the Caddyfile and add a matching block next to the existing ones,
+   again just the next number:
    ```caddyfile
    handle {$PERSON3_BASE_PATH:/PERSON3_UNSET}* {
        reverse_proxy scribedog-3:3000
    }
    ```
-3. Add `PERSON3_INIT_PASSWORD=` (eight characters or more) and
-   `PERSON3_BASE_PATH=/carol` (or whatever path you want) to `.env`.
+3. Open `.env` and add `PERSON3_INIT_PASSWORD=` (eight characters or more)
+   and `PERSON3_BASE_PATH=/carol` (or whatever path you want).
 4. Run `docker compose up -d`. This starts only the new container; the
    running ones are untouched. The fallback 404 (a client without a prefix)
    is deliberately generic and does not list instances, so nothing else in
