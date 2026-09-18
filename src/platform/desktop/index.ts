@@ -4,7 +4,7 @@ import { listen } from "@tauri-apps/api/event";
 import { dirname, join, normalize } from "@tauri-apps/api/path";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { open as openDialog } from "@tauri-apps/plugin-dialog";
+import { open as openDialog, save as saveDialog } from "@tauri-apps/plugin-dialog";
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { relaunch } from "@tauri-apps/plugin-process";
@@ -47,6 +47,7 @@ export const platform: Platform = {
     localFolders: true,
     importFiles: true,
     exportFiles: true,
+    downloads: true,
     imagePicker: true,
     updater: true,
     voiceInput: true,
@@ -140,6 +141,32 @@ export const platform: Platform = {
       const selected = await openDialog({ multiple: true, directory: false, title, filters, defaultPath });
 
       return typeof selected === "string" ? [selected] : Array.isArray(selected) ? selected : [];
+    }
+  },
+  downloads: {
+    // "Download" on the desktop is a save dialog: the user picks the file,
+    // the dialog plugin widens the fs scope to it, and the bytes are written
+    // through the same local filesystem the export uses.
+    saveFile: async ({ fileName, data }) => {
+      const extension = fileName.split(".").pop() ?? "";
+      const target = await saveDialog({
+        defaultPath: fileName,
+        filters: extension ? [{ name: extension.toUpperCase(), extensions: [extension] }] : []
+      });
+
+      if (!target) {
+        return false;
+      }
+
+      await invoke("allow_file_scope", { filePath: target });
+
+      if (typeof data === "string") {
+        await localFs.writeTextFile(target, data);
+      } else {
+        await localFs.writeFile(target, data);
+      }
+
+      return true;
     }
   },
   voice: {

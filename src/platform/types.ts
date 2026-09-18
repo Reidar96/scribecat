@@ -102,6 +102,14 @@ export const ALL_VAULT_CAPABILITIES: VaultCapabilities = {
 export type VaultStorage = FileSystemApi & {
   capabilities: VaultCapabilities;
   listMarkdownFiles(rootPath: string): Promise<MarkdownFileRecord[]>;
+  /**
+   * Packs a folder of the vault (notes, images, everything but the
+   * `.scribedog/` metadata) into a ZIP archive of the raw files. Null for a
+   * local folder, whose files are right there in the file manager. A server
+   * vault answers it in one request (`GET /api/export/zip`), which is what
+   * makes "get my notes out" possible from a browser at all.
+   */
+  packFolder: ((folderPath: string) => Promise<Uint8Array>) | null;
 };
 
 /**
@@ -118,6 +126,23 @@ export type PathApi = {
 export type FileDialogFilter = {
   name: string;
   extensions: string[];
+};
+
+export type DownloadFile = {
+  fileName: string;
+  data: Uint8Array | string;
+  mimeType: string;
+};
+
+/**
+ * Hands one finished file to the user. Where it ends up is the shell's
+ * business: the browser saves it the way it saves any download, the desktop
+ * asks with a save dialog. Resolves to false when the user cancelled that
+ * dialog; a browser download never does. This is the last inch of every
+ * export that cannot write into a folder of the user's choosing.
+ */
+export type DownloadsApi = {
+  saveFile(file: DownloadFile): Promise<boolean>;
 };
 
 /** Native file/folder pickers. Desktop only. */
@@ -356,6 +381,8 @@ export type PlatformFeatures = {
   importFiles: boolean;
   /** Export to a local folder picked in a native dialog. */
   exportFiles: boolean;
+  /** Hand a finished file to the user without choosing a folder first (see DownloadsApi). */
+  downloads: boolean;
   /** Toolbar image button (native file picker). Paste and drop work everywhere. */
   imagePicker: boolean;
   updater: boolean;
@@ -400,6 +427,7 @@ export type Platform = {
   spellcheck: { checkDictionary(language: string): Promise<SpellcheckDictionaryStatus> };
 
   dialogs: DialogsApi | null;
+  downloads: DownloadsApi | null;
   voice: VoiceApi | null;
   updater: UpdaterApi | null;
   knowledgeIndex: KnowledgeIndexApi | null;

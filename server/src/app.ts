@@ -14,6 +14,7 @@ import { llmRoutes } from "./llm/proxyRoutes.js";
 import { secretRoutes } from "./secrets/routes.js";
 import type { SecretStore } from "./secrets/secretStore.js";
 import { eventRoutes } from "./vault/eventRoutes.js";
+import { exportRoutes } from "./vault/exportRoutes.js";
 import type { Vault } from "./vault/files.js";
 import { fileRoutes } from "./vault/routes.js";
 import type { VaultWatcher } from "./vault/watcher.js";
@@ -91,6 +92,7 @@ export async function buildApp(deps: AppDependencies): Promise<FastifyInstance> 
 
       await scoped.register(authRoutes, { authStore, session, secrets, throttle, tokens, requireSession, prefix: "/api/auth" });
       await scoped.register(fileRoutes, { vault, requireSession, prefix: "/api" });
+      await scoped.register(exportRoutes, { vault, requireSession, prefix: "/api" });
       await scoped.register(secretRoutes, { secrets, authStore, session, requireSession, prefix: "/api" });
       await scoped.register(llmRoutes, {
         allowedHosts: config.llmAllowedHosts,

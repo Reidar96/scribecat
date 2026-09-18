@@ -8,6 +8,7 @@ import {
   Clock,
   Download,
   FileText,
+  FolderArchive,
   FolderOpen,
   FolderPlus,
   GripVertical,
@@ -41,6 +42,7 @@ import {
   readDropPayload,
   type DropPayload
 } from "@/lib/dragDrop/droppedSources";
+import { canDownloadFolderArchive } from "@/lib/export/markdownDownload";
 import { formatFolderLabel, getFolderBasename } from "@/lib/fileSystem";
 import { isRemoteVaultPath, remoteVaultFor } from "@/lib/remoteVaults";
 import { getVaultCapabilities, platform, vaultCapabilityHint } from "@/platform";
@@ -79,6 +81,8 @@ type SidebarProps = {
   onExportFileRequest: (filePath: string, mode: ExportMode) => void;
   onExportFolderRequest: (folderPath: string, mode: ExportMode) => void;
   onExportMultipleRequest: (entries: BatchEntry[], mode: ExportMode) => void;
+  onDownloadMarkdownRequest: (filePath: string) => void;
+  onDownloadFolderArchiveRequest: (folderPath: string, archiveName: string) => void;
   onPrintFileRequest: (filePath: string) => void;
   onRenameFolder: (folderPath: string, newBaseName: string) => Promise<boolean>;
   onRenameFile: (filePath: string, newBaseName: string) => Promise<boolean>;
@@ -129,6 +133,8 @@ export function Sidebar({
   onExportFileRequest,
   onExportFolderRequest,
   onExportMultipleRequest,
+  onDownloadMarkdownRequest,
+  onDownloadFolderArchiveRequest,
   onPrintFileRequest,
   onRenameFolder,
   onRenameFile,
@@ -155,9 +161,13 @@ export function Sidebar({
   const capabilities = getVaultCapabilities();
   const capabilityHint = vaultCapabilityHint();
   const [rootContextMenu, setRootContextMenu] = useState<{ x: number; y: number } | null>(null);
+  // Same conditions as the tree's context menu (see FileTree): the rendered
+  // export needs a folder or a download, the raw ZIP a storage that packs.
+  const offersExport = platform.features.exportFiles || platform.features.downloads;
+  const offersVaultArchive = canDownloadFolderArchive(folderPath);
 
   const openRootContextMenu = (event: React.MouseEvent) => {
-    if (folderPath === null || !platform.features.exportFiles) {
+    if (folderPath === null || !(offersExport || offersVaultArchive)) {
       return;
     }
 
@@ -470,7 +480,7 @@ export function Sidebar({
         </div>
       </div>
 
-      {rootContextMenu && folderPath !== null && platform.features.exportFiles
+      {rootContextMenu && folderPath !== null && (offersExport || offersVaultArchive)
         ? createPortal(
             <div
               className="file-tree-context-menu"
@@ -478,30 +488,50 @@ export function Sidebar({
               style={{ top: rootContextMenu.y, left: rootContextMenu.x }}
               onClick={(event) => event.stopPropagation()}
             >
-              <button
-                type="button"
-                role="menuitem"
-                className="file-tree-context-menu__item"
-                onClick={() => {
-                  onExportFolderRequest(folderPath, "standard");
-                  setRootContextMenu(null);
-                }}
-              >
-                <Download aria-hidden="true" />
-                {t("fileTree.export")}
-              </button>
-              <button
-                type="button"
-                role="menuitem"
-                className="file-tree-context-menu__item"
-                onClick={() => {
-                  onExportFolderRequest(folderPath, "manuscript");
-                  setRootContextMenu(null);
-                }}
-              >
-                <BookOpen aria-hidden="true" />
-                {t("fileTree.exportManuscript")}
-              </button>
+              {offersExport ? (
+                <>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="file-tree-context-menu__item"
+                    onClick={() => {
+                      onExportFolderRequest(folderPath, "standard");
+                      setRootContextMenu(null);
+                    }}
+                  >
+                    <Download aria-hidden="true" />
+                    {t("fileTree.export")}
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="file-tree-context-menu__item"
+                    onClick={() => {
+                      onExportFolderRequest(folderPath, "manuscript");
+                      setRootContextMenu(null);
+                    }}
+                  >
+                    <BookOpen aria-hidden="true" />
+                    {t("fileTree.exportManuscript")}
+                  </button>
+                </>
+              ) : null}
+              {offersVaultArchive ? (
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="file-tree-context-menu__item"
+                  onClick={() => {
+                    // The root has no folder name of its own; the label the
+                    // sidebar shows (server name or host) names the archive.
+                    onDownloadFolderArchiveRequest(folderPath, folderLabel);
+                    setRootContextMenu(null);
+                  }}
+                >
+                  <FolderArchive aria-hidden="true" />
+                  {t("fileTree.downloadFolderArchive")}
+                </button>
+              ) : null}
             </div>,
             document.body
           )
@@ -560,6 +590,8 @@ export function Sidebar({
             onExportFileRequest={onExportFileRequest}
             onExportFolderRequest={onExportFolderRequest}
             onExportMultipleRequest={onExportMultipleRequest}
+            onDownloadMarkdownRequest={onDownloadMarkdownRequest}
+            onDownloadFolderArchiveRequest={onDownloadFolderArchiveRequest}
             onPrintFileRequest={onPrintFileRequest}
             onRenameFolder={onRenameFolder}
             onRenameFile={onRenameFile}

@@ -107,7 +107,12 @@
     "titleManuscript": "Esporta come manoscritto",
     "descriptionManuscript": "Unisce tutti i capitoli in un unico libro, nell'ordine mostrato dalla barra laterale.",
     "mergeIntoOneFile": "Unisci in un solo file",
-    "mergeHint": "Tutte le note una dopo l'altra in un unico documento, invece di un file per nota."
+    "mergeHint": "Tutte le note una dopo l'altra in un unico documento, invece di un file per nota.",
+    "descriptionFileDownload": "Scegli un formato e un nome file. Il browser salva il file.",
+    "descriptionFolderDownload": "Tutte le note di questa cartella vengono esportate ricorsivamente in un archivio ZIP; la struttura delle cartelle viene mantenuta.",
+    "descriptionMultipleDownload": "Tutte le note selezionate vengono esportate in un archivio ZIP; la struttura delle cartelle selezionate viene mantenuta.",
+    "archiveNameLabel": "Nome dell'archivio",
+    "downloadAction": "Scarica"
   },
   "importDialog": {
     "eyebrow": "Importa",
@@ -510,6 +515,8 @@
     "export": "Esporta…",
     "print": "Stampa…",
     "exportManuscript": "Esporta come manoscritto…",
+    "downloadMarkdown": "Scarica come Markdown",
+    "downloadFolderArchive": "Scarica come ZIP (file Markdown)",
     "stagedChange": "L’agente propone una modifica",
     "stagedChangeFolder": "Modifiche proposte in questa cartella: {{count}}",
     "openFolderNote": "{{path}} – un clic apre la nota della cartella, la freccia espande e comprime",
@@ -597,6 +604,7 @@
     "optionsMenu": "Altre opzioni",
     "spellcheckToggle": "Controllo ortografico (sottolineatura rossa)",
     "printButton": "Stampa",
+    "downloadMarkdown": "Scarica come Markdown",
     "spellcheckDictionaryMissing": "Nessun dizionario ortografico trovato per \"{{code}}\". Installa un dizionario Hunspell (ad es. hunspell-{{code}}) tramite il gestore pacchetti."
   },
   "findReplace": {

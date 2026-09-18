@@ -86,6 +86,7 @@ import {
   saveImageToFolder
 } from "@/lib/fileSystem";
 import { updateSearchHighlight } from "@/lib/searchHighlight";
+import { canDownloadMarkdown, downloadNoteAsMarkdown } from "@/lib/export/markdownDownload";
 import { printMarkdown } from "@/lib/print";
 import { couldBeShortcut } from "@/lib/shortcuts/binding";
 import { matchFixedEditorShortcut } from "@/lib/shortcuts/fixed";
@@ -650,6 +651,23 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       console.error("Print failed:", error);
     });
   };
+
+  // The note as the .md it is, with what the editor holds right now. Only
+  // offered where the file is not on this machine (see markdownDownload).
+  const downloadDocument =
+    filePath && canDownloadMarkdown(folderPath)
+      ? () => {
+          const currentEditor = editorRef.current;
+
+          if (!currentEditor) {
+            return;
+          }
+
+          downloadNoteAsMarkdown(filePath, getEditorMarkdown(currentEditor, markdown)).catch((error: unknown) => {
+            console.error("Markdown download failed:", error);
+          });
+        }
+      : null;
 
   // The tools below back the chat agent's document read/edit tool calls (see
   // src/lib/chat/agentTools.ts) — a lookup indirection is needed because the
@@ -1578,6 +1596,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         onAiCheckRequest={ai.runAiGrammarCheck}
         onAiSettingsRequest={onAiSettingsRequest}
         onPrintRequest={printDocument}
+        onDownloadMarkdownRequest={downloadDocument}
         onSearchRequest={openFindPanel}
         onZenModeRequest={onZenModeRequest}
       />

@@ -107,7 +107,12 @@
     "titleManuscript": "原稿として書き出す",
     "descriptionManuscript": "サイドバーに表示されている順序で、すべての章を 1 冊にまとめます。",
     "mergeIntoOneFile": "1 つのファイルにまとめる",
-    "mergeHint": "ノートごとに 1 ファイルではなく、すべてのノートを 1 つの文書に続けて収めます。"
+    "mergeHint": "ノートごとに 1 ファイルではなく、すべてのノートを 1 つの文書に続けて収めます。",
+    "descriptionFileDownload": "形式とファイル名を選びます。ファイルはブラウザーが保存します。",
+    "descriptionFolderDownload": "このフォルダー内のすべてのノートを再帰的に ZIP アーカイブに書き出します。フォルダー構造は保持されます。",
+    "descriptionMultipleDownload": "選択したすべてのノートを ZIP アーカイブに書き出します。選択したフォルダー内のフォルダー構造は保持されます。",
+    "archiveNameLabel": "アーカイブ名",
+    "downloadAction": "ダウンロード"
   },
   "importDialog": {
     "eyebrow": "インポート",
@@ -509,6 +514,8 @@
     "export": "エクスポート…",
     "print": "印刷…",
     "exportManuscript": "原稿として書き出す…",
+    "downloadMarkdown": "Markdown としてダウンロード",
+    "downloadFolderArchive": "ZIP としてダウンロード（Markdown ファイル）",
     "stagedChange": "エージェントが変更を提案しています",
     "stagedChangeFolder": "このフォルダー内の提案された変更：{{count}}",
     "openFolderNote": "{{path}} – クリックでフォルダーノートを開き、矢印で展開・折りたたみ",
@@ -596,6 +603,7 @@
     "optionsMenu": "その他のオプション",
     "spellcheckToggle": "スペルチェック（赤い波線）",
     "printButton": "印刷",
+    "downloadMarkdown": "Markdown としてダウンロード",
     "spellcheckDictionaryMissing": "「{{code}}」用のスペルチェック辞書が見つかりません。パッケージマネージャーで Hunspell 辞書（例: hunspell-{{code}}）をインストールしてください。"
   },
   "findReplace": {

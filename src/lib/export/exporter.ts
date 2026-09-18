@@ -1,7 +1,7 @@
 import { join } from "@/platform/paths";
-import { requireLocalFs } from "@/platform";
+import { platform, PlatformUnavailableError, requireLocalFs } from "@/platform";
 
-import { allowMarkdownFolderAccess, listMarkdownFiles, type MarkdownFileRecord } from "@/lib/fileSystem";
+import { listMarkdownFiles, type MarkdownFileRecord } from "@/lib/fileSystem";
 import { buildFileTree, type FileTreeNode } from "@/lib/fileTree";
 import { getNoteDisplayName } from "@/lib/folderNotes";
 import { DEFAULT_DOCUMENT_STYLE, type DocumentStyle } from "@/lib/fonts";
@@ -16,6 +16,7 @@ import {
   type ManuscriptSource
 } from "./manuscript";
 import { parseMarkdownToBlocks, type ExportBlock } from "./markdownModel";
+import { addArchiveEntry, buildZipArchive, createArchive, mimeTypeFor } from "./zipArchive";
 
 /** Formats available when every note becomes its own file. */
 export const EXPORT_FORMATS = ["pdf", "docx", "odt", "html"] as const;
@@ -32,6 +33,16 @@ export type ExportFormat = (typeof MERGED_EXPORT_FORMATS)[number];
 export function isMergedOnlyFormat(format: ExportFormat): boolean {
   return !(EXPORT_FORMATS as readonly string[]).includes(format);
 }
+
+/**
+ * Where an export goes. "folder" is the desktop's export into a directory
+ * the user picked, one file per note with a conflict prompt for each file
+ * already there. "download" hands the result to `platform.downloads`: a
+ * single document as it is, many documents packed into one ZIP, and never
+ * a conflict prompt, because the browser (or the save dialog) settles the
+ * name. The rendering is the same either way; only the last step differs.
+ */
+export type ExportDestination = { kind: "folder"; directory: string } | { kind: "download" };
 
 export type ConflictDecision = "overwrite" | "skip" | "cancel";
 
@@ -171,10 +182,76 @@ async function writeExportFile(
   }
 }
 
+/**
+ * Widens the shell's filesystem scope to the target folder. Only that: the
+ * vault stays whatever is open (`allowMarkdownFolderAccess` would also
+ * switch the active storage to the target, which for a server vault on the
+ * desktop would cut the export off from the notes it is about to read).
+ */
+async function allowExportFolder(directory: string): Promise<void> {
+  await platform.vault.allowFolderAccess(directory);
+}
+
+function requireDownloads() {
+  if (!platform.downloads) {
+    throw new PlatformUnavailableError();
+  }
+
+  return platform.downloads;
+}
+
+/** Hands one finished file to the platform; false when the user cancelled the save dialog. */
+async function downloadRendered(fileName: string, rendered: RenderedExport): Promise<boolean> {
+  const data = rendered.text ?? rendered.bytes;
+
+  if (data === undefined) {
+    return false;
+  }
+
+  return requireDownloads().saveFile({ fileName, data, mimeType: mimeTypeFor(fileName) });
+}
+
+function rememberDestination(destination: ExportDestination, format: ExportFormat): void {
+  if (destination.kind === "folder") {
+    setLastExportDirectory(destination.directory);
+  }
+
+  setLastExportFormat(format);
+}
+
+/**
+ * The folder half of a single-document export: where the file goes, and
+ * whether the user wants an existing one written over. An outcome instead
+ * of a path means the export stops here (cancelled or skipped).
+ */
+async function prepareSingleTarget(
+  directory: string,
+  fileName: string,
+  onConflict: ConflictResolver
+): Promise<{ targetPath: string } | { outcome: ExportOutcome }> {
+  await allowExportFolder(directory);
+
+  const targetPath = await join(directory, fileName);
+
+  if (await requireLocalFs().exists(targetPath)) {
+    const { decision } = await onConflict(fileName);
+
+    if (decision === "cancel") {
+      return { outcome: { exportedCount: 0, skippedCount: 0, cancelled: true } };
+    }
+
+    if (decision === "skip") {
+      return { outcome: { exportedCount: 0, skippedCount: 1, cancelled: false } };
+    }
+  }
+
+  return { targetPath };
+}
+
 export type SingleExportInput = {
   markdownFilePath: string;
   format: ExportFormat;
-  targetDirectory: string;
+  destination: ExportDestination;
   baseName: string;
   readMarkdown: MarkdownReader;
   onConflict: ConflictResolver;
@@ -185,28 +262,24 @@ export async function exportSingleNote(input: SingleExportInput): Promise<Export
   const {
     markdownFilePath,
     format,
-    targetDirectory,
+    destination,
     baseName,
     readMarkdown,
     onConflict,
     style = DEFAULT_DOCUMENT_STYLE
   } = input;
 
-  await allowMarkdownFolderAccess(targetDirectory);
-
   const fileName = `${sanitizeExportName(baseName)}.${format}`;
-  const targetPath = await join(targetDirectory, fileName);
+  let targetPath: string | null = null;
 
-  if (await requireLocalFs().exists(targetPath)) {
-    const { decision } = await onConflict(fileName);
+  if (destination.kind === "folder") {
+    const prepared = await prepareSingleTarget(destination.directory, fileName, onConflict);
 
-    if (decision === "cancel") {
-      return { exportedCount: 0, skippedCount: 0, cancelled: true };
+    if ("outcome" in prepared) {
+      return prepared.outcome;
     }
 
-    if (decision === "skip") {
-      return { exportedCount: 0, skippedCount: 1, cancelled: false };
-    }
+    targetPath = prepared.targetPath;
   }
 
   const markdown = await readMarkdown(markdownFilePath);
@@ -217,9 +290,14 @@ export async function exportSingleNote(input: SingleExportInput): Promise<Export
     markdownFilePath,
     style
   );
-  await writeExportFile(targetPath, rendered);
-  setLastExportDirectory(targetDirectory);
-  setLastExportFormat(format);
+
+  if (targetPath !== null) {
+    await writeExportFile(targetPath, rendered);
+  } else if (!(await downloadRendered(fileName, rendered))) {
+    return { exportedCount: 0, skippedCount: 0, cancelled: true };
+  }
+
+  rememberDestination(destination, format);
 
   return { exportedCount: 1, skippedCount: 0, cancelled: false };
 }
@@ -227,7 +305,7 @@ export async function exportSingleNote(input: SingleExportInput): Promise<Export
 export type FolderExportInput = {
   sourceFolderPath: string;
   format: ExportFormat;
-  targetDirectory: string;
+  destination: ExportDestination;
   folderName: string;
   readMarkdown: MarkdownReader;
   onConflict: ConflictResolver;
@@ -235,25 +313,103 @@ export type FolderExportInput = {
   style?: DocumentStyle;
 };
 
+/**
+ * The two ways a list of rendered notes leaves the app. The folder sink
+ * writes each note into the target tree (creating folders, asking about
+ * files already there, honouring "apply to all"); the archive sink collects
+ * them and hands one ZIP to the platform at the end. `prepare` runs before
+ * the note is rendered, so a skipped file is never rendered for nothing.
+ */
+type RecordSink = {
+  prepare(relativeSegments: string[], fileName: string): Promise<ConflictDecision>;
+  write(relativeSegments: string[], fileName: string, rendered: RenderedExport): Promise<void>;
+  /** Once, after the last note; false if the user cancelled the download's save dialog. */
+  finish(): Promise<boolean>;
+};
+
+function createFolderSink(exportRootPath: string, onConflict: ConflictResolver): RecordSink {
+  let blanketDecision: Extract<ConflictDecision, "overwrite" | "skip"> | null = null;
+
+  const targetPathFor = async (relativeSegments: string[], fileName: string) => {
+    let targetDirectoryPath = exportRootPath;
+
+    for (const segment of relativeSegments) {
+      targetDirectoryPath = await join(targetDirectoryPath, sanitizeExportName(segment));
+    }
+
+    return { targetDirectoryPath, targetPath: await join(targetDirectoryPath, fileName) };
+  };
+
+  return {
+    async prepare(relativeSegments, fileName) {
+      const { targetDirectoryPath, targetPath } = await targetPathFor(relativeSegments, fileName);
+
+      await requireLocalFs().mkdir(targetDirectoryPath, { recursive: true });
+
+      if (!(await requireLocalFs().exists(targetPath))) {
+        return "overwrite";
+      }
+
+      if (blanketDecision) {
+        return blanketDecision;
+      }
+
+      const resolution = await onConflict(
+        relativeSegments.length > 0 ? `${relativeSegments.join("/")}/${fileName}` : fileName
+      );
+
+      if (resolution.applyToAll && resolution.decision !== "cancel") {
+        blanketDecision = resolution.decision;
+      }
+
+      return resolution.decision;
+    },
+    async write(relativeSegments, fileName, rendered) {
+      const { targetPath } = await targetPathFor(relativeSegments, fileName);
+      await writeExportFile(targetPath, rendered);
+    },
+    finish: async () => true
+  };
+}
+
+function createArchiveSink(archiveName: string): RecordSink {
+  const entries = createArchive();
+
+  return {
+    prepare: async () => "overwrite",
+    async write(relativeSegments, fileName, rendered) {
+      const path = [...relativeSegments.map(sanitizeExportName), fileName].join("/");
+      addArchiveEntry(entries, path, rendered.text ?? rendered.bytes ?? new Uint8Array());
+    },
+    finish: () => {
+      const fileName = `${sanitizeExportName(archiveName)}.zip`;
+
+      return requireDownloads().saveFile({
+        fileName,
+        data: buildZipArchive(entries),
+        mimeType: mimeTypeFor(fileName)
+      });
+    }
+  };
+}
+
 type ExportRecordsInput = {
   records: MarkdownFileRecord[];
   format: ExportFormat;
-  exportRootPath: string;
+  sink: RecordSink;
   readMarkdown: MarkdownReader;
-  onConflict: ConflictResolver;
   onProgress?: (progress: ExportProgress) => void;
   style: DocumentStyle;
 };
 
-// Shared write/conflict/progress core for exporting a resolved list of notes
-// (each with a relativePath under exportRootPath) — used by both the
+// Shared render/conflict/progress core for exporting a resolved list of notes
+// (each with a relativePath under the export root) — used by both the
 // single-folder export and the multi-selection export.
 async function writeExportRecords(input: ExportRecordsInput): Promise<ExportOutcome> {
-  const { records, format, exportRootPath, readMarkdown, onConflict, onProgress, style } = input;
+  const { records, format, sink, readMarkdown, onProgress, style } = input;
 
   let exportedCount = 0;
   let skippedCount = 0;
-  let blanketDecision: Extract<ConflictDecision, "overwrite" | "skip"> | null = null;
 
   for (const [index, record] of records.entries()) {
     const relativeSegments = record.relativePath.split("/");
@@ -269,53 +425,51 @@ async function writeExportRecords(input: ExportRecordsInput): Promise<ExportOutc
       currentFileName: targetFileName
     });
 
-    let targetDirectoryPath = exportRootPath;
+    const decision = await sink.prepare(relativeSegments, targetFileName);
 
-    for (const segment of relativeSegments) {
-      targetDirectoryPath = await join(targetDirectoryPath, sanitizeExportName(segment));
+    if (decision === "cancel") {
+      return { exportedCount, skippedCount, cancelled: true };
     }
 
-    await requireLocalFs().mkdir(targetDirectoryPath, { recursive: true });
-
-    const targetPath = await join(targetDirectoryPath, targetFileName);
-
-    if (await requireLocalFs().exists(targetPath)) {
-      let decision: ConflictDecision;
-
-      if (blanketDecision) {
-        decision = blanketDecision;
-      } else {
-        const resolution = await onConflict(
-          relativeSegments.length > 0
-            ? `${relativeSegments.join("/")}/${targetFileName}`
-            : targetFileName
-        );
-        decision = resolution.decision;
-
-        if (resolution.applyToAll && decision !== "cancel") {
-          blanketDecision = decision;
-        }
-      }
-
-      if (decision === "cancel") {
-        return { exportedCount, skippedCount, cancelled: true };
-      }
-
-      if (decision === "skip") {
-        skippedCount += 1;
-        continue;
-      }
+    if (decision === "skip") {
+      skippedCount += 1;
+      continue;
     }
 
     const markdown = await readMarkdown(record.filePath);
     const rendered = await renderExportBytes(format, baseName, markdown, record.filePath, style);
-    await writeExportFile(targetPath, rendered);
+    await sink.write(relativeSegments, targetFileName, rendered);
     exportedCount += 1;
   }
 
   onProgress?.({ completed: records.length, total: records.length, currentFileName: "" });
 
+  if (!(await sink.finish())) {
+    return { exportedCount, skippedCount, cancelled: true };
+  }
+
   return { exportedCount, skippedCount, cancelled: false };
+}
+
+/**
+ * The sink for a many-notes export: the folder `<directory>/<folderName>`
+ * (merged into if it exists, never replaced), or a ZIP of that name.
+ */
+async function createRecordSink(
+  destination: ExportDestination,
+  folderName: string,
+  onConflict: ConflictResolver
+): Promise<RecordSink> {
+  if (destination.kind === "download") {
+    return createArchiveSink(folderName);
+  }
+
+  await allowExportFolder(destination.directory);
+
+  const exportRootPath = await join(destination.directory, sanitizeExportName(folderName));
+  await requireLocalFs().mkdir(exportRootPath, { recursive: true });
+
+  return createFolderSink(exportRootPath, onConflict);
 }
 
 // Exports every note under the folder, preserving the subfolder structure.
@@ -325,7 +479,7 @@ export async function exportFolderNotes(input: FolderExportInput): Promise<Expor
   const {
     sourceFolderPath,
     format,
-    targetDirectory,
+    destination,
     folderName,
     readMarkdown,
     onConflict,
@@ -333,25 +487,21 @@ export async function exportFolderNotes(input: FolderExportInput): Promise<Expor
     style = DEFAULT_DOCUMENT_STYLE
   } = input;
 
-  await allowMarkdownFolderAccess(targetDirectory);
-
+  const sink = await createRecordSink(destination, folderName, onConflict);
   const records = await listMarkdownFiles(sourceFolderPath);
-  const exportRootPath = await join(targetDirectory, sanitizeExportName(folderName));
-
-  await requireLocalFs().mkdir(exportRootPath, { recursive: true });
 
   const outcome = await writeExportRecords({
     records,
     format,
-    exportRootPath,
+    sink,
     readMarkdown,
-    onConflict,
     onProgress,
     style
   });
 
-  setLastExportDirectory(targetDirectory);
-  setLastExportFormat(format);
+  if (!outcome.cancelled) {
+    rememberDestination(destination, format);
+  }
 
   return outcome;
 }
@@ -361,7 +511,7 @@ export type MultipleExportEntry = { kind: "file" | "folder"; path: string };
 export type MultipleExportInput = {
   entries: MultipleExportEntry[];
   format: ExportFormat;
-  targetDirectory: string;
+  destination: ExportDestination;
   folderName: string;
   readMarkdown: MarkdownReader;
   onConflict: ConflictResolver;
@@ -377,7 +527,7 @@ export async function exportMultipleNotes(input: MultipleExportInput): Promise<E
   const {
     entries,
     format,
-    targetDirectory,
+    destination,
     folderName,
     readMarkdown,
     onConflict,
@@ -385,7 +535,7 @@ export async function exportMultipleNotes(input: MultipleExportInput): Promise<E
     style = DEFAULT_DOCUMENT_STYLE
   } = input;
 
-  await allowMarkdownFolderAccess(targetDirectory);
+  const sink = await createRecordSink(destination, folderName, onConflict);
 
   const recordLists = await Promise.all(
     entries.map(async (entry): Promise<MarkdownFileRecord[]> => {
@@ -405,22 +555,19 @@ export async function exportMultipleNotes(input: MultipleExportInput): Promise<E
   );
 
   const records = recordLists.flat();
-  const exportRootPath = await join(targetDirectory, sanitizeExportName(folderName));
-
-  await requireLocalFs().mkdir(exportRootPath, { recursive: true });
 
   const outcome = await writeExportRecords({
     records,
     format,
-    exportRootPath,
+    sink,
     readMarkdown,
-    onConflict,
     onProgress,
     style
   });
 
-  setLastExportDirectory(targetDirectory);
-  setLastExportFormat(format);
+  if (!outcome.cancelled) {
+    rememberDestination(destination, format);
+  }
 
   return outcome;
 }
@@ -476,7 +623,7 @@ export type MergedExportInput = {
   /** Chapter files, already in the order they should appear in the book. */
   records: MarkdownFileRecord[];
   format: ExportFormat;
-  targetDirectory: string;
+  destination: ExportDestination;
   baseName: string;
   readMarkdown: MarkdownReader;
   onConflict: ConflictResolver;
@@ -496,7 +643,7 @@ export async function exportMergedNotes(input: MergedExportInput): Promise<Expor
   const {
     records,
     format,
-    targetDirectory,
+    destination,
     baseName,
     readMarkdown,
     onConflict,
@@ -506,21 +653,17 @@ export async function exportMergedNotes(input: MergedExportInput): Promise<Expor
     language = "en"
   } = input;
 
-  await allowMarkdownFolderAccess(targetDirectory);
-
   const fileName = `${sanitizeExportName(baseName)}.${format}`;
-  const targetPath = await join(targetDirectory, fileName);
+  let targetPath: string | null = null;
 
-  if (await requireLocalFs().exists(targetPath)) {
-    const { decision } = await onConflict(fileName);
+  if (destination.kind === "folder") {
+    const prepared = await prepareSingleTarget(destination.directory, fileName, onConflict);
 
-    if (decision === "cancel") {
-      return { exportedCount: 0, skippedCount: 0, cancelled: true };
+    if ("outcome" in prepared) {
+      return prepared.outcome;
     }
 
-    if (decision === "skip") {
-      return { exportedCount: 0, skippedCount: 1, cancelled: false };
-    }
+    targetPath = prepared.targetPath;
   }
 
   const sources: ManuscriptSource[] = [];
@@ -572,9 +715,13 @@ export async function exportMergedNotes(input: MergedExportInput): Promise<Expor
         })()
       : await renderBlocksAs(format, documentTitle, manuscript.blocks, manuscript.images, style);
 
-  await writeExportFile(targetPath, rendered);
-  setLastExportDirectory(targetDirectory);
-  setLastExportFormat(format);
+  if (targetPath !== null) {
+    await writeExportFile(targetPath, rendered);
+  } else if (!(await downloadRendered(fileName, rendered))) {
+    return { exportedCount: 0, skippedCount: 0, cancelled: true };
+  }
+
+  rememberDestination(destination, format);
 
   return { exportedCount: 1, skippedCount: 0, cancelled: false };
 }

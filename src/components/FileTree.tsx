@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { BookOpen, Download, FilePlus, FolderInput, Pencil, Printer, Trash2 } from "lucide-react";
+import { BookOpen, Download, FileDown, FilePlus, FolderArchive, FolderInput, Pencil, Printer, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { getVaultCapabilities, platform, vaultCapabilityHint } from "@/platform";
 import { dirname, join } from "@/platform/paths";
@@ -12,6 +12,7 @@ import {
   stagedChangeKind,
   vaultPathKey
 } from "@/lib/chat/vaultStaging";
+import { canDownloadFolderArchive, canDownloadMarkdown } from "@/lib/export/markdownDownload";
 import { getRelativeDisplayPath, type MarkdownFileRecord } from "@/lib/fileSystem";
 import { buildFileTree, type FileTreeFolderNode, type FileTreeNode } from "@/lib/fileTree";
 import { getFolderNoteFolderPath, isFolderNotePath } from "@/lib/folderNotes";
@@ -60,6 +61,10 @@ type FileTreeProps = {
   onDeleteFolderRequest: (folderPath: string) => void;
   onExportFileRequest: (filePath: string, mode: ExportMode) => void;
   onExportFolderRequest: (folderPath: string, mode: ExportMode) => void;
+  /** The note as the .md it is; offered only where the vault is not on this machine. */
+  onDownloadMarkdownRequest: (filePath: string) => void;
+  /** The folder's raw files as a ZIP, packed by the storage; same condition. */
+  onDownloadFolderArchiveRequest: (folderPath: string, archiveName: string) => void;
   onPrintFileRequest: (filePath: string) => void;
   onRenameFolder: (folderPath: string, newBaseName: string) => Promise<boolean>;
   onRenameFile: (filePath: string, newBaseName: string) => Promise<boolean>;
@@ -91,6 +96,8 @@ export function FileTree({
   onDeleteFolderRequest,
   onExportFileRequest,
   onExportFolderRequest,
+  onDownloadMarkdownRequest,
+  onDownloadFolderArchiveRequest,
   onPrintFileRequest,
   onRenameFolder,
   onRenameFile,
@@ -105,6 +112,12 @@ export function FileTree({
   const { t } = useTranslation();
   const capabilities = getVaultCapabilities();
   const capabilityHint = vaultCapabilityHint();
+  // The rendered export needs somewhere to go: a folder on this machine or
+  // the platform's download. The raw Markdown is only worth a menu entry
+  // where the file manager cannot do the job (browser, server vault).
+  const offersExport = platform.features.exportFiles || platform.features.downloads;
+  const offersMarkdownDownload = canDownloadMarkdown(folderPath);
+  const offersFolderArchive = canDownloadFolderArchive(folderPath);
   const { expandedFolderPaths, toggleFolder, expandAncestorsOf, expandFolders } =
     useExpandedFolders(folderPath);
   const { contextMenu, setContextMenu } = useTreeContextMenu();
@@ -687,7 +700,7 @@ export function FileTree({
         >
           {contextMenu.kind === "multiple" ? (
             <>
-              {platform.features.exportFiles ? (["standard", "manuscript"] as const).map((mode) => (
+              {offersExport ? (["standard", "manuscript"] as const).map((mode) => (
                 <button
                   key={mode}
                   type="button"
@@ -831,7 +844,7 @@ export function FileTree({
                 {t("fileTree.moveTo")}
               </button>
 
-              {platform.features.exportFiles ? (
+              {offersExport ? (
                 <>
                   <button
                     type="button"
@@ -873,6 +886,40 @@ export function FileTree({
                     {t("fileTree.exportManuscript")}
                   </button>
                 </>
+              ) : null}
+
+              {contextMenu.kind === "file" && offersMarkdownDownload ? (
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="file-tree-context-menu__item"
+                  onClick={() => {
+                    onDownloadMarkdownRequest(contextMenu.filePath);
+                    setContextMenu(null);
+                  }}
+                >
+                  <FileDown aria-hidden="true" />
+                  {t("fileTree.downloadMarkdown")}
+                </button>
+              ) : null}
+
+              {contextMenu.kind === "folder" && offersFolderArchive ? (
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="file-tree-context-menu__item"
+                  onClick={() => {
+                    const archiveName = contextMenu.relativePath.split("/").pop() ?? contextMenu.relativePath;
+
+                    void join(folderPath, contextMenu.relativePath).then((path) =>
+                      onDownloadFolderArchiveRequest(path, archiveName)
+                    );
+                    setContextMenu(null);
+                  }}
+                >
+                  <FolderArchive aria-hidden="true" />
+                  {t("fileTree.downloadFolderArchive")}
+                </button>
               ) : null}
 
               {contextMenu.kind === "file" ? (

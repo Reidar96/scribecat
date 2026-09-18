@@ -107,7 +107,12 @@
     "titleManuscript": "导出为书稿",
     "descriptionManuscript": "按侧边栏显示的顺序，把所有章节合并成一本书。",
     "mergeIntoOneFile": "合并为一个文件",
-    "mergeHint": "所有笔记依次排在同一个文档里，而不是每条笔记一个文件。"
+    "mergeHint": "所有笔记依次排在同一个文档里，而不是每条笔记一个文件。",
+    "descriptionFileDownload": "选择格式和文件名。文件由浏览器保存。",
+    "descriptionFolderDownload": "此文件夹中的所有笔记会递归导出到一个 ZIP 压缩包；文件夹结构保持不变。",
+    "descriptionMultipleDownload": "所有选中的笔记会导出到一个 ZIP 压缩包；所选文件夹内的文件夹结构保持不变。",
+    "archiveNameLabel": "压缩包名称",
+    "downloadAction": "下载"
   },
   "importDialog": {
     "eyebrow": "导入",
@@ -509,6 +514,8 @@
     "export": "导出…",
     "print": "打印…",
     "exportManuscript": "导出为书稿…",
+    "downloadMarkdown": "下载为 Markdown",
+    "downloadFolderArchive": "下载为 ZIP（Markdown 文件）",
     "stagedChange": "代理提议了一处更改",
     "stagedChangeFolder": "此文件夹中提议的更改：{{count}}",
     "openFolderNote": "{{path}} – 点击打开文件夹笔记，箭头用于展开和折叠",
@@ -596,6 +603,7 @@
     "optionsMenu": "更多选项",
     "spellcheckToggle": "拼写检查（红色波浪线）",
     "printButton": "打印",
+    "downloadMarkdown": "下载为 Markdown",
     "spellcheckDictionaryMissing": "未找到“{{code}}”的拼写检查词典。请通过你的包管理器安装 Hunspell 词典（例如 hunspell-{{code}}）。"
   },
   "findReplace": {

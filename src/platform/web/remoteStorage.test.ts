@@ -11,7 +11,8 @@ const api = vi.hoisted(() => ({
   readBytes: vi.fn(),
   writeBytes: vi.fn(),
   rename: vi.fn(),
-  remove: vi.fn()
+  remove: vi.fn(),
+  packFolder: vi.fn()
 }));
 
 vi.mock("./serverApi", async (importOriginal) => {
@@ -94,6 +95,17 @@ describe("remote vault storage (web platform)", () => {
     api.writeBytes.mockResolvedValue({ mtimeMs: 1 });
     await remoteVaultStorage.writeFile("/vault/images/y.png", bytes);
     expect(api.writeBytes).toHaveBeenCalledWith("images/y.png", bytes);
+  });
+
+  it("packs a folder, the root included, through the server", async () => {
+    const zip = new Uint8Array([80, 75, 3, 4]);
+    api.packFolder.mockResolvedValue(zip);
+
+    await expect(remoteVaultStorage.packFolder?.("/vault/Notes")).resolves.toBe(zip);
+    expect(api.packFolder).toHaveBeenCalledWith("Notes");
+
+    await remoteVaultStorage.packFolder?.("/vault");
+    expect(api.packFolder).toHaveBeenLastCalledWith("");
   });
 
   it("refuses paths outside the virtual root before they reach the server", async () => {

@@ -109,7 +109,12 @@
     "titleManuscript": "Экспорт как рукопись",
     "descriptionManuscript": "Собирает все главы в одну книгу в том порядке, в каком они показаны на боковой панели.",
     "mergeIntoOneFile": "Объединить в один файл",
-    "mergeHint": "Все заметки подряд в одном документе вместо отдельного файла на каждую заметку."
+    "mergeHint": "Все заметки подряд в одном документе вместо отдельного файла на каждую заметку.",
+    "descriptionFileDownload": "Выберите формат и имя файла. Браузер сохранит файл.",
+    "descriptionFolderDownload": "Все заметки этой папки рекурсивно экспортируются в ZIP-архив; структура папок сохраняется.",
+    "descriptionMultipleDownload": "Все выбранные заметки экспортируются в ZIP-архив; структура папок внутри выбранных папок сохраняется.",
+    "archiveNameLabel": "Имя архива",
+    "downloadAction": "Скачать"
   },
   "importDialog": {
     "eyebrow": "Импорт",
@@ -522,6 +527,8 @@
     "export": "Экспортировать…",
     "print": "Печать…",
     "exportManuscript": "Экспорт как рукопись…",
+    "downloadMarkdown": "Скачать как Markdown",
+    "downloadFolderArchive": "Скачать как ZIP (файлы Markdown)",
     "stagedChange": "Агент предлагает изменение",
     "stagedChangeFolder": "Предложенных изменений в этой папке: {{count}}",
     "openFolderNote": "{{path}} – щелчок открывает заметку папки, стрелка разворачивает и сворачивает",
@@ -609,6 +616,7 @@
     "optionsMenu": "Другие настройки",
     "spellcheckToggle": "Проверка орфографии (красное подчёркивание)",
     "printButton": "Печать",
+    "downloadMarkdown": "Скачать как Markdown",
     "spellcheckDictionaryMissing": "Словарь для проверки орфографии для «{{code}}» не найден. Установите словарь Hunspell (например, hunspell-{{code}}) через ваш пакетный менеджер."
   },
   "findReplace": {

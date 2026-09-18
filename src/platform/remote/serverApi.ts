@@ -164,8 +164,8 @@ export function createServerApi(transport: ServerTransport) {
     return (await response.json()) as T;
   }
 
-  async function requestBytes(path: string): Promise<Uint8Array> {
-    const response = await send(path, {});
+  async function requestBytes(path: string, accept = "application/json"): Promise<Uint8Array> {
+    const response = await send(path, { headers: { accept } });
 
     return new Uint8Array(await response.arrayBuffer());
   }
@@ -195,6 +195,8 @@ export function createServerApi(transport: ServerTransport) {
     rename: (from: string, to: string) => request<void>("/fs/rename", { method: "POST", body: JSON.stringify({ from, to }) }),
     remove: (path: string, recursive: boolean) =>
       request<void>("/fs/remove", { method: "POST", body: JSON.stringify({ path, recursive }) }),
+    /** A folder (`""` for the whole vault) as a ZIP of its raw files; see server/src/vault/exportZip.ts. */
+    packFolder: (path: string) => requestBytes(withPath("/export/zip", path), "application/zip"),
     changePassword: (currentPassword: string, newPassword: string) =>
       request<{ ok: true }>("/auth/password", {
         method: "POST",

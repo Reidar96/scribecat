@@ -107,7 +107,12 @@
     "titleManuscript": "Exporter comme manuscrit",
     "descriptionManuscript": "Assemble tous les chapitres en un seul livre, dans l'ordre affiché par la barre latérale.",
     "mergeIntoOneFile": "Fusionner en un seul fichier",
-    "mergeHint": "Toutes les notes à la suite dans un même document, au lieu d'un fichier par note."
+    "mergeHint": "Toutes les notes à la suite dans un même document, au lieu d'un fichier par note.",
+    "descriptionFileDownload": "Choisissez un format et un nom de fichier. Le navigateur enregistre le fichier.",
+    "descriptionFolderDownload": "Toutes les notes de ce dossier sont exportées récursivement dans une archive ZIP ; la structure des dossiers est conservée.",
+    "descriptionMultipleDownload": "Toutes les notes sélectionnées sont exportées dans une archive ZIP ; la structure des dossiers sélectionnés est conservée.",
+    "archiveNameLabel": "Nom de l'archive",
+    "downloadAction": "Télécharger"
   },
   "importDialog": {
     "eyebrow": "Import",
@@ -510,6 +515,8 @@
     "export": "Exporter…",
     "print": "Imprimer…",
     "exportManuscript": "Exporter comme manuscrit…",
+    "downloadMarkdown": "Télécharger en Markdown",
+    "downloadFolderArchive": "Télécharger en ZIP (fichiers Markdown)",
     "stagedChange": "L’agent propose une modification",
     "stagedChangeFolder": "Modifications proposées dans ce dossier : {{count}}",
     "openFolderNote": "{{path}} – un clic ouvre la note du dossier, la flèche déplie et replie",
@@ -597,6 +604,7 @@
     "optionsMenu": "Plus d'options",
     "spellcheckToggle": "Vérification orthographique (soulignement rouge)",
     "printButton": "Imprimer",
+    "downloadMarkdown": "Télécharger en Markdown",
     "spellcheckDictionaryMissing": "Aucun dictionnaire orthographique trouvé pour « {{code}} ». Installez un dictionnaire Hunspell (par ex. hunspell-{{code}}) via votre gestionnaire de paquets."
   },
   "findReplace": {

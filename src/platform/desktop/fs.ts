@@ -81,6 +81,8 @@ async function collectMarkdownFiles(
 export const localVaultStorage: VaultStorage = {
   capabilities: ALL_VAULT_CAPABILITIES,
   ...localFs,
+  // The files are on this machine; the file manager is the archive.
+  packFolder: null,
   async listMarkdownFiles(rootPath) {
     const accumulator: MarkdownFileRecord[] = [];
     await collectMarkdownFiles(rootPath, rootPath, accumulator);

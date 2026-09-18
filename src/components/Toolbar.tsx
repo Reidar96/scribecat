@@ -30,6 +30,7 @@ import {
   PanelRight,
   PawPrint,
   Pilcrow,
+  FileDown,
   Printer,
   Quote,
   Search,
@@ -77,6 +78,8 @@ type ToolbarProps = {
   onAiCheckRequest: () => void;
   onAiSettingsRequest: () => void;
   onPrintRequest: () => void;
+  /** "Download as Markdown"; null where the note is on this machine anyway. */
+  onDownloadMarkdownRequest: (() => void) | null;
   onSearchRequest: () => void;
   onZenModeRequest: () => void;
 };
@@ -212,7 +215,13 @@ type MissingDictionary = {
   installCommand: string | null;
 };
 
-function EditorOptionsMenu({ onPrintRequest }: { onPrintRequest: () => void }) {
+function EditorOptionsMenu({
+  onPrintRequest,
+  onDownloadMarkdownRequest
+}: {
+  onPrintRequest: () => void;
+  onDownloadMarkdownRequest: (() => void) | null;
+}) {
   const { t, i18n } = useTranslation();
   const spellcheckEnabled = useEditorSettingsStore((state) => state.spellcheckEnabled);
   const setSpellcheckEnabled = useEditorSettingsStore((state) => state.setSpellcheckEnabled);
@@ -267,6 +276,12 @@ function EditorOptionsMenu({ onPrintRequest }: { onPrintRequest: () => void }) {
                 <Printer className="size-4" />
                 {t("toolbar.printButton")}
               </MenuItem>
+              {onDownloadMarkdownRequest ? (
+                <MenuItem onClick={onDownloadMarkdownRequest}>
+                  <FileDown className="size-4" />
+                  {t("toolbar.downloadMarkdown")}
+                </MenuItem>
+              ) : null}
             </MenuPopup>
           </MenuPositioner>
         </MenuPortal>
@@ -452,6 +467,7 @@ export function Toolbar({
   onAiCheckRequest,
   onAiSettingsRequest,
   onPrintRequest,
+  onDownloadMarkdownRequest,
   onSearchRequest,
   onZenModeRequest
 }: ToolbarProps) {
@@ -753,7 +769,10 @@ export function Toolbar({
         >
           <Focus />
         </Button>
-        <EditorOptionsMenu onPrintRequest={onPrintRequest} />
+        <EditorOptionsMenu
+          onPrintRequest={onPrintRequest}
+          onDownloadMarkdownRequest={onDownloadMarkdownRequest}
+        />
       </div>
     </div>
   );

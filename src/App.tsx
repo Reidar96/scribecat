@@ -50,6 +50,7 @@ import {
 import { getLastOpenedRelativePath, setLastOpenedRelativePath } from "@/lib/lastOpenedFile";
 import { clearVaultSearchCache } from "@/lib/ragSearch";
 import { findStepIndex } from "@/lib/navigationHistory";
+import { downloadFolderAsArchive, downloadNoteAsMarkdown } from "@/lib/export/markdownDownload";
 import { printMarkdown } from "@/lib/print";
 import type { FileVersion } from "@/lib/fileVersions";
 import type { VersionDiffTarget } from "@/components/VersionDiffDialog";
@@ -337,6 +338,22 @@ function App() {
       .catch((error: unknown) => {
         console.error("Print failed:", error);
       });
+  };
+
+  // The note as the .md it is, unsaved edits included, for a vault that is
+  // not on this machine (browser, server vault); see lib/export/markdownDownload.
+  const handleDownloadMarkdownRequest = (filePath: string) => {
+    void readMarkdownForExport(filePath)
+      .then((markdown) => downloadNoteAsMarkdown(filePath, markdown))
+      .catch((error: unknown) => {
+        console.error("Markdown download failed:", error);
+      });
+  };
+
+  const handleDownloadFolderArchiveRequest = (archiveFolderPath: string, archiveName: string) => {
+    void downloadFolderAsArchive(archiveFolderPath, archiveName).catch((error: unknown) => {
+      console.error("Folder download failed:", error);
+    });
   };
 
   const deleteTargetLabel =
@@ -904,6 +921,8 @@ function App() {
       onExportFileRequest={requestExportFile}
       onExportFolderRequest={requestExportFolder}
       onExportMultipleRequest={requestExportMultiple}
+      onDownloadMarkdownRequest={handleDownloadMarkdownRequest}
+      onDownloadFolderArchiveRequest={handleDownloadFolderArchiveRequest}
       onPrintFileRequest={handlePrintFileRequest}
       onRenameFolder={renameFolderPath}
       onRenameFile={renameFilePath}

@@ -26,6 +26,9 @@ curl -s https://notes.example.com/api/auth/tokens \
 
 # from then on
 curl -s https://notes.example.com/api/files -H 'authorization: Bearer sdt_...'
+
+# the whole vault as a ZIP, for a copy on your own machine
+curl -s 'https://notes.example.com/api/export/zip?path=' -H 'authorization: Bearer sdt_...' -o notes.zip
 ```
 
 ## Routes
@@ -50,6 +53,7 @@ curl -s https://notes.example.com/api/files -H 'authorization: Bearer sdt_...'
 | `PUT` | `/api/fs/file?path=…` | body as `application/octet-stream` creates or overwrites |
 | `POST` | `/api/fs/rename` | `{ "from": "…", "to": "…" }` (files and folders) |
 | `POST` | `/api/fs/remove` | `{ "path": "…", "recursive": true }` (a folder without `recursive` must be empty) |
+| `GET` | `/api/export/zip?path=Notes` | the folder's files as a ZIP archive (`path=` for the whole vault), streamed; `.scribedog` metadata and symlinks are left out |
 | `GET` | `/api/secrets` | which API keys are stored, never their values |
 | `PUT` | `/api/secrets/:id` | `{ "value": "..." }` stores a key (an empty value removes it) |
 | `DELETE` | `/api/secrets/:id` | removes a key |
@@ -63,6 +67,13 @@ The `/fs` routes are the app's filesystem layer, one call per primitive.
 Paths are relative to the vault and may not point outside it (symlinks
 included) or into `.scribedog/server/`; the vault root, `.scribedog` itself
 and the data-version marker cannot be renamed or removed.
+
+`/export/zip` is not one of those primitives: it packs a folder the way you
+would copy it, so the archive has the notes, the images and any other file
+in real subfolders, but no `.scribedog` directory at any level and nothing
+reached through a symlink. The rendered formats (PDF, DOCX, ODT, EPUB) are
+made in the browser or the desktop app, not on the server, so there is no
+route for them.
 
 ## Errors
 

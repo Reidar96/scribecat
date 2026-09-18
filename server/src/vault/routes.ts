@@ -1,4 +1,4 @@
-import type { FastifyInstance } from "fastify";
+import type { FastifyError, FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 
 import type { RequireSession } from "../auth/guard.js";
 import { EntryConflictError, EntryNotFoundError, type Vault } from "./files.js";
@@ -45,6 +45,32 @@ function contentTypeFor(relativePath: string): string {
 }
 
 /**
+ * Maps the vault layer's errors onto status codes, for every route group
+ * that touches the vault (the file API here, the export in exportRoutes.ts).
+ */
+export function vaultErrorHandler(error: FastifyError, request: FastifyRequest, reply: FastifyReply) {
+  if (error instanceof VaultPathError) {
+    return reply.code(400).send({ error: "invalid_path", message: error.message });
+  }
+
+  if (error instanceof EntryNotFoundError) {
+    return reply.code(404).send({ error: "not_found", message: error.message });
+  }
+
+  if (error instanceof EntryConflictError) {
+    return reply.code(409).send({ error: "conflict", message: error.message });
+  }
+
+  if (typeof (error as { statusCode?: number }).statusCode === "number") {
+    // Fastify's own validation and body errors already carry a status.
+    return reply.send(error);
+  }
+
+  request.log.error(error);
+  return reply.code(500).send({ error: "internal", message: "Internal server error." });
+}
+
+/**
  * The file API. `/files` lists the notes; everything under `/fs` is the
  * frontend's filesystem layer (`VaultStorage` in src/platform/types.ts)
  * one call per primitive, on any path inside the vault except the server's
@@ -55,28 +81,7 @@ export async function fileRoutes(app: FastifyInstance, options: FileRoutesOption
   const { vault, requireSession } = options;
 
   app.addHook("onRequest", requireSession);
-
-  app.setErrorHandler((error, request, reply) => {
-    if (error instanceof VaultPathError) {
-      return reply.code(400).send({ error: "invalid_path", message: error.message });
-    }
-
-    if (error instanceof EntryNotFoundError) {
-      return reply.code(404).send({ error: "not_found", message: error.message });
-    }
-
-    if (error instanceof EntryConflictError) {
-      return reply.code(409).send({ error: "conflict", message: error.message });
-    }
-
-    if (typeof (error as { statusCode?: number }).statusCode === "number") {
-      // Fastify's own validation and body errors already carry a status.
-      return reply.send(error);
-    }
-
-    request.log.error(error);
-    return reply.code(500).send({ error: "internal", message: "Internal server error." });
-  });
+  app.setErrorHandler(vaultErrorHandler);
 
   // Raw bodies for the binary write; JSON stays the default for everything else.
   app.addContentTypeParser("application/octet-stream", { parseAs: "buffer" }, (_request, body, done) => {

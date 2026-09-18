@@ -51,7 +51,8 @@ To sign out one device only, revoke it in the device list instead.
 
 **Can I use the desktop app with the server?**
 Yes: "Add server vault…" in the vault menu. Notes stay on the server; AI,
-dictation, import and export run on your computer. See
+dictation, import and export run on your computer, and the file tree's
+context menu can save a note or a folder from the server as Markdown. See
 [The desktop app as a client](desktop-app.md).
 
 **The desktop app says the server cannot be reached, but the browser works.**
@@ -112,6 +113,23 @@ they are.
 **Will images show up on my phone?**
 Yes: the web app resolves the relative image paths itself, unlike some
 third-party Markdown apps used with a sync folder.
+
+**How do I get a note out of the browser?**
+Right-click it in the file tree (long-press on a phone). **Export…** renders
+it as PDF, DOCX, ODT or HTML and the browser downloads the file; for a
+folder or a selection you get one ZIP with one document per note, or one
+merged document if you tick "Merge into one file". **Download as Markdown**
+saves the note as the `.md` it is; it is also in the editor's ⋮ menu next
+to Print. For a folder, or the whole vault from the vault name at the top,
+**Download as ZIP (Markdown files)** gives you the folder as it is on the
+server: notes, images and subfolders, without the `.scribedog` metadata.
+The rendering happens in the browser, so a very large folder export takes a
+moment; the Markdown ZIP comes straight from the server.
+
+**Can I import files in the browser?**
+Not yet; the import runs in the desktop app, also with a server vault. In
+the browser, paste the text or upload the file to the server folder (SSH,
+a sync tool) and it shows up in the tree.
 
 ## AI
 

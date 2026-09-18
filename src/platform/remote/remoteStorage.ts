@@ -81,6 +81,7 @@ export function createRemoteVaultStorage(api: ServerApi, root: string): VaultSto
       await api.writeBytes(toVaultRelative(path), data);
     },
     rename: async (oldPath, newPath) => api.rename(toVaultRelative(oldPath), toVaultRelative(newPath)),
-    remove: async (path, options) => api.remove(toVaultRelative(path), options?.recursive === true)
+    remove: async (path, options) => api.remove(toVaultRelative(path), options?.recursive === true),
+    packFolder: async (folderPath) => api.packFolder(toVaultRelative(folderPath))
   };
 }

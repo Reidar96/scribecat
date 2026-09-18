@@ -107,7 +107,12 @@
     "titleManuscript": "Export as manuscript",
     "descriptionManuscript": "Compiles every chapter into one book, in the order the sidebar shows them.",
     "mergeIntoOneFile": "Merge into one file",
-    "mergeHint": "All notes one after another in a single document instead of one file per note."
+    "mergeHint": "All notes one after another in a single document instead of one file per note.",
+    "descriptionFileDownload": "Choose a format and file name. Your browser saves the file.",
+    "descriptionFolderDownload": "All notes in this folder are exported recursively into a ZIP archive; the folder structure is preserved.",
+    "descriptionMultipleDownload": "All selected notes are exported into a ZIP archive; folder structure within selected folders is preserved.",
+    "archiveNameLabel": "Archive name",
+    "downloadAction": "Download"
   },
   "importDialog": {
     "eyebrow": "Import",
@@ -510,6 +515,8 @@
     "export": "Export…",
     "print": "Print…",
     "exportManuscript": "Export as manuscript…",
+    "downloadMarkdown": "Download as Markdown",
+    "downloadFolderArchive": "Download as ZIP (Markdown files)",
     "stagedChange": "The agent proposes a change",
     "stagedChangeFolder": "Proposed changes in this folder: {{count}}",
     "openFolderNote": "{{path}} – click opens the folder note, the arrow expands and collapses",
@@ -597,6 +604,7 @@
     "optionsMenu": "More options",
     "spellcheckToggle": "Spell check (red underline)",
     "printButton": "Print",
+    "downloadMarkdown": "Download as Markdown",
     "spellcheckDictionaryMissing": "No spell-check dictionary found for \"{{code}}\". Install a Hunspell dictionary (e.g. hunspell-{{code}}) via your package manager."
   },
   "findReplace": {

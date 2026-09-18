@@ -15,6 +15,7 @@ import {
   getLastExportFormat,
   isMergedOnlyFormat,
   type ConflictResolution,
+  type ExportDestination,
   type ExportFormat,
   type ExportOutcome,
   type ExportProgress,
@@ -100,6 +101,18 @@ export function ExportDialog({
   const [outcome, setOutcome] = useState<ExportOutcome | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
+
+  // Two ways out of the app. With a local filesystem the export writes into a
+  // folder the user picks, file by file, asking about conflicts. Without one
+  // (the browser) the result is handed to the platform as a download: one
+  // document as it is, many packed into a ZIP, and no destination to choose,
+  // because the browser settles where downloads go.
+  const folderMode = platform.features.exportFiles;
+  const destination: ExportDestination | null = folderMode
+    ? targetDirectory
+      ? { kind: "folder", directory: targetDirectory }
+      : null
+    : { kind: "download" };
 
   const isOpen = target !== null;
   const isExporting = phase === "exporting";
@@ -228,7 +241,7 @@ export function ExportDialog({
   };
 
   const runExport = async (): Promise<ExportOutcome> => {
-    if (!target || !targetDirectory) {
+    if (!target || !destination) {
       return { exportedCount: 0, skippedCount: 0, cancelled: true };
     }
 
@@ -242,7 +255,7 @@ export function ExportDialog({
       const result = await exportMergedNotes({
         records,
         format,
-        targetDirectory,
+        destination,
         baseName,
         readMarkdown,
         onConflict: resolveConflict,
@@ -270,7 +283,7 @@ export function ExportDialog({
         const result = await exportMergedNotes({
           records,
           format,
-          targetDirectory,
+          destination,
           baseName,
           readMarkdown,
           onConflict: resolveConflict,
@@ -292,7 +305,7 @@ export function ExportDialog({
       return exportSingleNote({
         markdownFilePath: target.sourcePath,
         format,
-        targetDirectory,
+        destination,
         baseName,
         readMarkdown,
         onConflict: resolveConflict,
@@ -304,7 +317,7 @@ export function ExportDialog({
       return exportFolderNotes({
         sourceFolderPath: target.sourcePath,
         format,
-        targetDirectory,
+        destination,
         folderName: baseName,
         readMarkdown,
         onConflict: resolveConflict,
@@ -316,7 +329,7 @@ export function ExportDialog({
     return exportMultipleNotes({
       entries: target.entries,
       format,
-      targetDirectory,
+      destination,
       folderName: baseName,
       readMarkdown,
       onConflict: resolveConflict,
@@ -326,7 +339,7 @@ export function ExportDialog({
   };
 
   const startExport = async () => {
-    if (!target || !targetDirectory || !name.trim()) {
+    if (!target || !destination || !name.trim()) {
       return;
     }
 
@@ -363,7 +376,20 @@ export function ExportDialog({
     return null;
   }
 
-  const canExport = Boolean(targetDirectory) && name.trim().length > 0;
+  const canExport = destination !== null && name.trim().length > 0;
+  const descriptionKey = isManuscript
+    ? "exportDialog.descriptionManuscript"
+    : isMultiple
+      ? folderMode
+        ? "exportDialog.descriptionMultiple"
+        : "exportDialog.descriptionMultipleDownload"
+      : isFolder
+        ? folderMode
+          ? "exportDialog.descriptionFolder"
+          : "exportDialog.descriptionFolderDownload"
+        : folderMode
+          ? "exportDialog.descriptionFile"
+          : "exportDialog.descriptionFileDownload";
 
   return (
     <div className="unsaved-dialog" role="presentation" onClick={handleClose}>
@@ -445,17 +471,7 @@ export function ExportDialog({
           </>
         ) : (
           <>
-            <p className="unsaved-dialog__description">
-              {t(
-                isManuscript
-                  ? "exportDialog.descriptionManuscript"
-                  : isMultiple
-                    ? "exportDialog.descriptionMultiple"
-                    : isFolder
-                      ? "exportDialog.descriptionFolder"
-                      : "exportDialog.descriptionFile"
-              )}
-            </p>
+            <p className="unsaved-dialog__description">{t(descriptionKey)}</p>
 
             <div className="export-dialog__form">
               <label className="export-dialog__field">
@@ -478,7 +494,9 @@ export function ExportDialog({
                   {t(
                     producesOneFile || !hasMultipleFiles
                       ? "exportDialog.fileNameLabel"
-                      : "exportDialog.folderNameLabel"
+                      : folderMode
+                        ? "exportDialog.folderNameLabel"
+                        : "exportDialog.archiveNameLabel"
                   )}
                 </span>
                 <input
@@ -497,26 +515,28 @@ export function ExportDialog({
                 />
               </label>
 
-              <div className="export-dialog__field">
-                <span>{t("exportDialog.destinationLabel")}</span>
-                <div className="export-dialog__destination">
-                  <span
-                    className="export-dialog__destination-path"
-                    title={targetDirectory ?? undefined}
-                  >
-                    {targetDirectory ?? t("exportDialog.noDestination")}
-                  </span>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={isExporting}
-                    onClick={() => void chooseTargetDirectory()}
-                  >
-                    <FolderOpen aria-hidden="true" />
-                    {t("exportDialog.chooseFolder")}
-                  </Button>
+              {folderMode ? (
+                <div className="export-dialog__field">
+                  <span>{t("exportDialog.destinationLabel")}</span>
+                  <div className="export-dialog__destination">
+                    <span
+                      className="export-dialog__destination-path"
+                      title={targetDirectory ?? undefined}
+                    >
+                      {targetDirectory ?? t("exportDialog.noDestination")}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={isExporting}
+                      onClick={() => void chooseTargetDirectory()}
+                    >
+                      <FolderOpen aria-hidden="true" />
+                      {t("exportDialog.chooseFolder")}
+                    </Button>
+                  </div>
                 </div>
-              </div>
+              ) : null}
 
               {hasMultipleFiles && !isManuscript ? (
                 <label className="export-dialog__switch export-dialog__field--full">
@@ -569,7 +589,9 @@ export function ExportDialog({
                 onClick={() => void startExport()}
                 disabled={!canExport || isExporting}
               >
-                {isExporting ? t("exportDialog.exporting") : t("exportDialog.exportAction")}
+                {isExporting
+                  ? t("exportDialog.exporting")
+                  : t(folderMode ? "exportDialog.exportAction" : "exportDialog.downloadAction")}
               </Button>
             </div>
           </>

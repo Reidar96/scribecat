@@ -73,6 +73,14 @@ in the compose file is the alternative: a `restic` or `kopia` image with
 over the network, scheduled by its own entrypoint. It is the same backup,
 just a heavier way to schedule it.
 
+**A copy on your own machine** without a backup tool: in the browser or the
+desktop app, right-click the vault name at the top of the file tree and
+choose **Download as ZIP (Markdown files)**. That is the folder as it is on
+the server (notes, images, subfolders) without the `.scribedog` metadata,
+so it is a copy of your notes, not a backup of the instance; a script can
+fetch the same ZIP from `GET /api/export/zip?path=` with an access key, see
+[API](api.md).
+
 **Restoring** is copying the folder back and starting the server. Sessions
 and access keys are in the folder too (`.scribedog/server/`), so everyone
 stays signed in; if you restore only the notes, they sign in again.

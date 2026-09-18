@@ -60,6 +60,16 @@ and both save, the later save wins and the earlier edit is lost (the version
 history keeps a copy). Open a note in one place at a time; different notes in
 different places are fine.
 
+**The notes are on the server, so the file tree offers two extra entries**
+that a local folder does not need: **Download as Markdown** on a note (also
+in the editor's ⋮ menu) saves it as the `.md` file it is, through a save
+dialog, and **Download as ZIP (Markdown files)** on a folder, or on the
+vault name for the whole vault, saves the folder as it is on the server:
+notes, images and subfolders, without the `.scribedog` metadata. That ZIP
+is packed by the server (`GET /api/export/zip`), so it is quick even over a
+slow connection. The rendered export (PDF, DOCX, ODT, HTML, EPUB) works as
+for a local folder and writes into a folder you pick.
+
 **The knowledge base is not available for a server vault.** Its search index
 runs inside the desktop app and reads the notes from your disk, which a
 server vault is not on. The settings tab says so. The chat agent's own

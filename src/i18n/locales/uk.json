@@ -109,7 +109,12 @@
     "titleManuscript": "Експортувати як рукопис",
     "descriptionManuscript": "Збирає всі розділи в одну книгу в тому порядку, у якому їх показує бічна панель.",
     "mergeIntoOneFile": "Об'єднати в один файл",
-    "mergeHint": "Усі нотатки поспіль в одному документі замість окремого файлу для кожної."
+    "mergeHint": "Усі нотатки поспіль в одному документі замість окремого файлу для кожної.",
+    "descriptionFileDownload": "Виберіть формат і назву файлу. Браузер збереже файл.",
+    "descriptionFolderDownload": "Усі нотатки цієї теки рекурсивно експортуються в ZIP-архів; структура тек зберігається.",
+    "descriptionMultipleDownload": "Усі вибрані нотатки експортуються в ZIP-архів; структура тек усередині вибраних тек зберігається.",
+    "archiveNameLabel": "Назва архіву",
+    "downloadAction": "Завантажити"
   },
   "importDialog": {
     "eyebrow": "Імпорт",
@@ -522,6 +527,8 @@
     "export": "Експортувати…",
     "print": "Друк…",
     "exportManuscript": "Експортувати як рукопис…",
+    "downloadMarkdown": "Завантажити як Markdown",
+    "downloadFolderArchive": "Завантажити як ZIP (файли Markdown)",
     "stagedChange": "Агент пропонує зміну",
     "stagedChangeFolder": "Запропонованих змін у цій теці: {{count}}",
     "openFolderNote": "{{path}} – клац відкриває нотатку теки, стрілка розгортає та згортає",
@@ -609,6 +616,7 @@
     "optionsMenu": "Інші налаштування",
     "spellcheckToggle": "Перевірка орфографії (червоне підкреслення)",
     "printButton": "Друк",
+    "downloadMarkdown": "Завантажити як Markdown",
     "spellcheckDictionaryMissing": "Словник для перевірки орфографії для «{{code}}» не знайдено. Встановіть словник Hunspell (наприклад, hunspell-{{code}}) через ваш пакетний менеджер."
   },
   "findReplace": {

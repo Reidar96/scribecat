@@ -2,6 +2,7 @@ import { SessionError } from "@/platform/errors";
 import { secretRef } from "@/platform/secretRef";
 import type { CredentialsStatus, Platform } from "@/platform/types";
 
+import { browserDownloads } from "./downloads";
 import { subscribeToVaultChanges } from "./liveUpdates";
 import { browserLocalModels } from "./localModels";
 import { posixPaths } from "@/platform/remote/paths";
@@ -70,6 +71,7 @@ export const platform: Platform = {
     localFolders: false,
     importFiles: false,
     exportFiles: false,
+    downloads: true,
     imagePicker: false,
     updater: false,
     voiceInput: false,
@@ -158,6 +160,7 @@ export const platform: Platform = {
   },
 
   dialogs: null,
+  downloads: browserDownloads,
   voice: null,
   updater: null,
   knowledgeIndex: null,

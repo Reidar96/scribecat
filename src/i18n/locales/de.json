@@ -107,7 +107,12 @@
     "titleManuscript": "Als Manuskript exportieren",
     "descriptionManuscript": "Fügt alle Kapitel in der Reihenfolge der Seitenleiste zu einem Buch zusammen.",
     "mergeIntoOneFile": "In eine Datei zusammenfassen",
-    "mergeHint": "Alle Notizen hintereinander in einem Dokument statt je eine Datei pro Notiz."
+    "mergeHint": "Alle Notizen hintereinander in einem Dokument statt je eine Datei pro Notiz.",
+    "descriptionFileDownload": "Format und Dateinamen wählen. Der Browser speichert die Datei.",
+    "descriptionFolderDownload": "Alle Notizen in diesem Ordner werden rekursiv in ein ZIP-Archiv exportiert; die Ordnerstruktur bleibt erhalten.",
+    "descriptionMultipleDownload": "Alle ausgewählten Notizen werden in ein ZIP-Archiv exportiert; die Ordnerstruktur innerhalb ausgewählter Ordner bleibt erhalten.",
+    "archiveNameLabel": "Archivname",
+    "downloadAction": "Herunterladen"
   },
   "importDialog": {
     "eyebrow": "Import",
@@ -510,6 +515,8 @@
     "export": "Exportieren…",
     "print": "Drucken…",
     "exportManuscript": "Als Manuskript exportieren …",
+    "downloadMarkdown": "Als Markdown herunterladen",
+    "downloadFolderArchive": "Als ZIP herunterladen (Markdown-Dateien)",
     "stagedChange": "Der Agent schlägt eine Änderung vor",
     "stagedChangeFolder": "Vorgeschlagene Änderungen in diesem Ordner: {{count}}",
     "openFolderNote": "{{path}} – Klick öffnet die Ordnernotiz, der Pfeil klappt auf und zu",
@@ -597,6 +604,7 @@
     "optionsMenu": "Weitere Optionen",
     "spellcheckToggle": "Rechtschreibprüfung (rote Unterringelung)",
     "printButton": "Drucken",
+    "downloadMarkdown": "Als Markdown herunterladen",
     "spellcheckDictionaryMissing": "Kein Rechtschreib-Wörterbuch für „{{code}}\" gefunden. Installiere z. B. ein Hunspell-Wörterbuch (etwa hunspell-{{code}}) über deinen Paketmanager."
   },
   "findReplace": {
