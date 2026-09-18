@@ -96,31 +96,25 @@ applies unchanged, one instance at a time:
 
 ## Adding another person later
 
-1. In `docker-compose.yml`, copy the last `scribedog-<N>` service block and
-   bump the number (`scribedog-2` copied becomes `scribedog-3`). Point its
-   `SCRIBEDOG_BASE_PATH`, `SCRIBEDOG_INIT_PASSWORD`, `PUID`, `PGID` and volume
-   at the matching `PERSON3_*` variables (same pattern as `PERSON1`/`PERSON2`,
-   just the next number).
-2. In `docker-compose.yml`, in the `caddy` service's own `depends_on:` list
-   (the one with `scribedog-1` and `scribedog-2` under it, a few lines below
-   the service block from step 1), add a line `- scribedog-3`, so
-   `docker compose up` starts it before Caddy instead of at the same time.
-   Skipping this is not fatal, Caddy just answers that instance with
-   connection errors until its container is up, which it usually is within a
-   second or two anyway.
-3. In the Caddyfile, add a matching block next to the existing ones, again
+1. In `docker-compose.yml`:
+   - Copy the last `scribedog-<N>` service block, bump the number
+     (`scribedog-2` copied becomes `scribedog-3`), and point its
+     `SCRIBEDOG_BASE_PATH`, `SCRIBEDOG_INIT_PASSWORD`, `PUID`, `PGID` and
+     volume at the matching `PERSON3_*` variables.
+   - Add `- scribedog-3` to the `caddy` service's `depends_on:` list.
+   - Add `PERSON3_BASE_PATH: ${PERSON3_BASE_PATH:-/PERSON3_UNSET}` to the
+     `caddy` service's `environment:` block, next to
+     `PERSON1_BASE_PATH` / `PERSON2_BASE_PATH`.
+2. In the Caddyfile, add a matching block next to the existing ones, again
    just the next number:
    ```caddyfile
    handle {$PERSON3_BASE_PATH:/PERSON3_UNSET}* {
        reverse_proxy scribedog-3:3000
    }
    ```
-4. Also pass `PERSON3_BASE_PATH` into Caddy's own `environment:` block in
-   `docker-compose.yml` (next to `PERSON1_BASE_PATH` / `PERSON2_BASE_PATH`),
-   or step 3's substitution has nothing to read.
-5. Add `PERSON3_INIT_PASSWORD=` (eight characters or more) and
+3. Add `PERSON3_INIT_PASSWORD=` (eight characters or more) and
    `PERSON3_BASE_PATH=/carol` (or whatever path you want) to `.env`.
-6. Run `docker compose up -d`. This starts only the new container; the
+4. Run `docker compose up -d`. This starts only the new container; the
    running ones are untouched. The fallback 404 (a client without a prefix)
    is deliberately generic and does not list instances, so nothing else in
    the Caddyfile needs touching for this.
