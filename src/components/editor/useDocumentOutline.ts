@@ -46,9 +46,19 @@ export function useDocumentOutline(editor: TipTapEditor | null): DocumentOutline
 
     let current: OutlineHeading[] = [];
     let frame = 0;
+    // Mirrors the last activeIndex outside React state, so refreshFromScroll
+    // can compare against it synchronously without a stale closure over the
+    // state value. Sourced from either path — the cursor (a click into the
+    // text, an outline jump) or a previous scroll frame.
+    let lastActiveIndex = -1;
+
+    const setActive = (index: number) => {
+      lastActiveIndex = index;
+      setActiveIndex(index);
+    };
 
     const refreshFromCursor = () => {
-      setActiveIndex(activeHeadingIndex(current, editor.state.selection.from));
+      setActive(activeHeadingIndex(current, editor.state.selection.from));
     };
 
     const refreshHeadings = () => {
@@ -67,8 +77,42 @@ export function useDocumentOutline(editor: TipTapEditor | null): DocumentOutline
 
     // The scroll container is not known when the panel mounts (the view may
     // not be attached yet), so scrolls are caught at the document and
-    // filtered down to the one that carries the editor. One layout read per
-    // heading per frame is cheap next to the scroll itself.
+    // filtered down to the one that carries the editor. Resolved lazily and
+    // cached: not `target.contains(editor.view.dom)`, which also matches any
+    // outer wrapper that merely happens to contain the editor without being
+    // the one that scrolls it — the sidebar's own `item.scrollIntoView`
+    // (DetailsOutlineSection) can nudge such a wrapper by a couple of px,
+    // and a wrapper that small reads as "scrolled to the very bottom" on
+    // every jump, forcing the outline onto the last heading regardless of
+    // which one was actually clicked.
+    let scrollContainer: HTMLElement | null = null;
+
+    const resolveScrollContainer = (): HTMLElement | null => {
+      if (scrollContainer?.isConnected) {
+        return scrollContainer;
+      }
+
+      if (!(editor.view.dom instanceof HTMLElement)) {
+        return null;
+      }
+
+      let node = editor.view.dom.parentElement;
+
+      while (node) {
+        const overflowY = getComputedStyle(node).overflowY;
+
+        if (overflowY === "auto" || overflowY === "scroll") {
+          scrollContainer = node;
+          return node;
+        }
+
+        node = node.parentElement;
+      }
+
+      return null;
+    };
+
+    // One layout read per heading per frame is cheap next to the scroll itself.
     const refreshFromScroll = (container: HTMLElement) => {
       if (frame) {
         return;
@@ -81,38 +125,51 @@ export function useDocumentOutline(editor: TipTapEditor | null): DocumentOutline
           return;
         }
 
-        // Scrolled to (or within a heading-detection-width of) the very end,
-        // the last heading can never clear the viewport-top threshold below —
-        // its own scroll-margin-top (editor-content.css) plus DPI/zoom
-        // rounding can leave it a few px short of the exact max, so a 1px
-        // tolerance here missed it and left the outline showing the section
-        // above as active even though a jump had already landed on the last
-        // one. The reader is in the last section either way.
-        if (container.scrollTop + container.clientHeight >= container.scrollHeight - VIEWPORT_TOP_OFFSET_PX) {
-          setActiveIndex(current.length - 1);
-          return;
-        }
-
         const viewportTop = container.getBoundingClientRect().top + VIEWPORT_TOP_OFFSET_PX;
         const tops = current.map((heading) => {
           const element = editor.view.nodeDOM(heading.pos);
           return element instanceof HTMLElement ? element.getBoundingClientRect().top : null;
         });
 
-        setActiveIndex(headingIndexAtViewportTop(tops, viewportTop));
+        let index = headingIndexAtViewportTop(tops, viewportTop);
+
+        // At the very bottom of the scroll range there's nothing left to
+        // scroll further up with, so a heading's own scroll-margin plus a
+        // short tail of content after it can leave its measured top well
+        // past the threshold above even though it's the one an explicit jump
+        // (or the reader's own scrolling) just settled on — the browser
+        // clamped the scroll before it could get any closer. Geometry alone
+        // can't recover that heading's identity once it's clamped, so this
+        // falls back to whichever heading was last established as active
+        // (by the cursor, most recently, or an earlier scroll frame) rather
+        // than silently regressing to whatever the loop above sees instead —
+        // but only while that heading is still on screen at all, and only
+        // once nothing more can be scrolled into view: an ordinary scroll
+        // still has to move activeIndex both ways as the reader scrolls.
+        const viewportBottom = container.getBoundingClientRect().bottom;
+        const atScrollLimit = container.scrollTop + container.clientHeight >= container.scrollHeight - 1;
+
+        if (index < lastActiveIndex && lastActiveIndex < current.length && atScrollLimit) {
+          const element = editor.view.nodeDOM(current[lastActiveIndex].pos);
+          const lastActiveTop = element instanceof HTMLElement ? element.getBoundingClientRect().top : null;
+
+          if (lastActiveTop !== null && lastActiveTop <= viewportBottom) {
+            index = lastActiveIndex;
+          }
+        }
+
+        setActive(index);
       });
     };
 
     const handleScroll = (event: Event) => {
+      if (editor.isDestroyed) {
+        return;
+      }
+
       const target = event.target;
 
-      if (
-        target instanceof HTMLElement &&
-        !editor.isDestroyed &&
-        editor.view.dom instanceof HTMLElement &&
-        target !== editor.view.dom &&
-        target.contains(editor.view.dom)
-      ) {
+      if (target instanceof HTMLElement && target === resolveScrollContainer()) {
         refreshFromScroll(target);
       }
     };

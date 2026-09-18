@@ -103,12 +103,20 @@ FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
 OTHER DEALINGS IN THE FONT SOFTWARE.`;
 
 // --- npm ---
-const raw = execSync('npx --yes license-checker --production --json', {
-  cwd: root,
-  maxBuffer: 64 * 1024 * 1024,
-  shell: true
-}).toString();
-const pkgs = JSON.parse(raw);
+// Two separate npm trees ship independently: the root package (desktop app +
+// web frontend) and server/ (the server edition's own production deps, e.g.
+// fastify) — server/ is not an npm workspace of root, so each needs its own
+// license-checker pass or the server's deps go undocumented.
+function readProductionLicenses(cwd) {
+  const raw = execSync('npx --yes license-checker --production --json', {
+    cwd,
+    maxBuffer: 64 * 1024 * 1024,
+    shell: true
+  }).toString();
+  return JSON.parse(raw);
+}
+
+const pkgs = { ...readProductionLicenses(root), ...readProductionLicenses(resolve(root, 'server')) };
 
 let out = `# Third-Party Licenses\n\nScribeDog bundles the following third-party software. Each component is the property of its respective authors and is licensed under the terms below.\n\n## JavaScript / npm packages\n\n`;
 
@@ -116,7 +124,7 @@ const names = Object.keys(pkgs).sort();
 let npmCount = 0;
 for (const name of names) {
   const p = pkgs[name];
-  if (p.path && resolve(p.path).toLowerCase() === root.toLowerCase()) continue; // scribedog itself
+  if (p.path && [root, resolve(root, 'server')].some((self) => resolve(p.path).toLowerCase() === self.toLowerCase())) continue; // scribedog itself
   npmCount++;
   out += `### ${name}\n\n`;
   out += `- License: ${p.licenses}\n`;
