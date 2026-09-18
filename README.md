@@ -12,6 +12,8 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Platform: Windows | Linux](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-0078d4)
 
+💻 [Download desktop app](https://github.com/snooky234/scribedog/releases/latest) · 📖 [Server Edition docs](server/docs/README.md) · 🐳 [Docker Hub](https://hub.docker.com/r/snooky234/scribedog-server) · 📦 [GHCR](https://github.com/snooky234/scribedog/pkgs/container/scribedog-server)
+
 </div>
 
 ScribeDog is a native desktop editor where you write and format text as a
