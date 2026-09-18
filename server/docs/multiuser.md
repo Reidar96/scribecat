@@ -12,8 +12,8 @@ Starting here right away, even for a single person, saves you the later move
 described below. Renaming a person is a single line in `.env`
 (`PERSON1_BASE_PATH`): that is the one place their URL-facing name lives,
 and it drives both `docker-compose.yml` and the Caddyfile without editing
-either. Their data folder name (`PERSON1_DATA_DIR`) is separate and purely
-cosmetic; it keeps its old value unless you change that too. Adding or
+either. It does not rename the data folder, though: that stays e.g.
+`anna-data` until you also change `PERSON1_DATA_DIR` yourself. Adding or
 removing a person still means copying or deleting a numbered block by hand
 in `docker-compose.yml` and the Caddyfile (not a single command), but it is
 copying a number, not renaming strings across three files, and the
