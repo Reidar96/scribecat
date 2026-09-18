@@ -47,6 +47,11 @@ your first `docker compose up`:
   more each, or that instance rejects it and keeps restarting.
 - `PERSON1_BASE_PATH` and `PERSON2_BASE_PATH`: where each instance
   answers, e.g. `/anna`. Change these, and only these, to rename a person.
+- `PERSON1_DATA_DIR` and `PERSON2_DATA_DIR`: the data folder name, `anna-data`
+  and `bob-data` by default. Only worth changing to match a folder you
+  already have (see [Moving an existing single instance
+  here](#moving-an-existing-single-instance-here)) or to keep it in step with
+  a renamed `BASE_PATH`.
 - `SCRIBEDOG_SITE_ADDRESS`: the box's LAN IP or host name, not `localhost`,
   unless every person opens the app on this same machine (see
   [Getting started](getting-started.md#install)).
@@ -138,7 +143,7 @@ step 4, and even then it is a move, not a copy.
 2. Get the three multi-instance files into a new folder, as in step 1 of
    "Setting it up from scratch" above.
 3. Move that person's data folder (`./scribedog-data` in the single-instance
-   default) next to the new files, and set `PERSON1_DATA_DIR` in `.env` to
+   default) next to the new files, and change `PERSON1_DATA_DIR` in `.env` to
    its name (e.g. `PERSON1_DATA_DIR=scribedog-data`) so nothing needs
    renaming on disk. Set `PERSON1_BASE_PATH` to a path for that person (their
    old address if `SCRIBEDOG_BASE_PATH` was already set, otherwise pick one,
