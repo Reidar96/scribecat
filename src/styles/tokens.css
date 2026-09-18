@@ -41,6 +41,10 @@
 
   --overlay-rgb: 15, 23, 42;
   --text-rgb: 15, 23, 42;
+  /* Default (non-emphasized) text opacity. One step darker than the dark
+     theme's value: the same alpha read noticeably lighter against a white
+     page than the near-black --text-rgb does against dark surfaces. */
+  --text-default-alpha: 0.82;
   --muted-rgb: 100, 116, 139;
   --surface-rgb: 255, 255, 255;
   --surface-raised-rgb: 248, 250, 252;
@@ -134,6 +138,7 @@
 
   --overlay-rgb: 255, 255, 255;
   --text-rgb: 226, 232, 240;
+  --text-default-alpha: 0.72;
   --muted-rgb: 148, 163, 184;
   --surface-rgb: 24, 24, 26;
   --surface-raised-rgb: 28, 28, 30;

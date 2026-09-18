@@ -64,7 +64,7 @@ body {
 .detail-panel p,
 .sidebar-panel p {
   margin: 0;
-  color: rgba(var(--text-rgb),0.72);
+  color: rgba(var(--text-rgb),var(--text-default-alpha));
 }
 
 .workspace-grid {

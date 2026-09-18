@@ -79,7 +79,7 @@
   text-align: left;
   font-size: 0.9rem;
   font-family: inherit;
-  color: rgba(var(--text-rgb),0.72);
+  color: rgba(var(--text-rgb),var(--text-default-alpha));
   border: none;
   background: transparent;
   border-radius: 0.5rem;

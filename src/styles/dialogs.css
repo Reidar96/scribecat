@@ -126,7 +126,7 @@
 .ai-dialog__description {
   margin-top: 0.6rem;
   margin-bottom: 1.6rem;
-  color: rgba(var(--text-rgb),0.72);
+  color: rgba(var(--text-rgb),var(--text-default-alpha));
 }
 
 .ai-dialog__grid {
@@ -550,7 +550,7 @@
   gap: 0.5rem;
   padding: 2rem 1rem;
   text-align: center;
-  color: rgba(var(--text-rgb),0.72);
+  color: rgba(var(--text-rgb),var(--text-default-alpha));
 }
 
 .ai-check-dialog__empty-icon {
