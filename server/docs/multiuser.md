@@ -9,10 +9,9 @@ compose file for that: two ready-made slots, `PERSON1` and `PERSON2`
 (`anna`/`bob` by default), as a starting template.
 
 Starting here right away, even for a single person, saves you the later move
-described below. To rename a person, change `PERSON1_BASE_PATH` in `.env`
-(the one place their URL-facing name lives, driving both
-`docker-compose.yml` and the Caddyfile without editing either) and, if you
-want the data folder renamed to match, `PERSON1_DATA_DIR` too. Adding or
+described below. To rename a person, change `PERSON1_BASE_PATH` in `.env`:
+it is the one place their URL-facing name lives, and it drives both
+`docker-compose.yml` and the Caddyfile without editing either. Adding or
 removing a person still means copying or deleting a numbered block by hand
 in `docker-compose.yml` and the Caddyfile (not a single command), but it is
 copying a number, not renaming strings across three files, and the
@@ -49,11 +48,14 @@ your first `docker compose up`:
 - `PERSON1_BASE_PATH` and `PERSON2_BASE_PATH`: where each instance
   answers, e.g. `/anna`. Change these to rename a person.
 - `PERSON1_DATA_DIR` and `PERSON2_DATA_DIR`: the data folder name,
-  `anna-data` and `bob-data` by default. Renaming `BASE_PATH` does not
-  rename this too, so change it as well if you want the folder to match
-  (or leave it if you don't care, or are pointing it at a folder you
-  already have, see [Moving an existing single instance
-  here](#moving-an-existing-single-instance-here)).
+  `anna-data` and `bob-data` by default. At this point, before the first
+  start, there is nothing to lose either way, so leave these unless you
+  want a different name from the start. Once an instance already has data
+  in it, changing this variable alone does not rename that folder: it
+  starts the instance over with a new, empty one, so rename the folder on
+  disk yourself first (see [Moving an existing single instance
+  here](#moving-an-existing-single-instance-here) for the same move done on
+  purpose).
 - `SCRIBEDOG_SITE_ADDRESS`: the box's LAN IP or host name, not `localhost`,
   unless every person opens the app on this same machine (see
   [Getting started](getting-started.md#install)).
