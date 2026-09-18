@@ -5,57 +5,70 @@ no accounts, no sharing rules and no permissions to get wrong. Two or more
 people on one box therefore get one instance each, every one under its own
 path prefix, behind a single shared Caddy.
 [`examples/multi-instance/`](../examples/multi-instance/) is a complete
-compose file for that (two instances, `anna` and `bob`, as a starting
-template).
+compose file for that: two ready-made slots, `PERSON1` and `PERSON2`
+(`anna`/`bob` by default), as a starting template.
 
 Starting here right away, even for a single person, saves you the later move
-described below. Adding, and removing, a person is not fully automatic
-either way: it is copying and renaming one service block in
-`docker-compose.yml` and one `handle` block in the Caddyfile by hand each
-time, not a single command, though the instances you are not touching keep
-running throughout.
+described below. Renaming a person is a single line in `.env`
+(`PERSON1_BASE_PATH`, say) — it is the one place that name exists, and it
+drives both `docker-compose.yml` and the Caddyfile, nothing there needs
+editing. Adding or removing a person still means copying or deleting a
+numbered block by hand in `docker-compose.yml` and the Caddyfile (not a
+single command), but it is copying a number, not renaming strings across
+three files, and the instances you are not touching keep running throughout.
 
 Pick the section below that matches your situation.
 
 ## Setting it up from scratch
 
-1. Get the three files the compose stack needs:
-   ```bash
-   mkdir -p scribedog-multi && cd scribedog-multi
-   curl -fsSL -o docker-compose.yml https://raw.githubusercontent.com/snooky234/scribedog/main/server/examples/multi-instance/docker-compose.yml
-   curl -fsSL -o Caddyfile https://raw.githubusercontent.com/snooky234/scribedog/main/server/examples/multi-instance/Caddyfile
-   curl -fsSL -o .env https://raw.githubusercontent.com/snooky234/scribedog/main/server/examples/multi-instance/.env.example
-   ```
-   `anna` and `bob` are placeholder names in all three files; rename them to
-   whatever you like, as long as the name stays consistent across
-   `docker-compose.yml`, the Caddyfile and `.env`. Want to start with just one
-   person, or more than two? Remove or copy a service block (plus its
-   Caddyfile `handle` block and its two `.env` lines) the same way
-   [Removing a person](#removing-a-person) or
-   [Adding another person later](#adding-another-person-later) describe,
-   before your first `docker compose up` instead of after.
-2. Open `.env` and set:
-   - `ANNA_INIT_PASSWORD` and `BOB_INIT_PASSWORD`: eight characters or more
-     each, or that instance rejects it and keeps restarting.
-   - `SCRIBEDOG_SITE_ADDRESS`: the box's LAN IP or host name, not `localhost`,
-     unless every person opens the app on this same machine (see
-     [Getting started](getting-started.md#install)).
-   - `SCRIBEDOG_HTTP_PORT` / `SCRIBEDOG_HTTPS_PORT`: only if 80/443 are
-     already used on this host (see
-     [Troubleshooting](getting-started.md#troubleshooting)).
-3. Start it:
-   ```bash
-   docker compose pull
-   docker compose up -d
-   ```
-   Or clone the repository and run `docker compose up -d --build` to build
-   from source instead (same trade-off as
-   [Getting started](getting-started.md#install)).
+### 1. Get the three files the compose stack needs
 
-This serves `https://<host>/anna/` and `https://<host>/bob/` from two
-containers with two data folders (`anna-data`, `bob-data`). Each instance has
-its own password and its own session cookie, scoped to its prefix, so signing
-in to one says nothing about the other.
+```bash
+mkdir -p scribedog-multi && cd scribedog-multi
+curl -fsSL -o docker-compose.yml https://raw.githubusercontent.com/snooky234/scribedog/main/server/examples/multi-instance/docker-compose.yml
+curl -fsSL -o Caddyfile https://raw.githubusercontent.com/snooky234/scribedog/main/server/examples/multi-instance/Caddyfile
+curl -fsSL -o .env https://raw.githubusercontent.com/snooky234/scribedog/main/server/examples/multi-instance/.env.example
+```
+
+Starting with a different number of people than two? Do this next, before
+your first `docker compose up`:
+
+- **Just one person:** delete `PERSON2`'s parts: its two lines in `.env`,
+  its `scribedog-2` block in `docker-compose.yml` (plus its entry in
+  `depends_on` and in Caddy's `environment:`), and its `handle` block in
+  the Caddyfile.
+- **More than two people:** copy a `PERSON<N>` slot the same way
+  [Adding another person later](#adding-another-person-later) describes,
+  just before your first start instead of after.
+
+### 2. Open `.env` and set
+
+- `PERSON1_INIT_PASSWORD` and `PERSON2_INIT_PASSWORD`: eight characters or
+  more each, or that instance rejects it and keeps restarting.
+- `PERSON1_BASE_PATH` and `PERSON2_BASE_PATH`: where each instance
+  answers, e.g. `/anna`. Change these, and only these, to rename a person.
+- `SCRIBEDOG_SITE_ADDRESS`: the box's LAN IP or host name, not `localhost`,
+  unless every person opens the app on this same machine (see
+  [Getting started](getting-started.md#install)).
+- `SCRIBEDOG_HTTP_PORT` / `SCRIBEDOG_HTTPS_PORT`: only if 80/443 are
+  already used on this host (see
+  [Troubleshooting](getting-started.md#troubleshooting)).
+
+### 3. Start it
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+Or clone the repository and run `docker compose up -d --build` to build from
+source instead (same trade-off as [Getting started](getting-started.md#install)).
+
+This serves `https://<host>/anna/` and `https://<host>/bob/` (or whatever you
+set `PERSON1_BASE_PATH` / `PERSON2_BASE_PATH` to) from two containers with
+two data folders (`anna-data`, `bob-data` by default). Each instance has its
+own password and its own session cookie, scoped to its prefix, so signing in
+to one says nothing about the other.
 
 ## Next steps
 
@@ -78,36 +91,39 @@ applies unchanged, one instance at a time:
 
 ## Adding another person later
 
-1. In `docker-compose.yml`, copy one service block and rename it:
-   `scribedog-bob` becomes `scribedog-<name>`, its `SCRIBEDOG_BASE_PATH`
-   becomes `/<name>`, its `SCRIBEDOG_INIT_PASSWORD` points at a new
-   `<NAME>_INIT_PASSWORD` variable, its `PUID`/`PGID` use ids not already in
-   use, and its volume becomes `./<name>-data:/data`.
+1. In `docker-compose.yml`, copy the last `scribedog-<N>` service block and
+   bump the number (`scribedog-2` copied becomes `scribedog-3`). Point its
+   `SCRIBEDOG_BASE_PATH`, `SCRIBEDOG_INIT_PASSWORD`, `PUID`, `PGID` and volume
+   at the matching `PERSON3_*` variables (same pattern as `PERSON1`/`PERSON2`,
+   just the next number).
 2. Add the new service to Caddy's `depends_on` list.
-3. In the Caddyfile, add a matching block next to the existing ones:
+3. In the Caddyfile, add a matching block next to the existing ones, again
+   just the next number:
    ```caddyfile
-   handle /<name>* {
-       reverse_proxy scribedog-<name>:3000
+   handle {$PERSON3_BASE_PATH:/PERSON3_UNSET}* {
+       reverse_proxy scribedog-3:3000
    }
    ```
-4. Still in the Caddyfile, add the new instance to the fallback `handle`
-   block too (the message a client without a prefix gets). This does not
-   affect routing, but the message goes stale otherwise.
-5. Add `<NAME>_INIT_PASSWORD=` (eight characters or more) to `.env`.
+4. Also pass `PERSON3_BASE_PATH` into Caddy's own `environment:` block in
+   `docker-compose.yml` (next to `PERSON1_BASE_PATH` / `PERSON2_BASE_PATH`),
+   or step 3's substitution has nothing to read.
+5. Add `PERSON3_INIT_PASSWORD=` (eight characters or more) and
+   `PERSON3_BASE_PATH=/carol` (or whatever path you want) to `.env`.
 6. Run `docker compose up -d`. This starts only the new container; the
-   running ones are untouched.
+   running ones are untouched. The fallback 404 (a client without a prefix)
+   is deliberately generic and does not list instances, so nothing else in
+   the Caddyfile needs touching for this.
 
 ## Removing a person
 
 1. If you want to keep their notes, back up the data folder now (e.g.
    `./bob-data`); removing the service does not delete it, but do this before
    you forget.
-2. Remove that service block from `docker-compose.yml` (and drop it from
-   Caddy's `depends_on`).
-3. Remove the matching `handle /bob* { ... }` block from the Caddyfile, and
-   drop that person from the fallback `handle` block's message.
-4. Remove `BOB_INIT_PASSWORD` (and `BOB_PUID`/`BOB_PGID` if you set them)
-   from `.env`.
+2. Remove that `PERSON<N>` service block from `docker-compose.yml` (and drop
+   it from Caddy's `depends_on` and from Caddy's `environment:` block).
+3. Remove the matching `handle {$PERSON2_BASE_PATH:/bob}* { ... }` block
+   from the Caddyfile.
+4. Remove that person's `PERSON<N>_*` variables from `.env`.
 5. Run `docker compose up -d --remove-orphans`. This stops and removes the
    now-undefined container in one step; the remaining instances keep running.
 6. Delete `./bob-data` once you are sure you no longer need it, or after
@@ -116,34 +132,36 @@ applies unchanged, one instance at a time:
 ## Moving an existing single instance here
 
 Your notes are not at risk: the data folder is untouched by any of this until
-step 4.
+step 4, and even then it is a move, not a copy.
 
 1. Stop the single instance: `docker compose down` in its folder.
 2. Get the three multi-instance files into a new folder, as in step 1 of
    "Setting it up from scratch" above.
-3. In the new `docker-compose.yml`, rename one service (`scribedog-anna` by
-   default) to match the person who already has it: its container name, its
-   `SCRIBEDOG_BASE_PATH`, and its volume path.
-4. Move that person's data folder (`./scribedog-data` in the single-instance
-   default) into the new volume path, e.g. `./<name>-data`.
-5. Fill in `.env` for both people (see step 2 of "Setting it up from
-   scratch"), matching the site address and ports you already had for the
-   existing instance.
-6. Start it: `docker compose up -d` (or `--build` if you build from source).
+3. Move that person's data folder (`./scribedog-data` in the single-instance
+   default) next to the new files, and set `PERSON1_DATA_DIR` in `.env` to
+   its name (e.g. `PERSON1_DATA_DIR=scribedog-data`) so nothing needs
+   renaming on disk. Set `PERSON1_BASE_PATH` to a path for that person (their
+   old address if `SCRIBEDOG_BASE_PATH` was already set, otherwise pick one,
+   e.g. `/anna`) and `PERSON1_PUID`/`PERSON1_PGID` to whatever the single
+   instance used (its own `.env` already had these).
+4. Fill in `PERSON2_*` for the second person (see step 2 of "Setting it up
+   from scratch"), and match `SCRIBEDOG_SITE_ADDRESS` and the ports to what
+   the existing instance already had.
+5. Start it: `docker compose up -d` (or `--build` if you build from source).
 
 If the single instance served the bare `https://<host>/` before
-(`SCRIBEDOG_BASE_PATH` empty), it now answers under its own prefix instead,
-like the other instance. Update any bookmarks and the desktop app's
-server-vault connection to the new address.
+(`SCRIBEDOG_BASE_PATH` empty), it now answers under `PERSON1_BASE_PATH`
+instead. Update any bookmarks and the desktop app's server-vault connection
+to the new address.
 
 ## Caddyfile details
 
 Two things are worth knowing if you write your own Caddyfile instead of the
 bundled one:
 
-- The instances are routed with `handle /anna*`, not `handle_path`: the
-  prefix has to reach the container intact, because the app answers under it
-  and would otherwise neither find its assets nor scope its cookie.
+- The instances are routed with `handle`, not `handle_path`: the prefix has
+  to reach the container intact, because the app answers under it and would
+  otherwise neither find its assets nor scope its cookie.
 - A browser that opens the site by IP address sends no server name, and with
   more than one site Caddy needs `default_sni` to pick a certificate (see
   `SCRIBEDOG_DEFAULT_SNI` in [Configuration](configuration.md)).
@@ -151,14 +169,14 @@ bundled one:
 ## Keeping the folders apart
 
 The data folders are plain folders on the host, so whoever can read
-`anna-data` can read Anna's notes. If the people sharing the box also have
-shell access to it, give every instance its own Linux user and folder
+`anna-data` can read that person's notes. If the people sharing the box also
+have shell access to it, give every instance its own Linux user and folder
 permissions to match:
 
 ```bash
 sudo useradd --system --no-create-home anna
 sudo mkdir anna-data && sudo chown anna:anna anna-data && sudo chmod 700 anna-data
-id anna                       # -> the ANNA_PUID / ANNA_PGID for .env
+id anna                       # -> PERSON1_PUID / PERSON1_PGID in .env
 ```
 
 The container starts as root, hands the folder to that user and drops to it,

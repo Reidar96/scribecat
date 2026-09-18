@@ -1,14 +1,19 @@
 # Two ScribeDog instances on one host, one Caddy in front of both:
 #
-#   https://<host>/anna/   ->  scribedog-anna  (data in ./anna-data)
-#   https://<host>/bob/    ->  scribedog-bob   (data in ./bob-data)
+#   https://<host>/anna/   ->  person 1  (data in ./anna-data)
+#   https://<host>/bob/    ->  person 2  (data in ./bob-data)
 #
 # Every instance is a separate container with its own data folder, password
 # and session cookie (the cookie is scoped to the base path, so the two never
-# see each other's). Add a third by copying one service block, one `handle`
-# block in the Caddyfile and one data folder.
+# see each other's). The service names below (scribedog-1, scribedog-2) are
+# internal plumbing, never seen outside this compose file: renaming a person,
+# or moving them to a different path, is a single line in .env
+# (PERSON1_BASE_PATH / PERSON2_BASE_PATH) — nothing here or in the Caddyfile
+# needs editing for that. Add a third person by copying one service block
+# below with the next number, one matching `handle` block in the Caddyfile,
+# and one PERSON3_* group in .env.
 #
-#   cp .env.example .env         # passwords, host name, ids
+#   cp .env.example .env         # passwords, paths, host name, ids
 #   docker compose up -d --build
 #
 # The image is built from the repository like the single-instance file; to
@@ -24,34 +29,34 @@ x-scribedog: &scribedog
     - "3000"
 
 services:
-  scribedog-anna:
+  scribedog-1:
     <<: *scribedog
     environment:
-      SCRIBEDOG_BASE_PATH: /anna
-      SCRIBEDOG_INIT_PASSWORD: ${ANNA_INIT_PASSWORD:-}
-      # Ideally a Linux user of its own per instance (see README): the
-      # container hands ./anna-data to these ids and runs as them.
-      PUID: ${ANNA_PUID:-1000}
-      PGID: ${ANNA_PGID:-1000}
+      SCRIBEDOG_BASE_PATH: ${PERSON1_BASE_PATH:-/PERSON1_UNSET}
+      SCRIBEDOG_INIT_PASSWORD: ${PERSON1_INIT_PASSWORD:-}
+      # Ideally a Linux user of its own per instance (see docs/multiuser.md):
+      # the container hands its data folder to these ids and runs as them.
+      PUID: ${PERSON1_PUID:-1000}
+      PGID: ${PERSON1_PGID:-1000}
     volumes:
-      - ./anna-data:/data
+      - ./${PERSON1_DATA_DIR:-anna-data}:/data
 
-  scribedog-bob:
+  scribedog-2:
     <<: *scribedog
     environment:
-      SCRIBEDOG_BASE_PATH: /bob
-      SCRIBEDOG_INIT_PASSWORD: ${BOB_INIT_PASSWORD:-}
-      PUID: ${BOB_PUID:-1001}
-      PGID: ${BOB_PGID:-1001}
+      SCRIBEDOG_BASE_PATH: ${PERSON2_BASE_PATH:-/PERSON2_UNSET}
+      SCRIBEDOG_INIT_PASSWORD: ${PERSON2_INIT_PASSWORD:-}
+      PUID: ${PERSON2_PUID:-1001}
+      PGID: ${PERSON2_PGID:-1001}
     volumes:
-      - ./bob-data:/data
+      - ./${PERSON2_DATA_DIR:-bob-data}:/data
 
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
     depends_on:
-      - scribedog-anna
-      - scribedog-bob
+      - scribedog-1
+      - scribedog-2
     ports:
       - "${SCRIBEDOG_HTTP_PORT:-80}:80"
       - "${SCRIBEDOG_HTTPS_PORT:-443}:443"
@@ -60,6 +65,11 @@ services:
       SCRIBEDOG_SITE_ADDRESS: ${SCRIBEDOG_SITE_ADDRESS:-localhost}
       SCRIBEDOG_DEFAULT_SNI: ${SCRIBEDOG_DEFAULT_SNI:-${SCRIBEDOG_SITE_ADDRESS:-localhost}}
       SCRIBEDOG_TLS: ${SCRIBEDOG_TLS:-internal}
+      # Passed through so the Caddyfile's {$PERSON1_BASE_PATH} etc. can read
+      # them; this is what keeps the path in one place (.env) instead of
+      # also being hardcoded in the Caddyfile.
+      PERSON1_BASE_PATH: ${PERSON1_BASE_PATH:-/PERSON1_UNSET}
+      PERSON2_BASE_PATH: ${PERSON2_BASE_PATH:-/PERSON2_UNSET}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data

@@ -4,6 +4,10 @@
 # Each ScribeDog knows its own SCRIBEDOG_BASE_PATH, answers under it and 404s
 # everywhere else; `handle_path` would strip the prefix and the app would
 # neither find its assets nor scope its cookie.
+#
+# The paths themselves come from PERSON1_BASE_PATH / PERSON2_BASE_PATH in
+# .env (passed through by docker-compose.yml), not from anything hardcoded
+# here: renaming a person is a single line in .env, not an edit in this file.
 
 {
 	default_sni {$SCRIBEDOG_DEFAULT_SNI:localhost}
@@ -14,16 +18,21 @@
 
 	encode zstd gzip
 
-	handle /anna* {
-		reverse_proxy scribedog-anna:3000
+	# The part after the colon only ever shows up if the .env variable were
+	# somehow unset, which .env.example never leaves it as; change
+	# PERSON1_BASE_PATH / PERSON2_BASE_PATH in .env, not here.
+	handle {$PERSON1_BASE_PATH:/PERSON1_UNSET}* {
+		reverse_proxy scribedog-1:3000
 	}
 
-	handle /bob* {
-		reverse_proxy scribedog-bob:3000
+	handle {$PERSON2_BASE_PATH:/PERSON2_UNSET}* {
+		reverse_proxy scribedog-2:3000
 	}
 
-	# Everything else: a short list of the instances instead of a bare 404.
+	# Everything else. Deliberately generic, not a list of instances: with
+	# three or more, correctly listing them here in Caddyfile string syntax
+	# is its own source of typos, for a line nobody but a lost visitor sees.
 	handle {
-		respond "ScribeDog instances: /anna/ and /bob/" 404
+		respond "Not found. Ask whoever runs this ScribeDog for the address." 404
 	}
 }
