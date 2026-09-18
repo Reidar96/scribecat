@@ -101,7 +101,10 @@ applies unchanged, one instance at a time:
    `SCRIBEDOG_BASE_PATH`, `SCRIBEDOG_INIT_PASSWORD`, `PUID`, `PGID` and volume
    at the matching `PERSON3_*` variables (same pattern as `PERSON1`/`PERSON2`,
    just the next number).
-2. Add the new service to Caddy's `depends_on` list.
+2. Add the new service to Caddy's `depends_on` list, so `docker compose up`
+   starts it before Caddy instead of at the same time. Skipping this is not
+   fatal, Caddy just answers that instance with connection errors until its
+   container is up, which it usually is within a second or two anyway.
 3. In the Caddyfile, add a matching block next to the existing ones, again
    just the next number:
    ```caddyfile
