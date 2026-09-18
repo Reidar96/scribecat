@@ -4,3 +4,7 @@
 *.sh text eol=lf
 server/caddy/Caddyfile text eol=lf
 server/Dockerfile text eol=lf
+
+# cargo rewrites this file with LF endings on every build, which otherwise
+# shows up as a false-positive diff against the CRLF checkout on Windows.
+src-tauri/Cargo.toml text eol=lf
