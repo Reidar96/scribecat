@@ -79,46 +79,8 @@ address; that is all.
 
 ## Several people on one host
 
-ScribeDog has one password and one vault per instance, on purpose: there are
-no accounts, no sharing rules and no permissions to get wrong. Two people on
-one box therefore get two instances, each under its own path prefix behind
-one Caddy. [`examples/multi-instance/`](../examples/multi-instance/) is a
-complete compose file for that:
-
-```bash
-cd server/examples/multi-instance
-cp .env.example .env         # one init password per instance, host name, ids
-docker compose up -d --build
-```
-
-which serves `https://<host>/anna/` and `https://<host>/bob/` from two
-containers with two data folders (`anna-data`, `bob-data`). Each instance
-has its own password and its own session cookie, scoped to its prefix, so
-signing in to one says nothing about the other. Adding a third means one
-more service block, one more `handle` block in the Caddyfile and one more
-folder.
-
-Two details of the Caddyfile are worth knowing if you write your own:
-
-- The instances are routed with `handle /anna*`, not `handle_path`: the
-  prefix has to reach the container intact, because the app answers under
-  it and would otherwise neither find its assets nor scope its cookie.
-- A browser that opens the site by IP address sends no server name, and with
-  more than one site Caddy needs `default_sni` to pick a certificate (see
-  `SCRIBEDOG_DEFAULT_SNI` above).
-
-**Keeping the folders apart.** The data folders are plain folders on the
-host, so whoever can read `anna-data` can read Anna's notes. If the people
-sharing the box also have shell access to it, give every instance its own
-Linux user and folder permissions to match:
-
-```bash
-sudo useradd --system --no-create-home anna
-sudo mkdir anna-data && sudo chown anna:anna anna-data && sudo chmod 700 anna-data
-id anna                       # -> the ANNA_PUID / ANNA_PGID for .env
-```
-
-The container starts as root, hands the folder to that user and drops to it,
-so the files it writes stay that user's. This keeps ordinary users out of
-each other's notes; it does not keep root out, and nothing on the host can
-(see [Security](security.md)).
+Each person needs their own instance, password and vault, all behind one
+shared Caddy. Setting that up from scratch, moving an existing single
+instance into it, and adding another person later are all covered in
+[Multiple users on one host](multiuser.md), with `SCRIBEDOG_BASE_PATH` (see
+above) doing the per-instance path routing.

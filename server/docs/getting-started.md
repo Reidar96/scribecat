@@ -8,6 +8,15 @@
 - A folder for your notes. Docker creates it if it does not exist.
 - Five minutes.
 
+## One person or several?
+
+Everything below sets up a single instance for one person. If more than one
+person will use this host, each needs their own instance, password and vault
+behind one shared Caddy, which is a different compose file — see
+[Multiple users on one host](multiuser.md) instead, whether you are starting
+fresh, moving an existing single instance to multi-user, or adding another
+person to a multi-user setup you already have.
+
 ## Install
 
 Two ways to get it running.
@@ -23,7 +32,7 @@ curl -fsSL -o caddy/Caddyfile https://raw.githubusercontent.com/snooky234/scribe
 curl -fsSL -o .env https://raw.githubusercontent.com/snooky234/scribedog/main/server/.env.example
 ```
 
-Open `.env` and set two things:
+Open `.env` and set three things:
 
 - `SCRIBEDOG_INIT_PASSWORD`: the password for the first start, eight
   characters or more. It is only used until a password exists in the data
@@ -32,6 +41,11 @@ Open `.env` and set two things:
 - `PUID` and `PGID`: the user and group your notes should belong to on the
   host, usually your own (`id -u` and `id -g`). The container hands the data
   folder to these ids, so the files stay yours.
+- `SCRIBEDOG_SITE_ADDRESS`: leave it as `localhost` only if you will open the
+  app on this same machine. Opening it from a phone, another computer, or
+  anywhere else on the network (the usual case for a Pi or home server) needs
+  the box's LAN IP or host name here instead, e.g. `192.168.1.50`, or Caddy
+  will not answer that request at all.
 
 `SCRIBEDOG_IMAGE` is already set to the current version, so there is nothing
 to change there for the latest release. Two reasons you might still touch it:
@@ -54,9 +68,9 @@ cd scribedog/server
 cp .env.example .env
 ```
 
-Open `.env` and set three things: `SCRIBEDOG_INIT_PASSWORD` and `PUID`/`PGID`
-as in option 1, plus `SCRIBEDOG_IMAGE`: empty it (it comes pre-filled from
-`.env.example`) so Compose builds instead of pulling.
+Open `.env` and set four things: `SCRIBEDOG_INIT_PASSWORD`, `PUID`/`PGID` and
+`SCRIBEDOG_SITE_ADDRESS` as in option 1, plus `SCRIBEDOG_IMAGE`: empty it (it
+comes pre-filled from `.env.example`) so Compose builds instead of pulling.
 
 Then start it:
 
@@ -71,11 +85,14 @@ Pi.
 Either way, this creates `./scribedog-data` if it is not there and starts two
 containers: the ScribeDog server and Caddy, which provides HTTPS.
 
-If that fails with `port is already allocated`, something else on that
-machine already uses port 80 or 443 (Pi-hole, another reverse proxy, a NAS
-admin UI). Run `docker compose down` first, then set `SCRIBEDOG_HTTP_PORT`
-and `SCRIBEDOG_HTTPS_PORT` in `.env` to a free pair, e.g. `8080` and `8443`,
-and start it again; see [Configuration](configuration.md) for both variables.
+## Troubleshooting
+
+If `docker compose up` fails with `port is already allocated`, something else
+on that machine already uses port 80 or 443 (Pi-hole, another reverse proxy,
+a NAS admin UI). Run `docker compose down` first, then set
+`SCRIBEDOG_HTTP_PORT` and `SCRIBEDOG_HTTPS_PORT` in `.env` to a free pair,
+e.g. `8080` and `8443`, and start it again; see
+[Configuration](configuration.md) for both variables.
 
 ## First sign-in
 
@@ -84,10 +101,9 @@ from another device on your network, and sign in with the password you set.
 On the very first start with an empty folder the server creates a
 `Welcome.md` so there is something to open.
 
-If you open the app from another device, tell Caddy the address it is reached
-under: set `SCRIBEDOG_SITE_ADDRESS` in `.env` to the host name or IP of the
-box (several, separated by commas, if it has more than one) and run
-`docker compose up -d` again. See [Configuration](configuration.md).
+If the box answers under more than one name or IP, list them all in
+`SCRIBEDOG_SITE_ADDRESS`, separated by commas, and run `docker compose up -d`
+again. See [Configuration](configuration.md).
 
 ## The certificate warning
 
