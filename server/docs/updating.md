@@ -2,11 +2,15 @@
 
 ## Versions
 
+As with any update, back up the data folder first (see
+[Backups](data-and-backups.md#backups)), so a bad update is a restore, not a
+loss.
+
 Images are published per version, with no `latest` tag: you pick a version
 and keep it until you decide to move. Put the one you want in `.env`,
 
 ```dotenv
-SCRIBEDOG_IMAGE=ghcr.io/snooky234/scribedog-server:0.11.0
+SCRIBEDOG_IMAGE=ghcr.io/snooky234/scribedog-server:0.12.0
 ```
 
 and update with

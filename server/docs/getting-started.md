@@ -2,17 +2,25 @@
 
 ## What you need
 
-- A machine that runs Docker with the Compose plugin: a home server, a
-  Raspberry Pi (64-bit), a NAS with Docker, a small cloud VM.
+- A machine that runs [Docker](https://docs.docker.com/engine/install/) with
+  the [Compose plugin](https://docs.docker.com/compose/install/linux/): a home
+  server, a Raspberry Pi (64-bit), a NAS with Docker, a small cloud VM.
 - A folder for your notes. Docker creates it if it does not exist.
 - Five minutes.
 
 ## Install
 
+Two ways to get it running.
+
+**Option 1: published image from GHCR** (recommended, especially on a
+Raspberry Pi or other modest hardware, no build step). Get the three files
+the compose stack needs:
+
 ```bash
-git clone https://github.com/snooky234/scribedog.git
-cd scribedog/server
-cp .env.example .env
+mkdir -p scribedog-server/caddy && cd scribedog-server
+curl -fsSL -o docker-compose.yml https://raw.githubusercontent.com/snooky234/scribedog/v0.12.0/server/docker-compose.yml
+curl -fsSL -o caddy/Caddyfile https://raw.githubusercontent.com/snooky234/scribedog/v0.12.0/server/caddy/Caddyfile
+curl -fsSL -o .env https://raw.githubusercontent.com/snooky234/scribedog/v0.12.0/server/.env.example
 ```
 
 Open `.env` and set two things:
@@ -25,18 +33,49 @@ Open `.env` and set two things:
   host, usually your own (`id -u` and `id -g`). The container hands the data
   folder to these ids, so the files stay yours.
 
+`SCRIBEDOG_IMAGE` is already set to the current version, so there is nothing
+to change there for the latest release. Two reasons you might still touch it:
+you would rather pull from Docker Hub than GHCR (same image, set it to
+`snooky234/scribedog-server:0.12.0`, no registry host needed in the name), or
+you want an older version on purpose (pin that tag instead).
+
+Then start it:
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+**Option 2: build from source** instead, cloning the whole repository:
+
+```bash
+git clone https://github.com/snooky234/scribedog.git
+cd scribedog/server
+cp .env.example .env
+```
+
+Open `.env` and set three things: `SCRIBEDOG_INIT_PASSWORD` and `PUID`/`PGID`
+as in option 1, plus `SCRIBEDOG_IMAGE`: empty it (it comes pre-filled from
+`.env.example`) so Compose builds instead of pulling.
+
 Then start it:
 
 ```bash
 docker compose up -d --build
 ```
 
-This builds the image (a few minutes the first time), creates
-`./scribedog-data` if it is not there, and starts two containers: the
-ScribeDog server and Caddy, which provides HTTPS.
+This compiles the whole frontend and server on that machine, which is a few
+minutes on a normal PC and considerably longer, sometimes tight on RAM, on a
+Pi.
 
-If you would rather run a published image than build one, set
-`SCRIBEDOG_IMAGE` in `.env` (see [Updating](updating.md)).
+Either way, this creates `./scribedog-data` if it is not there and starts two
+containers: the ScribeDog server and Caddy, which provides HTTPS.
+
+If that fails with `port is already allocated`, something else on that
+machine already uses port 80 or 443 (Pi-hole, another reverse proxy, a NAS
+admin UI). Run `docker compose down` first, then set `SCRIBEDOG_HTTP_PORT`
+and `SCRIBEDOG_HTTPS_PORT` in `.env` to a free pair, e.g. `8080` and `8443`,
+and start it again; see [Configuration](configuration.md) for both variables.
 
 ## First sign-in
 
