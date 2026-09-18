@@ -18,9 +18,9 @@ the compose stack needs:
 
 ```bash
 mkdir -p scribedog-server/caddy && cd scribedog-server
-curl -fsSL -o docker-compose.yml https://raw.githubusercontent.com/snooky234/scribedog/v0.12.0/server/docker-compose.yml
-curl -fsSL -o caddy/Caddyfile https://raw.githubusercontent.com/snooky234/scribedog/v0.12.0/server/caddy/Caddyfile
-curl -fsSL -o .env https://raw.githubusercontent.com/snooky234/scribedog/v0.12.0/server/.env.example
+curl -fsSL -o docker-compose.yml https://raw.githubusercontent.com/snooky234/scribedog/main/server/docker-compose.yml
+curl -fsSL -o caddy/Caddyfile https://raw.githubusercontent.com/snooky234/scribedog/main/server/caddy/Caddyfile
+curl -fsSL -o .env https://raw.githubusercontent.com/snooky234/scribedog/main/server/.env.example
 ```
 
 Open `.env` and set two things:
