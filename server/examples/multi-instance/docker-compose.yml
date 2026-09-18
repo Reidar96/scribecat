@@ -39,7 +39,7 @@ services:
       PUID: ${PERSON1_PUID:-1000}
       PGID: ${PERSON1_PGID:-1000}
     volumes:
-      - ./${PERSON1_DATA_DIR:-anna-data}:/data
+      - ./${PERSON1_DATA_DIR:-person1-data}:/data
 
   scribedog-2:
     <<: *scribedog
@@ -49,7 +49,7 @@ services:
       PUID: ${PERSON2_PUID:-1001}
       PGID: ${PERSON2_PGID:-1001}
     volumes:
-      - ./${PERSON2_DATA_DIR:-bob-data}:/data
+      - ./${PERSON2_DATA_DIR:-person2-data}:/data
 
   caddy:
     image: caddy:2-alpine
