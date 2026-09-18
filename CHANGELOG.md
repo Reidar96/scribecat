@@ -3,6 +3,28 @@
 All notable changes to ScribeDog are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.12.0] - 2026-09-18
+
+### Highlights
+- Add ScribeDog Server Edition: run ScribeDog as a self-hosted web app with a full file API, live updates, and a PUID/PGID Docker entrypoint
+- Open a vault on a ScribeDog server directly from the desktop app, next to local folders
+- Let a remote vault download notes and folders directly
+- Enable folder notes
+- Add automatic heading numbering
+
+### Improvements
+- Restructure the settings dialog into grouped settings pages
+- Add a duplicate-file action to the file tree context menu
+- Add a selection context menu with copy variants / copy a selection as Markdown or bare text on touch
+- Add a paper-white surface option for dark theme
+
+### Bug Fixes
+- Fix outline active-heading detection at the scroll limit
+- Scale default text opacity per theme
+- Keep inline marks when only part of a block is serialized
+- Pick a certificate for browsers that open the site by IP
+- Keep a note ending in a code block clean on open
+
 ## [0.11.0] - 2026-09-12
 
 ### Highlights
