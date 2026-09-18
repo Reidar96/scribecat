@@ -10,12 +10,14 @@ compose file for that: two ready-made slots, `PERSON1` and `PERSON2`
 
 Starting here right away, even for a single person, saves you the later move
 described below. Renaming a person is a single line in `.env`
-(`PERSON1_BASE_PATH`, say) — it is the one place that name exists, and it
-drives both `docker-compose.yml` and the Caddyfile, nothing there needs
-editing. Adding or removing a person still means copying or deleting a
-numbered block by hand in `docker-compose.yml` and the Caddyfile (not a
-single command), but it is copying a number, not renaming strings across
-three files, and the instances you are not touching keep running throughout.
+(`PERSON1_BASE_PATH`): that is the one place their URL-facing name lives,
+and it drives both `docker-compose.yml` and the Caddyfile without editing
+either. Their data folder name (`PERSON1_DATA_DIR`) is separate and purely
+cosmetic; it keeps its old value unless you change that too. Adding or
+removing a person still means copying or deleting a numbered block by hand
+in `docker-compose.yml` and the Caddyfile (not a single command), but it is
+copying a number, not renaming strings across three files, and the
+instances you are not touching keep running throughout.
 
 Pick the section below that matches your situation.
 
