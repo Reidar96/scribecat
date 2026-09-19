@@ -43,7 +43,7 @@ sheet, "Add to Home Screen") and it opens without the browser chrome. The
 session lasts 60 days of use, so the password is asked for rarely.
 
 Chrome and Safari on phones show a certificate warning for Caddy's local CA
-just like the desktop browsers; import `caddy-root.crt` on the device once
+just like the desktop browsers; import `scribedog-ca.crt` on the device once
 (see [Getting started](getting-started.md)) or accept the warning.
 
 ## Dictation

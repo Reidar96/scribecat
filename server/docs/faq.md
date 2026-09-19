@@ -10,7 +10,7 @@ you want Let's Encrypt or reach the server from the internet.
 
 **The browser says the connection is not private.**
 That is Caddy's local CA, which the browser does not know yet. Accept the
-warning, or import `caddy-root.crt` so it stops. Details in
+warning, or import `scribedog-ca.crt` so it stops. Details in
 [Getting started](getting-started.md).
 
 **I can reach the app on the server but not from my laptop.**
@@ -58,7 +58,7 @@ context menu can save a note or a folder from the server as Markdown. See
 **The desktop app says the server cannot be reached, but the browser works.**
 Usually the certificate: the desktop app trusts the operating system's
 certificate store, and accepting a warning in the browser does not put the CA
-there. Import `caddy-root.crt` into the system store. On Linux, the app
+there. Import `scribedog-ca.crt` into the system store. On Linux, the app
 does not use Firefox's store.
 
 **Can I add a server over plain HTTP?**

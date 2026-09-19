@@ -44,7 +44,7 @@ The compose file ships with Caddy for that:
 
 - **No domain (home network, IP or local host name):** keep
   `SCRIBEDOG_TLS=internal`. Caddy uses its own local CA; import
-  `caddy-root.crt` as described in [Getting started](getting-started.md) so
+  `scribedog-ca.crt` as described in [Getting started](getting-started.md) so
   browsers and the desktop app stop warning.
 - **Public domain:** set `SCRIBEDOG_SITE_ADDRESS=notes.example.com` and
   `SCRIBEDOG_TLS=you@example.com`. Ports 80 and 443 must be reachable from

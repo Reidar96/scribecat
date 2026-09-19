@@ -25,5 +25,16 @@
 
 	encode zstd gzip
 
-	reverse_proxy scribedog:3000
+	# Lets a browser fetch the local CA's certificate directly, so trusting it
+	# (see docs/getting-started.md, "The certificate warning") is opening this
+	# URL on the device rather than moving a file there some other way.
+	handle /scribedog-ca.crt {
+		root * /data/caddy/pki/authorities/local
+		rewrite * /root.crt
+		file_server
+	}
+
+	handle {
+		reverse_proxy scribedog:3000
+	}
 }

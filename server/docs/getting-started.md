@@ -111,21 +111,25 @@ Your browser will warn about the certificate on the first visit: Caddy signs
 it with its own local certificate authority (CA), because there is no public
 domain to get a certificate for. You can accept the warning, or import the
 CA once so every browser on the device trusts it (and, if you use it, the
-[desktop app](desktop-app.md), which needs the CA in the system store):
-
-```bash
-docker compose cp caddy:/data/caddy/pki/authorities/local/root.crt ./caddy-root.crt
-```
-
-Then add `caddy-root.crt` to the trust store:
+[desktop app](desktop-app.md), which needs the CA in the system store). Do
+this on each device you use ScribeDog from, not just once: on the device in
+question, open `https://<host>/scribedog-ca.crt` (same host and port as
+ScribeDog itself) to download it, then add `scribedog-ca.crt` to the trust
+store:
 
 | Where | How |
 | --- | --- |
 | Windows | Double-click the file, "Install Certificate", current user, "Place all certificates in the following store", *Trusted Root Certification Authorities*. Confirm the security warning. |
 | macOS | Double-click the file to add it to Keychain Access, open it there and set "When using this certificate" to *Always Trust*. |
-| Linux | Depends on the distribution; for Debian and Ubuntu copy it to `/usr/local/share/ca-certificates/caddy-root.crt` and run `sudo update-ca-certificates`. Firefox has its own store: Settings, Privacy & Security, Certificates, View Certificates, Import. |
+| Linux | Depends on the distribution; for Debian and Ubuntu copy it to `/usr/local/share/ca-certificates/scribedog-ca.crt` and run `sudo update-ca-certificates`. Firefox has its own store: Settings, Privacy & Security, Certificates, View Certificates, Import. |
 | Android | Settings, Security, Encryption & credentials, Install a certificate, CA certificate. |
-| iOS | Open the file (send it to the device by mail or AirDrop), install the profile under Settings, then enable it under Settings, General, About, Certificate Trust Settings. |
+| iOS | Open `https://<host>/scribedog-ca.crt` in Safari on the device itself, install the profile under Settings, then enable it under Settings, General, About, Certificate Trust Settings. |
+
+The download goes through the same warning as the site itself, so there is
+nothing extra to click past. If you would rather distribute one file to
+several people yourself instead of having each open that URL, run
+`docker compose cp caddy:/data/caddy/pki/authorities/local/root.crt
+./scribedog-ca.crt` on the host instead and send them that.
 
 With a public domain and ports 80 and 443 reachable from the internet you can
 skip all this: set `SCRIBEDOG_SITE_ADDRESS` to the domain and `SCRIBEDOG_TLS`

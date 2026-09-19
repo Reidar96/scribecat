@@ -5,4 +5,4 @@ examples/*/*-data/
 examples/*/.env
 test-results/
 playwright-report/
-caddy-root.crt
+scribedog-ca.crt
