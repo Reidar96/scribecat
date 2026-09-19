@@ -1,4 +1,4 @@
-import { useRef, type KeyboardEvent } from "react";
+import { useEffect, useRef, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 
 import {
@@ -33,6 +33,13 @@ export function SettingsNav({ activeTab, onSelect }: SettingsNavProps) {
   const { t } = useTranslation();
   const folderPath = useAppStore((state) => state.folderPath);
   const buttonRefs = useRef(new Map<SettingsTab, HTMLButtonElement>());
+
+  // In a narrow window the column is a strip that scrolls sideways, and the
+  // entry that is open can sit outside it — on opening the dialog on the last
+  // one, or after a click, which unlike the arrow keys moves no focus.
+  useEffect(() => {
+    buttonRefs.current.get(activeTab)?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [activeTab]);
 
   const moveTo = (tab: SettingsTab) => {
     onSelect(tab);

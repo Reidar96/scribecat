@@ -152,6 +152,35 @@ export type DialogsApi = {
 };
 
 /**
+ * One file the user picked for insertion. The bytes are read on request
+ * rather than up front, so a file that cannot be read is reported by name
+ * without taking the others down with it.
+ */
+export type PickedImageFile = {
+  fileName: string;
+  read(): Promise<{ mimeType: string; data: Uint8Array }>;
+};
+
+export type ImagePickerOptions = {
+  /** Where the native dialog opens. The browser's picker has no such notion. */
+  defaultPath?: string;
+  title: string;
+  filterName: string;
+  /** Without the dot. */
+  extensions: string[];
+};
+
+/**
+ * The toolbar's image button. Both shells have one: the desktop opens the
+ * native dialog and reads the files from disk, the browser uses an
+ * `<input type="file">`, which on a phone is what offers the camera and the
+ * photo library. Paste and drop bypass this and hand the bytes over directly.
+ */
+export type ImagePickerApi = {
+  pickImages(options: ImagePickerOptions): Promise<PickedImageFile[]>;
+};
+
+/**
  * What the shell does around a vault folder: widening its filesystem scope,
  * watching it for changes made outside the app, and telling the frontend
  * which vault to open at startup.
@@ -383,8 +412,6 @@ export type PlatformFeatures = {
   exportFiles: boolean;
   /** Hand a finished file to the user without choosing a folder first (see DownloadsApi). */
   downloads: boolean;
-  /** Toolbar image button (native file picker). Paste and drop work everywhere. */
-  imagePicker: boolean;
   updater: boolean;
   voiceInput: boolean;
   portableMode: boolean;
@@ -427,6 +454,7 @@ export type Platform = {
   spellcheck: { checkDictionary(language: string): Promise<SpellcheckDictionaryStatus> };
 
   dialogs: DialogsApi | null;
+  imagePicker: ImagePickerApi;
   downloads: DownloadsApi | null;
   voice: VoiceApi | null;
   updater: UpdaterApi | null;

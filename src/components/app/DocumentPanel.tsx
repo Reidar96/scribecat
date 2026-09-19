@@ -1,5 +1,16 @@
 import { useState, type RefObject } from "react";
-import { ArrowLeft, ArrowRight, FolderOpen, MessagesSquare, PanelLeft, Pencil, Square } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  FolderOpen,
+  Loader2,
+  PanelLeft,
+  Pencil,
+  Save,
+  Square
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
@@ -11,7 +22,6 @@ import { useLayoutMode } from "@/hooks/useLayoutMode";
 import type { FileVersion } from "@/lib/fileVersions";
 import { cn } from "@/lib/utils";
 import { getVaultCapabilities, vaultCapabilityHint } from "@/platform";
-import { useChatStore } from "@/store/useChatStore";
 import { useSearchStore } from "@/store/useSearchStore";
 import { useVersioningSettingsStore } from "@/store/useVersioningSettingsStore";
 
@@ -109,7 +119,6 @@ export function DocumentPanel({
 }: DocumentPanelProps) {
   const { t } = useTranslation();
   const layout = useLayoutMode();
-  const isChatOpen = useChatStore((state) => state.isOpen);
   // Bumped by the header menu's "Versions" entry on the phone, where the
   // popover's own trigger button has no room in the header.
   const [versionsRequestId, setVersionsRequestId] = useState(0);
@@ -117,6 +126,15 @@ export function DocumentPanel({
   const capabilityHint = vaultCapabilityHint();
   const versioningEnabled = useVersioningSettingsStore((state) => state.versioningEnabled);
   const closeFindPanel = useSearchStore((state) => state.closePanel);
+  // Icon-only save button: what the pill used to spell out has to reach the
+  // screen reader through the label instead.
+  const saveStateLabel = isSaving
+    ? t("app.statusSaving")
+    : isSelectedFileMissing
+      ? t("app.statusFileRemoved")
+      : isDirty
+        ? t("app.saveButton")
+        : t("app.statusSaved");
 
   // Find & replace normally lives inside <Editor> (it needs the ProseMirror
   // document). Whenever no editor is mounted — no file open, or the selected
@@ -236,7 +254,9 @@ export function DocumentPanel({
                       title={t("app.folderNoteBadgeHint")}
                     >
                       <FolderOpen size={12} aria-hidden="true" />
-                      {t("app.folderNoteBadge")}
+                      <span className="detail-panel__title-badge-text">
+                        {t("app.folderNoteBadge")}
+                      </span>
                     </span>
                   ) : null}
                   <button
@@ -302,59 +322,57 @@ export function DocumentPanel({
                         : t("app.statusSaved")}
                 </div>
               ) : (
-                // Without a keyboard there is no Ctrl+S; the pill that shows
-                // the unsaved state is where the eye already is, so it saves.
-                <button
+                // Without a keyboard there is no Ctrl+S, so the thing showing
+                // the unsaved state is also what saves. Icon only: the word
+                // costs the width the file name needs, and the state is
+                // carried by the colour plus the label that is announced.
+                <Button
                   type="button"
+                  size="icon-sm"
+                  variant={isDirty && !isSaving ? "default" : "outline"}
                   className={cn(
-                    "detail-panel__status",
-                    "detail-panel__status--button",
-                    isSaving && "detail-panel__status--saving",
-                    isDirty && "detail-panel__status--dirty",
-                    isSelectedFileMissing && "detail-panel__status--warning"
+                    "detail-panel__save-button",
+                    isSelectedFileMissing && "detail-panel__save-button--warning"
                   )}
-                  aria-live="polite"
+                  aria-label={saveStateLabel}
                   data-testid="status"
                   data-dirty={isDirty ? "true" : "false"}
                   disabled={!isDirty || isSaving}
-                  title={isDirty ? t("app.saveButtonTitle") : undefined}
+                  title={isDirty && !isSaving ? t("app.saveButtonTitle") : saveStateLabel}
                   onClick={onSaveRequest}
                 >
-                  {isSaving
-                    ? t("app.statusSaving")
-                    : isSelectedFileMissing
-                      ? t("app.statusFileRemoved")
-                      : isDirty
-                        ? t("app.saveButton")
-                        : t("app.statusSaved")}
-                </button>
+                  {isSaving ? (
+                    <Loader2 className="animate-spin" />
+                  ) : isSelectedFileMissing ? (
+                    <AlertTriangle />
+                  ) : isDirty ? (
+                    <Save />
+                  ) : (
+                    <Check />
+                  )}
+                </Button>
               )}
+              {/* A changing aria-label is not announced; the state change the
+                  pill used to speak on the desktop needs its own region. */}
+              {layout === "desktop" ? null : (
+                <span className="sr-only" role="status" aria-live="polite">
+                  {saveStateLabel}
+                </span>
+              )}
+              {/* The chat toggle is the format toolbar's, at the bottom of
+                  the screen next to the other AI buttons: the header has no
+                  width to spare and the thumb is down there anyway. */}
               {layout !== "desktop" ? (
-                <>
-                  <Button
-                    type="button"
-                    size="icon-sm"
-                    variant="outline"
-                    className="detail-panel__chat-button"
-                    aria-label={t("chat.openButton")}
-                    aria-pressed={isChatOpen}
-                    title={t("chat.openButtonTitle")}
-                    data-testid="open-chat"
-                    onClick={() => useChatStore.getState().togglePanel()}
-                  >
-                    <MessagesSquare />
-                  </Button>
-                  <DocumentMenu
-                    editorHandleRef={editorHandleRef}
-                    backTargetLabel={backTargetLabel}
-                    forwardTargetLabel={forwardTargetLabel}
-                    onNavigateBack={onNavigateBack}
-                    onNavigateForward={onNavigateForward}
-                    onVersionsRequest={() => setVersionsRequestId((id) => id + 1)}
-                    versioningEnabled={versioningEnabled}
-                    onZenModeRequest={onZenModeRequest}
-                  />
-                </>
+                <DocumentMenu
+                  editorHandleRef={editorHandleRef}
+                  backTargetLabel={backTargetLabel}
+                  forwardTargetLabel={forwardTargetLabel}
+                  onNavigateBack={onNavigateBack}
+                  onNavigateForward={onNavigateForward}
+                  onVersionsRequest={() => setVersionsRequestId((id) => id + 1)}
+                  versioningEnabled={versioningEnabled}
+                  onZenModeRequest={onZenModeRequest}
+                />
               ) : null}
             </div>
           </div>

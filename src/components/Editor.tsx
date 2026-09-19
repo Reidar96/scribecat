@@ -1,7 +1,8 @@
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { getVaultCapabilities, platform, requireLocalFs, vaultCapabilityHint } from "@/platform";
+import { getVaultCapabilities, platform, vaultCapabilityHint } from "@/platform";
+import type { PickedImageFile } from "@/platform/types";
 import { EditorContent, type Editor as TipTapEditor, useEditor } from "@tiptap/react";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -78,11 +79,9 @@ import {
 } from "@/lib/editor/selectionClipboard";
 import { findTextRange } from "@/lib/editor/textSearch";
 import {
-  allowFileAccess,
   getLastOpenedFolderPath,
   getRelativeDisplayPath,
   getRelativeImageMarkdownPath,
-  guessImageMimeType,
   saveImageToFolder
 } from "@/lib/fileSystem";
 import { updateSearchHighlight } from "@/lib/searchHighlight";
@@ -562,19 +561,9 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     await insertImagePayloads(payloads, insertPos);
   };
 
-  const readImagePayload = async (path: string): Promise<ImagePayload> => {
-    await allowFileAccess(path);
-
-    return {
-      fileName: path.replace(/\\/g, "/").split("/").pop() ?? "image",
-      mimeType: guessImageMimeType(path),
-      data: await requireLocalFs().readFile(path)
-    };
-  };
-
-  // Toolbar image button: pick one or more image files via the native file
-  // dialog, opened at the currently open vault (falling back to the last
-  // opened folder), then insert them like a paste/drop.
+  // Toolbar image button: pick one or more image files through the shell's
+  // picker (the native dialog opened at the current vault, or the browser's
+  // file input), then insert them like a paste/drop.
   const handleImageInsertRequest = async () => {
     const currentEditor = editorRef.current;
 
@@ -590,22 +579,14 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       return;
     }
 
-    if (!platform.dialogs) {
-      return;
-    }
-
-    let paths: string[];
+    let picked: PickedImageFile[];
 
     try {
-      paths = await platform.dialogs.chooseFiles({
+      picked = await platform.imagePicker.pickImages({
         defaultPath: folderPath ?? getLastOpenedFolderPath() ?? undefined,
         title: t("editor.imageDialogTitle"),
-        filters: [
-          {
-            name: t("editor.imageDialogFilter"),
-            extensions: EDITOR_IMAGE_EXTENSIONS
-          }
-        ]
+        filterName: t("editor.imageDialogFilter"),
+        extensions: EDITOR_IMAGE_EXTENSIONS
       });
     } catch (error) {
       ai.setAiStatus({
@@ -615,20 +596,20 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       return;
     }
 
-    if (paths.length === 0) {
+    if (picked.length === 0) {
       return;
     }
 
     const payloads: ImagePayload[] = [];
 
-    for (const path of paths) {
+    for (const file of picked) {
       try {
-        payloads.push(await readImagePayload(path));
+        payloads.push({ fileName: file.fileName, ...(await file.read()) });
       } catch (error) {
         ai.setAiStatus({
           kind: "error",
           message: t("editor.imageInsertFailed", {
-            fileName: path.replace(/\\/g, "/").split("/").pop() ?? path,
+            fileName: file.fileName,
             error: extractErrorMessage(error, t)
           })
         });
@@ -1616,6 +1597,20 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
                 editor={editor}
                 className="editor-view__content"
                 onContextMenu={handleEditorContextMenu}
+                // The wrapper fills the scroll area below a short document.
+                // A click there is outside the contenteditable, so left to
+                // itself the browser parks the DOM selection on the nearest
+                // selectable element before it, the toolbar's separator,
+                // which then lights up as a stray caret. Treat it as "after
+                // the last paragraph" instead, the way editors do.
+                onMouseDown={(event) => {
+                  if (event.target !== event.currentTarget || !editor) {
+                    return;
+                  }
+
+                  event.preventDefault();
+                  editor.commands.focus("end");
+                }}
               />
             </ScrollArea>
 

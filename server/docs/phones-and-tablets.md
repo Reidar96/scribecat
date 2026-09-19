@@ -9,8 +9,14 @@ Below about 640 px wide:
 - The file list is a sheet behind the button at the top left. It comes up by
   itself while no note is open and closes when you choose one.
 - The formatting toolbar sits at the bottom, above the keyboard, and scrolls
-  sideways.
-- The save button is the status pill in the header.
+  sideways. The chat button is in it, next to the AI buttons. The model and
+  the thinking mode are behind the slider button after them, where the
+  desktop has a dropdown; a dot on that button means no model is chosen yet.
+- Saving is the icon button in the header: it is highlighted while there is
+  something to save and greyed out once there is not.
+- The image button in the toolbar opens the phone's own picker, so a photo
+  can come straight from the camera or the photo library. It is stored in
+  the vault's `images/` folder like a pasted one.
 - Everything else the toolbar offers on the desktop (find and replace,
   details, zoom, zen mode, print, spell check, versions, back and forward)
   is in the header's menu.

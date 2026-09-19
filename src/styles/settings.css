@@ -373,9 +373,10 @@
   gap: 0.3rem;
 }
 
-/* A narrow window turns the column into a strip above the panel. Rare for
-   a desktop app, so this only has to stay usable, not pretty: the group
-   titles and the folder name go, the entries wrap. */
+/* A narrow window turns the column into a strip above the panel: the group
+   titles and the folder name go, and the entries stay on one line that
+   scrolls sideways, like the formatting toolbar does. Wrapping them instead
+   would cost four rows of a phone screen before the first setting. */
 @media (max-width: 700px) {
   .settings-body {
     flex-direction: column;
@@ -385,17 +386,29 @@
   .settings-nav {
     flex: 0 0 auto;
     flex-direction: row;
-    flex-wrap: wrap;
-    gap: 0.25rem;
+    flex-wrap: nowrap;
+    /* Wider than between the entries of one group: with the group titles
+       hidden this is all that is left of the three groups. */
+    gap: 0.8rem;
     padding: 0 0 0.6rem;
     border-right: none;
     border-bottom: 1px solid rgba(var(--overlay-rgb), 0.1);
-    overflow-y: visible;
+    overflow-x: auto;
+    /* Not "visible": a single non-visible axis turns the other one into a
+       scroll container too, which would put a stray vertical bar here. */
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+
+  .settings-nav::-webkit-scrollbar {
+    display: none;
   }
 
   .settings-nav__group {
     flex-direction: row;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    flex-shrink: 0;
     gap: 0.25rem;
   }
 
@@ -406,8 +419,10 @@
 
   .settings-nav__item {
     width: auto;
+    flex-shrink: 0;
     padding: 0.35rem 0.6rem;
     font-size: 0.85rem;
+    white-space: nowrap;
   }
 
   .setting-row--switch .setting-row__hint {

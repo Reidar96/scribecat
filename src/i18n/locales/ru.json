@@ -42,7 +42,7 @@
     "statusSaved": "Сохранено",
     "fileLoading": "Загрузка файла …",
     "emptyEyebrow": "Файл ещё не выбран",
-    "emptyTitle": "Выберите файл Markdown слева",
+    "emptyTitle": "Выберите файл Markdown",
     "emptyDescription": "После открытия папки здесь появятся её содержимое и область редактирования.",
     "pendingTargetOtherFolder": "другую папку",
     "version": "v{{version}}",

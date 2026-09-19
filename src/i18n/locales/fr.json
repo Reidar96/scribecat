@@ -42,7 +42,7 @@
     "statusSaved": "Enregistré",
     "fileLoading": "Chargement du fichier …",
     "emptyEyebrow": "Aucun fichier sélectionné",
-    "emptyTitle": "Sélectionnez un fichier Markdown à gauche",
+    "emptyTitle": "Sélectionnez un fichier Markdown",
     "emptyDescription": "Une fois un dossier ouvert, son contenu et la surface d'édition apparaîtront ici.",
     "pendingTargetOtherFolder": "un autre dossier",
     "version": "v{{version}}",

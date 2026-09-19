@@ -34,6 +34,7 @@ import {
   Printer,
   Quote,
   Search,
+  SlidersHorizontal,
   SpellCheck,
   Strikethrough,
   TriangleAlert,
@@ -55,9 +56,13 @@ import {
   MenuPopup,
   MenuPortal,
   MenuPositioner,
+  MenuRadioGroup,
+  MenuRadioItem,
+  MenuRadioItemIndicator,
   MenuTrigger
 } from "@/components/ui/menu";
 import { Toggle } from "@/components/ui/toggle";
+import { useLayoutMode } from "@/hooks/useLayoutMode";
 import { EmojiPicker } from "@/components/EmojiPicker";
 import { TableGridPicker } from "@/components/TableGridPicker";
 import { TableMenu } from "@/components/TableMenu";
@@ -65,7 +70,6 @@ import { ZoomControl } from "@/components/ZoomControl";
 import { CALLOUT_VARIANTS, type CalloutVariant } from "@/lib/editor/extensions/callout";
 import { checkSpellcheckDictionary } from "@/lib/spellcheckDictionary";
 import { useAiModelsStore } from "@/store/useAiModelsStore";
-import { platform } from "@/platform";
 import { useAiSettingsStore } from "@/store/useAiSettingsStore";
 import { useChatStore } from "@/store/useChatStore";
 import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
@@ -133,12 +137,94 @@ function DetailsPanelToggle() {
   );
 }
 
+/* Phone and tablet: the model select is allowed 11rem and the thinking
+   toggle another button, together the width of five buttons in the single
+   toolbar row a phone has — for two things that are settings rather than
+   actions on the text. Both move behind this one trigger, which leaves the
+   model exactly as far away as the select did: one tap to open, one to
+   choose. */
+function AiQuickSettingsMenu({
+  model,
+  models,
+  thinkingEnabled,
+  onModelSelect,
+  onThinkingChange,
+  onAiSettingsRequest
+}: {
+  model: string;
+  models: string[];
+  thinkingEnabled: boolean;
+  onModelSelect: (model: string) => void;
+  onThinkingChange: (enabled: boolean) => void;
+  onAiSettingsRequest: () => void;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <Menu>
+      <MenuTrigger
+        render={
+          <Button
+            type="button"
+            size="icon-sm"
+            variant="outline"
+            className="editor-toolbar__ai-settings-trigger"
+            aria-label={t("toolbar.aiModel")}
+            // The name the select showed and a narrow screen cut off anyway.
+            title={model || t("toolbar.aiModelPlaceholder")}
+            data-unset={model ? undefined : "true"}
+            onMouseDown={(event) => {
+              event.preventDefault();
+            }}
+          />
+        }
+      >
+        <SlidersHorizontal />
+      </MenuTrigger>
+      <MenuPortal>
+        {/* The toolbar is at the bottom of the screen in this layout. */}
+        <MenuPositioner side="top" align="start">
+          <MenuPopup className="editor-toolbar__ai-settings-popup">
+            <MenuCheckboxItem
+              checked={thinkingEnabled}
+              // Toggling it is not the reason the menu was opened, so it
+              // stays open for the model choice below.
+              closeOnClick={false}
+              onCheckedChange={onThinkingChange}
+            >
+              <Brain className="size-4" />
+              {t("settingsDialog.thinking")}
+              <MenuCheckboxItemIndicator />
+            </MenuCheckboxItem>
+            <div className="editor-toolbar__menu-separator" role="separator" />
+            {models.length > 0 ? (
+              <MenuRadioGroup value={model} onValueChange={(value) => onModelSelect(String(value))}>
+                {models.map((entry) => (
+                  <MenuRadioItem key={entry} value={entry}>
+                    <span className="editor-toolbar__ai-settings-model">{entry}</span>
+                    <MenuRadioItemIndicator />
+                  </MenuRadioItem>
+                ))}
+              </MenuRadioGroup>
+            ) : (
+              <MenuItem disabled>{t("toolbar.aiModelPlaceholder")}</MenuItem>
+            )}
+            <div className="editor-toolbar__menu-separator" role="separator" />
+            <MenuItem onClick={onAiSettingsRequest}>{t("toolbar.aiOpenSettings")}</MenuItem>
+          </MenuPopup>
+        </MenuPositioner>
+      </MenuPortal>
+    </Menu>
+  );
+}
+
 function AiQuickSettings({
   onAiSettingsRequest
 }: {
   onAiSettingsRequest: () => void;
 }) {
   const { t } = useTranslation();
+  const layout = useLayoutMode();
   const settings = useAiSettingsStore((state) => state.settings);
   const updateSettings = useAiSettingsStore((state) => state.updateSettings);
   // The central store is the single source for the model list — the toolbar
@@ -162,6 +248,19 @@ function AiQuickSettings({
     settings.model && !models.includes(settings.model)
       ? [settings.model, ...models]
       : models;
+
+  if (layout !== "desktop") {
+    return (
+      <AiQuickSettingsMenu
+        model={settings.model}
+        models={options}
+        thinkingEnabled={thinkingEnabled}
+        onModelSelect={(model) => updateSettings({ model })}
+        onThinkingChange={(enabled) => updateSettings({ thinkingMode: enabled ? "default" : "off" })}
+        onAiSettingsRequest={onAiSettingsRequest}
+      />
+    );
+  }
 
   return (
     <>
@@ -474,6 +573,9 @@ export function Toolbar({
   const { t } = useTranslation();
   const [, forceRerender] = useState(0);
   const hasSelection = !editor.state.selection.empty;
+  // On phone and tablet this button is the only chat toggle, so whether the
+  // panel is open has to be readable from it.
+  const isChatOpen = useChatStore((state) => state.isOpen);
 
   // Indent controls act on the list item the cursor sits in; there is no
   // generic block indentation in a markdown document.
@@ -542,8 +644,10 @@ export function Toolbar({
           type="button"
           size="icon-sm"
           aria-label={t("chat.openButton")}
+          aria-pressed={isChatOpen}
           title={`${t("chat.openButtonTitle")} (${t("common.keys.ctrl")}+${t("common.keys.shift")}+A)`}
           className="editor-toolbar__chat-button"
+          data-testid="open-chat"
           onMouseDown={(event) => {
             event.preventDefault();
           }}
@@ -717,21 +821,19 @@ export function Toolbar({
         <TableGridPicker editor={editor} />
         {editor.isActive("table") ? <TableMenu editor={editor} /> : null}
         <EmojiPicker editor={editor} />
-        {platform.features.imagePicker ? (
-          <Button
-            type="button"
-            size="icon-sm"
-            variant="outline"
-            aria-label={t("toolbar.insertImage")}
-            title={t("toolbar.insertImage")}
-            onMouseDown={(event) => {
-              event.preventDefault();
-            }}
-            onClick={onImageInsertRequest}
-          >
-            <ImagePlus />
-          </Button>
-        ) : null}
+        <Button
+          type="button"
+          size="icon-sm"
+          variant="outline"
+          aria-label={t("toolbar.insertImage")}
+          title={t("toolbar.insertImage")}
+          onMouseDown={(event) => {
+            event.preventDefault();
+          }}
+          onClick={onImageInsertRequest}
+        >
+          <ImagePlus />
+        </Button>
         <CalloutMenu editor={editor} />
       </div>
 

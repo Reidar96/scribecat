@@ -160,6 +160,21 @@ export function Sidebar({
     .map((path) => ({ path, remote: remoteVaultFor(path) }))
     .filter(({ path, remote }) => remote !== null || !isRemoteVaultPath(path));
   const folderLabel = formatFolderLabel(folderPath);
+  // A vault on a server, whether this is the browser (always) or the desktop
+  // app opened one: the name gets the same server mark the recent list uses.
+  const isServerVault = folderPath !== null && (platform.kind === "web" || remoteVaultFor(folderPath) !== null);
+  // The name is clipped at its start (sidebar.css), which takes an RTL
+  // block — and RTL alone reorders anything with digits in it, turning
+  // "192.168.1.5/stephan/" into "stephan/192.168.1.5". The isolate keeps the
+  // characters in reading order inside that block.
+  const folderLabelContent = (
+    <>
+      {isServerVault ? <Server className="size-4 sidebar-panel__folder-kind" aria-hidden="true" /> : null}
+      <span className="sidebar-panel__folder-name">
+        <bdi dir="ltr">{folderLabel}</bdi>
+      </span>
+    </>
+  );
   const capabilities = getVaultCapabilities();
   const capabilityHint = vaultCapabilityHint();
   const [rootContextMenu, setRootContextMenu] = useState<{ x: number; y: number } | null>(null);
@@ -425,7 +440,7 @@ export function Sidebar({
                   />
                 }
               >
-                {folderLabel}
+                {folderLabelContent}
               </MenuTrigger>
               <MenuPortal>
                 <MenuPositioner align="start">
@@ -476,7 +491,7 @@ export function Sidebar({
               onContextMenu={openRootContextMenu}
               data-testid="vault-name"
             >
-              {folderLabel}
+              {folderLabelContent}
             </div>
           )}
         </div>

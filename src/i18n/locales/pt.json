@@ -42,7 +42,7 @@
     "statusSaved": "Salvo",
     "fileLoading": "Carregando arquivo …",
     "emptyEyebrow": "Nenhum arquivo selecionado ainda",
-    "emptyTitle": "Selecione um arquivo Markdown à esquerda",
+    "emptyTitle": "Selecione um arquivo Markdown",
     "emptyDescription": "Assim que uma pasta for aberta, seu conteúdo e a área de edição aparecerão aqui.",
     "pendingTargetOtherFolder": "outra pasta",
     "version": "v{{version}}",

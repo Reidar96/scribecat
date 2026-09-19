@@ -42,7 +42,7 @@
     "statusSaved": "Saved",
     "fileLoading": "Loading file …",
     "emptyEyebrow": "No file selected yet",
-    "emptyTitle": "Select a Markdown file on the left",
+    "emptyTitle": "Select a Markdown file",
     "emptyDescription": "Once a folder is open, its content and the editing surface will appear here.",
     "pendingTargetOtherFolder": "another folder",
     "version": "v{{version}}",

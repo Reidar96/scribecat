@@ -66,17 +66,12 @@
 }
 
 .sidebar-panel__folder {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
   width: 100%;
   max-width: none;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  /* Truncate the start (vault root) rather than the end, so the part of the
-     path closest to the current folder stays visible; the full path is
-     still available via the title tooltip. */
-  direction: rtl;
-  text-align: left;
+  min-width: 0;
   font-size: 0.9rem;
   font-family: inherit;
   color: rgba(var(--text-rgb),var(--text-default-alpha));
@@ -87,6 +82,25 @@
   margin: -0.25rem -0.4rem;
   cursor: pointer;
   transition: background 160ms ease;
+}
+
+.sidebar-panel__folder-kind {
+  flex-shrink: 0;
+  color: rgba(var(--muted-rgb), 0.9);
+}
+
+.sidebar-panel__folder-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  /* Truncate the start (vault root) rather than the end, so the part of the
+     path closest to the current folder stays visible; the full path is
+     still available via the title tooltip. The <bdi dir="ltr"> inside keeps
+     the text itself in reading order (Sidebar.tsx). */
+  direction: rtl;
+  text-align: left;
 }
 
 .sidebar-panel__folder:hover {

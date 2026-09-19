@@ -42,7 +42,7 @@
     "statusSaved": "保存済み",
     "fileLoading": "ファイルを読み込み中…",
     "emptyEyebrow": "ファイルが選択されていません",
-    "emptyTitle": "左側で Markdown ファイルを選択してください",
+    "emptyTitle": "Markdown ファイルを選択してください",
     "emptyDescription": "フォルダーを開くと、その内容と編集画面がここに表示されます。",
     "pendingTargetOtherFolder": "別のフォルダー",
     "version": "v{{version}}",

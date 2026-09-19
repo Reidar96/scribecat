@@ -10,8 +10,9 @@ import {
   VAULT_META_DIR_NAME
 } from "@/lib/vaultPaths";
 import type { MarkdownFileRecord } from "@/platform/types";
+import { guessImageMimeType } from "@/lib/imageMimeTypes";
 
-export { getRelativeDisplayPath, isPathInsideVault, VAULT_META_DIR_NAME };
+export { getRelativeDisplayPath, guessImageMimeType, isPathInsideVault, VAULT_META_DIR_NAME };
 export type { MarkdownFileRecord };
 
 export const ABSOLUTE_URL_PATTERN = /^[a-z][a-z0-9+.-]*:/i;
@@ -26,21 +27,6 @@ const EXTENSION_BY_MIME_TYPE: Record<string, string> = {
   "image/svg+xml": "svg",
   "image/bmp": "bmp"
 };
-
-const MIME_TYPE_BY_EXTENSION: Record<string, string> = {
-  png: "image/png",
-  jpg: "image/jpeg",
-  jpeg: "image/jpeg",
-  gif: "image/gif",
-  webp: "image/webp",
-  svg: "image/svg+xml",
-  bmp: "image/bmp"
-};
-
-export function guessImageMimeType(filePath: string): string {
-  const extension = filePath.split(".").pop()?.toLowerCase() ?? "";
-  return MIME_TYPE_BY_EXTENSION[extension] ?? "application/octet-stream";
-}
 
 const LAST_FOLDER_PATH_STORAGE_KEY = "scribedog:lastFolderPath";
 const RECENT_FOLDER_PATHS_STORAGE_KEY = "scribedog:recentFolderPaths";

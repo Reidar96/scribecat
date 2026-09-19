@@ -137,9 +137,10 @@ test.describe("phone (Pixel 7)", () => {
     await page.getByRole("button", { name: "Bold", exact: true }).tap();
 
     const status = page.getByTestId("status");
-    await expect(status).toHaveText("Save");
+    await expect(status).toHaveAccessibleName("Save");
     await status.tap();
-    await expect(status).toHaveText("Saved");
+    await expect(status).toHaveAccessibleName("Saved");
+    await expect(status).toHaveAttribute("data-dirty", "false");
 
     const saved = await readOnServer(page, NOTE);
     expect(saved).toContain("Typed on a phone.");
@@ -222,7 +223,7 @@ test.describe("phone (Pixel 7)", () => {
     await removeOnServer(page, "Projects/Mobile move.md");
   });
 
-  test("the chat opens from the header as a full-screen sheet and answers", async ({ page }) => {
+  test("the chat opens from the bottom toolbar as a full-screen sheet and answers", async ({ page }) => {
     await signIn(page);
     await writeOnServer(page, NOTE, SEED);
     const stored = await page.request.put(`${basePath(page)}/api/secrets/openai`, { data: { value: "sk-mock" } });

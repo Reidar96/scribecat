@@ -10,6 +10,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { check as checkForUpdate } from "@tauri-apps/plugin-updater";
 
+import { guessImageMimeType } from "@/lib/imageMimeTypes";
 import { normalizeDisplayPath } from "@/lib/vaultPaths";
 import { joinPosixPath, normalizePosixPath, posixDirname } from "@/platform/remote/paths";
 import { isRemoteVaultPath } from "@/platform/remote/vaultRoot";
@@ -48,7 +49,6 @@ export const platform: Platform = {
     importFiles: true,
     exportFiles: true,
     downloads: true,
-    imagePicker: true,
     updater: true,
     voiceInput: true,
     portableMode: true,
@@ -141,6 +141,29 @@ export const platform: Platform = {
       const selected = await openDialog({ multiple: true, directory: false, title, filters, defaultPath });
 
       return typeof selected === "string" ? [selected] : Array.isArray(selected) ? selected : [];
+    }
+  },
+  imagePicker: {
+    pickImages: async ({ defaultPath, title, filterName, extensions }) => {
+      const selected = await openDialog({
+        multiple: true,
+        directory: false,
+        title,
+        defaultPath,
+        filters: [{ name: filterName, extensions }]
+      });
+      const paths = typeof selected === "string" ? [selected] : Array.isArray(selected) ? selected : [];
+
+      return paths.map((path) => ({
+        fileName: path.replace(/\\/g, "/").split("/").pop() ?? "image",
+        read: async () => {
+          // The dialog does not widen the fs scope by itself; a picked file
+          // outside the vault is unreadable until the shell allows it.
+          await invoke("allow_file_scope", { filePath: path });
+
+          return { mimeType: guessImageMimeType(path), data: await localFs.readFile(path) };
+        }
+      }));
     }
   },
   downloads: {

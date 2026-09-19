@@ -42,7 +42,7 @@
     "statusSaved": "已保存",
     "fileLoading": "文件加载中……",
     "emptyEyebrow": "尚未选择文件",
-    "emptyTitle": "在左侧选择一个 Markdown 文件",
+    "emptyTitle": "选择一个 Markdown 文件",
     "emptyDescription": "打开文件夹后，其内容和编辑界面将显示在此处。",
     "pendingTargetOtherFolder": "另一个文件夹",
     "version": "v{{version}}",

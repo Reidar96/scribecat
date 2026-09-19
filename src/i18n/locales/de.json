@@ -42,7 +42,7 @@
     "statusSaved": "Gespeichert",
     "fileLoading": "Datei wird geladen …",
     "emptyEyebrow": "Noch keine Datei gewählt",
-    "emptyTitle": "Wähle links eine Markdown-Datei aus",
+    "emptyTitle": "Wähle eine Markdown-Datei aus",
     "emptyDescription": "Sobald ein Ordner geöffnet ist, erscheinen hier Inhalt und die spätere Bearbeitungsoberfläche.",
     "pendingTargetOtherFolder": "einen anderen Ordner",
     "version": "v{{version}}",

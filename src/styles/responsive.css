@@ -80,10 +80,23 @@
     padding: 1rem;
   }
 
+  /* The folder-note badge's label ("Ordnernotiz") doesn't fit next to a long
+     folder title on a phone-width header; the icon alone still conveys it
+     (title attribute keeps the label for anyone who taps and holds). */
+  .detail-panel__title-badge {
+    gap: 0;
+    padding: 0.3rem;
+  }
+
+  .detail-panel__title-badge-text {
+    display: none;
+  }
+
   /* The toolbar moves below the text, one swipeable row: with the keyboard
      open it then sits right above the keys. The view group (find, details,
-     zoom, zen, options) and the chat button live in the document header's
-     menu and button instead, so they are hidden here with their separator. */
+     zoom, zen, options) lives in the document header's menu instead, so it
+     is hidden here with its separator; the chat button stays, the header has
+     no width for it. */
   .editor-view > .editor-toolbar {
     order: 10;
     flex-wrap: nowrap;
@@ -107,8 +120,7 @@
   }
 
   .editor-toolbar__group--view,
-  .editor-toolbar__separator--view,
-  .editor-toolbar__chat-button {
+  .editor-toolbar__separator--view {
     display: none;
   }
 
@@ -190,36 +202,41 @@
     max-width: calc(100vw - 1rem);
   }
 
-  /* The title gives way, the buttons next to it do not. */
+  /* The title gives way, the buttons next to it do not. It's a path
+     ("Projects/TTTT/Test2/…"), so the end — the actual file name — is what
+     matters; truncating from the end would hide it behind an ellipsis while
+     the parent folders stay visible. Flipping direction moves the ellipsis
+     to the visual start instead: the LTR path text itself still reads
+     left-to-right, only the cut end moves. */
   .detail-panel__title h2 {
     flex: 1;
     min-width: 0;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
+    direction: rtl;
+    text-align: left;
     font-size: 1.25rem;
   }
 
-  /* The header's save pill is a button here (DocumentPanel). */
-  .detail-panel__status--button {
-    font-family: inherit;
-    line-height: inherit;
+  /* The header's save state is an icon button here (DocumentPanel):
+     accent while there is something to save, disabled once there is not. */
+  .detail-panel__save-button {
     cursor: pointer;
     transition: background 160ms ease, color 160ms ease;
   }
 
-  .detail-panel__status--button:disabled {
+  .detail-panel__save-button:disabled {
     cursor: default;
   }
 
-  .detail-panel__status--button.detail-panel__status--dirty {
-    border-color: transparent;
-    background: rgb(var(--accent-rgb));
-    color: #ffffff;
-  }
-
-  .detail-panel__status--button.detail-panel__status--dirty:active {
-    background: rgba(var(--accent-rgb), 0.85);
+  /* A file removed underneath us is the one state an icon alone would not
+     carry, so it keeps the warning colour even while the button is off. */
+  .detail-panel__save-button--warning:disabled {
+    opacity: 1;
+    border-color: rgba(251, 191, 36, 0.22);
+    background: rgba(var(--warning-bg-rgb), 0.55);
+    color: var(--amber-fg);
   }
 }
 
@@ -407,9 +424,45 @@
     display: none;
   }
 
+  /* Once the label is hidden, the chip's own padding and animated gradient
+     (sized to wrap a label) are all that's left around the button, reading
+     as a smudge bleeding past it instead of a control. Drop the chip's own
+     look and colour the button itself instead. */
+  .detail-panel__ai-chip {
+    background: none;
+    border: none;
+    padding: 0;
+    box-shadow: none;
+    animation: none;
+  }
+
+  .detail-panel__ai-chip::after {
+    content: none;
+  }
+
+  .detail-panel__ai-chip-cancel {
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 0.6rem;
+    background: rgb(var(--accent-rgb));
+    border-color: transparent;
+  }
+
+  .detail-panel__ai-chip-cancel:hover,
+  .detail-panel__ai-chip-cancel:active {
+    background: rgba(var(--accent-rgb), 0.85);
+  }
+
   .detail-panel__card--empty {
-    justify-content: center;
     padding: 0 1rem 1rem;
+  }
+
+  /* Some air below the header instead of the eyebrow sitting right under
+     its border, and between the eyebrow and the heading below it — the
+     base card's gap is zeroed out for the whole phone/tablet layout. */
+  .detail-panel__card--empty .detail-panel__eyebrow {
+    margin-top: 2.5rem;
+    margin-bottom: 0.5rem;
   }
 
   .detail-panel__card--empty .detail-panel__eyebrow,
@@ -440,10 +493,12 @@
   }
 
   /* Three classes: zen-mode.css is imported later and sets the same
-     property with two. The top inset clears the exit button. */
+     property with two. The top inset clears the exit button, which grows to
+     a 2.75rem touch target below (pointer: coarse) — 0.9rem top offset plus
+     that height plus a real gap, so the heading doesn't sit flush under it. */
   .app-shell .workspace-grid--zen .editor-view__surface {
     padding-inline: 1rem;
-    padding-top: 3.5rem;
+    padding-top: 4.75rem;
   }
 
   /* Dialogs fill the screen; a centred modal with margins would leave

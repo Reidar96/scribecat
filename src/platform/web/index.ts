@@ -1,3 +1,4 @@
+import { guessImageMimeType } from "@/lib/imageMimeTypes";
 import { SessionError } from "@/platform/errors";
 import { secretRef } from "@/platform/secretRef";
 import type { CredentialsStatus, Platform } from "@/platform/types";
@@ -72,7 +73,6 @@ export const platform: Platform = {
     importFiles: false,
     exportFiles: false,
     downloads: true,
-    imagePicker: false,
     updater: false,
     voiceInput: false,
     portableMode: false,
@@ -160,6 +160,33 @@ export const platform: Platform = {
   },
 
   dialogs: null,
+  imagePicker: {
+    pickImages: ({ extensions }) =>
+      new Promise((resolve) => {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.multiple = true;
+        // The extensions keep a desktop browser to what the editor renders;
+        // "image/*" is what makes a phone offer the camera and the library.
+        input.accept = [...extensions.map((extension) => `.${extension}`), "image/*"].join(",");
+        input.addEventListener("change", () => {
+          resolve(
+            Array.from(input.files ?? []).map((file) => ({
+              fileName: file.name,
+              read: async () => ({
+                mimeType: file.type || guessImageMimeType(file.name),
+                data: new Uint8Array(await file.arrayBuffer())
+              })
+            }))
+          );
+        });
+        // Dismissing the picker: browsers have fired this since 2023; where
+        // one does not, the promise simply never settles, and nothing waits
+        // on it but the click handler.
+        input.addEventListener("cancel", () => resolve([]));
+        input.click();
+      })
+  },
   downloads: browserDownloads,
   voice: null,
   updater: null,

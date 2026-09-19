@@ -42,7 +42,7 @@
     "statusSaved": "Guardado",
     "fileLoading": "Cargando archivo …",
     "emptyEyebrow": "Aún no se ha seleccionado ningún archivo",
-    "emptyTitle": "Selecciona un archivo Markdown a la izquierda",
+    "emptyTitle": "Selecciona un archivo Markdown",
     "emptyDescription": "Una vez que se abra una carpeta, su contenido y la superficie de edición aparecerán aquí.",
     "pendingTargetOtherFolder": "otra carpeta",
     "version": "v{{version}}",

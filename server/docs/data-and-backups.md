@@ -8,7 +8,7 @@
 - a folder's own note, where you use folder notes: `.scribedog-foldernote.md`
   inside that folder. It is a normal Markdown file, only the file tree shows
   it on the folder row instead of listing it next to its siblings;
-- `images/` for pictures pasted or dropped into notes;
+- `images/` for pictures inserted, pasted or dropped into notes;
 - `.scribedog/` with the same sidecars the desktop app keeps (version
   history, manual sort order, chat sessions, the agent's pending proposals
   and checkpoints, and the settings that belong to the folder rather than to
