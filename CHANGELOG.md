@@ -3,6 +3,11 @@
 All notable changes to ScribeDog are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.12.2] - 2026-09-19
+
+### Bug Fixes
+- Fix the app failing to load a note (and then failing to start at all) once it contains an image whose file name is purely numeric, such as photos from a phone camera
+
 ## [0.12.1] - 2026-09-19
 
 ### Highlights
