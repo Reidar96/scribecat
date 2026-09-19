@@ -35,10 +35,10 @@ curl -fsSL -o .env https://raw.githubusercontent.com/snooky234/scribedog/main/se
 Starting with a different number of people than two? Do this next, before
 your first `docker compose up`:
 
-- **Just one person:** delete `PERSON2`'s parts: its two lines in `.env`,
-  its `scribedog-2` block in `docker-compose.yml` (plus its entry in
-  `depends_on` and in Caddy's `environment:`), and its `handle` block in
-  the Caddyfile.
+- **Just one person:** delete `PERSON2`'s parts: its five `PERSON2_*`
+  lines in `.env`, its `scribedog-2` block in `docker-compose.yml` (plus its
+  entry in `depends_on` and in Caddy's `environment:`), and its `handle`
+  block in the Caddyfile.
 - **More than two people:** copy a `PERSON<N>` slot the same way
   [Adding another person later](#adding-another-person-later) describes,
   just before your first start instead of after.
@@ -117,8 +117,13 @@ applies unchanged, one instance at a time:
        reverse_proxy scribedog-3:3000
    }
    ```
-3. Open `.env` and add `PERSON3_INIT_PASSWORD=` (eight characters or more)
-   and `PERSON3_BASE_PATH=/carol` (or whatever path you want).
+3. Open `.env` and add the `PERSON3_*` group next to the other two:
+   `PERSON3_INIT_PASSWORD=` (eight characters or more), `PERSON3_BASE_PATH=/carol`
+   (or whatever path you want), `PERSON3_DATA_DIR=carol-data` and
+   `PERSON3_PUID`/`PERSON3_PGID` (their own Linux user, see [Keeping the
+   folders apart](#keeping-the-folders-apart)). Leaving the last three out
+   means the folder gets the fallback name from the copied service block and
+   the ids of the person you copied it from.
 4. Run `docker compose up -d`. This starts only the new container; the
    running ones are untouched. The fallback 404 (a client without a prefix)
    is deliberately generic and does not list instances, so nothing else in

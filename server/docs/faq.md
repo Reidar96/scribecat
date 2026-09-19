@@ -118,11 +118,12 @@ third-party Markdown apps used with a sync folder.
 Right-click it in the file tree (long-press on a phone). **Export…** renders
 it as PDF, DOCX, ODT or HTML and the browser downloads the file; for a
 folder or a selection you get one ZIP with one document per note, or one
-merged document if you tick "Merge into one file". **Download as Markdown**
-saves the note as the `.md` it is; it is also in the editor's ⋮ menu next
-to Print. For a folder, or the whole vault from the vault name at the top,
-**Download as ZIP (Markdown files)** gives you the folder as it is on the
-server: notes, images and subfolders, without the `.scribedog` metadata.
+merged document if you tick "Merge into one file" (EPUB is offered there
+too, since a book is one file). **Download as Markdown** saves the note as
+the `.md` it is; it is also in the editor's ⋮ menu next to Print. For a
+folder, or the whole vault from the vault name at the top, **Download as
+ZIP (Markdown files)** gives you the folder as it is on the server: notes,
+images and subfolders, without the `.scribedog` metadata.
 The rendering happens in the browser, so a very large folder export takes a
 moment; the Markdown ZIP comes straight from the server.
 

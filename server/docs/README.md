@@ -40,7 +40,8 @@ notes and folders, images, sort order, version history, live updates when a
 file changes on disk, export as a download (PDF, DOCX, ODT, HTML, EPUB, or
 the notes themselves as Markdown), and the AI features including the chat
 agent. The desktop app can open the same folder over the network as a
-"server vault", keeping its AI and dictation on your computer. Two things
+"server vault", keeping its AI and dictation on your computer. Three things
 stay desktop only: the knowledge base (its search index runs inside the
-desktop app) and built-in dictation (the web app uses what your device
-already has).
+desktop app), built-in dictation (the web app uses what your device already
+has) and importing files (the desktop app does that, also into a server
+vault).
