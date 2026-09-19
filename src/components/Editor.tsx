@@ -184,6 +184,9 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 ) {
   const { t } = useTranslation();
   const editorRef = useRef<TipTapEditor | null>(null);
+  // The pointer type of the last press inside the editor, for the context
+  // menu guard below: the event itself does not always say where it came from.
+  const lastPointerTypeRef = useRef<string | null>(null);
   const lastSyncedMarkdownRef = useRef(markdown);
   // Kept in a ref so the sync effect below doesn't re-run for a new callback
   // identity: it may only react to actual content changes. Declared up here
@@ -299,11 +302,20 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     // selects a word) arrives as this event too; it is how a word gets
     // selected there, and our menu would open instead of the selection
     // handles. The paw button in the toolbar is the way in on touch.
+    //
+    // The event's own pointerType is not enough: Android synthesises the
+    // contextmenu of the double tap from the selection, not from the finger,
+    // and reports it as a mouse. The last pointer that actually went down in
+    // the editor is what decides; only a menu opened without any pointer
+    // (keyboard) falls back to the device's primary pointer.
     const nativeEvent = event.nativeEvent as PointerEvent | MouseEvent;
+    const eventPointerType = "pointerType" in nativeEvent ? nativeEvent.pointerType : "";
+    const pointerType = lastPointerTypeRef.current ?? eventPointerType;
+    const isTouchPointer = (type: string) => type === "touch" || type === "pen";
     const fromTouch =
-      "pointerType" in nativeEvent
-        ? nativeEvent.pointerType === "touch"
-        : window.matchMedia("(pointer: coarse)").matches;
+      isTouchPointer(eventPointerType) ||
+      isTouchPointer(pointerType) ||
+      (pointerType === "" && window.matchMedia("(pointer: coarse)").matches);
 
     if (fromTouch) {
       return;
@@ -1596,6 +1608,9 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
               <EditorContent
                 editor={editor}
                 className="editor-view__content"
+                onPointerDownCapture={(event) => {
+                  lastPointerTypeRef.current = event.pointerType;
+                }}
                 onContextMenu={handleEditorContextMenu}
                 // The wrapper fills the scroll area below a short document.
                 // A click there is outside the contenteditable, so left to
