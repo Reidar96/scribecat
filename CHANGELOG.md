@@ -3,6 +3,19 @@
 All notable changes to ScribeDog are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.12.1] - 2026-09-19
+
+### Highlights
+- Add image picker on mobile/web and rework phone toolbar
+- Serve the CA certificate over HTTPS for direct download
+
+### Improvements
+- Make docker-compose.yml's data dir fallback generic
+- Rename person slots and make base paths env-driven
+
+### Bug Fixes
+- Keep context menu closed on Android double-tap selection
+
 ## [0.12.0] - 2026-09-18
 
 ### Highlights
