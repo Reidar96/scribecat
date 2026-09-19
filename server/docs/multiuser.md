@@ -50,14 +50,13 @@ your first `docker compose up`:
 - `PERSON1_BASE_PATH` and `PERSON2_BASE_PATH`: where each instance
   answers, e.g. `/anna`. Change these to rename a person.
 - `PERSON1_DATA_DIR` and `PERSON2_DATA_DIR`: the data folder name,
-  `anna-data` and `bob-data` by default. At this point, before the first
-  start, there is nothing to lose either way, so leave these unless you
-  want a different name from the start. Once an instance already has data
-  in it, changing this variable alone does not rename that folder: it
-  starts the instance over with a new, empty one, so rename the folder on
-  disk yourself first (see [Moving an existing single instance
-  here](#moving-an-existing-single-instance-here) for the same move done on
-  purpose).
+  `anna-data` and `bob-data` by default. Set these to match `BASE_PATH` now,
+  while there is nothing in the folders yet: once an instance already has
+  data, changing this variable alone does not rename the folder, it starts
+  the instance over with a new, empty one, so renaming it later means
+  moving the folder on disk yourself first (see [Moving an existing single
+  instance here](#moving-an-existing-single-instance-here) for the same
+  move done on purpose).
 - `SCRIBEDOG_SITE_ADDRESS`: the box's LAN IP or host name, not `localhost`,
   unless every person opens the app on this same machine (see
   [Getting started](getting-started.md#install)).
