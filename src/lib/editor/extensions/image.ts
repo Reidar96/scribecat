@@ -20,10 +20,27 @@ type MarkdownSerializerState = {
   closeBlock: (node: ProseMirrorNode) => void;
 };
 
+// TipTap's default attribute parser (fromString in @tiptap/core) turns a value
+// that looks like a number into a Number and "true"/"false" into booleans. A
+// photo from a phone camera is called "1000078813.jpg", so its alt text (the
+// file name without extension) came back from the DOM as a Number and
+// state.esc(alt) below crashed the whole serializer, and with it every save
+// and reload of that note. Parsing these attributes as the raw strings they
+// are keeps the markdown round-trip lossless for such names.
+const rawStringAttribute = (name: string) => ({
+  default: null,
+  parseHTML: (element: HTMLElement) => element.getAttribute(name)
+});
+
+const attributeAsString = (value: unknown): string =>
+  value === null || value === undefined ? "" : String(value);
+
 export const EditorImage = Image.extend({
   addAttributes() {
     return {
       ...this.parent?.(),
+      src: rawStringAttribute("src"),
+      alt: rawStringAttribute("alt"),
       width: {
         default: null,
         parseHTML: (element) => {
@@ -54,10 +71,10 @@ export const EditorImage = Image.extend({
     return {
       markdown: {
         serialize(state: MarkdownSerializerState, node: ProseMirrorNode) {
-          const alt = (node.attrs.alt as string | null) ?? "";
-          const src = (node.attrs.src as string | null) ?? "";
+          const alt = attributeAsString(node.attrs.alt);
+          const src = attributeAsString(node.attrs.src);
           const width = node.attrs.width as number | null;
-          const title = width ? `width=${width}` : (node.attrs.title as string | null);
+          const title = width ? `width=${width}` : attributeAsString(node.attrs.title);
 
           state.write(
             `![${state.esc(alt)}](${src.replace(/[()]/g, "\\$&")}${
