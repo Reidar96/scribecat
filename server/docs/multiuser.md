@@ -9,9 +9,11 @@ compose file for that: two ready-made slots, `PERSON1` and `PERSON2`
 (`anna`/`bob` by default), as a starting template.
 
 Starting here right away, even for a single person, saves you the later move
-described below. To rename a person, change `PERSON1_BASE_PATH` in `.env`:
-it is the one place their URL-facing name lives, and it drives both
-`docker-compose.yml` and the Caddyfile without editing either. Adding or
+described below. To rename a person, change `PERSON1_BASE_PATH` and
+`PERSON1_DATA_DIR` in `.env`. `BASE_PATH` is the one place their
+URL-facing name lives, driving both `docker-compose.yml` and the Caddyfile
+without editing either; `DATA_DIR` only needs changing here too, to keep
+the data folder's name in step. Adding or
 removing a person still means copying or deleting a numbered block by hand
 in `docker-compose.yml` and the Caddyfile (not a single command), but it is
 copying a number, not renaming strings across three files, and the
