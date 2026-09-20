@@ -3,6 +3,18 @@
 All notable changes to ScribeDog are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.14.0] - 2026-09-21
+
+### Highlights
+- Hot exit: unsaved edits survive a restart. Dirty notes are kept as drafts in `.scribedog/drafts/` (in the browser edition: in local storage) and come back exactly as left when the vault is opened again; switching notes, opening another vault and closing the window no longer ask about unsaved edits
+- "In progress" list above the file tree: pin notes (double-click, Enter, context menu) or, with a setting, let edited notes join automatically; close entries with the cross, middle-click or the new remappable Ctrl+W; the list is stored per vault and restored on open
+- Save-time conflict check: a manual save over a file changed outside the app stops and asks (overwrite or cancel), and the disk version goes into the history first; an auto-save never overwrites, it leaves the note dirty until the next manual save
+- URLs inside code blocks are clickable
+
+### Bug Fixes
+- Keep the toolbar in view after a large paste
+- Undo/redo from a touch screen no longer raises the on-screen keyboard when the editor wasn't focused
+
 ## [0.13.1] - 2026-09-20
 
 ### Bug Fixes
