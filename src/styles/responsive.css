@@ -697,13 +697,6 @@
   }
 }
 
-/* Actions that only appear on hover have no way to appear without one. */
-@media (hover: none) {
-  .code-block-wrapper__actions {
-    opacity: 1;
-  }
-}
-
 /* --- Move-to dialog (all widths) ---------------------------------------- */
 
 .move-dialog__filter {

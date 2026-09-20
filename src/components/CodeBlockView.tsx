@@ -18,7 +18,7 @@ import { CODE_LANGUAGES } from "@/lib/codeLanguages";
 
 const PLAIN_VALUE = "";
 
-export function CodeBlockView({ node, updateAttributes }: ReactNodeViewProps) {
+export function CodeBlockView({ node, updateAttributes, selected }: ReactNodeViewProps) {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
 
@@ -40,13 +40,23 @@ export function CodeBlockView({ node, updateAttributes }: ReactNodeViewProps) {
 
   return (
     <NodeViewWrapper className="code-block-wrapper">
-      <div className="code-block-wrapper__actions" contentEditable={false}>
+      {/* Two small badges on the block's top edge instead of a button bar
+          overlaying the first line: the content area stays free. The
+          language badge opens the switch menu; it is the trigger, never the
+          block itself, so a click into the code still only places the
+          caret. Copy sits next to it as its own one-click button. */}
+      <div
+        className={
+          selected || copied ? "code-block-wrapper__badge code-block-wrapper__badge--visible" : "code-block-wrapper__badge"
+        }
+        contentEditable={false}
+      >
         <Menu>
           <MenuTrigger
             render={
               <button
                 type="button"
-                className="code-block-wrapper__language"
+                className="code-block-wrapper__badge-button"
                 aria-label={t("codeBlock.language")}
                 title={t("codeBlock.language")}
               >
@@ -85,15 +95,14 @@ export function CodeBlockView({ node, updateAttributes }: ReactNodeViewProps) {
             </MenuPositioner>
           </MenuPortal>
         </Menu>
-
         <button
           type="button"
-          className="code-block-wrapper__copy"
+          className="code-block-wrapper__badge-button"
           onClick={handleCopy}
           aria-label={t("codeBlock.copy")}
           title={t("codeBlock.copy")}
         >
-          {copied ? <Check size={14} /> : <Copy size={14} />}
+          {copied ? <Check size={12} aria-hidden="true" /> : <Copy size={12} aria-hidden="true" />}
         </button>
       </div>
       <pre>

@@ -9,7 +9,9 @@ import { codeBlockLowlight } from "@/lib/codeLanguages";
 // read the code block's text content) are unaffected.
 export const CodeBlock = CodeBlockLowlight.extend({
   addNodeView() {
-    const render = ReactNodeViewRenderer(CodeBlockView);
+    // selectedOnTextSelection: the badges only need to show while the caret
+    // is actually inside this block, not only on a full node selection.
+    const render = ReactNodeViewRenderer(CodeBlockView, { selectedOnTextSelection: true });
 
     return (props) => {
       const nodeView = render(props);
