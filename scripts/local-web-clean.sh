@@ -5,6 +5,10 @@
 #   scripts/local-web-clean.sh                    # logs and PID files only
 #   scripts/local-web-clean.sh --with-vault       # also delete the test vault
 #   scripts/local-web-clean.sh --with-vault --yes # no confirmation prompt
+#
+# --with-vault removes the whole folder SCRIBEDOG_VAULT_PATH points to
+# (default ~/scribedog-test-vault), notes included. Only point it at a
+# folder you can afford to lose.
 set -uo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

@@ -30,3 +30,6 @@ dist-ssr
 # Personal dev tooling
 .claude/
 CLAUDE.md
+
+# Logs and PID files of scripts/local-web-*.sh
+scripts/.run/

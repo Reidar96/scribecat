@@ -33,7 +33,9 @@ scripts/local-web-clean.sh --with-vault # also delete the test vault
 
 They default to a vault in `~/scribedog-test-vault` and the password
 `devpassword`; set `SCRIBEDOG_VAULT_PATH` or `SCRIBEDOG_INIT_PASSWORD` to
-change that. Logs land in `scripts/.run/`.
+change that. Logs land in `scripts/.run/`. Note that `--with-vault` removes
+the whole folder `SCRIBEDOG_VAULT_PATH` points to, notes included, so only
+point it at a folder you can afford to lose.
 
 The start script binds Vite to all interfaces and prints the addresses of
 the machine, so the running app can also be opened from a phone in the same
