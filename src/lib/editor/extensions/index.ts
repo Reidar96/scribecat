@@ -7,6 +7,7 @@ import { Markdown } from "tiptap-markdown";
 import { AiDiffWidget } from "@/lib/aiDiffWidget";
 import { AiStreamWidget } from "@/lib/aiStreamWidget";
 import { AiSuggestionWidget } from "@/lib/aiSuggestionWidget";
+import { CodeBlockLinks } from "@/lib/editor/codeBlockLinks";
 import { HeadingNumbering } from "@/lib/editor/headingNumbering";
 import { InactiveSelection } from "@/lib/inactiveSelection";
 import { OutlineHighlight } from "@/lib/editor/outlineHighlight";
@@ -50,8 +51,8 @@ function buildContentExtensions(): Extensions {
 }
 
 // The complete extension set of the editor. The widgets at the end (AI
-// stream/diff/suggestion, voice insert, search highlight, inactive selection)
-// are decoration-only and don't affect serialization. EditorImage lives here
+// stream/diff/suggestion, voice insert, search highlight, code block links,
+// inactive selection) are decoration-only and don't affect serialization. EditorImage lives here
 // rather than in the content set: its NodeView resolves vault-relative paths
 // into blob URLs, which only makes sense for a document that is actually open.
 export function buildEditorExtensions(): Extensions {
@@ -63,6 +64,7 @@ export function buildEditorExtensions(): Extensions {
     AiDiffWidget,
     AiSuggestionWidget,
     SearchHighlight,
+    CodeBlockLinks,
     OutlineHighlight,
     HeadingNumbering,
     InactiveSelection

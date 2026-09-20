@@ -288,6 +288,20 @@
   cursor: pointer;
 }
 
+/* A URL inside a code block (src/lib/editor/codeBlockLinks.ts): plain text
+   under a decoration, so it keeps the code colour and only gains the
+   underline and pointer that say "this opens". */
+.editor-view__surface .code-block-link {
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  text-decoration-color: color-mix(in srgb, currentColor 45%, transparent);
+}
+
+.editor-view__surface .code-block-link:hover {
+  text-decoration-color: currentColor;
+}
+
 .code-block-wrapper {
   position: relative;
 }

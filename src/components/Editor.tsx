@@ -45,6 +45,7 @@ import {
   normalizeVaultPath,
   stagedChangeKind
 } from "@/lib/chat/vaultStaging";
+import { CODE_LINK_ATTR } from "@/lib/editor/codeBlockLinks";
 import { buildStagedPreview } from "@/lib/editor/stagedPreview";
 import { normalizeImageSrc } from "@/lib/chat/imageAttachments";
 import { EditorFileContext } from "@/lib/editorFileContext";
@@ -1218,7 +1219,18 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
           const anchor = target?.closest("a[href]") as HTMLAnchorElement | null;
 
           if (!anchor) {
-            return false;
+            // A URL inside a code block is plain text carrying a decoration
+            // (src/lib/editor/codeBlockLinks.ts), not an <a>: it opens in the
+            // browser like any other external link.
+            const codeLink = target?.closest(`[${CODE_LINK_ATTR}]`)?.getAttribute(CODE_LINK_ATTR);
+
+            if (!codeLink) {
+              return false;
+            }
+
+            event.preventDefault();
+            void platform.shell.openUrl(codeLink);
+            return true;
           }
 
           event.preventDefault();
