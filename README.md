@@ -77,12 +77,14 @@ notes — fluently, privately, and for free.
 | 🧭 Multi-step plans | Visible step-by-step plan for goals that touch several files | Chat panel, agent settings |
 | 📚 Knowledge base | The AI searches your whole folder of notes — by word or by meaning — and answers from them, listing its sources | Settings → Knowledge base |
 | 📎 Files as chat context | Drag notes or text files onto the chat panel and ask about their content | Drag & drop into chat |
-| ✅ AI spelling & grammar check | List of issues with suggested corrections, apply one by one or all at once | `Ctrl+Shift+X` / toolbar |
+| ✅ AI spelling & grammar check | Check a selection or the whole document; list of issues with suggested corrections, apply one by one or all at once | `Ctrl+Shift+X` / toolbar |
 | 🕓 Document versions | Automatic local snapshots on save; diff and restore any previous version | Version history popover |
-| 🧘 Zen mode | Full-screen, distraction-free writing with a resizable text column | `Ctrl+Shift+Y` / toolbar |
+| 🧘 Zen mode | Full-screen, distraction-free writing with a resizable text column and its own text zoom | `Ctrl+Shift+Y` / toolbar |
 | 🎙️ Voice input | Offline dictation into the document or straight into an AI prompt | `Ctrl+Shift+W` / `Ctrl+Shift+E` |
 | 🧩 Custom assistants | Named, reusable system prompts for the AI chat, switchable in-panel | Chat panel dropdown |
 | ✍️ WYSIWYG editing | Headings, tables, images, lists, code blocks, emoji, spell check | — |
+| 🖍️ Text highlighting | Mark passages with a highlighter (`==text==`), kept in every export; a marker mode for the pointer | `Ctrl+Shift+H` / toolbar |
+| 💾 Auto-save | Off by default; saves the note after a pause in typing and when you leave it | Toolbar options |
 | 📋 Copy as you need it | Copy a selection with formatting, as Markdown source, or as plain text | Right-click · `Ctrl+C` · `Ctrl+Alt+C` · `Ctrl+Shift+C` |
 | 📥 Paste Markdown | Pasted Markdown text is rendered right away (headings, lists, tables, bold); paste the raw text instead when you want it | `Ctrl+V` · `Ctrl+Shift+V` |
 | 🔗 Linked notes | Link notes by drag, dialog, or `[[`; links & backlinks in the details panel; back/forward history | `Ctrl+L` · `Ctrl+Shift+D` · `Alt+←`/`Alt+→` |
@@ -107,7 +109,7 @@ notes — fluently, privately, and for free.
   <img src="src/assets/scribe-dog-ai-assisted-proposal.png" alt="ScribeDog AI review widget with accept/discard" width="700">
 
 - Every AI edit is a single atomic change: one `Ctrl+Z` fully undoes it
-- **AI spelling & grammar check** — select a passage, press `Ctrl+Shift+X` (or use the toolbar button), and get a clear list of issues with suggested corrections and explanations; apply them one by one or all at once
+- **AI spelling & grammar check** — select a passage (or nothing at all to check the whole document), press `Ctrl+Shift+X` (or use the toolbar button), and get a clear list of issues with suggested corrections and explanations; apply them one by one or all at once
 
 ### 💬 AI chat — agentic editing
 - Press `Ctrl+Shift+A` (or the toolbar button) to open the **chat panel** — a resizable side panel with its own session history, separate from the quick select-and-rewrite flow above
@@ -167,6 +169,7 @@ notes — fluently, privately, and for free.
 ### 🧘 Zen mode — distraction-free, full-screen writing
 - Press `Ctrl+Shift+Y` (or the toolbar button) to strip away the sidebar, toolbar, and document header and go full screen, leaving just your text, centered in a comfortable column
 - **Drag the column edges** (or use the arrow keys once focused) to resize the text width to your taste — the setting is remembered
+- **Zoom the text** with `Ctrl`+mouse wheel (or a pinch on touch screens): the zoom is remembered separately from the document font size, so Zen mode can be larger without touching the normal view
 - A small dot in the top-right corner shows unsaved changes; a single button in the top-left takes you back to the normal view
 
   <img src="src/assets/scribe-dog-zenmode.png" alt="ScribeDog Zen mode" width="700">
@@ -197,6 +200,8 @@ notes — fluently, privately, and for free.
 - **Tables** with a visual grid picker and a context menu for adding/removing rows and columns
 - **Images** render inline; resize them by dragging, and the width is persisted back into the Markdown
 - **Code blocks** with a one-click copy button
+- **Highlighting**: mark a passage with a highlighter (`==text==` in the file, so other Markdown tools show it too) via the toolbar button or `Ctrl+Shift+H`; without a selection the shortcut switches on a marker mode where everything you select gets highlighted until you press `Esc`. Highlights survive every export
+- **Undo and redo** from the toolbar as well as `Ctrl+Z`/`Ctrl+Y`
 - **Emoji picker** with search, including keywords in your local language
 - **Reorder lines** — `Alt+Shift+↑`/`↓` moves the current line or list item up or down
 - **Spell check as you type** — optional red-underline spell checking powered by your operating system's built-in spellchecker (toggle it in the toolbar options; on Linux it uses your installed Hunspell/enchant dictionaries)
@@ -235,6 +240,8 @@ notes — fluently, privately, and for free.
 - **Flexible sorting** — order the file tree by name, last modified, or switch to manual mode and drag and drop files and folders into your own order
 - **Folder notes** (off by default, switched on per folder under *Settings → Open folder* and stored in its `.scribedog` folder) — every folder gets a text of its own, the way a node in Trilium or Notion is both a folder and a page: click the folder's name to open it, the arrow expands the folder. The note is a plain `.scribedog-foldernote.md` inside the folder, created on the first save, so it moves, renames and deletes together with the folder, even when you do that in Explorer or Finder; search, versions, export (as the folder's introduction chapter) and the AI chat treat it like any other note. Switching the feature off only hides the affordance, the files stay
 - Sidebar preferences (sort mode, manual order) are remembered per folder in a small hidden `.scribedog` metadata directory inside the vault
+- **Auto-save** (off by default, toggled in the toolbar options next to spell check): saves the note after a short pause in typing and on the way out of a note
+- The note title is shown as a **breadcrumb**; with folder notes on, each crumb opens that folder's note
 - Live sync via a native filesystem watcher — changes made outside the app are picked up automatically
 - Safe switching: leaving an unsaved file (or a pending, undecided AI suggestion) prompts you to save, discard, or cancel, with a clear dirty indicator
 
