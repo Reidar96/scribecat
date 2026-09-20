@@ -3,6 +3,34 @@
 All notable changes to ScribeDog are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.13.0] - 2026-09-20
+
+### Highlights
+- Highlight text with a marker (`==text==`): toolbar button, Ctrl+Shift+H, or a marker mode for the pointer; the highlight goes into every export
+- Auto-save (off by default): saves the note after a pause in typing and on the way out of a note
+- Paste Markdown: pasted plain text with Markdown markers becomes headings, lists, tables and bold right away; Ctrl+Shift+V pastes the raw text
+- Check spelling and grammar of the whole document without selecting text first (Ctrl+Shift+X)
+- Zen mode text zoom: pinch on touch screens, Ctrl+wheel on the desktop, remembered separately from the document font size
+
+### Improvements
+- Show the note title as a breadcrumb; with folder notes on, each crumb opens that folder's note
+- File tree: hide the .md extension, drop the file icons, add "New folder" to the context menu
+- Heading numbering: choose whether numbers show everywhere or only in the outline, and whether the `{-}` marker is always visible or only in the heading being edited (#47)
+- Add undo and redo buttons to the toolbar
+- Phone layout: group the AI actions into one menu and move the AI quick settings into Settings
+- Swipe from the left edge to open the file list on phones, swipe back to close it
+- Download the server certificate from Settings, Account in the browser, with a short explanation and a link to the install guide
+- Slightly lighter default text in the dark theme
+- Grammar check now tolerates the loose JSON of small local models (prose around the array, fences mid-sentence, list-shaped answers)
+- AI error messages can be dismissed with an X
+- Disable page pinch zoom on phones and tablets; the layout is built for the width it has
+
+### Bug Fixes
+- Fix code blocks hanging the tab on Android
+- Fix the on-screen keyboard opening on Android when ticking a checkbox or tapping an image
+- Fix extra spacing below indented checkboxes that sometimes remained after removing them
+- Fix Ctrl+Shift+Up/Down not moving a list item past a blockquote, image or paragraph next to the list
+
 ## [0.12.2] - 2026-09-19
 
 ### Bug Fixes
