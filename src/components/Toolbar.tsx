@@ -44,7 +44,7 @@ import {
   Undo2,
   X
 } from "lucide-react";
-import { useEffect, useState, type ComponentType, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
@@ -562,6 +562,20 @@ export function Toolbar({
   const isChatOpen = useChatStore((state) => state.isOpen);
   const layout = useLayoutMode();
 
+  // Undo/redo re-focus the editor so the caret lands on the reverted edit
+  // and the user can keep typing. On a touch screen that focus call is what
+  // raises the on-screen keyboard, which nobody asked for by tapping a
+  // toolbar button: there the editor is focused only when it already was
+  // (the keyboard is up anyway). The pointer type is remembered from the
+  // press because the click event itself reports a mouse on Android.
+  const historyPointerTypeRef = useRef("");
+  const runHistory = (command: "undo" | "redo") => {
+    const touch =
+      historyPointerTypeRef.current === "touch" || historyPointerTypeRef.current === "pen";
+    const chain = touch && !editor.isFocused ? editor.chain() : editor.chain().focus();
+    chain[command]().run();
+  };
+
   // Indent controls act on the list item the cursor sits in; there is no
   // generic block indentation in a markdown document.
   const inList =
@@ -660,11 +674,14 @@ export function Toolbar({
           aria-label={t("toolbar.undo")}
           title={t("toolbar.undoTitle")}
           disabled={!editor.can().undo()}
+          onPointerDown={(event) => {
+            historyPointerTypeRef.current = event.pointerType;
+          }}
           onMouseDown={(event) => {
             event.preventDefault();
           }}
           onClick={() => {
-            editor.chain().focus().undo().run();
+            runHistory("undo");
           }}
         >
           <Undo2 />
@@ -676,11 +693,14 @@ export function Toolbar({
           aria-label={t("toolbar.redo")}
           title={t("toolbar.redoTitle")}
           disabled={!editor.can().redo()}
+          onPointerDown={(event) => {
+            historyPointerTypeRef.current = event.pointerType;
+          }}
           onMouseDown={(event) => {
             event.preventDefault();
           }}
           onClick={() => {
-            editor.chain().focus().redo().run();
+            runHistory("redo");
           }}
         >
           <Redo2 />
