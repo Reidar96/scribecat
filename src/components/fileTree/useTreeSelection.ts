@@ -113,20 +113,35 @@ export function useTreeSelection({
 
   // Moves the active entry (roving tabindex) to the file that was just
   // opened, so tabbing back from the editor later lands on the file being
-  // edited instead of a previously selected row.
+  // edited instead of a previously selected row. A single selection follows
+  // too: a note opened from outside the tree (the "In progress" list, a
+  // link, back/forward) would otherwise leave the grey selection tint on
+  // whatever row was last picked here, which reads as a second cursor. A
+  // multi-selection is a deliberate batch and stays; a folder note clears
+  // the selection instead of tinting its folder, since opening a folder's
+  // note is not selecting the folder.
   useEffect(() => {
     if (!selectedFilePath) {
       return;
     }
 
     const relativePath = getRelativeDisplayPath(folderPath, selectedFilePath);
+    const isFolderNote = isFolderNotePath(relativePath) && getFolderNoteFolderPath(relativePath) !== "";
+    const key = isFolderNote ? `folder:${getFolderNoteFolderPath(relativePath)}` : `file:${relativePath}`;
 
     // A folder note has no row of its own; the folder row stands in for it.
-    setActiveKey(
-      isFolderNotePath(relativePath) && getFolderNoteFolderPath(relativePath)
-        ? `folder:${getFolderNoteFolderPath(relativePath)}`
-        : `file:${relativePath}`
-    );
+    setActiveKey(key);
+    setSelectedKeys((currentKeys) => {
+      if (currentKeys.size > 1 || (currentKeys.size === 1 && currentKeys.has(key))) {
+        return currentKeys;
+      }
+
+      if (isFolderNote) {
+        return currentKeys.size === 0 ? currentKeys : new Set();
+      }
+
+      return new Set([key]);
+    });
   }, [folderPath, selectedFilePath]);
 
   // Falls back to the first visible entry if the active one drops out of the

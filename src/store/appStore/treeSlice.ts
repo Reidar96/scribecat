@@ -14,6 +14,7 @@ import { isDescendantRelativePath } from "@/lib/fileTree";
 import { writeManualOrder, writeSortMode, type SortMode } from "@/lib/vaultMeta";
 
 import { isDocumentDirty } from "./documents";
+import { moveDraftFor, moveFolderDraftsFor, scheduleDraft } from "./drafts";
 import { toErrorMessage } from "./errors";
 import { currentChildBasenames, ensureManualOrderEntry } from "./manualOrder";
 import {
@@ -28,6 +29,7 @@ import {
   moveFolderVersionHistory,
   snapshotFileVersion
 } from "./versioning";
+import { persistWorkingSet } from "./workingSetSlice";
 
 export const createTreeSlice: AppSlice<TreeSlice> = (set, get) => ({
   setSortMode: async (mode: SortMode) => {
@@ -118,6 +120,7 @@ export const createTreeSlice: AppSlice<TreeSlice> = (set, get) => ({
       let nextEmptyFolderPaths = emptyFolderPaths;
       let nextDocuments = fileDocuments;
       let nextSelectedFilePath = state.selectedFilePath;
+      let nextWorkingSet = state.workingSet;
 
       if (!isSameParent) {
         const affectedFilePaths =
@@ -133,9 +136,11 @@ export const createTreeSlice: AppSlice<TreeSlice> = (set, get) => ({
         if (kind === "folder") {
           await renameMarkdownFolder(sourcePath, newPath);
           moveFolderVersionHistory(folderPath, sourcePath, newPath);
+          moveFolderDraftsFor(folderPath, sourcePath, newPath);
         } else {
           await renameMarkdownFile(sourcePath, newPath);
           moveFileVersionHistory(folderPath, sourcePath, newPath);
+          moveDraftFor(folderPath, sourcePath, newPath);
         }
 
         nextFilePaths = await Promise.all(
@@ -167,10 +172,22 @@ export const createTreeSlice: AppSlice<TreeSlice> = (set, get) => ({
                 ? correctedBaseContent
                 : await rewriteRelativeImagePaths(document.content, oldDirPath, mappedPath, folderPath);
 
+            // A rename keeps the mtime; a rewrite of the image paths below
+            // produces a new one nobody looks up here, so it is unknown.
+            const baseMtimeMs =
+              correctedBaseContent === preMoveContentByPath.get(path) ? document.baseMtimeMs : undefined;
+
             rewrittenDocuments[mappedPath] = {
               content: correctedContent,
-              baseContent: correctedBaseContent
+              baseContent: correctedBaseContent,
+              baseMtimeMs
             };
+
+            // The moved draft still holds the old image paths; the rewritten
+            // unsaved edits are what has to survive a restart now.
+            if (correctedContent !== correctedBaseContent) {
+              scheduleDraft(folderPath, mappedPath, correctedContent, baseMtimeMs ?? null);
+            }
 
             // The rewritten paths have to reach disk, not just this map:
             // correcting only in memory leaves the document clean, so nothing
@@ -218,6 +235,13 @@ export const createTreeSlice: AppSlice<TreeSlice> = (set, get) => ({
         nextSelectedFilePath = state.selectedFilePath
           ? await remapPathUnderRenamedFolder(state.selectedFilePath, sourcePath, newPath)
           : state.selectedFilePath;
+
+        const remappedWorkingSetPaths = await Promise.all(
+          state.workingSet.map((entry) => remapPathUnderRenamedFolder(entry.filePath, sourcePath, newPath))
+        );
+        nextWorkingSet = state.workingSet.map((entry, index) =>
+          remappedWorkingSetPaths[index] === entry.filePath ? entry : { ...entry, filePath: remappedWorkingSetPaths[index] }
+        );
       }
 
       const finalBasename = getBasename(newPath);
@@ -257,8 +281,13 @@ export const createTreeSlice: AppSlice<TreeSlice> = (set, get) => ({
           : state.selectedFileBaseContent,
         isDirty: nextSelectedDocument ? isDocumentDirty(nextSelectedDocument) : state.isDirty,
         manualOrder: withoutSource,
+        workingSet: nextWorkingSet,
         fileError: null
       });
+
+      if (nextWorkingSet !== state.workingSet) {
+        persistWorkingSet(folderPath, nextWorkingSet);
+      }
 
       return true;
     } catch (error) {

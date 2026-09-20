@@ -289,6 +289,14 @@
   box-shadow: 0 0 0 4px rgba(253, 230, 138, 0.12);
 }
 
+/* A collapsed folder with an unsaved note somewhere inside: the same mark,
+   hollow, so it cannot be read as "this folder's own note is unsaved" (that
+   one keeps the filled dot, and both can stand side by side). */
+.sidebar-panel__item-dirty--inside {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px #fde68a, 0 0 0 4px rgba(253, 230, 138, 0.12);
+}
+
 /* The vault agent's paw: a file (or a collapsed folder holding one) has a
    change waiting for review. Deliberately quieter than the dirty dot — a
    proposal is not something the user has to act on right now. */

@@ -23,6 +23,7 @@ import {
   writeFolderNotesEnabled,
   writeHeadingNumbering
 } from "@/lib/vaultMeta";
+import { setAutoAdmitWorkingSetProvider, setRestoreWorkingSetProvider } from "@/store/appStore/workingSetSlice";
 
 export const SPELLCHECK_STORAGE_KEY = "scribedog-spellcheck-enabled";
 export const REOPEN_LAST_NOTE_STORAGE_KEY = "scribedog-reopen-last-note";
@@ -39,6 +40,8 @@ export const FONT_STORAGE_KEY = "scribedog-font-id";
 export const FONT_SIZE_STORAGE_KEY = "scribedog-font-size-pt";
 export const PAPER_SURFACE_STORAGE_KEY = "scribedog-paper-surface";
 export const AUTO_SAVE_STORAGE_KEY = "scribedog-auto-save-enabled";
+export const RESTORE_WORKING_SET_STORAGE_KEY = "scribedog-restore-working-set";
+export const AUTO_ADMIT_WORKING_SET_STORAGE_KEY = "scribedog-auto-admit-working-set";
 export const PASTE_MARKDOWN_STORAGE_KEY = "scribedog-paste-markdown";
 
 // Zoom level is an offset in percent relative to normal size (0 = 100%).
@@ -150,6 +153,45 @@ function getStoredAutoSaveEnabled(): boolean {
 function persistAutoSaveEnabled(enabled: boolean): void {
   try {
     window.localStorage.setItem(AUTO_SAVE_STORAGE_KEY, String(enabled));
+  } catch {
+    // localStorage may be unavailable in some environments.
+  }
+}
+
+// On by default: the app already reopens the last note per vault, and a
+// list of notes in progress that did not come back with it would be the odd
+// one out. Whoever wants a clean start every day switches it off once.
+function getStoredRestoreWorkingSet(): boolean {
+  try {
+    return window.localStorage.getItem(RESTORE_WORKING_SET_STORAGE_KEY) !== "false";
+  } catch {
+    return true;
+  }
+}
+
+function persistRestoreWorkingSet(enabled: boolean): void {
+  try {
+    window.localStorage.setItem(RESTORE_WORKING_SET_STORAGE_KEY, String(enabled));
+  } catch {
+    // localStorage may be unavailable in some environments.
+  }
+}
+
+// Off by default: the "In progress" list is something the user sets up by
+// pinning, not something the app opens on the first keystroke. A section that
+// appears by itself is one more thing on screen that nobody asked for; found
+// through a double-click it is the user's own.
+function getStoredAutoAdmitWorkingSet(): boolean {
+  try {
+    return window.localStorage.getItem(AUTO_ADMIT_WORKING_SET_STORAGE_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
+function persistAutoAdmitWorkingSet(enabled: boolean): void {
+  try {
+    window.localStorage.setItem(AUTO_ADMIT_WORKING_SET_STORAGE_KEY, String(enabled));
   } catch {
     // localStorage may be unavailable in some environments.
   }
@@ -302,6 +344,21 @@ type EditorSettingsState = {
   autoSaveEnabled: boolean;
   setAutoSaveEnabled: (enabled: boolean) => void;
   /**
+   * Put the "In progress" list back when a vault is opened
+   * (store/appStore/workingSetSlice.ts). Only the list: notes with unsaved
+   * edits always come back through their drafts and re-enter the list by the
+   * admission rule, so switching this off never loses anything.
+   */
+  restoreWorkingSet: boolean;
+  setRestoreWorkingSet: (enabled: boolean) => void;
+  /**
+   * Let a note into the "In progress" list the moment it is edited. Off, only
+   * pinning (double-click, Enter, context menu) admits a note; unsaved edits
+   * are kept and shown in the tree either way.
+   */
+  autoAdmitWorkingSet: boolean;
+  setAutoAdmitWorkingSet: (enabled: boolean) => void;
+  /**
    * Convert plain-text clipboard content that looks like Markdown on paste
    * (see lib/editor/pasteMarkdown.ts). Ctrl+Shift+V bypasses it either way.
    */
@@ -416,6 +473,16 @@ export const useEditorSettingsStore = create<EditorSettingsState>((set, get) => 
   setAutoSaveEnabled: (enabled: boolean) => {
     persistAutoSaveEnabled(enabled);
     set({ autoSaveEnabled: enabled });
+  },
+  restoreWorkingSet: getStoredRestoreWorkingSet(),
+  setRestoreWorkingSet: (enabled: boolean) => {
+    persistRestoreWorkingSet(enabled);
+    set({ restoreWorkingSet: enabled });
+  },
+  autoAdmitWorkingSet: getStoredAutoAdmitWorkingSet(),
+  setAutoAdmitWorkingSet: (enabled: boolean) => {
+    persistAutoAdmitWorkingSet(enabled);
+    set({ autoAdmitWorkingSet: enabled });
   },
   pasteMarkdown: getStoredPasteMarkdown(),
   setPasteMarkdown: (enabled: boolean) => {
@@ -534,3 +601,7 @@ export const useEditorSettingsStore = create<EditorSettingsState>((set, get) => 
     set({ zenFontSizePt: clamped });
   }
 }));
+
+// See workingSetSlice.ts for why this is registered rather than imported there.
+setRestoreWorkingSetProvider(() => useEditorSettingsStore.getState().restoreWorkingSet);
+setAutoAdmitWorkingSetProvider(() => useEditorSettingsStore.getState().autoAdmitWorkingSet);

@@ -67,6 +67,30 @@ export function snapshotFileVersion(
   ).catch(() => undefined);
 }
 
+/**
+ * The one snapshot that is awaited: the disk version about to be overwritten
+ * by a save over an external change. Fire-and-forget would race the write it
+ * is meant to protect against. Same gate as snapshotFileVersion, no throttle.
+ */
+export async function snapshotFileVersionNow(
+  folderPath: string | null,
+  filePath: string,
+  content: string
+): Promise<void> {
+  const { versioningEnabled, maxVersionsPerFile } = useVersioningSettingsStore.getState();
+
+  if (!folderPath || !versioningEnabled) {
+    return;
+  }
+
+  await createFileVersion(
+    folderPath,
+    getRelativeDisplayPath(folderPath, filePath),
+    content,
+    maxVersionsPerFile
+  ).catch(() => undefined);
+}
+
 export function moveFileVersionHistory(
   folderPath: string | null,
   oldFilePath: string,

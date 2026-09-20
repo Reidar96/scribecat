@@ -5,21 +5,26 @@ import { Button } from "@/components/ui/button";
 
 type UnsavedChangesDialogProps = {
   open: boolean;
-  targetLabel: string | null;
-  currentFileLabel: string | null;
+  /** The note being closed, as the tree labels it. */
+  fileLabel: string | null;
   isSaving: boolean;
-  hasPendingAiAction?: boolean;
   onSave: () => void;
   onDiscard: () => void;
   onCancel: () => void;
 };
 
+/**
+ * Save / Discard / Cancel for a dirty note the user is closing out of the
+ * "In progress" list. The one dialog of its kind left: switching notes,
+ * vaults or closing the app no longer asks (unsaved edits survive all three
+ * as drafts). Closing an entry is different, because "close" is the user
+ * saying they are done with the note, and a draft they are done with should
+ * not come back on the next start.
+ */
 export function UnsavedChangesDialog({
   open,
-  targetLabel,
-  currentFileLabel,
+  fileLabel,
   isSaving,
-  hasPendingAiAction = false,
   onSave,
   onDiscard,
   onCancel
@@ -100,26 +105,10 @@ export function UnsavedChangesDialog({
         <p className="unsaved-dialog__eyebrow">{t("unsavedDialog.eyebrow")}</p>
         <h3 id="unsaved-dialog-title">{t("unsavedDialog.title")}</h3>
         <p id="unsaved-dialog-description" className="unsaved-dialog__description">
-          {currentFileLabel
-            ? t("unsavedDialog.descriptionCurrent", { fileLabel: currentFileLabel })
-            : t("unsavedDialog.descriptionGeneric")}{" "}
-          {targetLabel ? t("unsavedDialog.descriptionTarget", { targetLabel }) : ""}
+          {fileLabel
+            ? t("unsavedDialog.descriptionCurrent", { fileLabel })
+            : t("unsavedDialog.descriptionGeneric")}
         </p>
-
-        {hasPendingAiAction ? (
-          <p className="unsaved-dialog__description">{t("unsavedDialog.descriptionAiPending")}</p>
-        ) : null}
-
-        <div className="unsaved-dialog__summary">
-          <div>
-            <span>{t("unsavedDialog.summaryFile")}</span>
-            <strong>{currentFileLabel ?? t("common.unknown")}</strong>
-          </div>
-          <div>
-            <span>{t("unsavedDialog.summaryTarget")}</span>
-            <strong>{targetLabel ?? t("common.unknown")}</strong>
-          </div>
-        </div>
 
         <div className="unsaved-dialog__actions">
           <Button

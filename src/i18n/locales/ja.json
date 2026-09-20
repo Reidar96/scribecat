@@ -44,9 +44,8 @@
     "emptyEyebrow": "ファイルが選択されていません",
     "emptyTitle": "Markdown ファイルを選択してください",
     "emptyDescription": "フォルダーを開くと、その内容と編集画面がここに表示されます。",
-    "pendingTargetOtherFolder": "別のフォルダー",
     "version": "v{{version}}",
-    "pendingTargetLogout": "サインアウト",
+    "aiPendingNotice": "先にAIの提案を承諾または破棄してください。",
     "openSidebar": "ファイルを表示",
     "documentMenu": "ドキュメントメニュー",
     "saveButton": "保存",
@@ -54,13 +53,18 @@
   },
   "unsavedDialog": {
     "eyebrow": "未保存の変更",
-    "title": "切り替える前に変更を処理してください",
-    "descriptionCurrent": "ファイル {{fileLabel}} にはまだ未保存の変更があります。",
-    "descriptionGeneric": "現在のファイルにはまだ未保存の変更があります。",
-    "descriptionTarget": "{{targetLabel}} に切り替える前に操作を選択してください。",
-    "descriptionAiPending": "また、このファイルにはまだ承諾も破棄もされていないAIの提案があります。",
-    "summaryFile": "ファイル",
-    "summaryTarget": "切り替え先"
+    "title": "閉じる前に変更を処理",
+    "descriptionCurrent": "ノート {{fileLabel}} には未保存の変更があります。破棄すると失われます。",
+    "descriptionGeneric": "このノートには未保存の変更があります。破棄すると失われます。"
+  },
+  "saveConflictDialog": {
+    "eyebrow": "ファイルがアプリ外で変更されました",
+    "title": "ディスク上の変更を上書きしますか？",
+    "descriptionWithName": "ファイル {{fileLabel}} は、その間に ScribeDog の外で変更されました。",
+    "descriptionGeneric": "このファイルは、その間に ScribeDog の外で変更されました。",
+    "versioningOn": "上書きする前にディスク上の版が履歴に保存されるため、あとで両方を比較できます。",
+    "versioningOff": "バージョン管理がオフのため、上書きするともう一方の版は失われます。",
+    "overwrite": "上書き"
   },
   "deleteDialog": {
     "eyebrow": "ファイルを削除",
@@ -289,7 +293,13 @@
     "agentMaxPlanStepsLabel": "タスク一覧のステップ数",
     "agentMaxPlanStepsHint": "タスク一覧の長さの上限です。",
     "localProviderBrowserHint": "{{provider}} はこの端末で動作し、ブラウザーが直接通信します。そのため {{origin}} からのリクエストを受け付ける必要があります: {{instruction}}。公開アドレスから ScribeDog を開いた場合、ブラウザーはローカルネットワークへのアクセスも一度確認します。",
-    "tabServer": "サーバー"
+    "tabServer": "サーバー",
+    "restoreWorkingSet": "次回起動時に作業中のノートを復元する",
+    "restoreWorkingSetShort": "「作業中」リストはフォルダーごとに記憶されます。",
+    "restoreWorkingSetHint": "オフにすると、リストは起動時に空になり、ピン留めか編集で再び埋まります。未保存の変更はいずれにしても戻ります。",
+    "autoAdmitWorkingSet": "編集したノートを自動的に「作業中」へ追加する",
+    "autoAdmitWorkingSetShort": "既定ではピン留めしたノートだけが表示されます（ツリーでダブルクリックまたは Enter）。このオプションを有効にすると、編集したノートがすぐに追加されます。",
+    "autoAdmitWorkingSetHint": "未保存の変更はどちらの場合も保持され、ツリーの黄色い点で分かります。折りたたまれたフォルダーのリングは、その中に未保存のものがあることを示します。"
   },
   "assistants": {
     "defaultName": "ScribeDog (デフォルト)",
@@ -476,7 +486,8 @@
       "closeDialog": "ダイアログを閉じる",
       "moveListItemUp": "行またはリスト項目を上へ移動",
       "moveListItemDown": "行またはリスト項目を下へ移動",
-      "toggleDetailsPanel": "詳細パネル（アウトライン・リンク・バックリンク・ファイル情報）の表示を切り替え"
+      "toggleDetailsPanel": "詳細パネル（アウトライン・リンク・バックリンク・ファイル情報）の表示を切り替え",
+      "closeWorkingSetEntry": "「作業中」のノートを閉じる"
     },
     "recording": "キーを押してください …",
     "recordHint": "新しいキーの組み合わせを押してください（Ctrl または Alt を含める必要があります）。Esc で中止します。",
@@ -536,7 +547,12 @@
     "moreActions": "その他の操作",
     "duplicate": "複製",
     "moveTo": "移動先…",
-    "selectionCount": "{{count}} 件を選択中"
+    "selectionCount": "{{count}} 件を選択中",
+    "pinWorkingSet": "「作業中」にピン留め",
+    "unpinWorkingSet": "「作業中」からピン留めを外す",
+    "discardChanges": "変更を破棄",
+    "unsavedChangesInside": "このフォルダー内に未保存の変更があります",
+    "closeWorkingSet": "「作業中」から閉じる"
   },
   "moveDialog": {
     "eyebrow": "移動",
@@ -1086,5 +1102,19 @@
     "disconnect": "接続を解除",
     "disconnecting": "解除中…",
     "removeFailed": "サーバーを削除できませんでした。"
+  },
+  "workingSet": {
+    "title": "作業中",
+    "treeTitle": "ファイル",
+    "closeSaved": "保存済みを閉じる",
+    "close": "{{name}} を閉じる",
+    "closeShort": "閉じる",
+    "closeOthers": "他を閉じる",
+    "closeAll": "すべて閉じる",
+    "revealInTree": "ツリーで表示",
+    "pin": "ピン留め",
+    "unpin": "ピン留めを外す",
+    "pinned": "ピン留め済み",
+    "resizeLabel": "「作業中」リストの高さを調整"
   }
 }

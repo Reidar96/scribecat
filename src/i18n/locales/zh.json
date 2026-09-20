@@ -44,9 +44,8 @@
     "emptyEyebrow": "尚未选择文件",
     "emptyTitle": "选择一个 Markdown 文件",
     "emptyDescription": "打开文件夹后，其内容和编辑界面将显示在此处。",
-    "pendingTargetOtherFolder": "另一个文件夹",
     "version": "v{{version}}",
-    "pendingTargetLogout": "退出登录",
+    "aiPendingNotice": "请先接受或放弃 AI 建议。",
     "openSidebar": "显示文件",
     "documentMenu": "文档菜单",
     "saveButton": "保存",
@@ -54,13 +53,18 @@
   },
   "unsavedDialog": {
     "eyebrow": "未保存的更改",
-    "title": "切换前请先处理更改",
-    "descriptionCurrent": "文件 {{fileLabel}} 仍有未保存的更改。",
-    "descriptionGeneric": "当前文件仍有未保存的更改。",
-    "descriptionTarget": "切换到 {{targetLabel}} 之前，请选择一个操作。",
-    "descriptionAiPending": "此外，此文件还有一个尚未接受或放弃的 AI 建议。",
-    "summaryFile": "文件",
-    "summaryTarget": "目标"
+    "title": "关闭前处理更改",
+    "descriptionCurrent": "笔记 {{fileLabel}} 有未保存的更改。放弃后将丢失。",
+    "descriptionGeneric": "此笔记有未保存的更改。放弃后将丢失。"
+  },
+  "saveConflictDialog": {
+    "eyebrow": "文件已在应用外被修改",
+    "title": "覆盖磁盘上的更改？",
+    "descriptionWithName": "文件 {{fileLabel}} 在此期间已在 ScribeDog 之外被修改。",
+    "descriptionGeneric": "该文件在此期间已在 ScribeDog 之外被修改。",
+    "versioningOn": "覆盖前会先把磁盘上的版本保存到历史记录，之后可以对比两者。",
+    "versioningOff": "版本管理已关闭，覆盖后另一个版本将丢失。",
+    "overwrite": "覆盖"
   },
   "deleteDialog": {
     "eyebrow": "删除文件",
@@ -289,7 +293,13 @@
     "agentMaxPlanStepsLabel": "任务清单的步骤数",
     "agentMaxPlanStepsHint": "任务清单长度的上限。",
     "localProviderBrowserHint": "{{provider}} 在此设备上运行，浏览器直接与它通信，因此它必须接受来自 {{origin}} 的请求：{{instruction}}。如果通过公网地址打开 ScribeDog，浏览器还会询问一次是否允许访问本地网络。",
-    "tabServer": "服务器"
+    "tabServer": "服务器",
+    "restoreWorkingSet": "下次启动时恢复进行中的笔记",
+    "restoreWorkingSetShort": "“进行中”列表按文件夹记住。",
+    "restoreWorkingSetHint": "关闭后，列表在启动时为空，只有固定或编辑才会再次填充。未保存的更改无论如何都会恢复。",
+    "autoAdmitWorkingSet": "自动把编辑过的笔记加入“进行中”",
+    "autoAdmitWorkingSetShort": "默认只列出固定的笔记（在树中双击或按 Enter）。启用此选项后，每篇笔记一经编辑即会加入。",
+    "autoAdmitWorkingSetHint": "未保存的更改无论如何都会保留，并在树中以黄点显示；折叠文件夹上的圆环表示其中有未保存的内容。"
   },
   "assistants": {
     "defaultName": "ScribeDog (默认)",
@@ -476,7 +486,8 @@
       "closeDialog": "关闭对话框",
       "moveListItemUp": "上移行或列表项",
       "moveListItemDown": "下移行或列表项",
-      "toggleDetailsPanel": "显示/隐藏详情面板（大纲、链接、反向链接与文件信息）"
+      "toggleDetailsPanel": "显示/隐藏详情面板（大纲、链接、反向链接与文件信息）",
+      "closeWorkingSetEntry": "关闭“进行中”里的笔记"
     },
     "recording": "请按键 …",
     "recordHint": "按下新的快捷键组合（必须包含 Ctrl 或 Alt），按 Esc 取消。",
@@ -536,7 +547,12 @@
     "moreActions": "更多操作",
     "duplicate": "创建副本",
     "moveTo": "移动到…",
-    "selectionCount": "已选择 {{count}} 项"
+    "selectionCount": "已选择 {{count}} 项",
+    "pinWorkingSet": "固定到“进行中”",
+    "unpinWorkingSet": "从“进行中”取消固定",
+    "discardChanges": "放弃更改",
+    "unsavedChangesInside": "此文件夹内有未保存的更改",
+    "closeWorkingSet": "从“进行中”关闭"
   },
   "moveDialog": {
     "eyebrow": "移动",
@@ -1086,5 +1102,19 @@
     "disconnect": "断开连接",
     "disconnecting": "正在断开…",
     "removeFailed": "无法移除服务器。"
+  },
+  "workingSet": {
+    "title": "进行中",
+    "treeTitle": "文件",
+    "closeSaved": "关闭已保存的",
+    "close": "关闭 {{name}}",
+    "closeShort": "关闭",
+    "closeOthers": "关闭其他",
+    "closeAll": "全部关闭",
+    "revealInTree": "在树中显示",
+    "pin": "固定",
+    "unpin": "取消固定",
+    "pinned": "已固定",
+    "resizeLabel": "调整“进行中”列表的高度"
   }
 }

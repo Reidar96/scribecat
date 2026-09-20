@@ -44,9 +44,8 @@
     "emptyEyebrow": "Aún no se ha seleccionado ningún archivo",
     "emptyTitle": "Selecciona un archivo Markdown",
     "emptyDescription": "Una vez que se abra una carpeta, su contenido y la superficie de edición aparecerán aquí.",
-    "pendingTargetOtherFolder": "otra carpeta",
     "version": "v{{version}}",
-    "pendingTargetLogout": "cerrar sesión",
+    "aiPendingNotice": "Primero acepta o descarta la sugerencia de la IA.",
     "openSidebar": "Mostrar archivos",
     "documentMenu": "Menú del documento",
     "saveButton": "Guardar",
@@ -54,13 +53,18 @@
   },
   "unsavedDialog": {
     "eyebrow": "Cambios sin guardar",
-    "title": "Gestionar los cambios antes de cambiar",
-    "descriptionCurrent": "El archivo {{fileLabel}} todavía tiene cambios sin guardar.",
-    "descriptionGeneric": "El archivo actual todavía tiene cambios sin guardar.",
-    "descriptionTarget": "Elige una acción antes de cambiar a {{targetLabel}}.",
-    "descriptionAiPending": "Además, hay una sugerencia de la IA para este archivo que aún no se ha aceptado ni descartado.",
-    "summaryFile": "Archivo",
-    "summaryTarget": "Destino"
+    "title": "Decidir sobre los cambios antes de cerrar",
+    "descriptionCurrent": "La nota {{fileLabel}} tiene cambios sin guardar. Al descartarlos se perderán.",
+    "descriptionGeneric": "La nota tiene cambios sin guardar. Al descartarlos se perderán."
+  },
+  "saveConflictDialog": {
+    "eyebrow": "Archivo modificado fuera de la aplicación",
+    "title": "¿Sobrescribir los cambios en el disco?",
+    "descriptionWithName": "El archivo {{fileLabel}} se ha modificado fuera de ScribeDog mientras tanto.",
+    "descriptionGeneric": "El archivo se ha modificado fuera de ScribeDog mientras tanto.",
+    "versioningOn": "Al sobrescribir, la versión del disco se guarda antes en el historial, así podrás comparar ambas después.",
+    "versioningOff": "El control de versiones está desactivado, así que la otra versión se perderá al sobrescribir.",
+    "overwrite": "Sobrescribir"
   },
   "deleteDialog": {
     "eyebrow": "Eliminar archivo",
@@ -290,7 +294,13 @@
     "agentMaxPlanStepsLabel": "Pasos por lista de tareas",
     "agentMaxPlanStepsHint": "Límite superior de longitud de una lista de tareas.",
     "localProviderBrowserHint": "{{provider}} se ejecuta en este dispositivo y el navegador se comunica con él directamente, por lo que debe aceptar solicitudes de {{origin}}: {{instruction}}. Si abres ScribeDog desde una dirección pública, el navegador también pedirá una vez acceso a la red local.",
-    "tabServer": "Servidores"
+    "tabServer": "Servidores",
+    "restoreWorkingSet": "Restaurar las notas en curso en el próximo inicio",
+    "restoreWorkingSetShort": "La lista «En curso» se recuerda por carpeta.",
+    "restoreWorkingSetHint": "Desactivado significa que la lista empieza vacía y solo se vuelve a llenar al fijar o editar. Los cambios sin guardar vuelven de todos modos.",
+    "autoAdmitWorkingSet": "Añadir automáticamente las notas editadas a «En curso»",
+    "autoAdmitWorkingSetShort": "De forma predeterminada solo aparecen las notas fijadas (doble clic o Intro en el árbol). Con esta opción se añade cada nota en cuanto se edita.",
+    "autoAdmitWorkingSetHint": "Los cambios sin guardar se conservan en cualquier caso y se ven como el punto amarillo en el árbol; un anillo en una carpeta plegada indica que dentro hay algo sin guardar."
   },
   "assistants": {
     "defaultName": "ScribeDog (Predeterminado)",
@@ -477,7 +487,8 @@
       "closeDialog": "Cerrar cuadro de diálogo",
       "moveListItemUp": "Subir línea o elemento de lista",
       "moveListItemDown": "Bajar línea o elemento de lista",
-      "toggleDetailsPanel": "Mostrar/ocultar el panel de detalles (esquema, enlaces, retroenlaces e información del archivo)"
+      "toggleDetailsPanel": "Mostrar/ocultar el panel de detalles (esquema, enlaces, retroenlaces e información del archivo)",
+      "closeWorkingSetEntry": "Cerrar la nota de «En curso»"
     },
     "recording": "Pulsa una tecla …",
     "recordHint": "Pulsa la nueva combinación (debe incluir Ctrl o Alt); Esc cancela.",
@@ -537,7 +548,12 @@
     "moreActions": "Más acciones",
     "duplicate": "Duplicar",
     "moveTo": "Mover a…",
-    "selectionCount": "{{count}} seleccionados"
+    "selectionCount": "{{count}} seleccionados",
+    "pinWorkingSet": "Fijar en «En curso»",
+    "unpinWorkingSet": "Soltar de «En curso»",
+    "discardChanges": "Descartar cambios",
+    "unsavedChangesInside": "Cambios sin guardar en esta carpeta",
+    "closeWorkingSet": "Cerrar en «En curso»"
   },
   "moveDialog": {
     "eyebrow": "Mover",
@@ -1087,5 +1103,19 @@
     "disconnect": "Desconectar",
     "disconnecting": "Desconectando…",
     "removeFailed": "No se pudo eliminar el servidor."
+  },
+  "workingSet": {
+    "title": "En curso",
+    "treeTitle": "Archivos",
+    "closeSaved": "Cerrar las guardadas",
+    "close": "Cerrar {{name}}",
+    "closeShort": "Cerrar",
+    "closeOthers": "Cerrar las demás",
+    "closeAll": "Cerrar todas",
+    "revealInTree": "Mostrar en el árbol",
+    "pin": "Fijar",
+    "unpin": "Soltar",
+    "pinned": "Fijada",
+    "resizeLabel": "Ajustar la altura de la lista «En curso»"
   }
 }

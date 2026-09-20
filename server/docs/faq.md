@@ -112,6 +112,24 @@ version history and backups treat it like any other note; only the file tree
 shows it on the folder row. Switching the setting off leaves the files where
 they are.
 
+**What is the "In progress" list above the file tree?**
+The notes you pinned as the ones you are working on (double-click, Enter or
+the context menu in the tree); it stays hidden until you pin the first one.
+A setting adds every note you edit as well, if you want that. The cross
+closes an entry; a note with unsaved changes asks whether to save or discard
+first. The list is stored in the vault
+(`.scribedog/open-files.json`), so it is the same in every browser and
+desktop app that opens this vault; only the unsaved drafts themselves stay
+in the browser they were typed in. In the browser, Ctrl+W closes the tab,
+as it always does, not the entry; use the cross or the context menu.
+
+**Why is a note marked as changed after I reopen the tab?**
+You typed into it and did not save. The app keeps such unsaved edits as a
+draft in the browser and brings them back when you open the vault again, so
+nothing is lost by closing the tab. Save the note to keep the edits; the
+draft belongs to this browser, so on another device the note shows its
+saved content until you do.
+
 **Will images show up on my phone?**
 Yes: the web app resolves the relative image paths itself, unlike some
 third-party Markdown apps used with a sync folder.

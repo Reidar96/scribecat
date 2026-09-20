@@ -21,6 +21,8 @@ type UseGlobalShortcutsOptions = {
   toggleZenMode: () => void;
   navigateBack: () => void;
   navigateForward: () => void;
+  /** Closes the open note's entry in the "In progress" list, if it has one. */
+  closeWorkingSetEntry: () => void;
   editorHandleRef: RefObject<EditorHandle | null>;
 };
 
@@ -33,6 +35,7 @@ export function useGlobalShortcuts({
   toggleZenMode,
   navigateBack,
   navigateForward,
+  closeWorkingSetEntry,
   editorHandleRef
 }: UseGlobalShortcutsOptions): void {
   useEffect(() => {
@@ -97,6 +100,9 @@ export function useGlobalShortcuts({
           return;
         case "navigateBack":
           navigateBack();
+          return;
+        case "closeWorkingSetEntry":
+          closeWorkingSetEntry();
           return;
         case "navigateForward":
           navigateForward();

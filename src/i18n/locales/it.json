@@ -44,9 +44,8 @@
     "emptyEyebrow": "Nessun file ancora selezionato",
     "emptyTitle": "Seleziona un file Markdown",
     "emptyDescription": "Una volta aperta una cartella, il suo contenuto e l'area di modifica verranno visualizzati qui.",
-    "pendingTargetOtherFolder": "un'altra cartella",
     "version": "v{{version}}",
-    "pendingTargetLogout": "la disconnessione",
+    "aiPendingNotice": "Prima accetta o scarta il suggerimento dell'IA.",
     "openSidebar": "Mostra file",
     "documentMenu": "Menu del documento",
     "saveButton": "Salva",
@@ -54,13 +53,18 @@
   },
   "unsavedDialog": {
     "eyebrow": "Modifiche non salvate",
-    "title": "Gestisci le modifiche prima di cambiare",
-    "descriptionCurrent": "Il file {{fileLabel}} contiene ancora modifiche non salvate.",
-    "descriptionGeneric": "Il file corrente contiene ancora modifiche non salvate.",
-    "descriptionTarget": "Scegli un'azione prima di passare a {{targetLabel}}.",
-    "descriptionAiPending": "Inoltre, c'è un suggerimento dell'IA per questo file non ancora accettato né scartato.",
-    "summaryFile": "File",
-    "summaryTarget": "Destinazione"
+    "title": "Decidere delle modifiche prima di chiudere",
+    "descriptionCurrent": "La nota {{fileLabel}} ha modifiche non salvate. Scartandole andranno perse.",
+    "descriptionGeneric": "La nota ha modifiche non salvate. Scartandole andranno perse."
+  },
+  "saveConflictDialog": {
+    "eyebrow": "File modificato fuori dall'app",
+    "title": "Sovrascrivere le modifiche sul disco?",
+    "descriptionWithName": "Il file {{fileLabel}} è stato modificato fuori da ScribeDog nel frattempo.",
+    "descriptionGeneric": "Il file è stato modificato fuori da ScribeDog nel frattempo.",
+    "versioningOn": "Sovrascrivendo, la versione sul disco viene prima salvata nella cronologia, così potrai confrontarle dopo.",
+    "versioningOff": "Il versionamento è disattivato, quindi l'altra versione andrà persa sovrascrivendo.",
+    "overwrite": "Sovrascrivi"
   },
   "deleteDialog": {
     "eyebrow": "Elimina file",
@@ -290,7 +294,13 @@
     "agentMaxPlanStepsLabel": "Passaggi per elenco attività",
     "agentMaxPlanStepsHint": "Limite massimo alla lunghezza di un elenco di attività.",
     "localProviderBrowserHint": "{{provider}} è in esecuzione su questo dispositivo e il browser vi accede direttamente, quindi deve accettare richieste da {{origin}}: {{instruction}}. Se apri ScribeDog da un indirizzo pubblico, il browser chiede inoltre una volta l'accesso alla rete locale.",
-    "tabServer": "Server"
+    "tabServer": "Server",
+    "restoreWorkingSet": "Ripristina le note in lavorazione al prossimo avvio",
+    "restoreWorkingSetShort": "L'elenco «In lavorazione» viene ricordato per cartella.",
+    "restoreWorkingSetHint": "Disattivata: l'elenco parte vuoto e si riempie di nuovo solo fissando o modificando. Le modifiche non salvate tornano comunque.",
+    "autoAdmitWorkingSet": "Aggiungere automaticamente le note modificate a «In lavorazione»",
+    "autoAdmitWorkingSetShort": "Per impostazione predefinita compaiono solo le note fissate (doppio clic o Invio nell'albero). Con questa opzione si aggiunge ogni nota appena viene modificata.",
+    "autoAdmitWorkingSetHint": "Le modifiche non salvate restano in ogni caso e si riconoscono dal punto giallo nell'albero; un anello su una cartella chiusa indica che dentro c'è qualcosa di non salvato."
   },
   "assistants": {
     "defaultName": "ScribeDog (Predefinito)",
@@ -477,7 +487,8 @@
       "closeDialog": "Chiudi finestra",
       "moveListItemUp": "Sposta la riga o l'elemento dell'elenco in alto",
       "moveListItemDown": "Sposta la riga o l'elemento dell'elenco in basso",
-      "toggleDetailsPanel": "Mostra/nascondi il pannello dei dettagli (struttura, collegamenti, backlink e info file)"
+      "toggleDetailsPanel": "Mostra/nascondi il pannello dei dettagli (struttura, collegamenti, backlink e info file)",
+      "closeWorkingSetEntry": "Chiudi la nota in «In lavorazione»"
     },
     "recording": "Premi un tasto …",
     "recordHint": "Premi la nuova combinazione (deve includere Ctrl o Alt) — Esc annulla.",
@@ -537,7 +548,12 @@
     "moreActions": "Altre azioni",
     "duplicate": "Duplica",
     "moveTo": "Sposta in…",
-    "selectionCount": "{{count}} selezionati"
+    "selectionCount": "{{count}} selezionati",
+    "pinWorkingSet": "Fissa in «In lavorazione»",
+    "unpinWorkingSet": "Sgancia da «In lavorazione»",
+    "discardChanges": "Scarta le modifiche",
+    "unsavedChangesInside": "Modifiche non salvate in questa cartella",
+    "closeWorkingSet": "Chiudi in «In lavorazione»"
   },
   "moveDialog": {
     "eyebrow": "Sposta",
@@ -1087,5 +1103,19 @@
     "disconnect": "Disconnetti",
     "disconnecting": "Disconnessione…",
     "removeFailed": "Impossibile rimuovere il server."
+  },
+  "workingSet": {
+    "title": "In lavorazione",
+    "treeTitle": "File",
+    "closeSaved": "Chiudi le salvate",
+    "close": "Chiudi {{name}}",
+    "closeShort": "Chiudi",
+    "closeOthers": "Chiudi le altre",
+    "closeAll": "Chiudi tutte",
+    "revealInTree": "Mostra nell'albero",
+    "pin": "Fissa",
+    "unpin": "Sgancia",
+    "pinned": "Fissata",
+    "resizeLabel": "Regola l'altezza dell'elenco «In lavorazione»"
   }
 }

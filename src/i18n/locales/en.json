@@ -44,9 +44,8 @@
     "emptyEyebrow": "No file selected yet",
     "emptyTitle": "Select a Markdown file",
     "emptyDescription": "Once a folder is open, its content and the editing surface will appear here.",
-    "pendingTargetOtherFolder": "another folder",
     "version": "v{{version}}",
-    "pendingTargetLogout": "signing out",
+    "aiPendingNotice": "Accept or discard the AI suggestion first.",
     "openSidebar": "Show files",
     "documentMenu": "Document menu",
     "saveButton": "Save",
@@ -54,13 +53,18 @@
   },
   "unsavedDialog": {
     "eyebrow": "Unsaved changes",
-    "title": "Handle changes before switching",
-    "descriptionCurrent": "The file {{fileLabel}} still has unsaved changes.",
-    "descriptionGeneric": "The current file still has unsaved changes.",
-    "descriptionTarget": "Choose an action before switching to {{targetLabel}}.",
-    "descriptionAiPending": "There is also an unresolved AI suggestion for this file that hasn't been accepted or discarded yet.",
-    "summaryFile": "File",
-    "summaryTarget": "Target"
+    "title": "Handle changes before closing",
+    "descriptionCurrent": "The note {{fileLabel}} has unsaved changes. Discarding loses them.",
+    "descriptionGeneric": "The note has unsaved changes. Discarding loses them."
+  },
+  "saveConflictDialog": {
+    "eyebrow": "File changed outside the app",
+    "title": "Overwrite the changes on disk?",
+    "descriptionWithName": "The file {{fileLabel}} has been changed outside ScribeDog in the meantime.",
+    "descriptionGeneric": "The file has been changed outside ScribeDog in the meantime.",
+    "versioningOn": "Overwriting saves the version on disk to the history first, so you can compare the two afterwards.",
+    "versioningOff": "Versioning is off, so the other version is lost when you overwrite.",
+    "overwrite": "Overwrite"
   },
   "deleteDialog": {
     "eyebrow": "Delete file",
@@ -290,7 +294,13 @@
     "agentMaxPlanStepsLabel": "Steps per task list",
     "agentMaxPlanStepsHint": "Upper bound on how long a task list may get.",
     "localProviderBrowserHint": "{{provider}} runs on this device and the browser talks to it directly, so it has to accept requests from {{origin}}: {{instruction}}. When you open ScribeDog through a public address, the browser also asks once for local network access.",
-    "tabServer": "Servers"
+    "tabServer": "Servers",
+    "restoreWorkingSet": "Restore notes in progress on the next start",
+    "restoreWorkingSetShort": "The \"In progress\" list is remembered per folder.",
+    "restoreWorkingSetHint": "Off means the list starts empty and fills again only by pinning or editing. Unsaved changes come back regardless.",
+    "autoAdmitWorkingSet": "Add edited notes to \"In progress\" automatically",
+    "autoAdmitWorkingSetShort": "By default only pinned notes are listed there (double-click or Enter in the tree). With this option every note joins as soon as it is edited.",
+    "autoAdmitWorkingSetHint": "Unsaved changes are kept either way and show as the yellow dot in the tree; a ring on a collapsed folder means something inside it is unsaved."
   },
   "assistants": {
     "defaultName": "ScribeDog (Default)",
@@ -477,7 +487,8 @@
       "closeDialog": "Close dialog",
       "moveListItemUp": "Move line or list item up",
       "moveListItemDown": "Move line or list item down",
-      "toggleDetailsPanel": "Toggle the details panel (outline, links, backlinks & file info)"
+      "toggleDetailsPanel": "Toggle the details panel (outline, links, backlinks & file info)",
+      "closeWorkingSetEntry": "Close note in \"In progress\""
     },
     "recording": "Press a key …",
     "recordHint": "Press the new key combination (must include Ctrl or Alt) — Esc cancels.",
@@ -537,7 +548,12 @@
     "moreActions": "More actions",
     "duplicate": "Duplicate",
     "moveTo": "Move to…",
-    "selectionCount": "{{count}} selected"
+    "selectionCount": "{{count}} selected",
+    "pinWorkingSet": "Pin to In progress",
+    "unpinWorkingSet": "Unpin from In progress",
+    "discardChanges": "Discard changes",
+    "unsavedChangesInside": "Unsaved changes in this folder",
+    "closeWorkingSet": "Close in \"In progress\""
   },
   "moveDialog": {
     "eyebrow": "Move",
@@ -1087,5 +1103,19 @@
     "disconnect": "Disconnect",
     "disconnecting": "Disconnecting…",
     "removeFailed": "The server could not be removed."
+  },
+  "workingSet": {
+    "title": "In progress",
+    "treeTitle": "Files",
+    "closeSaved": "Close saved",
+    "close": "Close {{name}}",
+    "closeShort": "Close",
+    "closeOthers": "Close others",
+    "closeAll": "Close all",
+    "revealInTree": "Show in tree",
+    "pin": "Pin",
+    "unpin": "Unpin",
+    "pinned": "Pinned",
+    "resizeLabel": "Resize the \"In progress\" list"
   }
 }

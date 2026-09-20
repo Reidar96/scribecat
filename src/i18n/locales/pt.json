@@ -44,9 +44,8 @@
     "emptyEyebrow": "Nenhum arquivo selecionado ainda",
     "emptyTitle": "Selecione um arquivo Markdown",
     "emptyDescription": "Assim que uma pasta for aberta, seu conteúdo e a área de edição aparecerão aqui.",
-    "pendingTargetOtherFolder": "outra pasta",
     "version": "v{{version}}",
-    "pendingTargetLogout": "sair",
+    "aiPendingNotice": "Primeiro aceite ou descarte a sugestão da IA.",
     "openSidebar": "Mostrar arquivos",
     "documentMenu": "Menu do documento",
     "saveButton": "Salvar",
@@ -54,13 +53,18 @@
   },
   "unsavedDialog": {
     "eyebrow": "Alterações não salvas",
-    "title": "Resolva as alterações antes de trocar",
-    "descriptionCurrent": "O arquivo {{fileLabel}} ainda possui alterações não salvas.",
-    "descriptionGeneric": "O arquivo atual ainda possui alterações não salvas.",
-    "descriptionTarget": "Escolha uma ação antes de trocar para {{targetLabel}}.",
-    "descriptionAiPending": "Além disso, há uma sugestão da IA para este arquivo que ainda não foi aceita nem descartada.",
-    "summaryFile": "Arquivo",
-    "summaryTarget": "Destino"
+    "title": "Decidir sobre as alterações antes de fechar",
+    "descriptionCurrent": "A nota {{fileLabel}} tem alterações não salvas. Ao descartar, elas se perdem.",
+    "descriptionGeneric": "A nota tem alterações não salvas. Ao descartar, elas se perdem."
+  },
+  "saveConflictDialog": {
+    "eyebrow": "Arquivo alterado fora do aplicativo",
+    "title": "Sobrescrever as alterações no disco?",
+    "descriptionWithName": "O arquivo {{fileLabel}} foi alterado fora do ScribeDog nesse meio-tempo.",
+    "descriptionGeneric": "O arquivo foi alterado fora do ScribeDog nesse meio-tempo.",
+    "versioningOn": "Ao sobrescrever, a versão do disco é salva antes no histórico, então você poderá comparar as duas depois.",
+    "versioningOff": "O versionamento está desativado, então a outra versão será perdida ao sobrescrever.",
+    "overwrite": "Sobrescrever"
   },
   "deleteDialog": {
     "eyebrow": "Excluir arquivo",
@@ -290,7 +294,13 @@
     "agentMaxPlanStepsLabel": "Passos por lista de tarefas",
     "agentMaxPlanStepsHint": "Limite máximo para o comprimento de uma lista de tarefas.",
     "localProviderBrowserHint": "{{provider}} é executado neste dispositivo e o navegador comunica com ele diretamente, por isso tem de aceitar pedidos de {{origin}}: {{instruction}}. Se abrir o ScribeDog através de um endereço público, o navegador também pede uma vez acesso à rede local.",
-    "tabServer": "Servidores"
+    "tabServer": "Servidores",
+    "restoreWorkingSet": "Restaurar as notas em andamento no próximo início",
+    "restoreWorkingSetShort": "A lista \"Em andamento\" é lembrada por pasta.",
+    "restoreWorkingSetHint": "Desligado: a lista começa vazia e só volta a se preencher ao fixar ou editar. Alterações não salvas voltam de qualquer maneira.",
+    "autoAdmitWorkingSet": "Adicionar automaticamente notas editadas a \"Em andamento\"",
+    "autoAdmitWorkingSetShort": "Por padrão, só aparecem ali as notas fixadas (clique duplo ou Enter na árvore). Com esta opção, cada nota entra assim que for editada.",
+    "autoAdmitWorkingSetHint": "Alterações não salvas são mantidas de qualquer forma e aparecem como o ponto amarelo na árvore; um anel numa pasta recolhida indica que há algo não salvo dentro dela."
   },
   "assistants": {
     "defaultName": "ScribeDog (Padrão)",
@@ -477,7 +487,8 @@
       "closeDialog": "Fechar diálogo",
       "moveListItemUp": "Mover linha ou item de lista para cima",
       "moveListItemDown": "Mover linha ou item de lista para baixo",
-      "toggleDetailsPanel": "Mostrar/ocultar o painel de detalhes (estrutura, links, backlinks e informações do arquivo)"
+      "toggleDetailsPanel": "Mostrar/ocultar o painel de detalhes (estrutura, links, backlinks e informações do arquivo)",
+      "closeWorkingSetEntry": "Fechar a nota em \"Em andamento\""
     },
     "recording": "Prima uma tecla …",
     "recordHint": "Prima a nova combinação (tem de incluir Ctrl ou Alt) — Esc cancela.",
@@ -537,7 +548,12 @@
     "moreActions": "Mais ações",
     "duplicate": "Duplicar",
     "moveTo": "Mover para…",
-    "selectionCount": "{{count}} selecionados"
+    "selectionCount": "{{count}} selecionados",
+    "pinWorkingSet": "Fixar em \"Em andamento\"",
+    "unpinWorkingSet": "Soltar de \"Em andamento\"",
+    "discardChanges": "Descartar alterações",
+    "unsavedChangesInside": "Alterações não salvas nesta pasta",
+    "closeWorkingSet": "Fechar em \"Em andamento\""
   },
   "moveDialog": {
     "eyebrow": "Mover",
@@ -1087,5 +1103,19 @@
     "disconnect": "Desligar",
     "disconnecting": "A desligar…",
     "removeFailed": "Não foi possível remover o servidor."
+  },
+  "workingSet": {
+    "title": "Em andamento",
+    "treeTitle": "Arquivos",
+    "closeSaved": "Fechar as salvas",
+    "close": "Fechar {{name}}",
+    "closeShort": "Fechar",
+    "closeOthers": "Fechar as outras",
+    "closeAll": "Fechar todas",
+    "revealInTree": "Mostrar na árvore",
+    "pin": "Fixar",
+    "unpin": "Soltar",
+    "pinned": "Fixada",
+    "resizeLabel": "Ajustar a altura da lista \"Em andamento\""
   }
 }

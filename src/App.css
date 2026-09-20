@@ -18,6 +18,7 @@
 @import "./styles/base.css";
 @import "./styles/sidebar.css";
 @import "./styles/file-tree.css";
+@import "./styles/working-set.css";
 @import "./styles/detail-panel.css";
 @import "./styles/editor-shell.css";
 @import "./styles/voice.css";
@@ -90,4 +91,26 @@
   html {
     @apply font-sans;
   }
+}
+
+/* One-line, self-dismissing hint at the bottom of the window (App.tsx
+   showNotice): the answer to an action that cannot happen right now. */
+.app-notice {
+  position: fixed;
+  z-index: 70;
+  left: 50%;
+  bottom: 1.25rem;
+  transform: translateX(-50%);
+  max-width: min(32rem, calc(100vw - 2rem));
+  border: 1px solid rgba(var(--overlay-rgb), 0.14);
+  border-radius: 0.95rem;
+  background: rgba(var(--surface-rgb), 0.96);
+  color: var(--foreground);
+  padding: 0.6rem 0.95rem;
+  font-size: 0.9rem;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.14);
+}
+
+.dark .app-notice {
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.45);
 }

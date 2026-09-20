@@ -385,6 +385,10 @@ export function SettingsDialog({
   const pasteMarkdown = useEditorSettingsStore((state) => state.pasteMarkdown);
   const setPasteMarkdown = useEditorSettingsStore((state) => state.setPasteMarkdown);
   const setReopenLastNote = useEditorSettingsStore((state) => state.setReopenLastNote);
+  const restoreWorkingSet = useEditorSettingsStore((state) => state.restoreWorkingSet);
+  const setRestoreWorkingSet = useEditorSettingsStore((state) => state.setRestoreWorkingSet);
+  const autoAdmitWorkingSet = useEditorSettingsStore((state) => state.autoAdmitWorkingSet);
+  const setAutoAdmitWorkingSet = useEditorSettingsStore((state) => state.setAutoAdmitWorkingSet);
 
   const ragEnabled = useRagSettingsStore((state) => state.config.enabled);
 
@@ -597,6 +601,32 @@ export function SettingsDialog({
                       type="checkbox"
                       checked={reopenLastNote}
                       onChange={(event) => setReopenLastNote(event.target.checked)}
+                    />
+                  </SettingRow>
+
+                  <SettingRow
+                    layout="switch"
+                    label={t("settingsDialog.autoAdmitWorkingSet")}
+                    hint={t("settingsDialog.autoAdmitWorkingSetShort")}
+                    info={t("settingsDialog.autoAdmitWorkingSetHint")}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={autoAdmitWorkingSet}
+                      onChange={(event) => setAutoAdmitWorkingSet(event.target.checked)}
+                    />
+                  </SettingRow>
+
+                  <SettingRow
+                    layout="switch"
+                    label={t("settingsDialog.restoreWorkingSet")}
+                    hint={t("settingsDialog.restoreWorkingSetShort")}
+                    info={t("settingsDialog.restoreWorkingSetHint")}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={restoreWorkingSet}
+                      onChange={(event) => setRestoreWorkingSet(event.target.checked)}
                     />
                   </SettingRow>
 

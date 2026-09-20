@@ -22,6 +22,7 @@ import { useAppVersion } from "@/hooks/useAppVersion";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import { CHAT_MAX_WIDTH, CHAT_MIN_WIDTH, useChatWidth } from "@/hooks/useChatWidth";
 import { useDeleteTarget } from "@/hooks/useDeleteTarget";
+import { useDraftFlush } from "@/hooks/useDraftFlush";
 import { useExportTarget } from "@/hooks/useExportTarget";
 import { useFolderWatcher } from "@/hooks/useFolderWatcher";
 import { useGlobalShortcuts } from "@/hooks/useGlobalShortcuts";
@@ -39,10 +40,11 @@ import { useStartupFolder } from "@/hooks/useStartupFolder";
 import { useTitleRename } from "@/hooks/useTitleRename";
 import { useUpdateCheck } from "@/hooks/useUpdateCheck";
 import { useViewportHeight } from "@/hooks/useViewportHeight";
+import { useWorkingSetActions } from "@/hooks/useWorkingSetActions";
 import { useWebviewZoom } from "@/hooks/useWebviewZoom";
 import { useWindowReveal } from "@/hooks/useWindowReveal";
 import { useZenMode } from "@/hooks/useZenMode";
-import { getFolderBasename, getRecentFolderPaths, getRelativeDisplayPath } from "@/lib/fileSystem";
+import { getRecentFolderPaths, getRelativeDisplayPath } from "@/lib/fileSystem";
 import {
   describeNotePath,
   getFolderNoteFolderPath,
@@ -80,18 +82,14 @@ import "./App.css";
 
 function App() {
   const { t } = useTranslation();
-  const [pendingNavigation, setPendingNavigation] = useState<
-    | { type: "file"; filePath: string }
-    | { type: "folderNote"; folderPath: string }
-    | { type: "folder"; folderPath: string | null }
-    | { type: "logout" }
-    | null
-  >(null);
   // Set right before a back/forward step so the history effect below moves the
   // position instead of recording the target as a new entry. Cleared once it is
-  // consumed — or when the unsaved-changes dialog cancels the step.
+  // consumed — or when the step is refused because an AI proposal is open.
   const navigationIntentRef = useRef<{ filePath: string; index: number } | null>(null);
-  const [isUnsavedDialogOpen, setIsUnsavedDialogOpen] = useState(false);
+  // A one-line, self-dismissing hint at the bottom of the window; the place
+  // for "not now, because ..." answers that do not deserve a dialog.
+  const [notice, setNotice] = useState<string | null>(null);
+  const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isAiSettingsOpen, setIsAiSettingsOpen] = useState(false);
   const [settingsInitialTab, setSettingsInitialTab] = useState<SettingsTab>("application");
   const [versionDiffTarget, setVersionDiffTarget] = useState<VersionDiffTarget | null>(null);
@@ -136,6 +134,14 @@ function App() {
   const folderError = useAppStore((state) => state.folderError);
   const fileError = useAppStore((state) => state.fileError);
   const saveError = useAppStore((state) => state.saveError);
+  const saveConflict = useAppStore((state) => state.saveConflict);
+  const dismissSaveConflict = useAppStore((state) => state.dismissSaveConflict);
+  const workingSet = useAppStore((state) => state.workingSet);
+  const pinWorkingSetEntry = useAppStore((state) => state.pinWorkingSetEntry);
+  const unpinWorkingSetEntry = useAppStore((state) => state.unpinWorkingSetEntry);
+  const closeSavedWorkingSetEntries = useAppStore((state) => state.closeSavedWorkingSetEntries);
+  const discardFileChanges = useAppStore((state) => state.discardFileChanges);
+  const workingSetActions = useWorkingSetActions();
   const selectFilePath = useAppStore((state) => state.selectFilePath);
   const openFolderNote = useAppStore((state) => state.openFolderNote);
   const updateSelectedFileContent = useAppStore(
@@ -143,9 +149,6 @@ function App() {
   );
   const adoptCanonicalFileContent = useAppStore(
     (state) => state.adoptCanonicalFileContent
-  );
-  const discardSelectedFileChanges = useAppStore(
-    (state) => state.discardSelectedFileChanges
   );
   const saveSelectedFile = useAppStore((state) => state.saveSelectedFile);
   const restoreFileVersion = useAppStore((state) => state.restoreFileVersion);
@@ -263,6 +266,15 @@ function App() {
 
   useWebviewZoom();
   useAutoSave({ isAiActionPending, isSelectedFileStaged, isSelectedFileMissing });
+  useDraftFlush({
+    // Closing the app with auto-save on saves the open note the way leaving
+    // it would; without auto-save the draft is what comes back.
+    onBeforeClose: async () => {
+      if (isDirty && autoSaveEnabled && !isAiActionPending && !isSelectedFileStaged && !isSelectedFileMissing) {
+        await saveSelectedFile({ trigger: "auto" });
+      }
+    }
+  });
   useWindowReveal();
   useViewportHeight();
 
@@ -381,46 +393,42 @@ function App() {
           : deleteTarget.path
       : null;
 
-  const pendingTargetLabel = pendingNavigation
-    ? pendingNavigation.type === "file"
-      ? labelNotePath(pendingNavigation.filePath)
-      : pendingNavigation.type === "folderNote"
-        ? labelNotePath(getFolderNotePath(pendingNavigation.folderPath))
-        : pendingNavigation.type === "logout"
-          ? t("app.pendingTargetLogout")
-          : (pendingNavigation.folderPath ? getFolderBasename(pendingNavigation.folderPath) : null) ??
-            t("app.pendingTargetOtherFolder")
-    : null;
+  const showNotice = (message: string) => {
+    if (noticeTimerRef.current) {
+      clearTimeout(noticeTimerRef.current);
+    }
 
-  // Every way of leaving the open note runs through here. With auto-save on,
-  // edits the timer has not written yet are saved on the way out instead of
-  // asked about: the user has already said what should happen to them. Only
-  // when that save cannot be the answer (an AI request is still streaming,
-  // the write failed) does the dialog open.
-  const passUnsavedGuard = async (
-    navigation: NonNullable<typeof pendingNavigation>
-  ): Promise<boolean> => {
-    if (!selectedFilePath || !(isDirty || isAiActionPending)) {
+    setNotice(message);
+    noticeTimerRef.current = setTimeout(() => setNotice(null), 4000);
+  };
+
+  // Every way of leaving the open note runs through here. Unsaved edits are
+  // no reason to ask any more: they stay in the document map for the session
+  // and in the draft on disk across a restart (store/appStore/drafts.ts).
+  // With auto-save on they are saved on the way out, as they would have been
+  // a moment later; if that save fails or is skipped, the draft carries them.
+  // The one thing that cannot be carried is an AI proposal still open in the
+  // editor, so that is the one thing that still blocks, with a hint.
+  const leaveCurrentNote = async (): Promise<boolean> => {
+    if (!selectedFilePath) {
       return true;
     }
 
-    if (
-      autoSaveEnabled &&
-      !isAiActionPending &&
-      !isSelectedFileStaged &&
-      !isSelectedFileMissing &&
-      (await saveSelectedFile({ trigger: "auto" }))
-    ) {
-      return true;
+    if (isAiActionPending) {
+      navigationIntentRef.current = null;
+      showNotice(t("app.aiPendingNotice"));
+      return false;
     }
 
-    setPendingNavigation(navigation);
-    setIsUnsavedDialogOpen(true);
-    return false;
+    if (isDirty && autoSaveEnabled && !isSelectedFileStaged && !isSelectedFileMissing) {
+      await saveSelectedFile({ trigger: "auto" });
+    }
+
+    return true;
   };
 
   const openFolderSafely = async () => {
-    if (!(await passUnsavedGuard({ type: "folder", folderPath: null }))) {
+    if (!(await leaveCurrentNote())) {
       return;
     }
 
@@ -428,10 +436,10 @@ function App() {
   };
 
   // Server edition: signing out closes the vault as far as this browser is
-  // concerned, so it goes through the same unsaved-changes guard as opening
-  // another folder does.
+  // concerned, so it leaves the open note the same way opening another
+  // folder does.
   const logoutSafely = async () => {
-    if (!(await passUnsavedGuard({ type: "logout" }))) {
+    if (!(await leaveCurrentNote())) {
       return;
     }
 
@@ -439,7 +447,7 @@ function App() {
   };
 
   const openRecentFolderSafely = async (targetFolderPath: string) => {
-    if (!(await passUnsavedGuard({ type: "folder", folderPath: targetFolderPath }))) {
+    if (!(await leaveCurrentNote())) {
       return;
     }
 
@@ -451,7 +459,7 @@ function App() {
       return;
     }
 
-    if (!(await passUnsavedGuard({ type: "file", filePath }))) {
+    if (!(await leaveCurrentNote())) {
       return;
     }
 
@@ -463,14 +471,14 @@ function App() {
     await selectFilePath(filePath);
   };
 
-  // Same guard for a folder's note (the tree hands over the folder, the store
+  // Same for a folder's note (the tree hands over the folder, the store
   // resolves the note inside it).
   const openFolderNoteSafely = async (targetFolderPath: string) => {
     if (selectedFilePath && getFolderNotePath(targetFolderPath) === selectedFilePath) {
       return;
     }
 
-    if (!(await passUnsavedGuard({ type: "folderNote", folderPath: targetFolderPath }))) {
+    if (!(await leaveCurrentNote())) {
       return;
     }
 
@@ -655,58 +663,6 @@ function App() {
 
     const parentRelativePath = getRelativeDisplayPath(folderPath, importTargetFolder ?? folderPath);
     registerImportedFiles(createdFilePaths, parentRelativePath, importInsertAfterBasename);
-  };
-
-  const closeUnsavedDialog = () => {
-    // Cancelling the dialog cancels the navigation, so a back/forward step
-    // announced for it must not be applied to whatever is opened next.
-    navigationIntentRef.current = null;
-    setPendingNavigation(null);
-    setIsUnsavedDialogOpen(false);
-  };
-
-  const continuePendingNavigation = async (mode: "save" | "discard") => {
-    const nextNavigation = pendingNavigation;
-
-    if (!nextNavigation) {
-      closeUnsavedDialog();
-      return;
-    }
-
-    const shouldContinue =
-      mode === "save" ? await saveSelectedFile() : discardSelectedFileChanges();
-
-    if (!shouldContinue) {
-      return;
-    }
-
-    // Saving/discarding *continues* the navigation, so a back/forward step
-    // survives the dialog closing (which cancels one).
-    const navigationIntent = navigationIntentRef.current;
-    closeUnsavedDialog();
-    navigationIntentRef.current = navigationIntent;
-
-    if (nextNavigation.type === "logout") {
-      await logout();
-      return;
-    }
-
-    if (nextNavigation.type === "file") {
-      await selectFilePath(nextNavigation.filePath);
-      return;
-    }
-
-    if (nextNavigation.type === "folderNote") {
-      await openFolderNote(nextNavigation.folderPath);
-      return;
-    }
-
-    if (nextNavigation.folderPath) {
-      await openFolderAtPath(nextNavigation.folderPath);
-      return;
-    }
-
-    await openFolder();
   };
 
   useEffect(() => {
@@ -915,6 +871,7 @@ function App() {
     toggleZenMode,
     navigateBack: () => navigateHistory(backStepIndex),
     navigateForward: () => navigateHistory(forwardStepIndex),
+    closeWorkingSetEntry: workingSetActions.closeSelectedEntry,
     editorHandleRef
   });
 
@@ -927,6 +884,16 @@ function App() {
       emptyFolderPaths={emptyFolderPaths}
       selectedFilePath={selectedFilePath}
       dirtyFilePaths={dirtyFilePaths}
+      workingSet={{
+        entries: workingSet,
+        onClose: workingSetActions.closeEntry,
+        onCloseOthers: workingSetActions.closeOthers,
+        onCloseAll: workingSetActions.closeAll,
+        onCloseSaved: closeSavedWorkingSetEntries,
+        onPin: pinWorkingSetEntry,
+        onUnpin: unpinWorkingSetEntry,
+        onDiscardChanges: (filePath) => void discardFileChanges(filePath)
+      }}
       folderError={folderError}
       isLoading={isLoading}
       pendingFolderRename={pendingFolderRename}
@@ -1154,15 +1121,30 @@ function App() {
         onCancel={remoteVaultDialog.close}
       />
 
+      {notice ? (
+        <div className="app-notice" role="status">
+          {notice}
+        </div>
+      ) : null}
+
       <AppDialogs
-        isUnsavedDialogOpen={isUnsavedDialogOpen}
-        pendingTargetLabel={pendingTargetLabel}
-        selectedFileLabel={selectedFileLabel}
+        closingFileLabel={
+          workingSetActions.closeRequest ? labelNotePath(workingSetActions.closeRequest.filePath) : null
+        }
+        onSaveAndClose={() => void workingSetActions.saveAndClose()}
+        onDiscardAndClose={workingSetActions.discardAndClose}
+        onCancelClose={workingSetActions.cancelClose}
+        saveConflictFileLabel={saveConflict ? labelNotePath(saveConflict.filePath) : null}
         isSaving={isSaving}
-        isAiActionPending={isAiActionPending}
-        onSaveNavigation={() => void continuePendingNavigation("save")}
-        onDiscardNavigation={() => void continuePendingNavigation("discard")}
-        onCloseUnsavedDialog={closeUnsavedDialog}
+        onOverwriteConflict={() => {
+          // The answer belongs to the note the question was asked about.
+          if (saveConflict?.filePath === selectedFilePath) {
+            void saveSelectedFile({ force: true });
+          } else {
+            dismissSaveConflict();
+          }
+        }}
+        onDismissConflict={dismissSaveConflict}
         isAiSettingsOpen={isAiSettingsOpen}
         settingsInitialTab={settingsInitialTab}
         aiSettings={aiSettings}

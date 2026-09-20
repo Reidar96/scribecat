@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   ArrowDownAZ,
   ArrowUpDown,
   BookOpen,
   Check,
+  ChevronDown,
+  ChevronRight,
   Clock,
   Download,
   FileText,
@@ -36,7 +38,9 @@ import {
   MenuTrigger
 } from "@/components/ui/menu";
 import { FileTree, type BatchEntry, type PendingFolderRename } from "@/components/FileTree";
+import { WorkingSetPanel } from "@/components/sidebar/WorkingSetPanel";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useStoredCollapsed, useWorkingSetHeight } from "@/hooks/useWorkingSetHeight";
 import {
   carriesExternalFiles,
   readDropPayload,
@@ -47,8 +51,22 @@ import { formatFolderLabel, getFolderBasename } from "@/lib/fileSystem";
 import { isRemoteVaultPath, remoteVaultFor } from "@/lib/remoteVaults";
 import { getVaultCapabilities, platform, vaultCapabilityHint } from "@/platform";
 import type { ManualOrderMap, SortMode } from "@/lib/vaultMeta";
-import type { MoveTreeEntryInput } from "@/store/useAppStore";
+import { cn } from "@/lib/utils";
+import type { MoveTreeEntryInput, WorkingSetEntry } from "@/store/useAppStore";
 import { DROP_DIRECTORY_ATTRIBUTE, useImportDropStore } from "@/store/useImportDropStore";
+
+/** What the "In progress" section needs from the app (see WorkingSetPanel). */
+export type WorkingSetHandlers = {
+  entries: WorkingSetEntry[];
+  onClose: (filePath: string) => void;
+  onCloseOthers: (filePath: string) => void;
+  onCloseAll: () => void;
+  onCloseSaved: () => void;
+  onPin: (filePath: string) => void;
+  onUnpin: (filePath: string) => void;
+  /** Discard a note's unsaved edits (tree context menu); asks nothing. */
+  onDiscardChanges: (filePath: string) => void;
+};
 
 type SidebarProps = {
   folderPath: string | null;
@@ -56,6 +74,7 @@ type SidebarProps = {
   emptyFolderPaths: string[];
   selectedFilePath: string | null;
   dirtyFilePaths: string[];
+  workingSet: WorkingSetHandlers;
   folderError: string | null;
   isLoading: boolean;
   pendingFolderRename: PendingFolderRename | null;
@@ -111,6 +130,7 @@ export function Sidebar({
   emptyFolderPaths,
   selectedFilePath,
   dirtyFilePaths,
+  workingSet,
   folderError,
   isLoading,
   pendingFolderRename,
@@ -180,6 +200,36 @@ export function Sidebar({
   const capabilities = getVaultCapabilities();
   const capabilityHint = vaultCapabilityHint();
   const [rootContextMenu, setRootContextMenu] = useState<{ x: number; y: number } | null>(null);
+
+  // The "In progress" section and the tree's own header exist only while
+  // the list has entries; both fold states and the list's height ceiling
+  // are app-wide, and a folded section never unfolds on its own.
+  const hasWorkingSet = folderPath !== null && workingSet.entries.length > 0;
+  const [isWorkingSetCollapsed, toggleWorkingSetCollapsed] = useStoredCollapsed("scribedog-working-set-collapsed");
+  const [isTreeCollapsed, toggleTreeCollapsed] = useStoredCollapsed("scribedog-file-tree-collapsed");
+  const sectionsRef = useRef<HTMLDivElement>(null);
+  const workingSetListRef = useRef<HTMLUListElement>(null);
+  const {
+    maxHeight: workingSetMaxHeight,
+    isResizing: isResizingWorkingSet,
+    handleResizeStart: handleWorkingSetResizeStart,
+    handleResizeKeyDown: handleWorkingSetResizeKeyDown
+  } = useWorkingSetHeight({ listRef: workingSetListRef, containerRef: sectionsRef });
+  // Tree folded and list shown: the list gets the whole height. Tree folded
+  // and list hidden too (or absent): the tree stays folded but that is the
+  // user's choice; nothing unfolds by itself.
+  const workingSetFillsSidebar = hasWorkingSet && isTreeCollapsed;
+  const [treeRevealRequestId, setTreeRevealRequestId] = useState(0);
+
+  // "Show in tree": the tree unfolds if needed, the note is opened (which
+  // expands its folders), and the tree is asked to focus the row.
+  const revealInTree = (filePath: string) => {
+    if (isTreeCollapsed) {
+      toggleTreeCollapsed();
+    }
+
+    void onSelectFilePath(filePath).then(() => setTreeRevealRequestId((id) => id + 1));
+  };
   // Same conditions as the tree's context menu (see FileTree): the rendered
   // export needs a folder or a download, the raw ZIP a storage that packs.
   const offersExport = platform.features.exportFiles || platform.features.downloads;
@@ -586,7 +636,60 @@ export function Sidebar({
         </button>
       ) : null}
 
-      <ScrollArea className="sidebar-panel__scroll">
+      <div className="sidebar-panel__sections" ref={sectionsRef}>
+        {hasWorkingSet ? (
+          <WorkingSetPanel
+            folderPath={folderPath}
+            entries={workingSet.entries}
+            selectedFilePath={selectedFilePath}
+            dirtyFilePaths={dirtyFilePaths}
+            collapsed={isWorkingSetCollapsed}
+            onToggleCollapsed={toggleWorkingSetCollapsed}
+            fillsSidebar={workingSetFillsSidebar}
+            maxHeight={workingSetMaxHeight}
+            listRef={workingSetListRef}
+            onSelect={(filePath) => void onSelectFilePath(filePath)}
+            onClose={workingSet.onClose}
+            onCloseOthers={workingSet.onCloseOthers}
+            onCloseAll={workingSet.onCloseAll}
+            onCloseSaved={workingSet.onCloseSaved}
+            onRevealInTree={revealInTree}
+            onPin={workingSet.onPin}
+            onUnpin={workingSet.onUnpin}
+          />
+        ) : null}
+        {hasWorkingSet && !isWorkingSetCollapsed && !isTreeCollapsed ? (
+          <div
+            className={cn("working-set__resizer", isResizingWorkingSet && "workspace-resizer--active")}
+            role="separator"
+            aria-orientation="horizontal"
+            aria-label={t("workingSet.resizeLabel")}
+            aria-valuenow={Math.round(workingSetMaxHeight)}
+            tabIndex={0}
+            onPointerDown={handleWorkingSetResizeStart}
+            onKeyDown={handleWorkingSetResizeKeyDown}
+          >
+            <span className="workspace-resizer__grip" aria-hidden="true" />
+          </div>
+        ) : null}
+        <section
+          className={cn("sidebar-panel__tree", hasWorkingSet && isTreeCollapsed && "sidebar-panel__tree--collapsed")}
+          aria-label={t("sidebar.filesLabel")}
+        >
+          {hasWorkingSet ? (
+            <div className="sidebar-panel__tree-header">
+              <button
+                type="button"
+                className="sidebar-panel__tree-toggle"
+                onClick={toggleTreeCollapsed}
+                aria-expanded={!isTreeCollapsed}
+              >
+                {isTreeCollapsed ? <ChevronRight aria-hidden="true" /> : <ChevronDown aria-hidden="true" />}
+                <span className="working-set__title">{t("workingSet.treeTitle")}</span>
+              </button>
+            </div>
+          ) : null}
+      <ScrollArea className="sidebar-panel__scroll" hidden={hasWorkingSet && isTreeCollapsed}>
         {folderPath !== null && (filePaths.length > 0 || emptyFolderPaths.length > 0) ? (
           <FileTree
             key={folderPath}
@@ -595,6 +698,11 @@ export function Sidebar({
             emptyFolderPaths={emptyFolderPaths}
             selectedFilePath={selectedFilePath}
             dirtyFilePaths={dirtyFilePaths}
+            workingSetFilePaths={workingSet.entries.map((entry) => entry.filePath)}
+            onPinWorkingSetEntry={workingSet.onPin}
+            onUnpinWorkingSetEntry={workingSet.onUnpin}
+            onCloseWorkingSetEntry={workingSet.onClose}
+            onDiscardChangesRequest={workingSet.onDiscardChanges}
             pendingFolderRename={pendingFolderRename}
             sortMode={sortMode}
             manualOrder={manualOrder}
@@ -619,11 +727,13 @@ export function Sidebar({
             onMoveEntry={onMoveEntry}
             onMoveRequest={onMoveRequest}
             onRequestEditorFocus={onRequestEditorFocus}
-            focusRequestId={sidebarFocusRequestId}
+            focusRequestId={sidebarFocusRequestId + treeRevealRequestId}
             onSelectionChange={onFileTreeSelectionChange}
           />
         ) : null}
       </ScrollArea>
+        </section>
+      </div>
     </aside>
   );
 }

@@ -44,9 +44,8 @@
     "emptyEyebrow": "Aucun fichier sélectionné",
     "emptyTitle": "Sélectionnez un fichier Markdown",
     "emptyDescription": "Une fois un dossier ouvert, son contenu et la surface d'édition apparaîtront ici.",
-    "pendingTargetOtherFolder": "un autre dossier",
     "version": "v{{version}}",
-    "pendingTargetLogout": "la déconnexion",
+    "aiPendingNotice": "Acceptez ou rejetez d'abord la suggestion de l'IA.",
     "openSidebar": "Afficher les fichiers",
     "documentMenu": "Menu du document",
     "saveButton": "Enregistrer",
@@ -54,13 +53,18 @@
   },
   "unsavedDialog": {
     "eyebrow": "Modifications non enregistrées",
-    "title": "Gérer les modifications avant de changer",
-    "descriptionCurrent": "Le fichier {{fileLabel}} contient encore des modifications non enregistrées.",
-    "descriptionGeneric": "Le fichier actuel contient encore des modifications non enregistrées.",
-    "descriptionTarget": "Choisissez une action avant de passer à {{targetLabel}}.",
-    "descriptionAiPending": "Il y a également une suggestion de l'IA pour ce fichier qui n'a pas encore été acceptée ni rejetée.",
-    "summaryFile": "Fichier",
-    "summaryTarget": "Cible"
+    "title": "Que faire des modifications avant de fermer ?",
+    "descriptionCurrent": "La note {{fileLabel}} contient des modifications non enregistrées. Les abandonner les perd.",
+    "descriptionGeneric": "La note contient des modifications non enregistrées. Les abandonner les perd."
+  },
+  "saveConflictDialog": {
+    "eyebrow": "Fichier modifié en dehors de l'application",
+    "title": "Écraser les modifications sur le disque ?",
+    "descriptionWithName": "Le fichier {{fileLabel}} a été modifié en dehors de ScribeDog entre-temps.",
+    "descriptionGeneric": "Le fichier a été modifié en dehors de ScribeDog entre-temps.",
+    "versioningOn": "En écrasant, la version du disque est d'abord enregistrée dans l'historique, vous pourrez ensuite comparer les deux.",
+    "versioningOff": "Le versionnage est désactivé, l'autre version sera perdue si vous écrasez.",
+    "overwrite": "Écraser"
   },
   "deleteDialog": {
     "eyebrow": "Supprimer le fichier",
@@ -290,7 +294,13 @@
     "agentMaxPlanStepsLabel": "Étapes par liste de tâches",
     "agentMaxPlanStepsHint": "Limite supérieure de la longueur d’une liste de tâches.",
     "localProviderBrowserHint": "{{provider}} fonctionne sur cet appareil et le navigateur lui parle directement ; il doit donc accepter les requêtes de {{origin}} : {{instruction}}. Si vous ouvrez ScribeDog via une adresse publique, le navigateur demande aussi une fois l'accès au réseau local.",
-    "tabServer": "Serveurs"
+    "tabServer": "Serveurs",
+    "restoreWorkingSet": "Restaurer les notes en cours au prochain démarrage",
+    "restoreWorkingSetShort": "La liste « En cours » est mémorisée par dossier.",
+    "restoreWorkingSetHint": "Désactivé : la liste démarre vide et ne se remplit qu'en épinglant ou en modifiant. Les modifications non enregistrées reviennent quoi qu'il arrive.",
+    "autoAdmitWorkingSet": "Ajouter automatiquement les notes modifiées à « En cours »",
+    "autoAdmitWorkingSetShort": "Par défaut, seules les notes épinglées y figurent (double-clic ou Entrée dans l'arborescence). Avec cette option, chaque note s'y ajoute dès qu'elle est modifiée.",
+    "autoAdmitWorkingSetHint": "Les modifications non enregistrées sont conservées dans tous les cas et signalées par le point jaune dans l'arborescence ; un anneau sur un dossier replié indique qu'il contient quelque chose de non enregistré."
   },
   "assistants": {
     "defaultName": "ScribeDog (Par défaut)",
@@ -477,7 +487,8 @@
       "closeDialog": "Fermer la boîte de dialogue",
       "moveListItemUp": "Déplacer la ligne ou l'élément de liste vers le haut",
       "moveListItemDown": "Déplacer la ligne ou l'élément de liste vers le bas",
-      "toggleDetailsPanel": "Afficher/masquer le panneau de détails (plan, liens, rétroliens et infos du fichier)"
+      "toggleDetailsPanel": "Afficher/masquer le panneau de détails (plan, liens, rétroliens et infos du fichier)",
+      "closeWorkingSetEntry": "Fermer la note dans « En cours »"
     },
     "recording": "Appuyez sur une touche …",
     "recordHint": "Appuyez sur la nouvelle combinaison (elle doit contenir Ctrl ou Alt) — Échap annule.",
@@ -537,7 +548,12 @@
     "moreActions": "Autres actions",
     "duplicate": "Dupliquer",
     "moveTo": "Déplacer vers…",
-    "selectionCount": "{{count}} sélectionnés"
+    "selectionCount": "{{count}} sélectionnés",
+    "pinWorkingSet": "Épingler dans « En cours »",
+    "unpinWorkingSet": "Détacher de « En cours »",
+    "discardChanges": "Abandonner les modifications",
+    "unsavedChangesInside": "Modifications non enregistrées dans ce dossier",
+    "closeWorkingSet": "Fermer dans « En cours »"
   },
   "moveDialog": {
     "eyebrow": "Déplacer",
@@ -1087,5 +1103,19 @@
     "disconnect": "Déconnecter",
     "disconnecting": "Déconnexion…",
     "removeFailed": "Le serveur n'a pas pu être supprimé."
+  },
+  "workingSet": {
+    "title": "En cours",
+    "treeTitle": "Fichiers",
+    "closeSaved": "Fermer les enregistrées",
+    "close": "Fermer {{name}}",
+    "closeShort": "Fermer",
+    "closeOthers": "Fermer les autres",
+    "closeAll": "Tout fermer",
+    "revealInTree": "Afficher dans l'arborescence",
+    "pin": "Épingler",
+    "unpin": "Détacher",
+    "pinned": "Épinglée",
+    "resizeLabel": "Ajuster la hauteur de la liste « En cours »"
   }
 }

@@ -6,6 +6,7 @@ import { ExportDialog, type ExportDialogTarget } from "@/components/ExportDialog
 import type { MarkdownFileRecord } from "@/lib/fileSystem";
 import { ImportDialog } from "@/components/ImportDialog";
 import { MoveToDialog, type MoveRequest } from "@/components/MoveToDialog";
+import { SaveConflictDialog } from "@/components/SaveConflictDialog";
 import { SettingsDialog, type SettingsTab } from "@/components/SettingsDialog";
 import { UnsavedChangesDialog } from "@/components/UnsavedChangesDialog";
 import { UpdateNotification } from "@/components/UpdateNotification";
@@ -17,15 +18,17 @@ import type { AiSettings } from "@/store/useAiSettingsStore";
 import type { Assistant } from "@/store/useAssistantsStore";
 
 type AppDialogsProps = {
-  // Unsaved-changes navigation prompt
-  isUnsavedDialogOpen: boolean;
-  pendingTargetLabel: string | null;
-  selectedFileLabel: string | null;
+  // Closing a dirty entry of the "In progress" list (hooks/useWorkingSetActions.ts)
+  closingFileLabel: string | null;
+  onSaveAndClose: () => void;
+  onDiscardAndClose: () => void;
+  onCancelClose: () => void;
+
+  // A save that met an external change to the file (store: saveConflict)
+  saveConflictFileLabel: string | null;
   isSaving: boolean;
-  isAiActionPending: boolean;
-  onSaveNavigation: () => void;
-  onDiscardNavigation: () => void;
-  onCloseUnsavedDialog: () => void;
+  onOverwriteConflict: () => void;
+  onDismissConflict: () => void;
 
   // Settings
   isAiSettingsOpen: boolean;
@@ -82,14 +85,14 @@ type AppDialogsProps = {
 };
 
 export function AppDialogs({
-  isUnsavedDialogOpen,
-  pendingTargetLabel,
-  selectedFileLabel,
+  closingFileLabel,
+  onSaveAndClose,
+  onDiscardAndClose,
+  onCancelClose,
+  saveConflictFileLabel,
   isSaving,
-  isAiActionPending,
-  onSaveNavigation,
-  onDiscardNavigation,
-  onCloseUnsavedDialog,
+  onOverwriteConflict,
+  onDismissConflict,
   isAiSettingsOpen,
   settingsInitialTab,
   aiSettings,
@@ -131,14 +134,20 @@ export function AppDialogs({
   return (
     <>
       <UnsavedChangesDialog
-        open={isUnsavedDialogOpen}
-        targetLabel={pendingTargetLabel}
-        currentFileLabel={selectedFileLabel}
+        open={closingFileLabel !== null}
+        fileLabel={closingFileLabel}
         isSaving={isSaving}
-        hasPendingAiAction={isAiActionPending}
-        onSave={onSaveNavigation}
-        onDiscard={onDiscardNavigation}
-        onCancel={onCloseUnsavedDialog}
+        onSave={onSaveAndClose}
+        onDiscard={onDiscardAndClose}
+        onCancel={onCancelClose}
+      />
+
+      <SaveConflictDialog
+        open={saveConflictFileLabel !== null}
+        fileLabel={saveConflictFileLabel}
+        isSaving={isSaving}
+        onOverwrite={onOverwriteConflict}
+        onCancel={onDismissConflict}
       />
 
       <SettingsDialog

@@ -44,9 +44,8 @@
     "emptyEyebrow": "Noch keine Datei gewählt",
     "emptyTitle": "Wähle eine Markdown-Datei aus",
     "emptyDescription": "Sobald ein Ordner geöffnet ist, erscheinen hier Inhalt und die spätere Bearbeitungsoberfläche.",
-    "pendingTargetOtherFolder": "einen anderen Ordner",
     "version": "v{{version}}",
-    "pendingTargetLogout": "Abmelden",
+    "aiPendingNotice": "Zuerst den KI-Vorschlag übernehmen oder verwerfen.",
     "openSidebar": "Dateien anzeigen",
     "documentMenu": "Dokumentmenü",
     "saveButton": "Speichern",
@@ -54,13 +53,18 @@
   },
   "unsavedDialog": {
     "eyebrow": "Ungespeicherte Änderungen",
-    "title": "Änderungen vor dem Wechsel behandeln",
-    "descriptionCurrent": "Die Datei {{fileLabel}} enthält noch ungespeicherte Änderungen.",
-    "descriptionGeneric": "Die aktuelle Datei enthält noch ungespeicherte Änderungen.",
-    "descriptionTarget": "Bevor zu {{targetLabel}} gewechselt wird, wähle eine Aktion.",
-    "descriptionAiPending": "Außerdem gibt es für diese Datei noch einen nicht übernommenen oder verworfenen KI-Vorschlag.",
-    "summaryFile": "Datei",
-    "summaryTarget": "Ziel"
+    "title": "Änderungen vor dem Schließen behandeln",
+    "descriptionCurrent": "Die Notiz {{fileLabel}} enthält ungespeicherte Änderungen. Beim Verwerfen gehen sie verloren.",
+    "descriptionGeneric": "Die Notiz enthält ungespeicherte Änderungen. Beim Verwerfen gehen sie verloren."
+  },
+  "saveConflictDialog": {
+    "eyebrow": "Datei wurde außerhalb geändert",
+    "title": "Änderungen auf der Festplatte überschreiben?",
+    "descriptionWithName": "Die Datei {{fileLabel}} wurde inzwischen außerhalb von ScribeDog geändert.",
+    "descriptionGeneric": "Die Datei wurde inzwischen außerhalb von ScribeDog geändert.",
+    "versioningOn": "Beim Überschreiben wird die Fassung von der Festplatte vorher als Version gesichert; du kannst sie danach im Versionsverlauf vergleichen.",
+    "versioningOff": "Die Versionierung ist aus, die andere Fassung geht beim Überschreiben verloren.",
+    "overwrite": "Überschreiben"
   },
   "deleteDialog": {
     "eyebrow": "Datei löschen",
@@ -290,7 +294,13 @@
     "agentMaxPlanStepsLabel": "Schritte je Aufgabenliste",
     "agentMaxPlanStepsHint": "Obergrenze für die Länge einer Aufgabenliste.",
     "localProviderBrowserHint": "{{provider}} läuft auf diesem Gerät, und der Browser spricht es direkt an. Deshalb muss es Anfragen von {{origin}} annehmen: {{instruction}}. Wird ScribeDog über eine öffentliche Adresse geöffnet, fragt der Browser außerdem einmal nach dem Zugriff auf das lokale Netzwerk.",
-    "tabServer": "Server"
+    "tabServer": "Server",
+    "restoreWorkingSet": "Notizen in Arbeit beim nächsten Start wiederherstellen",
+    "restoreWorkingSetShort": "Die Liste „In Arbeit“ wird pro Ordner gemerkt.",
+    "restoreWorkingSetHint": "Aus bedeutet: Die Liste ist nach dem Start leer und füllt sich erst wieder durch Anheften oder Bearbeiten. Ungespeicherte Änderungen kommen unabhängig davon zurück.",
+    "autoAdmitWorkingSet": "Bearbeitete Notizen automatisch in „In Arbeit“ aufnehmen",
+    "autoAdmitWorkingSetShort": "Standardmäßig stehen dort nur angeheftete Notizen (Doppelklick oder Enter im Baum). Mit dieser Option kommt jede Notiz dazu, sobald sie bearbeitet wird.",
+    "autoAdmitWorkingSetHint": "Ungespeicherte Änderungen bleiben unabhängig davon erhalten und sind im Baum am gelben Punkt zu erkennen; ein Ring am zugeklappten Ordner zeigt, dass darin etwas ungespeichert ist."
   },
   "assistants": {
     "defaultName": "ScribeDog (Standard)",
@@ -477,7 +487,8 @@
       "closeDialog": "Dialog schließen",
       "moveListItemUp": "Zeile oder Listenelement nach oben verschieben",
       "moveListItemDown": "Zeile oder Listenelement nach unten verschieben",
-      "toggleDetailsPanel": "Details-Panel (Gliederung, Links, Backlinks & Datei-Info) ein-/ausblenden"
+      "toggleDetailsPanel": "Details-Panel (Gliederung, Links, Backlinks & Datei-Info) ein-/ausblenden",
+      "closeWorkingSetEntry": "Notiz aus „In Arbeit“ schließen"
     },
     "recording": "Taste drücken …",
     "recordHint": "Neue Tastenkombination drücken (muss Strg oder Alt enthalten) — Esc bricht ab.",
@@ -537,7 +548,12 @@
     "moreActions": "Weitere Aktionen",
     "duplicate": "Duplizieren",
     "moveTo": "Verschieben nach…",
-    "selectionCount": "{{count}} ausgewählt"
+    "selectionCount": "{{count}} ausgewählt",
+    "pinWorkingSet": "In Arbeit anheften",
+    "unpinWorkingSet": "Aus „In Arbeit“ lösen",
+    "discardChanges": "Änderungen verwerfen",
+    "unsavedChangesInside": "Ungespeicherte Änderungen in diesem Ordner",
+    "closeWorkingSet": "Aus „In Arbeit“ schließen"
   },
   "moveDialog": {
     "eyebrow": "Verschieben",
@@ -1087,5 +1103,19 @@
     "disconnect": "Verbindung trennen",
     "disconnecting": "Wird getrennt…",
     "removeFailed": "Der Server konnte nicht entfernt werden."
+  },
+  "workingSet": {
+    "title": "In Arbeit",
+    "treeTitle": "Dateien",
+    "closeSaved": "Gespeicherte schließen",
+    "close": "{{name}} schließen",
+    "closeShort": "Schließen",
+    "closeOthers": "Andere schließen",
+    "closeAll": "Alle schließen",
+    "revealInTree": "Im Baum anzeigen",
+    "pin": "Anheften",
+    "unpin": "Lösen",
+    "pinned": "Angeheftet",
+    "resizeLabel": "Höhe der Liste „In Arbeit“ anpassen"
   }
 }

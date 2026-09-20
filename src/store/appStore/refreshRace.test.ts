@@ -75,7 +75,8 @@ describe("refreshFolderFiles while the user is typing", () => {
     // The document nobody touched did pick up the change from disk.
     expect(state.fileDocuments[OTHER]).toEqual({
       content: "# Other, changed on disk\n",
-      baseContent: "# Other, changed on disk\n"
+      baseContent: "# Other, changed on disk\n",
+      baseMtimeMs: 1
     });
   });
 

@@ -104,7 +104,30 @@ export const platform: Platform = {
       await appWindow.setFocus();
     },
     isFullscreen: () => getCurrentWindow().isFullscreen(),
-    setFullscreen: (fullscreen) => getCurrentWindow().setFullscreen(fullscreen)
+    setFullscreen: (fullscreen) => getCurrentWindow().setFullscreen(fullscreen),
+    onCloseRequested: async (handler) => {
+      const appWindow = getCurrentWindow();
+      // The close button can be hit twice while the handler runs; the
+      // second request must not start a second handler or a second destroy.
+      let closing = false;
+
+      return appWindow.onCloseRequested(async (event) => {
+        event.preventDefault();
+
+        if (closing) {
+          return;
+        }
+
+        closing = true;
+
+        try {
+          await handler();
+        } finally {
+          // destroy(), not close(): close() would raise this event again.
+          await appWindow.destroy();
+        }
+      });
+    }
   },
   credentials: {
     storeApiKey: (id, apiKey) => invoke("store_api_key", { provider: id, apiKey }),

@@ -18,6 +18,8 @@ export const initialAppData: AppData = {
   folderError: null,
   fileError: null,
   saveError: null,
+  saveConflict: null,
+  workingSet: [],
   sortMode: DEFAULT_SORT_MODE,
   manualOrder: {},
   fileMtimeMs: {},

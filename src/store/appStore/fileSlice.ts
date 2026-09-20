@@ -7,13 +7,15 @@ import {
   deleteMarkdownFile,
   getRelativeDisplayPath,
   readMarkdownFile,
+  readMarkdownFileMtime,
   renameMarkdownFile,
   writeMarkdownFile
 } from "@/lib/fileSystem";
 import { readVersionContent } from "@/lib/fileVersions";
 import { getFolderNotePath, isFolderNotePath } from "@/lib/folderNotes";
 
-import { isDocumentDirty } from "./documents";
+import { isDocumentDirty, isExternallyModified } from "./documents";
+import { discardDraft, flushDrafts, moveDraftFor, scheduleDraft } from "./drafts";
 import { toErrorMessage } from "./errors";
 import {
   currentChildBasenames,
@@ -32,14 +34,20 @@ import {
   normalizePathKey
 } from "./pathUtils";
 import type { AppSlice, FileSlice } from "./types";
+import { addWorkingSetEntry, hasWorkingSetEntry, remapWorkingSetPaths, removeWorkingSetEntry } from "./workingSet";
+import { persistWorkingSet, shouldAutoAdmitWorkingSet } from "./workingSetSlice";
 import {
   deleteFileVersionHistory,
   moveFileVersionHistory,
-  snapshotFileVersion
+  snapshotFileVersion,
+  snapshotFileVersionNow
 } from "./versioning";
 
 export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
   selectFilePath: async (filePath: string) => {
+    // Leaving a note is one of the points where a pending draft goes out at once.
+    void flushDrafts();
+
     const existingDocument = get().fileDocuments[filePath];
 
     if (existingDocument) {
@@ -51,7 +59,8 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
         isSaving: false,
         isDirty: existingDocument.content !== existingDocument.baseContent,
         fileError: null,
-        saveError: null
+        saveError: null,
+        saveConflict: null
       });
 
       return true;
@@ -65,16 +74,23 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
       isSaving: false,
       isDirty: false,
       fileError: null,
-      saveError: null
+      saveError: null,
+      saveConflict: null
     });
 
     try {
-      const markdown = await readMarkdownFile(filePath);
+      // The mtime is read together with the content: it is what a later save
+      // compares against to notice that someone else wrote the file meanwhile.
+      const [markdown, baseMtimeMs] = await Promise.all([
+        readMarkdownFile(filePath),
+        readMarkdownFileMtime(filePath)
+      ]);
 
       const currentState = get();
       const nextDocumentState = {
         content: markdown,
-        baseContent: markdown
+        baseContent: markdown,
+        baseMtimeMs
       };
 
       if (currentState.selectedFilePath !== filePath) {
@@ -135,7 +151,7 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
       set({
         fileDocuments: {
           ...fileDocuments,
-          [notePath]: { content: "", baseContent: "" }
+          [notePath]: { content: "", baseContent: "", baseMtimeMs: null }
         }
       });
     }
@@ -143,7 +159,7 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
     return get().selectFilePath(notePath);
   },
   updateSelectedFileContent: (markdown: string) => {
-    const { selectedFilePath, selectedFileBaseContent, fileDocuments } = get();
+    const { selectedFilePath, selectedFileBaseContent, fileDocuments, folderPath, workingSet } = get();
 
     if (!selectedFilePath) {
       return;
@@ -151,20 +167,45 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
 
     const currentDocument = fileDocuments[selectedFilePath];
     const baseContent = currentDocument?.baseContent ?? selectedFileBaseContent ?? markdown;
+    // Carried, never looked up here: the mtime belongs to the moment the
+    // baseline was read, and only the reader of the file knows it.
+    const baseMtimeMs = currentDocument?.baseMtimeMs;
+    const isDirty = markdown !== baseContent;
+    // Becoming dirty is the one automatic way into the "In progress" list,
+    // and only when the user has asked for that; by default pinning is the
+    // only way in.
+    const nextWorkingSet =
+      isDirty && shouldAutoAdmitWorkingSet() && !hasWorkingSetEntry(workingSet, selectedFilePath)
+        ? addWorkingSetEntry(workingSet, selectedFilePath)
+        : workingSet;
 
     set({
       selectedFileContent: markdown,
       selectedFileBaseContent: baseContent,
-      isDirty: markdown !== baseContent,
+      isDirty,
       fileDocuments: {
         ...fileDocuments,
         [selectedFilePath]: {
           content: markdown,
-          baseContent
+          baseContent,
+          baseMtimeMs
         }
       },
+      workingSet: nextWorkingSet,
       saveError: null
     });
+
+    if (nextWorkingSet !== workingSet) {
+      persistWorkingSet(folderPath, nextWorkingSet);
+    }
+
+    // The draft follows the dirty state: typed back to the baseline means
+    // there is nothing to keep.
+    if (markdown === baseContent) {
+      discardDraft(folderPath, selectedFilePath);
+    } else {
+      scheduleDraft(folderPath, selectedFilePath, markdown, baseMtimeMs ?? null);
+    }
   },
   // A markdown file can be written in more than one way for the same document
   // (loose lists, "*" vs "-" bullets, "1)" vs "1."), and the editor always
@@ -189,7 +230,8 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
         ...fileDocuments,
         [filePath]: {
           content: markdown,
-          baseContent: markdown
+          baseContent: markdown,
+          baseMtimeMs: currentDocument?.baseMtimeMs
         }
       },
       ...(isSelected
@@ -202,11 +244,13 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
     });
   },
   discardSelectedFileChanges: () => {
-    const { selectedFilePath, selectedFileBaseContent, fileDocuments } = get();
+    const { selectedFilePath, selectedFileBaseContent, fileDocuments, folderPath } = get();
 
     if (!selectedFilePath || selectedFileBaseContent === null) {
       return false;
     }
+
+    discardDraft(folderPath, selectedFilePath);
 
     set({
       selectedFileContent: selectedFileBaseContent,
@@ -216,26 +260,69 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
         ...fileDocuments,
         [selectedFilePath]: {
           content: selectedFileBaseContent,
-          baseContent: selectedFileBaseContent
+          baseContent: selectedFileBaseContent,
+          baseMtimeMs: fileDocuments[selectedFilePath]?.baseMtimeMs
         }
       },
-      saveError: null
+      saveError: null,
+      saveConflict: null
     });
 
     return true;
   },
   saveSelectedFile: async (options) => {
-    const { selectedFilePath, selectedFileContent, folderPath, fileDocuments } = get();
+    const { selectedFilePath } = get();
 
-    if (!selectedFilePath || selectedFileContent === null) {
+    if (!selectedFilePath) {
       return false;
     }
 
-    const previousBaseContent = fileDocuments[selectedFilePath]?.baseContent ?? selectedFileContent;
+    return get().saveFilePath(selectedFilePath, options);
+  },
+  saveFilePath: async (filePath, options) => {
+    const { selectedFilePath: openFilePath, selectedFileContent: openContent, folderPath, fileDocuments } = get();
+    const previousDocument = fileDocuments[filePath];
+    // The editor's own copy is the authority for the open note (the two are
+    // kept in step, but this is the one the user sees).
+    const selectedFileContent =
+      filePath === openFilePath && openContent !== null ? openContent : previousDocument?.content ?? null;
+    const selectedFilePath = filePath;
 
-    set({ isSaving: true, saveError: null });
+    if (selectedFileContent === null) {
+      return false;
+    }
+
+    const previousBaseContent = previousDocument?.baseContent ?? selectedFileContent;
+
+    set({ isSaving: true, saveError: null, saveConflict: null });
 
     try {
+      const currentMtimeMs = await readMarkdownFileMtime(selectedFilePath);
+
+      if (!options?.force && isExternallyModified(previousDocument?.baseMtimeMs, currentMtimeMs)) {
+        // Someone else's version is on disk. A manual save asks; an
+        // auto-save, which fires from a timer while the user types, must
+        // not open a dialog, so it steps back and leaves the document dirty
+        // (the draft carries it) until the next manual save.
+        set({
+          isSaving: false,
+          saveConflict: options?.trigger === "auto" ? null : { filePath: selectedFilePath }
+        });
+
+        return false;
+      }
+
+      if (options?.force && currentMtimeMs !== null) {
+        // The version being overwritten is the only copy of someone else's
+        // work; it goes into the history before the write, so overwriting
+        // is never destructive while versioning is on.
+        const diskContent = await readMarkdownFile(selectedFilePath).catch(() => null);
+
+        if (diskContent !== null && diskContent !== selectedFileContent) {
+          await snapshotFileVersionNow(folderPath, selectedFilePath, diskContent);
+        }
+      }
+
       // A folder note is written into its folder on the first save; the
       // folder can still be one the agent has only proposed so far.
       if (isFolderNotePath(selectedFilePath)) {
@@ -243,6 +330,13 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
       }
 
       await writeMarkdownFile(selectedFilePath, selectedFileContent);
+
+      // What was just written is on disk; the draft has nothing left to protect.
+      discardDraft(folderPath, selectedFilePath);
+
+      // The mtime the write produced is the new baseline; without it every
+      // following save would see its own write as someone else's change.
+      const writtenMtimeMs = await readMarkdownFileMtime(selectedFilePath);
 
       snapshotFileVersion(folderPath, selectedFilePath, selectedFileContent, {
         throttle: options?.trigger === "auto"
@@ -274,14 +368,18 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
         ...(isKnown
           ? {}
           : {
-              filePaths: insertFilePathSorted(currentState.filePaths, selectedFilePath),
-              fileMtimeMs: { ...currentState.fileMtimeMs, [selectedFilePath]: Date.now() }
+              filePaths: insertFilePathSorted(currentState.filePaths, selectedFilePath)
             }),
+        fileMtimeMs: {
+          ...currentState.fileMtimeMs,
+          [selectedFilePath]: writtenMtimeMs ?? Date.now()
+        },
         fileDocuments: {
           ...currentState.fileDocuments,
           [selectedFilePath]: {
             content: nextSelectedContent,
-            baseContent: selectedFileContent
+            baseContent: selectedFileContent,
+            baseMtimeMs: writtenMtimeMs
           }
         },
         selectedFileBaseContent:
@@ -305,6 +403,9 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
 
       return false;
     }
+  },
+  dismissSaveConflict: () => {
+    set({ saveConflict: null });
   },
   // Restoring writes the version's content into the open document and saves
   // it, which creates a *new* version on top of the history. Nothing in the
@@ -517,6 +618,9 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
       await createMarkdownFolderAtPath(targetDirectory);
       await writeMarkdownFile(filePath, content);
       snapshotFileVersion(folderPath, filePath, content);
+      // The document below starts clean; a draft left from an earlier life of
+      // this path would come back dirty on the next open.
+      discardDraft(folderPath, filePath);
 
       const parentRelativePath = getRelativeDisplayPath(folderPath, targetDirectory);
       const currentManualOrder = get().manualOrder;
@@ -662,6 +766,7 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
 
       await renameMarkdownFile(filePath, newFilePath);
       moveFileVersionHistory(get().folderPath, filePath, newFilePath);
+      moveDraftFor(get().folderPath, filePath, newFilePath);
 
       const currentState = get();
       const nextDocuments = { ...currentState.fileDocuments };
@@ -688,6 +793,10 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
         persistManualOrderIfChanged(currentState.folderPath, currentState.manualOrder, nextManualOrder);
       }
 
+      const nextWorkingSet = remapWorkingSetPaths(currentState.workingSet, (path) =>
+        path === filePath ? newFilePath : path
+      );
+
       set({
         filePaths: insertFilePathSorted(
           currentState.filePaths.filter((path) => path !== filePath),
@@ -699,8 +808,13 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
             ? newFilePath
             : currentState.selectedFilePath,
         manualOrder: nextManualOrder,
+        workingSet: nextWorkingSet,
         fileError: null
       });
+
+      if (nextWorkingSet !== currentState.workingSet) {
+        persistWorkingSet(currentState.folderPath, nextWorkingSet);
+      }
 
       return true;
     } catch (error) {
@@ -728,6 +842,7 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
       }
 
       deleteFileVersionHistory(folderPath, filePath);
+      discardDraft(folderPath, filePath);
 
       if (folderPath) {
         void cleanupOrphanedImages(folderPath, filePath, contentBeforeDelete, "").catch(() => undefined);
@@ -766,6 +881,8 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
         }
       }
 
+      const nextWorkingSet = removeWorkingSetEntry(currentState.workingSet, filePath);
+
       set({
         filePaths: nextFilePaths,
         emptyFolderPaths: nextEmptyFolderPaths,
@@ -775,8 +892,13 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
         selectedFileBaseContent: isSelected ? null : currentState.selectedFileBaseContent,
         isDirty: isSelected ? false : currentState.isDirty,
         manualOrder: nextManualOrder,
+        workingSet: nextWorkingSet,
         fileError: null
       });
+
+      if (nextWorkingSet.length !== currentState.workingSet.length) {
+        persistWorkingSet(folderPath, nextWorkingSet);
+      }
 
       return true;
     } catch (error) {
@@ -802,10 +924,12 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
             ...get().fileDocuments,
             [filePath]: {
               content: newContent,
-              baseContent: existingDocument.baseContent
+              baseContent: existingDocument.baseContent,
+              baseMtimeMs: existingDocument.baseMtimeMs
             }
           }
         });
+        scheduleDraft(get().folderPath, filePath, newContent, existingDocument.baseMtimeMs ?? null);
       } else {
         await writeMarkdownFile(filePath, newContent);
 

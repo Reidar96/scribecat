@@ -7,6 +7,7 @@ import {
   type HeadingNumberingSettings
 } from "@/lib/editor/headingNumbers";
 import { VAULT_META_DIR_NAME } from "@/lib/fileSystem";
+import { normalizeStoredWorkingSet, type StoredWorkingSet } from "@/store/appStore/workingSet";
 
 export type SortMode = "name" | "modified" | "manual";
 
@@ -18,6 +19,7 @@ const ORDER_FILE_NAME = "order.json";
 const MANUSCRIPT_FILE_NAME = "manuscript.json";
 const HEADING_NUMBERING_FILE_NAME = "heading-numbering.json";
 const FOLDER_NOTES_FILE_NAME = "folder-notes.json";
+const WORKING_SET_FILE_NAME = "open-files.json";
 const SORT_MODES: SortMode[] = ["name", "modified", "manual"];
 
 /**
@@ -96,6 +98,32 @@ export async function writeManualOrder(folderPath: string, order: ManualOrderMap
   const dirPath = await vaultMetaDirPath(folderPath);
   await mkdir(dirPath, { recursive: true });
   await writeTextFile(await join(dirPath, ORDER_FILE_NAME), JSON.stringify(order, null, 2));
+}
+
+/**
+ * The "In progress" list (store/appStore/workingSet.ts), per vault like the
+ * manual order: which notes the user had in hand, so the next open of the
+ * folder can put them back. Relative paths, so the file travels with the
+ * vault.
+ */
+export async function readWorkingSet(folderPath: string): Promise<StoredWorkingSet> {
+  try {
+    const filePath = await join(await vaultMetaDirPath(folderPath), WORKING_SET_FILE_NAME);
+
+    if (!(await exists(filePath))) {
+      return { version: 1, entries: [] };
+    }
+
+    return normalizeStoredWorkingSet(JSON.parse(await readTextFile(filePath)));
+  } catch {
+    return { version: 1, entries: [] };
+  }
+}
+
+export async function writeWorkingSet(folderPath: string, workingSet: StoredWorkingSet): Promise<void> {
+  const dirPath = await vaultMetaDirPath(folderPath);
+  await mkdir(dirPath, { recursive: true });
+  await writeTextFile(await join(dirPath, WORKING_SET_FILE_NAME), JSON.stringify(workingSet, null, 2));
 }
 
 /**

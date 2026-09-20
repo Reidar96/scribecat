@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { BookOpen, Copy, Download, FileDown, FilePlus, FolderArchive, FolderInput, FolderPlus, Pencil, Printer, Trash2 } from "lucide-react";
+import { BookOpen, Copy, Download, FileDown, FilePlus, FolderArchive, FolderInput, FolderPlus, Pencil, Pin, PinOff, Printer, Trash2, Undo2, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { getVaultCapabilities, platform, vaultCapabilityHint } from "@/platform";
 import { dirname, join } from "@/platform/paths";
@@ -15,8 +15,9 @@ import {
 import { canDownloadFolderArchive, canDownloadMarkdown } from "@/lib/export/markdownDownload";
 import { getRelativeDisplayPath, type MarkdownFileRecord } from "@/lib/fileSystem";
 import { buildFileTree, type FileTreeFolderNode, type FileTreeNode } from "@/lib/fileTree";
-import { getFolderNoteFolderPath, isFolderNotePath } from "@/lib/folderNotes";
+import { getFolderNoteFolderPath, getFolderNotePath, isFolderNotePath } from "@/lib/folderNotes";
 import type { ManualOrderMap, SortMode } from "@/lib/vaultMeta";
+import { normalizePathKey } from "@/store/appStore/pathUtils";
 import type { MoveTreeEntryInput } from "@/store/useAppStore";
 import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
 import { useSearchStore } from "@/store/useSearchStore";
@@ -48,6 +49,14 @@ type FileTreeProps = {
   emptyFolderPaths: string[];
   selectedFilePath: string | null;
   dirtyFilePaths: string[];
+  /** Notes in the "In progress" list; decides between pin and unpin in the menu. */
+  workingSetFilePaths: string[];
+  onPinWorkingSetEntry: (filePath: string) => void;
+  onUnpinWorkingSetEntry: (filePath: string) => void;
+  /** Closes the note's entry (asking first when dirty); the tree's item in pin-only mode. */
+  onCloseWorkingSetEntry: (filePath: string) => void;
+  /** Throws away a dirty note's unsaved edits without asking. */
+  onDiscardChangesRequest: (filePath: string) => void;
   pendingFolderRename?: PendingFolderRename | null;
   sortMode: SortMode;
   manualOrder: ManualOrderMap;
@@ -86,6 +95,11 @@ export function FileTree({
   emptyFolderPaths,
   selectedFilePath,
   dirtyFilePaths,
+  workingSetFilePaths,
+  onPinWorkingSetEntry,
+  onUnpinWorkingSetEntry,
+  onCloseWorkingSetEntry,
+  onDiscardChangesRequest,
   pendingFolderRename,
   sortMode,
   manualOrder,
@@ -132,6 +146,9 @@ export function FileTree({
   // Folder notes on: a click on a folder's name opens its note and only the
   // chevron toggles it. Off: the whole row toggles, as it always has.
   const folderNotesEnabled = useEditorSettingsStore((state) => state.folderNotesEnabled);
+  // Pin-only admission: an entry is an entry, "unpin" has no meaning, so the
+  // listed note offers "close" instead (see WorkingSetPanel).
+  const autoAdmitWorkingSet = useEditorSettingsStore((state) => state.autoAdmitWorkingSet);
 
   // What the agent has proposed, indexed the way the rows need it.
   //
@@ -252,6 +269,13 @@ export function FileTree({
     [treeNodes, fileMatchCounts]
   );
 
+  // Dirty notes per subtree, for the ring on a collapsed folder: a draft
+  // restored after a restart may sit in a folder nobody has opened yet.
+  const folderDirtyCounts = useMemo(
+    () => buildFolderMatchCounts(treeNodes, Object.fromEntries(dirtyFilePaths.map((filePath) => [filePath, 1]))),
+    [treeNodes, dirtyFilePaths]
+  );
+
   // Same aggregation for the paw: a collapsed folder has to say that something
   // inside it is waiting, and no row can work that out without re-walking its
   // own subtree on every render.
@@ -367,6 +391,20 @@ export function FileTree({
 
   const openFolderNoteOf = (node: FileTreeFolderNode) => {
     void join(folderPath, node.relativePath).then(onOpenFolderNote);
+  };
+
+  // Double-click, Enter: the deliberate way into "In progress" (a click
+  // only shows the note). A folder row stands in for its note when folder
+  // notes are on; without them a folder has nothing to pin.
+  const pinNode = (node: FileTreeNode) => {
+    if (node.kind === "file") {
+      onPinWorkingSetEntry(node.filePath);
+      return;
+    }
+
+    if (folderNotesEnabled) {
+      void join(folderPath, node.relativePath).then((path) => onPinWorkingSetEntry(getFolderNotePath(path)));
+    }
   };
 
   const handleRowClick = (node: FileTreeNode, event: React.MouseEvent) => {
@@ -520,6 +558,29 @@ export function FileTree({
       onRequestEditorFocus?.();
     }
 
+    // Enter on a note opens and pins it. The row is a button, so without
+    // the preventDefault the key would also fire its click (a plain open).
+    // Only from a row itself: the "…" button in the row and the rename input
+    // have Enter meanings of their own.
+    const isFromRow = event.target instanceof HTMLElement && event.target.getAttribute("role") === "treeitem";
+
+    if (event.key === "Enter" && isFromRow && activeKey && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      const activeNode = flatNodes.find((node) => getNodeKey(node) === activeKey);
+
+      if (activeNode && (activeNode.kind === "file" || folderNotesEnabled)) {
+        event.preventDefault();
+
+        if (activeNode.kind === "file") {
+          void onSelectFilePath(activeNode.filePath);
+        } else {
+          openFolderNoteOf(activeNode);
+        }
+
+        pinNode(activeNode);
+        return;
+      }
+    }
+
     if (event.key === "F2" && capabilities.rename) {
       if (!activeKey) {
         return;
@@ -634,6 +695,7 @@ export function FileTree({
             expandedFolderPaths={expandedFolderPaths}
             folderMatchCounts={folderMatchCounts}
             folderStagedCounts={folderStagedCounts}
+            folderDirtyCounts={folderDirtyCounts}
             stagedKeys={staged.changedKeys}
             stagedCreatedKeys={staged.createdKeys}
             stagedDeletedKeys={staged.deletedKeys}
@@ -651,6 +713,7 @@ export function FileTree({
             dragSourceKeys={dragSourceKeys}
             dropIndicator={dropIndicator}
             onRowClick={handleRowClick}
+            onRowDoubleClick={pinNode}
             onToggleFolder={toggleFolderNode}
             onRowContextMenu={handleRowContextMenu}
             onRenameDraftChange={setRenameDraft}
@@ -857,6 +920,57 @@ export function FileTree({
                 >
                   <Copy aria-hidden="true" />
                   {t("fileTree.duplicate")}
+                </button>
+              ) : null}
+
+              {contextMenu.kind === "file" ? (
+                workingSetFilePaths.some((path) => normalizePathKey(path) === normalizePathKey(contextMenu.filePath)) ? (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="file-tree-context-menu__item"
+                    onClick={() => {
+                      if (autoAdmitWorkingSet) {
+                        onUnpinWorkingSetEntry(contextMenu.filePath);
+                      } else {
+                        onCloseWorkingSetEntry(contextMenu.filePath);
+                      }
+
+                      setContextMenu(null);
+                    }}
+                  >
+                    {autoAdmitWorkingSet ? <PinOff aria-hidden="true" /> : <X aria-hidden="true" />}
+                    {autoAdmitWorkingSet ? t("fileTree.unpinWorkingSet") : t("fileTree.closeWorkingSet")}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="file-tree-context-menu__item"
+                    onClick={() => {
+                      onPinWorkingSetEntry(contextMenu.filePath);
+                      setContextMenu(null);
+                    }}
+                  >
+                    <Pin aria-hidden="true" />
+                    {t("fileTree.pinWorkingSet")}
+                  </button>
+                )
+              ) : null}
+
+              {/* A draft closes from here too, with the section folded away. */}
+              {contextMenu.kind === "file" && dirtyFilePaths.includes(contextMenu.filePath) ? (
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="file-tree-context-menu__item"
+                  onClick={() => {
+                    onDiscardChangesRequest(contextMenu.filePath);
+                    setContextMenu(null);
+                  }}
+                >
+                  <Undo2 aria-hidden="true" />
+                  {t("fileTree.discardChanges")}
                 </button>
               ) : null}
 

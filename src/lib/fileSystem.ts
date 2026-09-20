@@ -108,6 +108,16 @@ export async function readMarkdownFile(filePath: string): Promise<string> {
   return readTextFile(filePath);
 }
 
+/** The file's mtime in ms, or null when it cannot be read (missing, no access). */
+export async function readMarkdownFileMtime(filePath: string): Promise<number | null> {
+  try {
+    const info = await stat(filePath);
+    return info.mtime ? info.mtime.getTime() : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Every write to a vault markdown file goes through here. Versioning is not
  * wired in at this level (that would make the filesystem layer depend on the

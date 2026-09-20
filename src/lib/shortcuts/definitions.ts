@@ -24,6 +24,7 @@ export type ShortcutActionId =
   | "shortcutsOverview"
   | "navigateBack"
   | "navigateForward"
+  | "closeWorkingSetEntry"
   | "toggleChat"
   | "newChat"
   | "toggleDetailsPanel"
@@ -187,6 +188,13 @@ export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
     category: "app",
     descriptionKey: "shortcutsDialog.items.navigateForward",
     defaultBinding: combo({ alt: true }, "ArrowRight", "", "→")
+  },
+  {
+    id: "closeWorkingSetEntry",
+    scope: "global",
+    category: "app",
+    descriptionKey: "shortcutsDialog.items.closeWorkingSetEntry",
+    defaultBinding: letter(CTRL, "W")
   },
   {
     id: "toggleChat",

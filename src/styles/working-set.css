@@ -1,0 +1,308 @@
+/* The "In progress" section above the file tree (components/sidebar/
+   WorkingSetPanel.tsx), the drag handle between the two sections, and the
+   tree's own collapsible header that appears alongside it. */
+
+/* The two sections share the sidebar's last grid row as a column: the list
+   takes what its rows need (up to the dragged ceiling), the tree the rest. */
+.sidebar-panel__sections {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  gap: 0.25rem;
+}
+
+.working-set {
+  /* One row: two lines of text plus padding. The height hook reads this,
+     so the drag clamp and the layout agree on what a row is. */
+  --working-set-row-height: 44px;
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+  min-height: 0;
+}
+
+.working-set--fills {
+  flex: 1 1 auto;
+}
+
+.working-set__header,
+.sidebar-panel__tree-header {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-height: 1.9rem;
+}
+
+.working-set__toggle,
+.sidebar-panel__tree-toggle {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+  border: none;
+  border-radius: 0.5rem;
+  background: transparent;
+  padding: 0.25rem 0.4rem;
+  color: rgba(var(--muted-rgb), 0.95);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-align: left;
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.working-set__toggle:hover,
+.sidebar-panel__tree-toggle:hover {
+  background: rgba(var(--surface-hover-rgb), 0.92);
+  color: rgba(var(--text-rgb), var(--text-default-alpha));
+}
+
+.working-set__toggle svg,
+.sidebar-panel__tree-toggle svg {
+  flex-shrink: 0;
+  width: 0.85rem;
+  height: 0.85rem;
+}
+
+.working-set__title {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.working-set__count {
+  flex-shrink: 0;
+  font-weight: 500;
+  opacity: 0.75;
+}
+
+.working-set__header-action {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: none;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: rgba(var(--muted-rgb), 0.9);
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.working-set__header-action svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.working-set__header-action:hover:not(:disabled) {
+  background: rgba(var(--surface-hover-rgb), 0.92);
+  color: rgba(var(--text-rgb), var(--text-default-alpha));
+}
+
+.working-set__header-action:disabled {
+  cursor: default;
+  opacity: 0.35;
+}
+
+/* The ceiling comes inline from the hook; the list is as tall as its rows
+   below it and scrolls above it. When the tree is folded the section fills
+   the sidebar instead (no inline max-height then). */
+.working-set__list {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.1rem;
+}
+
+.working-set__item {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.working-set__row {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  height: var(--working-set-row-height);
+  border: none;
+  border-radius: 0.5rem;
+  background: transparent;
+  /* Room on the right for the close button that overlays the row. */
+  padding: 0.3rem 2rem 0.3rem 0.75rem;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 160ms ease;
+}
+
+.working-set__row:hover {
+  background: rgba(var(--surface-hover-rgb), 0.92);
+}
+
+.working-set__row:focus-visible {
+  outline: none;
+  background: rgba(var(--selection-rgb), 0.14);
+}
+
+/* Same marker as the open note in the tree (file-tree.css --active). */
+.working-set__row--active {
+  background: rgba(var(--surface-active-rgb), 0.96);
+  box-shadow: inset 3px 0 0 rgba(var(--accent-rgb), 0.85);
+}
+
+.working-set__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.working-set__name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 0.9rem;
+}
+
+.working-set__folder {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 0.7rem;
+  color: rgba(var(--muted-rgb), 0.85);
+}
+
+.working-set__pin {
+  flex-shrink: 0;
+  width: 0.8rem;
+  height: 0.8rem;
+  color: rgba(var(--muted-rgb), 0.8);
+}
+
+/* Shown on hover and on keyboard focus of the row or the button itself;
+   otherwise the row reads as a plain list. */
+.working-set__close {
+  position: absolute;
+  top: 50%;
+  right: 0.35rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: none;
+  border-radius: 0.4rem;
+  background: transparent;
+  color: rgba(var(--muted-rgb), 0.9);
+  transform: translateY(-50%);
+  opacity: 0;
+  cursor: pointer;
+  transition: opacity 120ms ease, background 120ms ease;
+}
+
+.working-set__close svg {
+  width: 0.85rem;
+  height: 0.85rem;
+}
+
+.working-set__item:hover .working-set__close,
+.working-set__row:focus-visible ~ .working-set__close,
+.working-set__close:focus-visible {
+  opacity: 1;
+}
+
+.working-set__close:hover {
+  background: rgba(var(--overlay-rgb), 0.12);
+  color: rgba(var(--text-rgb), var(--text-default-alpha));
+}
+
+/* The handle between the sections: workspace-resizer turned horizontal.
+   Its clamp keeps it under the last row, never in empty space. */
+.working-set__resizer {
+  position: relative;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  height: 0.6rem;
+  margin: 0 0.5rem;
+  cursor: row-resize;
+  touch-action: none;
+}
+
+.working-set__resizer .workspace-resizer__grip {
+  width: 100%;
+  height: 3px;
+}
+
+.working-set__resizer:hover .workspace-resizer__grip,
+.working-set__resizer:focus-visible .workspace-resizer__grip,
+.working-set__resizer.workspace-resizer--active .workspace-resizer__grip {
+  width: 100%;
+  height: 4px;
+  background: rgba(var(--muted-rgb), 0.65);
+}
+
+.working-set__resizer:focus-visible {
+  outline: none;
+}
+
+/* Touch: the "…" button (styles shared with the tree in responsive.css)
+   stands in for hover and right-click; the cross has no hover to appear on. */
+@media (pointer: coarse) {
+  .working-set__row {
+    min-height: 2.75rem;
+    padding-right: 3rem;
+  }
+
+  .working-set__close {
+    display: none;
+  }
+
+  /* Centred on the two-line row (the tree positions it for its one-liners). */
+  .working-set__item .file-tree__more {
+    top: 50%;
+    transform: translateY(-50%);
+  }
+}
+
+body.is-resizing-working-set {
+  cursor: row-resize;
+  user-select: none;
+}
+
+/* The tree section: header only while the list above it exists, so a vault
+   without notes in progress looks exactly as it did before. */
+.sidebar-panel__tree {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.sidebar-panel__tree--collapsed {
+  flex: 0 0 auto;
+}
+
+.sidebar-panel__tree .sidebar-panel__scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+}

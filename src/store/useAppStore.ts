@@ -3,6 +3,7 @@ import { create } from "zustand";
 import { createFileSlice } from "./appStore/fileSlice";
 import { createFolderSlice } from "./appStore/folderSlice";
 import { createTreeSlice } from "./appStore/treeSlice";
+import { createWorkingSetSlice } from "./appStore/workingSetSlice";
 import { initialAppData } from "./appStore/initialState";
 import type { AppState } from "./appStore/types";
 
@@ -11,6 +12,7 @@ export type {
   FileDocumentState,
   MoveTreeEntryInput
 } from "./appStore/types";
+export type { WorkingSetEntry } from "./appStore/workingSet";
 
 /**
  * One store, composed from three slices (see appStore/types.ts for why each
@@ -21,5 +23,6 @@ export const useAppStore = create<AppState>()((...args) => ({
   ...initialAppData,
   ...createFolderSlice(...args),
   ...createFileSlice(...args),
-  ...createTreeSlice(...args)
+  ...createTreeSlice(...args),
+  ...createWorkingSetSlice(...args)
 }));

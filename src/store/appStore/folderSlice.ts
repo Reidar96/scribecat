@@ -25,6 +25,7 @@ import {
   pruneDocumentsToCurrentFolder,
   refreshCleanDocumentsFromDisk
 } from "./documents";
+import { deleteFolderDraftsFor, flushDrafts, moveFolderDraftsFor } from "./drafts";
 import { toErrorMessage } from "./errors";
 import { buildFileMtimeMap, createLoadedFolderState } from "./folderState";
 import { initialAppData } from "./initialState";
@@ -49,6 +50,8 @@ import {
 } from "./pathUtils";
 import type { AppSlice, FileDocumentState, FolderSlice } from "./types";
 import { deleteFolderVersionHistory, moveFolderVersionHistory } from "./versioning";
+import { pruneWorkingSet } from "./workingSet";
+import { persistWorkingSet } from "./workingSetSlice";
 
 export const createFolderSlice: AppSlice<FolderSlice> = (set, get) => ({
   openFolder: async () => {
@@ -62,6 +65,9 @@ export const createFolderSlice: AppSlice<FolderSlice> = (set, get) => ({
         return false;
       }
 
+      // The document map is about to be replaced; nothing may still sit in
+      // the draft timer when it goes.
+      await flushDrafts();
       await allowMarkdownFolderAccess(folderPath);
       const markdownFiles = await listMarkdownFiles(folderPath);
       const loadedState = await createLoadedFolderState(folderPath, markdownFiles);
@@ -94,6 +100,7 @@ export const createFolderSlice: AppSlice<FolderSlice> = (set, get) => ({
     set({ isLoading: true, folderError: null });
 
     try {
+      await flushDrafts();
       await allowMarkdownFolderAccess(folderPath);
       const markdownFiles = await listMarkdownFiles(folderPath);
       const loadedState = await createLoadedFolderState(folderPath, markdownFiles);
@@ -133,6 +140,9 @@ export const createFolderSlice: AppSlice<FolderSlice> = (set, get) => ({
     }
   },
   closeFolder: () => {
+    // Pending drafts carry their own vault path, so they can still go out
+    // after the store has forgotten the folder.
+    void flushDrafts();
     setActiveVaultStorage(null);
     clearLastOpenedFolderPath();
     set({ ...initialAppData });
@@ -149,10 +159,7 @@ export const createFolderSlice: AppSlice<FolderSlice> = (set, get) => ({
     try {
       const markdownFiles = await listMarkdownFiles(folderPath);
       const nextFilePaths = markdownFiles.map((record) => record.filePath);
-      const refreshedDocuments = await refreshCleanDocumentsFromDisk(
-        fileDocuments,
-        nextFilePaths
-      );
+      const refreshedDocuments = await refreshCleanDocumentsFromDisk(fileDocuments, markdownFiles);
 
       // The reads above take time (a round trip per file on a server vault),
       // and the user keeps typing meanwhile. Anything that changed in the
@@ -189,12 +196,20 @@ export const createFolderSlice: AppSlice<FolderSlice> = (set, get) => ({
         markdownFiles,
         emptyFolderRelativePaths
       );
+      // An entry survives exactly as long as its document would: on disk,
+      // or dirty, or a proposal / unwritten folder note the pruning kept.
+      const nextFilePathSet = new Set(nextFilePaths);
+      const nextWorkingSet = pruneWorkingSet(
+        latestState.workingSet,
+        (path) => nextFilePathSet.has(path) || path in nextDocuments
+      );
 
       set({
         filePaths: nextFilePaths,
         fileDocuments: nextDocuments,
         fileMtimeMs: buildFileMtimeMap(markdownFiles),
         manualOrder: nextManualOrder,
+        workingSet: nextWorkingSet,
         selectedFilePath: selectedDocument ? currentSelectedFilePath : null,
         selectedFileContent: selectedDocument ? selectedDocument.content : null,
         selectedFileBaseContent: selectedDocument ? selectedDocument.baseContent : null,
@@ -203,6 +218,10 @@ export const createFolderSlice: AppSlice<FolderSlice> = (set, get) => ({
         isRefreshing: false,
         folderError: null
       });
+
+      if (nextWorkingSet.length !== latestState.workingSet.length) {
+        persistWorkingSet(folderPath, nextWorkingSet);
+      }
 
       return true;
     } catch (error) {
@@ -338,6 +357,7 @@ export const createFolderSlice: AppSlice<FolderSlice> = (set, get) => ({
 
       await renameMarkdownFolder(folderPath, newFolderPath);
       moveFolderVersionHistory(get().folderPath, folderPath, newFolderPath);
+      moveFolderDraftsFor(get().folderPath, folderPath, newFolderPath);
 
       const currentState = get();
       const nextFilePaths = await Promise.all(
@@ -361,6 +381,12 @@ export const createFolderSlice: AppSlice<FolderSlice> = (set, get) => ({
       const nextSelectedFilePath = currentState.selectedFilePath
         ? await remapPathUnderRenamedFolder(currentState.selectedFilePath, folderPath, newFolderPath)
         : currentState.selectedFilePath;
+      const remappedWorkingSetPaths = await Promise.all(
+        currentState.workingSet.map((entry) => remapPathUnderRenamedFolder(entry.filePath, folderPath, newFolderPath))
+      );
+      const nextWorkingSet = currentState.workingSet.map((entry, index) =>
+        remappedWorkingSetPaths[index] === entry.filePath ? entry : { ...entry, filePath: remappedWorkingSetPaths[index] }
+      );
 
       let nextManualOrder = currentState.manualOrder;
 
@@ -387,8 +413,13 @@ export const createFolderSlice: AppSlice<FolderSlice> = (set, get) => ({
         fileDocuments: nextDocuments,
         selectedFilePath: nextSelectedFilePath,
         manualOrder: nextManualOrder,
+        workingSet: nextWorkingSet,
         fileError: null
       });
+
+      if (nextWorkingSet !== currentState.workingSet) {
+        persistWorkingSet(currentState.folderPath, nextWorkingSet);
+      }
 
       return true;
     } catch (error) {
@@ -403,6 +434,7 @@ export const createFolderSlice: AppSlice<FolderSlice> = (set, get) => ({
     try {
       await deleteMarkdownFolder(folderPath);
       deleteFolderVersionHistory(get().folderPath, folderPath);
+      deleteFolderDraftsFor(get().folderPath, folderPath);
 
       const currentState = get();
       const isSelectedInside =
@@ -430,6 +462,11 @@ export const createFolderSlice: AppSlice<FolderSlice> = (set, get) => ({
         persistManualOrderIfChanged(vaultRootPath, currentState.manualOrder, nextManualOrder);
       }
 
+      const nextWorkingSet = pruneWorkingSet(
+        currentState.workingSet,
+        (path) => !isPathInsideFolder(path, folderPath)
+      );
+
       set({
         filePaths: currentState.filePaths.filter((path) => !isPathInsideFolder(path, folderPath)),
         emptyFolderPaths: currentState.emptyFolderPaths.filter(
@@ -443,8 +480,13 @@ export const createFolderSlice: AppSlice<FolderSlice> = (set, get) => ({
         selectedFileBaseContent: isSelectedInside ? null : currentState.selectedFileBaseContent,
         isDirty: isSelectedInside ? false : currentState.isDirty,
         manualOrder: nextManualOrder,
+        workingSet: nextWorkingSet,
         fileError: null
       });
+
+      if (nextWorkingSet.length !== currentState.workingSet.length) {
+        persistWorkingSet(currentState.folderPath, nextWorkingSet);
+      }
 
       return true;
     } catch (error) {

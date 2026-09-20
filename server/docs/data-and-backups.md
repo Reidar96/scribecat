@@ -35,18 +35,29 @@ what that means for the stored API keys).
 
 The same vault can be open in several browsers and desktop apps at once, and
 each sees the others' changes live. What the server does not do is lock a
-note: if two places have the same note open and both save, the later save
-wins and the earlier edit is lost, apart from the copy in the version
-history. So:
+note. What it does do is notice: a save checks whether the note on the
+server has changed since this app read it, and if so it asks before
+overwriting. Say yes and the server's version goes into the version history
+first (while versioning is on), so nothing is lost and the two can be
+compared there; say no and your edits stay unsaved in this app. An
+auto-save never asks; it just steps back and leaves the note marked as
+changed until you save by hand. There is no merge, so:
 
 - Different notes in different places: fine.
 - The same note open in two places, editing in one: fine, the other updates
   when it is reopened.
-- Typing in the same note in two places at once: do not. The one that saves
-  last overwrites the other.
+- Typing in the same note in two places at once: avoid it. Whoever saves
+  second gets the question, and one of the two edits ends up in the history
+  rather than in the note.
 
-A save that checks whether the note changed in the meantime is a possible
-later addition; for now this is a rule to keep.
+Unsaved edits are a different matter: a note you have typed into but not
+saved is kept as a draft, and the draft stays in the browser (or desktop
+app) you typed it in, not on the server. Close the tab, come back the next
+day, and the note is still marked as changed with your edits in place; the
+other devices see the saved note only. The desktop app does the same for a
+local folder, but there the draft lives in the vault's `.scribedog/drafts/`;
+for a server vault nothing of the kind is written to the server, so two
+people editing the same vault never see each other's half-written text.
 
 ## Backups
 

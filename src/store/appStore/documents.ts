@@ -1,5 +1,6 @@
 import { readMarkdownFile } from "@/lib/fileSystem";
 import { isFolderNotePath } from "@/lib/folderNotes";
+import type { MarkdownFileRecord } from "@/platform/types";
 
 import { normalizePathKey } from "./pathUtils";
 import { stagedOnlyPathKeys } from "./stagedPaths";
@@ -7,6 +8,31 @@ import type { FileDocumentState } from "./types";
 
 export function isDocumentDirty(document: FileDocumentState): boolean {
   return document.content !== document.baseContent;
+}
+
+/**
+ * Filesystems round mtimes differently (FAT to two seconds, some sync clients
+ * rewrite them on the way through), so the comparison has slack rather than
+ * demanding equality.
+ */
+export const EXTERNAL_CHANGE_TOLERANCE_MS = 1_000;
+
+/**
+ * Whether the file on disk is a different one from the one the document was
+ * read from. Unknown on either side (never looked up, file missing) is "no":
+ * a missing file has nothing to protect, and a baseline nobody recorded
+ * cannot be compared, so the save goes ahead as it always did.
+ */
+export function isExternallyModified(
+  baseMtimeMs: number | null | undefined,
+  currentMtimeMs: number | null | undefined,
+  toleranceMs: number = EXTERNAL_CHANGE_TOLERANCE_MS
+): boolean {
+  if (baseMtimeMs == null || currentMtimeMs == null) {
+    return false;
+  }
+
+  return Math.abs(currentMtimeMs - baseMtimeMs) > toleranceMs;
 }
 
 export function pruneDocumentsToCurrentFolder(
@@ -59,12 +85,12 @@ export function pruneDocumentsToCurrentFolder(
 
 export async function refreshCleanDocumentsFromDisk(
   fileDocuments: Record<string, FileDocumentState>,
-  filePaths: string[]
+  markdownFiles: MarkdownFileRecord[]
 ): Promise<Record<string, FileDocumentState>> {
-  const filePathSet = new Set(filePaths);
+  const mtimeByPath = new Map(markdownFiles.map((record) => [record.filePath, record.mtimeMs]));
   const nextDocuments: Record<string, FileDocumentState> = { ...fileDocuments };
   const cleanPathsToReload = Object.entries(fileDocuments)
-    .filter(([filePath, document]) => filePathSet.has(filePath) && !isDocumentDirty(document))
+    .filter(([filePath, document]) => mtimeByPath.has(filePath) && !isDocumentDirty(document))
     .map(([filePath]) => filePath);
 
   await Promise.all(
@@ -73,7 +99,8 @@ export async function refreshCleanDocumentsFromDisk(
         const markdown = await readMarkdownFile(filePath);
         nextDocuments[filePath] = {
           content: markdown,
-          baseContent: markdown
+          baseContent: markdown,
+          baseMtimeMs: mtimeByPath.get(filePath) ?? null
         };
       } catch {
         delete nextDocuments[filePath];

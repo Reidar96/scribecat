@@ -129,6 +129,9 @@ export const platform: Platform = {
       document.documentElement.style.setProperty("--app-zoom", String(factor));
     },
     reveal: async () => undefined,
+    // A tab has no close request to intercept; hooks that need the moment
+    // before unload listen to pagehide themselves.
+    onCloseRequested: async () => () => undefined,
     isFullscreen: async () => document.fullscreenElement !== null,
     setFullscreen: async (fullscreen) => {
       if (fullscreen) {

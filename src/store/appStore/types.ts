@@ -2,9 +2,27 @@ import type { StateCreator } from "zustand";
 
 import type { ManualOrderMap, SortMode } from "@/lib/vaultMeta";
 
+import type { WorkingSetEntry } from "./workingSet";
+
 export type FileDocumentState = {
   content: string;
   baseContent: string;
+  /**
+   * mtime of the file when `baseContent` was read from it, or null when the
+   * file did not exist then. Undefined means unknown (the document came from
+   * a write whose mtime nobody looked up), which skips the save-time conflict
+   * check until the next reload sets it.
+   */
+  baseMtimeMs?: number | null;
+};
+
+/**
+ * A save that found the file changed on disk since it was read
+ * (isExternallyModified). The UI asks; overwrite goes through
+ * saveSelectedFile({ force: true }).
+ */
+export type SaveConflict = {
+  filePath: string;
 };
 
 export type MoveTreeEntryInput = {
@@ -35,6 +53,9 @@ export type AppData = {
   folderError: string | null;
   fileError: string | null;
   saveError: string | null;
+  saveConflict: SaveConflict | null;
+  /** The "In progress" list above the tree; see workingSet.ts for the rules. */
+  workingSet: WorkingSetEntry[];
   sortMode: SortMode;
   manualOrder: ManualOrderMap;
   fileMtimeMs: Record<string, number>;
@@ -55,6 +76,8 @@ export type FolderSlice = {
   deleteFolderPath: (folderPath: string) => Promise<boolean>;
 };
 
+export type SaveOptions = { trigger?: "manual" | "auto"; force?: boolean };
+
 /** Selecting, editing, saving and mutating individual files. */
 export type FileSlice = {
   selectFilePath: (filePath: string) => Promise<boolean>;
@@ -73,8 +96,23 @@ export type FileSlice = {
    * it fires after every pause in typing and would otherwise fill the version
    * history with keystroke-sized snapshots; the versioning bridge throttles
    * those, a deliberate save is always snapshotted.
+   *
+   * Before writing, the file's mtime is compared with the one its baseline was
+   * read at. A file someone changed outside the app in the meantime is not
+   * overwritten: a manual save sets `saveConflict` for the UI to ask and
+   * resolves false; an auto-save resolves false without a word, since a timer
+   * must not open a dialog mid-sentence. `force` is the user's answer: the
+   * version on disk is snapshotted first (when versioning is on), then written
+   * over.
    */
-  saveSelectedFile: (options?: { trigger?: "manual" | "auto" }) => Promise<boolean>;
+  saveSelectedFile: (options?: SaveOptions) => Promise<boolean>;
+  /**
+   * The same save for any note that has a document, open or not: what
+   * closing a dirty entry of the working set with "Save" needs.
+   */
+  saveFilePath: (filePath: string, options?: SaveOptions) => Promise<boolean>;
+  /** The user chose not to overwrite; the document stays dirty. */
+  dismissSaveConflict: () => void;
   restoreFileVersion: (versionId: string) => Promise<boolean>;
   createNewFile: (targetDirectory?: string, insertAfterBasename?: string | null) => Promise<string | null>;
   /**
@@ -104,7 +142,19 @@ export type TreeSlice = {
   moveTreeEntry: (input: MoveTreeEntryInput) => Promise<boolean>;
 };
 
-export type AppState = AppData & FolderSlice & FileSlice & TreeSlice;
+/** The "In progress" list: admission by pin, removal, and discard for any note. */
+export type WorkingSetSlice = {
+  pinWorkingSetEntry: (filePath: string) => void;
+  unpinWorkingSetEntry: (filePath: string) => void;
+  /** Removes the entry; a dirty note has to be saved or discarded first (the UI asks). */
+  closeWorkingSetEntry: (filePath: string) => void;
+  /** Removes every clean, unpinned entry. */
+  closeSavedWorkingSetEntries: () => void;
+  /** Back to the saved state for any note with a document, open or not. */
+  discardFileChanges: (filePath: string) => boolean;
+};
+
+export type AppState = AppData & FolderSlice & FileSlice & TreeSlice & WorkingSetSlice;
 
 /**
  * Slices are typed against the *whole* AppState, not just their own part, so

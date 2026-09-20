@@ -401,6 +401,14 @@ export type WindowApi = {
   reveal(): Promise<void>;
   isFullscreen(): Promise<boolean>;
   setFullscreen(fullscreen: boolean): Promise<void>;
+  /**
+   * Runs `handler` when the user closes the window, and closes it once the
+   * handler has settled, whether it resolved or rejected: the app must always
+   * let itself be closed. Desktop only; in the browser a tab closes without
+   * asking, and the pending work is written on `pagehide` instead. Resolves
+   * to the function that removes the handler.
+   */
+  onCloseRequested(handler: () => Promise<void>): Promise<() => void>;
 };
 
 export type PlatformFeatures = {

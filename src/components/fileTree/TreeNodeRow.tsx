@@ -44,6 +44,8 @@ type TreeNodeRowProps = {
    * layer (slashes normalized, lowercased — Windows).
    */
   folderStagedCounts: Record<string, number>;
+  /** Dirty notes per folder subtree, the folder's own note included. */
+  folderDirtyCounts: Record<string, number>;
   stagedKeys: Set<string>;
   stagedCreatedKeys: Set<string>;
   stagedDeletedKeys: Set<string>;
@@ -67,6 +69,8 @@ type TreeNodeRowProps = {
   dragSourceKeys: string[];
   dropIndicator: DropIndicator | null;
   onRowClick: (node: FileTreeNode, event: React.MouseEvent) => void;
+  /** Double-click on a note (or a folder's note row): pins it to "In progress". */
+  onRowDoubleClick: (node: FileTreeNode) => void;
   /** The chevron's own click, once the row itself opens the note. */
   onToggleFolder: (node: FileTreeFolderNode) => void;
   onRowContextMenu: (node: FileTreeNode, x: number, y: number) => void;
@@ -117,6 +121,7 @@ export function TreeNodeRow({
   expandedFolderPaths,
   folderMatchCounts,
   folderStagedCounts,
+  folderDirtyCounts,
   stagedKeys,
   stagedCreatedKeys,
   stagedDeletedKeys,
@@ -134,6 +139,7 @@ export function TreeNodeRow({
   dragSourceKeys,
   dropIndicator,
   onRowClick,
+  onRowDoubleClick,
   onToggleFolder,
   onRowContextMenu,
   onRenameDraftChange,
@@ -275,6 +281,10 @@ export function TreeNodeRow({
     const isRenaming = renamingTarget?.kind === "folder" && renamingTarget.relativePath === node.relativePath;
     const isNoteActive = folderNotesEnabled && activeFolderNotePath === node.relativePath;
     const isNoteDirty = folderNotesEnabled && dirtyFolderNotePaths.has(node.relativePath);
+    // The ring says "something *inside*"; the folder's own note has the
+    // filled dot for itself, so it is taken out of the count.
+    const hasDirtyInside =
+      !isExpanded && (folderDirtyCounts[node.relativePath] ?? 0) - (isNoteDirty ? 1 : 0) > 0;
     const shownMatchCount = isExpanded ? folderNoteMatchCount : folderMatchCount;
 
     return (
@@ -338,6 +348,7 @@ export function TreeNodeRow({
             tabIndex={tabIndex}
             ref={(element) => registerItemRef(key, element)}
             onClick={(event) => onRowClick(node, event)}
+            onDoubleClick={() => onRowDoubleClick(node)}
             onContextMenu={(event) => {
               event.preventDefault();
               onRowContextMenu(node, event.clientX, event.clientY);
@@ -389,6 +400,13 @@ export function TreeNodeRow({
               </PawPrint>
             ) : null}
             {modifiedLabel ? <span className="file-tree__mtime">{modifiedLabel}</span> : null}
+            {hasDirtyInside ? (
+              <span
+                className="sidebar-panel__item-dirty sidebar-panel__item-dirty--inside"
+                title={t("fileTree.unsavedChangesInside")}
+                aria-label={t("fileTree.unsavedChangesInside")}
+              />
+            ) : null}
             {isNoteDirty ? (
               <span
                 className="sidebar-panel__item-dirty"
@@ -412,6 +430,7 @@ export function TreeNodeRow({
                 expandedFolderPaths={expandedFolderPaths}
                 folderMatchCounts={folderMatchCounts}
                 folderStagedCounts={folderStagedCounts}
+                folderDirtyCounts={folderDirtyCounts}
                 stagedKeys={stagedKeys}
                 stagedCreatedKeys={stagedCreatedKeys}
                 stagedDeletedKeys={stagedDeletedKeys}
@@ -429,6 +448,7 @@ export function TreeNodeRow({
                 dragSourceKeys={dragSourceKeys}
                 dropIndicator={dropIndicator}
                 onRowClick={onRowClick}
+                onRowDoubleClick={onRowDoubleClick}
                 onToggleFolder={onToggleFolder}
                 onRowContextMenu={onRowContextMenu}
                 onRenameDraftChange={onRenameDraftChange}
@@ -506,6 +526,7 @@ export function TreeNodeRow({
           tabIndex={tabIndex}
           ref={(element) => registerItemRef(key, element)}
           onClick={(event) => onRowClick(node, event)}
+          onDoubleClick={() => onRowDoubleClick(node)}
           onContextMenu={(event) => {
             event.preventDefault();
             onRowContextMenu(node, event.clientX, event.clientY);
