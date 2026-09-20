@@ -3,6 +3,11 @@
 All notable changes to ScribeDog are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.13.1] - 2026-09-20
+
+### Bug Fixes
+- Stop code block controls from covering the first line: the copy and language buttons now sit as two small badges on the block's top edge and only show while the caret is inside the block
+
 ## [0.13.0] - 2026-09-20
 
 ### Highlights
