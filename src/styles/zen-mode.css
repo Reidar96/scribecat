@@ -11,8 +11,16 @@
 .workspace-grid--zen .sidebar-panel,
 .workspace-grid--zen .workspace-resizer,
 .workspace-grid--zen .editor-toolbar,
+.workspace-grid--zen .detail-panel__toolbar,
 .workspace-grid--zen .detail-panel__header {
   display: none;
+}
+
+/* With toolbar slot and header gone, the body is the only row left; the
+   desktop template (auto auto 1fr) would otherwise leave two empty rows and
+   their gaps below the text. */
+.workspace-grid--zen .detail-panel__card--document {
+  grid-template-rows: minmax(0, 1fr);
 }
 
 /* Drop the panel's card chrome so the page reads as a bare document. */
@@ -91,6 +99,24 @@
   border-radius: 9999px;
   background: #fde68a;
   box-shadow: 0 0 0 4px rgba(253, 230, 138, 0.12);
+}
+
+/* Current text size while pinching or Ctrl+wheeling (useZenFontZoom),
+   centred at the top like a reader's zoom readout; gone a moment later. */
+.zen-font-readout {
+  position: fixed;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+  padding: 0.3rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  color: rgb(var(--text-rgb));
+  background: rgba(var(--overlay-rgb), 0.08);
+  backdrop-filter: blur(6px);
+  pointer-events: none;
 }
 
 /* Draggable edges of the text column, positioned on the viewport centre so

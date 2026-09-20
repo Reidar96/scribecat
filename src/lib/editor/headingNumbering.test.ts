@@ -33,7 +33,9 @@ const numbersInDom = (current: Editor) =>
 let editor: Editor | null = null;
 
 beforeEach(() => {
-  useEditorSettingsStore.getState().setHeadingNumbering({ enabled: true, startLevel: 1, maxDepth: 6 });
+  useEditorSettingsStore
+    .getState()
+    .setHeadingNumbering({ enabled: true, startLevel: 1, maxDepth: 6, scope: "everywhere", marker: "always" });
 });
 
 afterEach(() => {
@@ -65,6 +67,38 @@ describe("HeadingNumbering", () => {
 
     useEditorSettingsStore.getState().setHeadingNumbering({ enabled: false });
     expect(numbersInDom(editor)).toEqual([null, null, null]);
+  });
+
+  it("keeps the numbers out of the editor with the scope on outline only", () => {
+    editor = createEditor("<h1>One</h1><h2>Two {-}</h2>");
+
+    useEditorSettingsStore.getState().setHeadingNumbering({ scope: "outline" });
+    expect(numbersInDom(editor)).toEqual([null, null]);
+    expect(editor.view.dom.querySelector(".heading-unnumbered-marker")).not.toBeNull();
+  });
+
+  it("hides the marker outside the heading the cursor is in", () => {
+    editor = createEditor("<h1>One {-}</h1><p>body</p><h1>Two {-}</h1>");
+    useEditorSettingsStore.getState().setHeadingNumbering({ marker: "activeLine" });
+
+    const hiddenMarkers = () => editor!.view.dom.querySelectorAll(".heading-unnumbered-marker--hidden").length;
+
+    editor.commands.setTextSelection(3);
+    expect(hiddenMarkers()).toBe(1);
+    expect(editor.view.dom.querySelector("h1 .heading-unnumbered-marker--hidden")?.closest("h1")?.textContent).toBe(
+      "Two {-}"
+    );
+
+    editor.commands.setTextSelection(editor.state.doc.content.size - 1);
+    expect(editor.view.dom.querySelector("h1 .heading-unnumbered-marker--hidden")?.closest("h1")?.textContent).toBe(
+      "One {-}"
+    );
+
+    editor.commands.setTextSelection(editor.state.doc.resolve(0).posAtIndex(1) + 1);
+    expect(hiddenMarkers()).toBe(2);
+
+    useEditorSettingsStore.getState().setHeadingNumbering({ marker: "always" });
+    expect(hiddenMarkers()).toBe(0);
   });
 
   it("leaves a marker split across marks in the text but still honours it", () => {

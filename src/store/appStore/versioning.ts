@@ -24,16 +24,40 @@ import { useVersioningSettingsStore } from "@/store/useVersioningSettingsStore";
  * save, a rename or a delete.
  */
 
+/**
+ * Auto-save writes after every pause in typing. Snapshotting each of those
+ * would push the states worth going back to out of a capped history within
+ * minutes, so throttled snapshots are taken at most this often per file. A
+ * deliberate save resets the clock, since it is itself a snapshot.
+ */
+export const AUTO_SAVE_SNAPSHOT_INTERVAL_MS = 5 * 60_000;
+
+const lastSnapshotAtByFile = new Map<string, number>();
+
 export function snapshotFileVersion(
   folderPath: string | null,
   filePath: string,
-  content: string
+  content: string,
+  options?: { throttle?: boolean }
 ): void {
   const { versioningEnabled, maxVersionsPerFile } = useVersioningSettingsStore.getState();
 
   if (!folderPath || !versioningEnabled) {
     return;
   }
+
+  const now = Date.now();
+  const lastSnapshotAt = lastSnapshotAtByFile.get(filePath);
+
+  if (
+    options?.throttle &&
+    lastSnapshotAt !== undefined &&
+    now - lastSnapshotAt < AUTO_SAVE_SNAPSHOT_INTERVAL_MS
+  ) {
+    return;
+  }
+
+  lastSnapshotAtByFile.set(filePath, now);
 
   void createFileVersion(
     folderPath,

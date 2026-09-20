@@ -3,7 +3,15 @@ import { describe, expect, it } from "vitest";
 import { numberExportBlockLists, numberExportBlocks } from "./headingNumbers";
 import { parseMarkdownToBlocks, type ExportBlock } from "./markdownModel";
 
-const settings = { enabled: true, startLevel: 1 as const, maxDepth: 6 };
+import type { HeadingNumberingSettings } from "@/lib/editor/headingNumbers";
+
+const settings: HeadingNumberingSettings = {
+  enabled: true,
+  startLevel: 1,
+  maxDepth: 6,
+  scope: "everywhere",
+  marker: "activeLine"
+};
 
 function headingTexts(blocks: ExportBlock[]): string[] {
   const texts: string[] = [];
@@ -31,6 +39,16 @@ describe("numberExportBlocks", () => {
 
     expect(numberExportBlocks(blocks, undefined)).toBe(blocks);
     expect(numberExportBlocks(blocks, { ...settings, enabled: false })).toBe(blocks);
+  });
+
+  it("leaves the numbers out but still drops the marker with the scope on outline only", () => {
+    const blocks = parseMarkdownToBlocks("# One\n\n## Two {-}\n\n## Three\n");
+
+    expect(headingTexts(numberExportBlocks(blocks, { ...settings, scope: "outline" }))).toEqual([
+      "One",
+      "Two",
+      "Three"
+    ]);
   });
 
   it("counts a heading inside a blockquote like the editor's outline does", () => {

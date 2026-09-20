@@ -113,9 +113,10 @@ domain to get a certificate for. You can accept the warning, or import the
 CA once so every browser on the device trusts it (and, if you use it, the
 [desktop app](desktop-app.md), which needs the CA in the system store). Do
 this on each device you use ScribeDog from, not just once: on the device in
-question, open `https://<host>/scribedog-ca.crt` (same host and port as
-ScribeDog itself) to download it, then add `scribedog-ca.crt` to the trust
-store:
+question, download it from Settings, Account, "Download certificate" (the
+button is only there while Caddy's own CA is in use; or open
+`https://<host>/scribedog-ca.crt` directly, same host and port as ScribeDog
+itself), then add `scribedog-ca.crt` to the trust store:
 
 | Where | How |
 | --- | --- |

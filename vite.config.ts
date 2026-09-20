@@ -5,6 +5,7 @@ import { defineConfig, type PluginOption } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { readFileSync } from "node:fs";
+import { Agent } from "node:http";
 import { fileURLToPath, URL } from "node:url";
 
 // @ts-expect-error process is a nodejs global
@@ -94,6 +95,13 @@ export default defineConfig(async ({ mode }) => {
               // browser test ending) takes the whole dev server down with an
               // unhandled ECONNRESET.
               ws: true,
+              // Without an agent the proxy opens a fresh connection per
+              // request and asks the server to close it afterwards. Node on
+              // Windows then resets the socket before the send buffer has
+              // drained on larger responses, so about one image in six
+              // arrived truncated and the editor waited forever for it.
+              // Keep-alive connections are closed by nobody mid-response.
+              agent: new Agent({ keepAlive: true }),
               configure: (proxy) => {
                 proxy.on("error", (error) => {
                   console.warn(`[dev:web] proxy: ${error.message}`);

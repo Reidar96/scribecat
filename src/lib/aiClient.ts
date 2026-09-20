@@ -251,7 +251,8 @@ function buildCheckModeSystemPrompt(explanationLanguage: string): string {
   return (
     "You are a spelling and grammar checker. Analyze the given text and identify spelling and grammar mistakes only — do not suggest stylistic rewrites or wording changes beyond fixing actual errors. Respond ONLY with a single JSON array (no markdown code fences, no explanation text outside the JSON) of issue objects, each with exactly these fields: \"original\" (the exact original passage as it appears in the text, copied verbatim), \"suggestion\" (the corrected replacement text), and \"explanation\" (a short explanation of the issue). " +
     `Always write the \"explanation\" field in ${explanationLanguage}, regardless of the language of the checked text. ` +
-    "List issues in the order they appear in the text. If there are no issues, respond with an empty JSON array: []."
+    "List issues in the order they appear in the text. If there are no issues, respond with an empty JSON array: []. " +
+    "The text itself may be a list or contain list items; that never changes the answer format — still respond with the single JSON array only."
   );
 }
 
@@ -3102,21 +3103,134 @@ export async function streamAiChat(
 // models wrap JSON output in despite the system prompt asking for raw JSON.
 export function stripJsonCodeFence(text: string): string {
   const trimmed = text.trim();
-  const fenceMatch = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+  // The fence may sit inside a sentence ("Here are the issues: ```json ..."),
+  // so it is looked for anywhere, not only around the whole response.
+  const fenceMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
 
   return fenceMatch ? fenceMatch[1].trim() : trimmed;
 }
 
-export function parseCheckIssues(rawResponse: string): AiCheckIssue[] {
-  let parsed: unknown;
-
+function tryParseJson(text: string): unknown {
   try {
-    parsed = JSON.parse(stripJsonCodeFence(rawResponse));
+    return JSON.parse(text);
   } catch {
-    throw new Error(i18n.t("aiClient.invalidCheckResponse"));
+    return undefined;
+  }
+}
+
+// Returns the end index (exclusive) of the bracketed JSON value that opens at
+// `start`, honouring strings and escapes, or -1 when it never closes.
+function findJsonValueEnd(text: string, start: number): number {
+  const open = text[start];
+  const close = open === "[" ? "]" : "}";
+  let depth = 0;
+  let inString = false;
+
+  for (let index = start; index < text.length; index++) {
+    const char = text[index];
+
+    if (inString) {
+      if (char === "\\") {
+        index++;
+      } else if (char === '"') {
+        inString = false;
+      }
+    } else if (char === '"') {
+      inString = true;
+    } else if (char === "[" || char === "{") {
+      depth++;
+    } else if (char === "]" || char === "}") {
+      depth--;
+
+      if (depth === 0) {
+        return char === close ? index + 1 : -1;
+      }
+    }
   }
 
-  if (!Array.isArray(parsed)) {
+  return -1;
+}
+
+// Small models regularly stray from "one raw JSON array": prose before or
+// after the array, a fence in the middle of a sentence, an object wrapping
+// the list (`{"issues": [...]}`), a single issue object, or an array that
+// is valid up to one entry with an unescaped quote. Every one of these
+// still carries usable issues, so the parser recovers what it can before
+// giving up: whole response, then the first array found, then the objects
+// inside it one by one.
+function extractCheckIssueEntries(rawResponse: string): unknown[] | null {
+  const text = stripJsonCodeFence(rawResponse);
+  const direct = tryParseJson(text);
+
+  if (Array.isArray(direct)) {
+    return direct;
+  }
+
+  if (direct && typeof direct === "object") {
+    const nested = Object.values(direct).find((value) => Array.isArray(value));
+
+    if (nested) {
+      return nested as unknown[];
+    }
+
+    return [direct];
+  }
+
+  const arrayStart = text.indexOf("[");
+
+  if (arrayStart === -1) {
+    const objectStart = text.indexOf("{");
+
+    if (objectStart === -1) {
+      return null;
+    }
+
+    const objectEnd = findJsonValueEnd(text, objectStart);
+    const single = objectEnd === -1 ? undefined : tryParseJson(text.slice(objectStart, objectEnd));
+
+    return single && typeof single === "object" ? [single] : null;
+  }
+
+  const arrayEnd = findJsonValueEnd(text, arrayStart);
+  const arrayText = text.slice(arrayStart, arrayEnd === -1 ? text.length : arrayEnd);
+  const array = tryParseJson(arrayText);
+
+  if (Array.isArray(array)) {
+    return array;
+  }
+
+  // The array as a whole is broken (or truncated by the token limit); keep
+  // every entry that parses on its own.
+  const entries: unknown[] = [];
+  let cursor = arrayText.indexOf("{");
+
+  while (cursor !== -1) {
+    const end = findJsonValueEnd(arrayText, cursor);
+
+    if (end === -1) {
+      break;
+    }
+
+    const entry = tryParseJson(arrayText.slice(cursor, end));
+
+    if (entry && typeof entry === "object") {
+      entries.push(entry);
+      cursor = arrayText.indexOf("{", end);
+    } else {
+      cursor = arrayText.indexOf("{", cursor + 1);
+    }
+  }
+
+  return entries.length > 0 ? entries : null;
+}
+
+export function parseCheckIssues(rawResponse: string): AiCheckIssue[] {
+  const parsed = extractCheckIssueEntries(rawResponse);
+
+  if (!parsed) {
+    // The raw text is what tells a bug report which model shape broke the
+    // parser, and it never reaches the document.
+    console.warn("[ScribeDog] Unreadable spelling/grammar check response:", rawResponse);
     throw new Error(i18n.t("aiClient.invalidCheckResponse"));
   }
 

@@ -40,7 +40,7 @@ async function openNote(page: Page, relativePath: string): Promise<void> {
   }
 
   await page.getByRole("treeitem").and(page.getByTitle(relativePath, { exact: true })).click();
-  await expect(page.getByTestId("note-title")).toHaveText(relativePath);
+  await expect(page.getByTestId("note-title")).toHaveText(relativePath.replace(/\.md$/i, ""));
 }
 
 test("rejects a wrong password", async ({ page }) => {
@@ -148,7 +148,7 @@ test("an expired session brings the login form back over the app", async ({ page
   await page.getByTestId("password").fill(PASSWORD);
   await page.getByTestId("login").click();
   await expect(page.getByTestId("logout")).toBeVisible();
-  await expect(page.getByTestId("note-title")).toHaveText(NOTE);
+  await expect(page.getByTestId("note-title")).toHaveText(NOTE.replace(/\.md$/i, ""));
   await expect(page.getByTestId("status")).toHaveAttribute("data-dirty", "true");
 });
 

@@ -82,6 +82,39 @@ export function VaultSettings() {
                 ))}
               </select>
             </SettingRow>
+
+            <SettingRow
+              label={t("settingsDialog.headingNumberingScope")}
+              hint={t("settingsDialog.headingNumberingScopeShort")}
+            >
+              <select
+                value={headingNumbering.scope}
+                disabled={disabled}
+                onChange={(event) =>
+                  setHeadingNumbering({ scope: event.target.value === "outline" ? "outline" : "everywhere" })
+                }
+              >
+                <option value="everywhere">{t("settingsDialog.headingNumberingScopeEverywhere")}</option>
+                <option value="outline">{t("settingsDialog.headingNumberingScopeOutline")}</option>
+              </select>
+            </SettingRow>
+
+            <SettingRow
+              label={t("settingsDialog.headingNumberingMarker")}
+              hint={t("settingsDialog.headingNumberingMarkerShort")}
+              info={t("settingsDialog.headingNumberingMarkerHint")}
+            >
+              <select
+                value={headingNumbering.marker}
+                disabled={disabled}
+                onChange={(event) =>
+                  setHeadingNumbering({ marker: event.target.value === "always" ? "always" : "activeLine" })
+                }
+              >
+                <option value="activeLine">{t("settingsDialog.headingNumberingMarkerActiveLine")}</option>
+                <option value="always">{t("settingsDialog.headingNumberingMarkerAlways")}</option>
+              </select>
+            </SettingRow>
           </>
         ) : null}
 

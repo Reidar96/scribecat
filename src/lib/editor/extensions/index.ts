@@ -1,6 +1,5 @@
 import { Link } from "@tiptap/extension-link";
 import { Table, TableCell, TableHeader, TableRow } from "@tiptap/extension-table";
-import TaskItem from "@tiptap/extension-task-item";
 import type { Extensions } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { Markdown } from "tiptap-markdown";
@@ -16,8 +15,9 @@ import { VoiceInsertWidget } from "@/lib/voiceInsertWidget";
 
 import { Callout } from "./callout";
 import { CodeBlock } from "./codeBlock";
+import { Highlight } from "./highlight";
 import { EditorImage } from "./image";
-import { TaskList, TaskListMarkdown } from "./taskList";
+import { TaskItem, TaskList, TaskListMarkdown } from "./taskList";
 import { Underline } from "./underline";
 
 // Everything that defines the document model itself, in the order TipTap loads
@@ -32,6 +32,7 @@ function buildContentExtensions(): Extensions {
     TaskItem.configure({ nested: true }),
     TaskListMarkdown,
     Underline,
+    Highlight,
     Table.configure({ resizable: true }),
     TableRow,
     TableHeader,

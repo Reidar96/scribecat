@@ -9,6 +9,39 @@ import { codeBlockLowlight } from "@/lib/codeLanguages";
 // read the code block's text content) are unaffected.
 export const CodeBlock = CodeBlockLowlight.extend({
   addNodeView() {
-    return ReactNodeViewRenderer(CodeBlockView);
+    const render = ReactNodeViewRenderer(CodeBlockView);
+
+    return (props) => {
+      const nodeView = render(props);
+
+      // TipTap's default ignoreMutation has an Android/iOS branch that lets
+      // childList mutations *outside* the contentDOM through as long as the
+      // added nodes are contentEditable (meant for the virtual keyboard).
+      // React mounts this view's wrapper and the contentDOM host after the
+      // node view is created, so exactly such a mutation happens on every
+      // (re)render. prosemirror-view then reads an added block element on
+      // Android as an Enter key, the Enter re-renders the code block, and the
+      // tab hangs in that loop. Only the contentDOM is ProseMirror's business
+      // here; everything else is React's own rendering.
+      nodeView.ignoreMutation = (mutation) => {
+        if (mutation.type === "selection") {
+          return false;
+        }
+
+        const contentDOM = nodeView.contentDOM;
+
+        if (!contentDOM) {
+          return true;
+        }
+
+        if (contentDOM === mutation.target && mutation.type === "attributes") {
+          return true;
+        }
+
+        return !contentDOM.contains(mutation.target);
+      };
+
+      return nodeView;
+    };
   }
 }).configure({ lowlight: codeBlockLowlight });

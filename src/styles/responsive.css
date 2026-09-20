@@ -26,6 +26,17 @@
   }
 }
 
+/* No pinch zoom of the page on phone and tablet: the layout is built for
+   the width it has, and a zoomed-in shell leaves the toolbar and sheets
+   half off screen. The viewport meta says the same for the browsers that
+   read it there. Zen mode has its own pinch (useZenFontZoom) that resizes
+   the text instead, the way a reader does. */
+@media (max-width: 920px) {
+  html {
+    touch-action: pan-x pan-y;
+  }
+}
+
 /* --- Tablet and phone: shell, toolbar, header --------------------------- */
 
 @media (max-width: 920px) {
@@ -219,25 +230,24 @@
     font-size: 1.25rem;
   }
 
-  /* The header's save state is an icon button here (DocumentPanel):
-     accent while there is something to save, disabled once there is not. */
-  .detail-panel__save-button {
-    cursor: pointer;
-    transition: background 160ms ease, color 160ms ease;
+  /* The rename form is that same h2 as a flex row (prefix, input). RTL would
+     reverse the row and put the input in front of its own folder path. Here
+     the folder path is the part that gives way, so the input stays reachable. */
+  .detail-panel__title h2.detail-panel__title-edit {
+    direction: ltr;
   }
 
-  .detail-panel__save-button:disabled {
-    cursor: default;
+  .detail-panel__title h2.detail-panel__title-edit .detail-panel__title-prefix {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
-  /* A file removed underneath us is the one state an icon alone would not
-     carry, so it keeps the warning colour even while the button is off. */
-  .detail-panel__save-button--warning:disabled {
-    opacity: 1;
-    border-color: rgba(251, 191, 36, 0.22);
-    background: rgba(var(--warning-bg-rgb), 0.55);
-    color: var(--amber-fg);
+  .detail-panel__title h2.detail-panel__title-edit .detail-panel__title-input {
+    flex-shrink: 0;
+    max-width: 60%;
   }
+
 }
 
 /* --- Sheets ------------------------------------------------------------- */
@@ -416,10 +426,6 @@
     gap: 0.3rem;
   }
 
-  .detail-panel__status {
-    padding: 0.4rem 0.65rem;
-  }
-
   .detail-panel__ai-chip-message {
     display: none;
   }
@@ -440,17 +446,53 @@
     content: none;
   }
 
+  /* The chip's look moves onto the button itself, so it animates the same
+     way as the labelled chip on the desktop: the moving gradient, the inner
+     glow and the shimmer running across it. */
   .detail-panel__ai-chip-cancel {
+    overflow: hidden;
     width: 1.75rem;
     height: 1.75rem;
     border-radius: 0.6rem;
-    background: rgb(var(--accent-rgb));
-    border-color: transparent;
+    border: 1px solid rgba(var(--accent-rgb), 0.4);
+    background: radial-gradient(
+      circle at center,
+      rgba(var(--accent-rgb), 0.95) 0%,
+      rgba(var(--accent-darker-rgb), 0.85) 45%,
+      rgba(var(--accent-darkest-rgb), 0.9) 100%
+    );
+    background-size: 200% 100%;
+    color: rgb(var(--accent-pale-rgb));
+    animation:
+      editor-feedback-glow 2.2s ease-in-out infinite,
+      editor-feedback-sheen 3.2s linear infinite;
+  }
+
+  .detail-panel__ai-chip-cancel::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      100deg,
+      transparent 30%,
+      rgba(var(--accent-lighter-rgb), 0.28) 50%,
+      transparent 70%
+    );
+    background-size: 200% 100%;
+    animation: editor-feedback-shimmer 1.8s linear infinite;
+    pointer-events: none;
   }
 
   .detail-panel__ai-chip-cancel:hover,
   .detail-panel__ai-chip-cancel:active {
-    background: rgba(var(--accent-rgb), 0.85);
+    border-color: rgba(var(--accent-rgb), 0.7);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .detail-panel__ai-chip-cancel,
+    .detail-panel__ai-chip-cancel::after {
+      animation: none;
+    }
   }
 
   .detail-panel__card--empty {

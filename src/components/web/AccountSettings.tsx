@@ -1,8 +1,9 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 
 import { DeviceList } from "@/components/remote/DeviceList";
-import { Button } from "@/components/ui/button";
+import { InfoPopover } from "@/components/settings/InfoPopover";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { platform, SessionError } from "@/platform";
 
 /**
@@ -17,7 +18,34 @@ import { platform, SessionError } from "@/platform";
  * Below the form: the devices that hold an access token for this server
  * (desktop apps that opened this vault), each of which can be signed out on
  * its own without touching the password.
+ *
+ * Last, the server's CA certificate. Caddy serves it at the origin's root
+ * (not under the base path, see server/caddy/Caddyfile), and the guide's
+ * advice is to open that URL on the device in question; a link in the
+ * settings is that, without typing the URL on a phone. The section only
+ * shows once a HEAD request has found a certificate there: behind another
+ * reverse proxy or with a Let's Encrypt certificate there is none (404), and
+ * under `vite dev` the SPA fallback answers with index.html, which a download
+ * link would happily save as `scribedog-ca.crt`.
  */
+
+/** Where Caddy serves the local CA, host-wide, whatever the base path. */
+const CA_CERTIFICATE_PATH = "/scribedog-ca.crt";
+
+const CA_CERTIFICATE_GUIDE_URL =
+  "https://github.com/snooky234/scribedog/blob/main/server/docs/getting-started.md#the-certificate-warning";
+
+async function isCaCertificateServed(signal: AbortSignal): Promise<boolean> {
+  try {
+    const response = await fetch(CA_CERTIFICATE_PATH, { method: "HEAD", credentials: "same-origin", signal });
+    const contentType = response.headers.get("content-type") ?? "";
+
+    return response.ok && !contentType.startsWith("text/html");
+  } catch {
+    return false;
+  }
+}
+
 export function AccountSettings() {
   const { t } = useTranslation();
   const [currentPassword, setCurrentPassword] = useState("");
@@ -26,6 +54,19 @@ export function AccountSettings() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDone, setIsDone] = useState(false);
+  const [hasCertificate, setHasCertificate] = useState(false);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    void isCaCertificateServed(controller.signal).then((served) => {
+      if (!controller.signal.aborted) {
+        setHasCertificate(served);
+      }
+    });
+
+    return () => controller.abort();
+  }, []);
 
   const canSubmit = currentPassword.length > 0 && newPassword.length > 0 && !isSaving;
 
@@ -133,6 +174,29 @@ export function AccountSettings() {
           revoke={(id) => platform.session?.revokeDevice(id) ?? Promise.resolve()}
         />
       </div>
+
+      {hasCertificate ? (
+        <>
+          <div className="ai-dialog__field--full account-settings__head">
+            <h3>{t("account.certificate")}</h3>
+            <InfoPopover
+              text={t("account.certificateInfo")}
+              link={{ href: CA_CERTIFICATE_GUIDE_URL, label: t("account.certificateGuide") }}
+            />
+          </div>
+          <p className="ai-dialog__field--full ai-dialog__model-hint">{t("account.certificateHint")}</p>
+          <div className="ai-dialog__field--full">
+            <a
+              className={buttonVariants({ variant: "outline" })}
+              href={CA_CERTIFICATE_PATH}
+              download="scribedog-ca.crt"
+              data-testid="download-ca-certificate"
+            >
+              {t("account.certificateDownload")}
+            </a>
+          </div>
+        </>
+      ) : null}
     </form>
   );
 }

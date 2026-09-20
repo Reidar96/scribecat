@@ -68,7 +68,13 @@ export type FileSlice = {
   updateSelectedFileContent: (markdown: string) => void;
   adoptCanonicalFileContent: (filePath: string, markdown: string) => void;
   discardSelectedFileChanges: () => boolean;
-  saveSelectedFile: () => Promise<boolean>;
+  /**
+   * Writes the open note. An auto-save (hooks/useAutoSave.ts) says so, because
+   * it fires after every pause in typing and would otherwise fill the version
+   * history with keystroke-sized snapshots; the versioning bridge throttles
+   * those, a deliberate save is always snapshotted.
+   */
+  saveSelectedFile: (options?: { trigger?: "manual" | "auto" }) => Promise<boolean>;
   restoreFileVersion: (versionId: string) => Promise<boolean>;
   createNewFile: (targetDirectory?: string, insertAfterBasename?: string | null) => Promise<string | null>;
   /**

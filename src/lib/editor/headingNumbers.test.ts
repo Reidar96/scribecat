@@ -12,6 +12,8 @@ const on = (overrides: Partial<HeadingNumberingSettings> = {}): HeadingNumbering
   enabled: true,
   startLevel: 1,
   maxDepth: 6,
+  scope: "everywhere",
+  marker: "activeLine",
   ...overrides
 });
 
@@ -82,16 +84,27 @@ describe("unnumbered marker", () => {
 
 describe("normalizeHeadingNumberingSettings", () => {
   it("falls back to the defaults for garbage", () => {
-    expect(normalizeHeadingNumberingSettings(null)).toEqual({ enabled: false, startLevel: 2, maxDepth: 6 });
-    expect(normalizeHeadingNumberingSettings({ enabled: "yes", startLevel: 3, maxDepth: "x" })).toEqual({
-      enabled: false,
-      startLevel: 2,
-      maxDepth: 6
+    const defaults = { enabled: false, startLevel: 2, maxDepth: 6, scope: "everywhere", marker: "activeLine" };
+
+    expect(normalizeHeadingNumberingSettings(null)).toEqual(defaults);
+    expect(
+      normalizeHeadingNumberingSettings({ enabled: "yes", startLevel: 3, maxDepth: "x", scope: "editor", marker: 1 })
+    ).toEqual(defaults);
+  });
+
+  it("keeps the display options a file from an older version does not have at their defaults", () => {
+    const settings = normalizeHeadingNumberingSettings({ enabled: true, startLevel: 1, maxDepth: 3 });
+
+    expect(settings.scope).toBe("everywhere");
+    expect(settings.marker).toBe("activeLine");
+    expect(normalizeHeadingNumberingSettings({ scope: "outline", marker: "always" })).toMatchObject({
+      scope: "outline",
+      marker: "always"
     });
   });
 
   it("keeps the depth at or below the start level and within 6", () => {
-    expect(normalizeHeadingNumberingSettings({ enabled: true, startLevel: 2, maxDepth: 1 })).toEqual({
+    expect(normalizeHeadingNumberingSettings({ enabled: true, startLevel: 2, maxDepth: 1 })).toMatchObject({
       enabled: true,
       startLevel: 2,
       maxDepth: 2

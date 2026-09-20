@@ -2,7 +2,6 @@ import {
   ChevronDown,
   ChevronRight,
   Ellipsis,
-  FileText,
   Folder,
   FolderOpen,
   PawPrint
@@ -14,6 +13,7 @@ import { vaultPathKey } from "@/lib/chat/vaultStaging";
 import { carriesExternalFiles } from "@/lib/dragDrop/droppedSources";
 import { FILE_LINK_DRAG_MIME } from "@/lib/editor/fileLinks";
 import { getNodeMtimeMs, type FileTreeFolderNode, type FileTreeNode } from "@/lib/fileTree";
+import { getNoteDisplayName } from "@/lib/folderNotes";
 import type { SortMode } from "@/lib/vaultMeta";
 import { DROP_DIRECTORY_ATTRIBUTE, useImportDropStore } from "@/store/useImportDropStore";
 import { getVaultCapabilities } from "@/platform";
@@ -460,7 +460,6 @@ export function TreeNodeRow({
           style={{ paddingLeft }}
         >
           <span className="file-tree__chevron" aria-hidden="true" />
-          <FileText aria-hidden="true" />
           <input
             ref={renameInputRef}
             type="text"
@@ -514,8 +513,8 @@ export function TreeNodeRow({
           {...dragHandlers}
         >
           <span className="file-tree__chevron" aria-hidden="true" />
-          <FileText aria-hidden="true" />
-          <span className="file-tree__name">{node.name}</span>
+          {/* Every note is a .md file, so the extension says nothing. */}
+          <span className="file-tree__name">{getNoteDisplayName(node.name)}</span>
           {searchMatchCount > 0 ? (
             <span
               className="file-tree__search-badge"

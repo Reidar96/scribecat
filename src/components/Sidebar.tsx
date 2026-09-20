@@ -71,6 +71,7 @@ type SidebarProps = {
   onCreateFile: () => void;
   onCreateFileRequest: (targetDirectory: string) => void;
   onCreateFolder: () => void;
+  onCreateFolderRequest: (targetDirectory: string) => void;
   onImportRequest: () => void;
   onSelectFilePath: (filePath: string) => Promise<void>;
   onOpenFolderNote: (folderPath: string) => Promise<void>;
@@ -124,6 +125,7 @@ export function Sidebar({
   onCreateFile,
   onCreateFileRequest,
   onCreateFolder,
+  onCreateFolderRequest,
   onImportRequest,
   onSelectFilePath,
   onOpenFolderNote,
@@ -601,6 +603,7 @@ export function Sidebar({
             onSelectFilePath={onSelectFilePath}
             onOpenFolderNote={onOpenFolderNote}
             onCreateFileRequest={onCreateFileRequest}
+            onCreateFolderRequest={onCreateFolderRequest}
             onDeleteFileRequest={onDeleteFileRequest}
             onDuplicateFileRequest={onDuplicateFileRequest}
             onDeleteFolderRequest={onDeleteFolderRequest}

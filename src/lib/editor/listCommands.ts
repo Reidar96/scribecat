@@ -54,10 +54,112 @@ function moveSiblingsAtDepth(view: EditorView, direction: "up" | "down", depth: 
   return true;
 }
 
+// Moves a list item that sits at the edge of a top-level list past the block
+// next to the list (an image, a blockquote, a paragraph, …): the item leaves
+// its list and either joins an adjacent list of the same type as its first
+// (down) or last (up) item, or becomes a new list of its own on the far side
+// of the neighbour. The item's nested sub-list travels with it. Only a
+// selection inside one item is handled — a range spanning several items has
+// no natural single-item meaning here.
+function moveListItemAcrossBlock(view: EditorView, direction: "up" | "down", itemDepth: number): boolean {
+  const { state } = view;
+  const { $from, $to, from, to } = state.selection;
+  const listDepth = itemDepth - 1;
+
+  if (listDepth !== 1 || $to.depth < itemDepth || $to.before(itemDepth) !== $from.before(itemDepth)) {
+    return false;
+  }
+
+  const doc = state.doc;
+  const list = $from.node(listDepth);
+  const item = $from.node(itemDepth);
+  const itemIndex = $from.index(listDepth);
+  const listIndex = $from.index(0);
+  const neighbourIndex = direction === "up" ? listIndex - 1 : listIndex + 1;
+
+  if (neighbourIndex < 0 || neighbourIndex >= doc.childCount) {
+    return false;
+  }
+
+  const neighbour = doc.child(neighbourIndex);
+
+  // The empty paragraph StarterKit's TrailingNode keeps at the end of the
+  // document is not a block to move past — crossing it would detach the last
+  // item from its list for no visible reason.
+  if (
+    neighbourIndex === doc.childCount - 1 &&
+    neighbour.type.name === "paragraph" &&
+    neighbour.content.size === 0
+  ) {
+    return false;
+  }
+
+  const listStart = $from.before(listDepth);
+  const listEnd = $from.after(listDepth);
+  const itemStart = $from.before(itemDepth);
+  const itemEnd = $from.after(itemDepth);
+
+  const remainingItems: ProseMirrorNode[] = [];
+  for (let i = 0; i < list.childCount; i++) {
+    if (i !== itemIndex) {
+      remainingItems.push(list.child(i));
+    }
+  }
+  const remainder = remainingItems.length > 0 ? list.copy(Fragment.from(remainingItems)) : null;
+
+  // The item lands in the first list of the same type it reaches: the
+  // neighbour itself, or the block right behind it — that is what the
+  // markdown line would join once it sits below the image or quote.
+  const beyondIndex = direction === "up" ? neighbourIndex - 1 : neighbourIndex + 1;
+  const beyond = beyondIndex >= 0 && beyondIndex < doc.childCount ? doc.child(beyondIndex) : null;
+  const mergeInto = neighbour.type === list.type ? neighbour : beyond?.type === list.type ? beyond : null;
+  const crossed: ProseMirrorNode[] = mergeInto === neighbour ? [] : [neighbour];
+  const crossedSize = crossed.reduce((sum, node) => sum + node.nodeSize, 0);
+  const target = mergeInto
+    ? direction === "up"
+      ? mergeInto.copy(mergeInto.content.append(Fragment.from(item)))
+      : mergeInto.copy(Fragment.from(item).append(mergeInto.content))
+    : list.copy(Fragment.from(item));
+  const replacedSize = crossedSize + (mergeInto ? mergeInto.nodeSize : 0);
+
+  const nodes: ProseMirrorNode[] = [];
+  let newItemStart: number;
+  const rangeStart = direction === "up" ? listStart - replacedSize : listStart;
+  const rangeEnd = direction === "up" ? listEnd : listEnd + replacedSize;
+
+  if (direction === "up") {
+    nodes.push(target, ...crossed);
+    newItemStart = rangeStart + 1 + (mergeInto ? mergeInto.content.size : 0);
+    if (remainder) {
+      nodes.push(remainder);
+    }
+  } else {
+    if (remainder) {
+      nodes.push(remainder);
+    }
+    nodes.push(...crossed, target);
+    newItemStart = rangeStart + (remainder ? remainder.nodeSize : 0) + crossedSize + 1;
+  }
+
+  const tr = state.tr.replaceWith(rangeStart, rangeEnd, Fragment.from(nodes));
+  const anchor = Math.min(Math.max(from, itemStart), itemEnd) - itemStart;
+  const head = Math.min(Math.max(to, itemStart), itemEnd) - itemStart;
+  tr.setSelection(TextSelection.create(tr.doc, newItemStart + anchor, newItemStart + head));
+  tr.scrollIntoView();
+
+  view.dispatch(tr);
+  return true;
+}
+
 // Moves the list item (bullet, numbered, or task) the selection is currently
 // in — or the range of sibling items it spans — one position up or down.
 // ProseMirror has no built-in command for this, so the affected range is
-// manually replaced with the sibling nodes swapped.
+// manually replaced with the sibling nodes swapped. At the edge of a top-level
+// list the item is moved past the neighbouring block instead (see
+// moveListItemAcrossBlock). Returns true whenever the selection is inside a
+// list item, even if nothing could move: falling through to moveLine there
+// would shove the whole list past its neighbour, which is never what a
+// "move this line" keystroke means.
 export function moveListItem(view: EditorView, direction: "up" | "down"): boolean {
   const { $from } = view.state.selection;
 
@@ -74,7 +176,11 @@ export function moveListItem(view: EditorView, direction: "up" | "down"): boolea
     return false;
   }
 
-  return moveSiblingsAtDepth(view, direction, listItemDepth);
+  if (!moveSiblingsAtDepth(view, direction, listItemDepth)) {
+    moveListItemAcrossBlock(view, direction, listItemDepth);
+  }
+
+  return true;
 }
 
 // Moves the top-level block(s) (paragraph, heading, blockquote, code block,

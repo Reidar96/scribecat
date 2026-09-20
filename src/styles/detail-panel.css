@@ -20,6 +20,13 @@
   grid-template-rows: auto minmax(0, 1fr);
 }
 
+/* Desktop: the editor toolbar is portalled into this slot above the title
+   row (DocumentPanel/Editor). It is a grid row of its own, so the body row
+   has to stay the stretching one. */
+.detail-panel__card--document:has(> .detail-panel__toolbar) {
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+
 .detail-panel__header {
   display: flex;
   align-items: center;
@@ -32,6 +39,11 @@
   align-items: center;
   gap: 0.5rem;
   min-width: 0;
+}
+
+.detail-panel__title h2 {
+  font-size: 1.05rem;
+  font-weight: 600;
 }
 
 /* Back/forward across opened notes, in front of the file name. */
@@ -47,8 +59,7 @@
   min-width: 0;
 }
 
-.detail-panel__title-prefix,
-.detail-panel__title-suffix {
+.detail-panel__title-prefix {
   color: rgba(var(--text-rgb),0.55);
   white-space: nowrap;
 }
@@ -75,6 +86,51 @@
 
 .detail-panel__title-input::selection {
   background: rgba(59, 130, 246, 0.45);
+}
+
+/* The title is a breadcrumb: the folders leading to the note, then the note
+   itself. With folder notes on, every folder crumb opens that folder's own
+   note, which is the same action the folder row in the sidebar performs; with
+   the feature off the crumbs are plain text, since there would be nothing to
+   open. The rendered text stays exactly the path string the title showed
+   before, so nothing that reads the title sees a different value. */
+.detail-panel__breadcrumb-text {
+  /* Keeps the crumbs in reading order inside the RTL-truncated h2 (see
+     responsive.css) and picks the direction from the path itself. */
+  unicode-bidi: plaintext;
+}
+
+.detail-panel__crumb {
+  /* Inline, not inline-block: an atomic inline box would be a neutral
+     character for the bidi algorithm and could end up reordered. */
+  display: inline;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: rgba(var(--text-rgb),0.55);
+}
+
+.detail-panel__crumb--leaf {
+  color: inherit;
+}
+
+.detail-panel__crumb--link {
+  cursor: pointer;
+  border-radius: 0.25rem;
+  transition: color 120ms ease;
+}
+
+.detail-panel__crumb--link:hover,
+.detail-panel__crumb--link:focus-visible {
+  color: rgba(var(--text-rgb),0.95);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.detail-panel__crumb-separator {
+  color: rgba(var(--text-rgb),0.35);
+  padding: 0 0.1em;
 }
 
 /* "Folder note" next to the title: the title is the folder's name, so the
@@ -123,17 +179,31 @@
   flex-shrink: 0;
 }
 
-.detail-panel__status {
+/* The header's save state is an icon button (DocumentPanel): accent while
+   there is something to save, disabled once there is not. */
+.detail-panel__save-button {
   flex-shrink: 0;
-  border: 1px solid rgba(var(--overlay-rgb),0.08);
-  border-radius: 9999px;
-  background: rgba(var(--surface-raised-rgb),0.72);
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease;
+}
 
-  padding: 0.45rem 0.8rem;
-  color: rgba(var(--text-rgb),0.8);
-  font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
+.detail-panel__save-button:disabled {
+  cursor: default;
+}
+
+/* Auto-save pending: a write that is about to happen on its own. Muted like
+   the "saved" state so the eye is not pulled there every half second. */
+.detail-panel__save-button--auto {
+  color: rgba(var(--text-rgb), 0.55);
+}
+
+/* A file removed underneath us is the one state an icon alone would not
+   carry, so it keeps the warning colour even while the button is off. */
+.detail-panel__save-button--warning:disabled {
+  opacity: 1;
+  border-color: rgba(251, 191, 36, 0.22);
+  background: rgba(var(--warning-bg-rgb), 0.55);
+  color: var(--amber-fg);
 }
 
 .detail-panel__ai-chip {
@@ -207,24 +277,6 @@
 
 .detail-panel__ai-chip-cancel:active {
   transform: scale(0.92);
-}
-
-.detail-panel__status--dirty {
-  border-color: rgba(var(--overlay-rgb),0.12);
-  background: rgba(var(--surface-active-rgb),0.86);
-  color: var(--amber-fg);
-}
-
-.detail-panel__status--saving {
-  border-color: rgba(var(--overlay-rgb),0.12);
-  background: rgba(var(--surface-active-rgb),0.9);
-  color: var(--blue-fg);
-}
-
-.detail-panel__status--warning {
-  border-color: rgba(251, 191, 36, 0.22);
-  background: rgba(var(--warning-bg-rgb),0.55);
-  color: var(--amber-fg);
 }
 
 .detail-panel__body {

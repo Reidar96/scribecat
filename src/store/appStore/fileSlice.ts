@@ -224,7 +224,7 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
 
     return true;
   },
-  saveSelectedFile: async () => {
+  saveSelectedFile: async (options) => {
     const { selectedFilePath, selectedFileContent, folderPath, fileDocuments } = get();
 
     if (!selectedFilePath || selectedFileContent === null) {
@@ -244,7 +244,9 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
 
       await writeMarkdownFile(selectedFilePath, selectedFileContent);
 
-      snapshotFileVersion(folderPath, selectedFilePath, selectedFileContent);
+      snapshotFileVersion(folderPath, selectedFilePath, selectedFileContent, {
+        throttle: options?.trigger === "auto"
+      });
 
       if (folderPath) {
         void cleanupOrphanedImages(

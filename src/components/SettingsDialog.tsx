@@ -382,6 +382,8 @@ export function SettingsDialog({
   );
   const appVersion = useAppVersion();
   const reopenLastNote = useEditorSettingsStore((state) => state.reopenLastNote);
+  const pasteMarkdown = useEditorSettingsStore((state) => state.pasteMarkdown);
+  const setPasteMarkdown = useEditorSettingsStore((state) => state.setPasteMarkdown);
   const setReopenLastNote = useEditorSettingsStore((state) => state.setReopenLastNote);
 
   const ragEnabled = useRagSettingsStore((state) => state.config.enabled);
@@ -595,6 +597,18 @@ export function SettingsDialog({
                       type="checkbox"
                       checked={reopenLastNote}
                       onChange={(event) => setReopenLastNote(event.target.checked)}
+                    />
+                  </SettingRow>
+
+                  <SettingRow
+                    layout="switch"
+                    label={t("settingsDialog.pasteMarkdown")}
+                    hint={t("settingsDialog.pasteMarkdownShort")}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={pasteMarkdown}
+                      onChange={(event) => setPasteMarkdown(event.target.checked)}
                     />
                   </SettingRow>
 

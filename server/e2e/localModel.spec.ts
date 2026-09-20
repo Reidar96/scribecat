@@ -51,7 +51,7 @@ async function signIn(page: Page): Promise<void> {
   }
 
   await treeRow(page, NOTE).click();
-  await expect(page.getByTestId("note-title")).toHaveText(NOTE);
+  await expect(page.getByTestId("note-title")).toHaveText(NOTE.replace(/\.md$/i, ""));
 }
 
 async function openChatAndAsk(page: Page, message: string): Promise<void> {

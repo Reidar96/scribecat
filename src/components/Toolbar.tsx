@@ -16,6 +16,7 @@ import {
   Heading4,
   Heading5,
   Heading6,
+  Highlighter,
   ImagePlus,
   IndentDecrease,
   IndentIncrease,
@@ -30,15 +31,17 @@ import {
   PanelRight,
   PawPrint,
   Pilcrow,
+  Redo2,
   FileDown,
   Printer,
   Quote,
   Search,
-  SlidersHorizontal,
+  Sparkles,
   SpellCheck,
   Strikethrough,
   TriangleAlert,
   Underline,
+  Undo2,
   X
 } from "lucide-react";
 import { useEffect, useState, type ComponentType, type ReactNode } from "react";
@@ -56,9 +59,6 @@ import {
   MenuPopup,
   MenuPortal,
   MenuPositioner,
-  MenuRadioGroup,
-  MenuRadioItem,
-  MenuRadioItemIndicator,
   MenuTrigger
 } from "@/components/ui/menu";
 import { Toggle } from "@/components/ui/toggle";
@@ -68,6 +68,7 @@ import { TableGridPicker } from "@/components/TableGridPicker";
 import { TableMenu } from "@/components/TableMenu";
 import { ZoomControl } from "@/components/ZoomControl";
 import { CALLOUT_VARIANTS, type CalloutVariant } from "@/lib/editor/extensions/callout";
+import { isHighlighterModeActive } from "@/lib/editor/extensions/highlight";
 import { checkSpellcheckDictionary } from "@/lib/spellcheckDictionary";
 import { useAiModelsStore } from "@/store/useAiModelsStore";
 import { useAiSettingsStore } from "@/store/useAiSettingsStore";
@@ -137,28 +138,26 @@ function DetailsPanelToggle() {
   );
 }
 
-/* Phone and tablet: the model select is allowed 11rem and the thinking
-   toggle another button, together the width of five buttons in the single
-   toolbar row a phone has — for two things that are settings rather than
-   actions on the text. Both move behind this one trigger, which leaves the
-   model exactly as far away as the select did: one tap to open, one to
-   choose. */
-function AiQuickSettingsMenu({
-  model,
-  models,
-  thinkingEnabled,
-  onModelSelect,
-  onThinkingChange,
+/* Phone and tablet: the single toolbar row a phone has cannot afford four
+   AI buttons, and the model select plus thinking toggle were already folded
+   away here. Model and thinking are visible one tap further in the AI
+   settings dialog, so the menu carries the three AI *actions* instead and
+   the trigger takes over the accent look of the buttons it replaces. */
+function AiMobileMenu({
+  isChatOpen,
+  onAiRequest,
+  onAiCheckRequest,
+  onChatToggle,
   onAiSettingsRequest
 }: {
-  model: string;
-  models: string[];
-  thinkingEnabled: boolean;
-  onModelSelect: (model: string) => void;
-  onThinkingChange: (enabled: boolean) => void;
+  isChatOpen: boolean;
+  onAiRequest: () => void;
+  onAiCheckRequest: () => void;
+  onChatToggle: () => void;
   onAiSettingsRequest: () => void;
 }) {
   const { t } = useTranslation();
+  const model = useAiSettingsStore((state) => state.settings.model);
 
   return (
     <Menu>
@@ -167,48 +166,36 @@ function AiQuickSettingsMenu({
           <Button
             type="button"
             size="icon-sm"
-            variant="outline"
-            className="editor-toolbar__ai-settings-trigger"
-            aria-label={t("toolbar.aiModel")}
-            // The name the select showed and a narrow screen cut off anyway.
-            title={model || t("toolbar.aiModelPlaceholder")}
+            className="editor-toolbar__ai-button editor-toolbar__ai-settings-trigger"
+            aria-label={t("toolbar.aiMenu")}
+            title={t("toolbar.aiMenu")}
             data-unset={model ? undefined : "true"}
+            data-testid="ai-menu"
             onMouseDown={(event) => {
               event.preventDefault();
             }}
           />
         }
       >
-        <SlidersHorizontal />
+        <Sparkles fill="white" />
       </MenuTrigger>
       <MenuPortal>
         {/* The toolbar is at the bottom of the screen in this layout. */}
         <MenuPositioner side="top" align="start">
           <MenuPopup className="editor-toolbar__ai-settings-popup">
-            <MenuCheckboxItem
-              checked={thinkingEnabled}
-              // Toggling it is not the reason the menu was opened, so it
-              // stays open for the model choice below.
-              closeOnClick={false}
-              onCheckedChange={onThinkingChange}
-            >
-              <Brain className="size-4" />
-              {t("settingsDialog.thinking")}
+            <MenuItem onClick={onAiRequest}>
+              <PawPrint className="size-4" />
+              {t("toolbar.aiButton")}
+            </MenuItem>
+            <MenuItem onClick={onAiCheckRequest}>
+              <SpellCheck className="size-4" />
+              {t("toolbar.aiCheckButton")}
+            </MenuItem>
+            <MenuCheckboxItem checked={isChatOpen} onCheckedChange={onChatToggle} data-testid="open-chat">
+              <MessagesSquare className="size-4" />
+              {t("chat.openButton")}
               <MenuCheckboxItemIndicator />
             </MenuCheckboxItem>
-            <div className="editor-toolbar__menu-separator" role="separator" />
-            {models.length > 0 ? (
-              <MenuRadioGroup value={model} onValueChange={(value) => onModelSelect(String(value))}>
-                {models.map((entry) => (
-                  <MenuRadioItem key={entry} value={entry}>
-                    <span className="editor-toolbar__ai-settings-model">{entry}</span>
-                    <MenuRadioItemIndicator />
-                  </MenuRadioItem>
-                ))}
-              </MenuRadioGroup>
-            ) : (
-              <MenuItem disabled>{t("toolbar.aiModelPlaceholder")}</MenuItem>
-            )}
             <div className="editor-toolbar__menu-separator" role="separator" />
             <MenuItem onClick={onAiSettingsRequest}>{t("toolbar.aiOpenSettings")}</MenuItem>
           </MenuPopup>
@@ -224,7 +211,6 @@ function AiQuickSettings({
   onAiSettingsRequest: () => void;
 }) {
   const { t } = useTranslation();
-  const layout = useLayoutMode();
   const settings = useAiSettingsStore((state) => state.settings);
   const updateSettings = useAiSettingsStore((state) => state.updateSettings);
   // The central store is the single source for the model list — the toolbar
@@ -248,19 +234,6 @@ function AiQuickSettings({
     settings.model && !models.includes(settings.model)
       ? [settings.model, ...models]
       : models;
-
-  if (layout !== "desktop") {
-    return (
-      <AiQuickSettingsMenu
-        model={settings.model}
-        models={options}
-        thinkingEnabled={thinkingEnabled}
-        onModelSelect={(model) => updateSettings({ model })}
-        onThinkingChange={(enabled) => updateSettings({ thinkingMode: enabled ? "default" : "off" })}
-        onAiSettingsRequest={onAiSettingsRequest}
-      />
-    );
-  }
 
   return (
     <>
@@ -324,6 +297,8 @@ function EditorOptionsMenu({
   const { t, i18n } = useTranslation();
   const spellcheckEnabled = useEditorSettingsStore((state) => state.spellcheckEnabled);
   const setSpellcheckEnabled = useEditorSettingsStore((state) => state.setSpellcheckEnabled);
+  const autoSaveEnabled = useEditorSettingsStore((state) => state.autoSaveEnabled);
+  const setAutoSaveEnabled = useEditorSettingsStore((state) => state.setAutoSaveEnabled);
   const [missingDictionary, setMissingDictionary] = useState<MissingDictionary | null>(null);
 
   const handleSpellcheckChange = (checked: boolean) => {
@@ -364,6 +339,15 @@ function EditorOptionsMenu({
         <MenuPortal>
           <MenuPositioner align="end">
             <MenuPopup>
+              <MenuCheckboxItem
+                checked={autoSaveEnabled}
+                onCheckedChange={(checked) => setAutoSaveEnabled(checked)}
+                title={t("toolbar.autoSaveToggleTitle")}
+                data-testid="auto-save-toggle"
+              >
+                {t("toolbar.autoSaveToggle")}
+                <MenuCheckboxItemIndicator />
+              </MenuCheckboxItem>
               <MenuCheckboxItem
                 checked={spellcheckEnabled}
                 onCheckedChange={handleSpellcheckChange}
@@ -576,6 +560,7 @@ export function Toolbar({
   // On phone and tablet this button is the only chat toggle, so whether the
   // panel is open has to be readable from it.
   const isChatOpen = useChatStore((state) => state.isOpen);
+  const layout = useLayoutMode();
 
   // Indent controls act on the list item the cursor sits in; there is no
   // generic block indentation in a markdown document.
@@ -589,6 +574,8 @@ export function Toolbar({
       editor.chain().focus().liftListItem(listItemType).run();
     }
   };
+
+  const highlighterMode = isHighlighterModeActive(editor.view);
 
   useEffect(() => {
     const rerender = () => {
@@ -607,55 +594,97 @@ export function Toolbar({
   return (
     <div className="editor-toolbar" aria-label={t("toolbar.formattingLabel")}>
       <div className="editor-toolbar__group editor-toolbar__group--ai">
+        {layout !== "desktop" ? (
+          <AiMobileMenu
+            isChatOpen={isChatOpen}
+            onAiRequest={onAiRequest}
+            onAiCheckRequest={onAiCheckRequest}
+            onChatToggle={() => useChatStore.getState().togglePanel()}
+            onAiSettingsRequest={onAiSettingsRequest}
+          />
+        ) : (
+          <>
+            <Button
+              type="button"
+              size="icon-sm"
+              aria-label={t("toolbar.aiButton")}
+              title={t("toolbar.aiButtonTitle")}
+              className="editor-toolbar__ai-button"
+              onMouseDown={(event) => {
+                event.preventDefault();
+              }}
+              onClick={onAiRequest}
+            >
+              <PawPrint />
+            </Button>
+            <Button
+              type="button"
+              size="icon-sm"
+              title={hasSelection ? t("toolbar.aiCheckButtonTitle") : t("toolbar.aiCheckButtonTitleDocument")}
+              aria-label={t("toolbar.aiCheckButton")}
+              className="editor-toolbar__ai-check-button"
+              onMouseDown={(event) => {
+                event.preventDefault();
+              }}
+              onClick={onAiCheckRequest}
+            >
+              <SpellCheck />
+            </Button>
+            <Button
+              type="button"
+              size="icon-sm"
+              aria-label={t("chat.openButton")}
+              aria-pressed={isChatOpen}
+              title={`${t("chat.openButtonTitle")} (${t("common.keys.ctrl")}+${t("common.keys.shift")}+A)`}
+              className="editor-toolbar__chat-button"
+              data-testid="open-chat"
+              onMouseDown={(event) => {
+                event.preventDefault();
+              }}
+              onClick={() => useChatStore.getState().togglePanel()}
+            >
+              <MessagesSquare />
+            </Button>
+            <AiQuickSettings onAiSettingsRequest={onAiSettingsRequest} />
+          </>
+        )}
+      </div>
+
+      <div className="editor-toolbar__separator" aria-hidden="true" />
+
+      <div className="editor-toolbar__group">
         <Button
           type="button"
           size="icon-sm"
-          aria-label={t("toolbar.aiButton")}
-          title={t("toolbar.aiButtonTitle")}
-          className="editor-toolbar__ai-button"
+          variant="outline"
+          aria-label={t("toolbar.undo")}
+          title={t("toolbar.undoTitle")}
+          disabled={!editor.can().undo()}
           onMouseDown={(event) => {
             event.preventDefault();
           }}
-          onClick={onAiRequest}
+          onClick={() => {
+            editor.chain().focus().undo().run();
+          }}
         >
-          <PawPrint />
+          <Undo2 />
         </Button>
-        {/* The Button's disabled state sets pointer-events: none, which would
-            suppress the native title tooltip while no text is selected — the
-            title lives on this wrapper instead so it still receives hover. */}
-        <span
-          title={hasSelection ? t("toolbar.aiCheckButtonTitle") : t("toolbar.aiCheckButtonTitleDisabled")}
-        >
-          <Button
-            type="button"
-            size="icon-sm"
-            aria-label={t("toolbar.aiCheckButton")}
-            className="editor-toolbar__ai-check-button"
-            disabled={!hasSelection}
-            onMouseDown={(event) => {
-              event.preventDefault();
-            }}
-            onClick={onAiCheckRequest}
-          >
-            <SpellCheck />
-          </Button>
-        </span>
         <Button
           type="button"
           size="icon-sm"
-          aria-label={t("chat.openButton")}
-          aria-pressed={isChatOpen}
-          title={`${t("chat.openButtonTitle")} (${t("common.keys.ctrl")}+${t("common.keys.shift")}+A)`}
-          className="editor-toolbar__chat-button"
-          data-testid="open-chat"
+          variant="outline"
+          aria-label={t("toolbar.redo")}
+          title={t("toolbar.redoTitle")}
+          disabled={!editor.can().redo()}
           onMouseDown={(event) => {
             event.preventDefault();
           }}
-          onClick={() => useChatStore.getState().togglePanel()}
+          onClick={() => {
+            editor.chain().focus().redo().run();
+          }}
         >
-          <MessagesSquare />
+          <Redo2 />
         </Button>
-        <AiQuickSettings onAiSettingsRequest={onAiSettingsRequest} />
       </div>
 
       <div className="editor-toolbar__separator" aria-hidden="true" />
@@ -700,6 +729,22 @@ export function Toolbar({
           }}
         >
           <Underline />
+        </ToggleButton>
+        <ToggleButton
+          pressed={highlighterMode || editor.isActive("highlight")}
+          label={t("toolbar.highlight")}
+          title={highlighterMode ? t("toolbar.highlightModeTitle") : t("toolbar.highlightTitle")}
+          onClick={() => {
+            // With a selection the button is a plain format toggle like bold;
+            // without one it switches the marker tool on or off.
+            if (editor.state.selection.empty) {
+              editor.chain().focus().toggleHighlighterMode().run();
+            } else {
+              editor.chain().focus().toggleHighlight().run();
+            }
+          }}
+        >
+          <Highlighter />
         </ToggleButton>
       </div>
 

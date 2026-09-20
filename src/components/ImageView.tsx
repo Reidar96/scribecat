@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import { dirname, join } from "@/platform/paths";
 import { readFile } from "@/platform/vaultFs";
+import { NodeSelection } from "@tiptap/pm/state";
 import { NodeViewWrapper, type ReactNodeViewProps } from "@tiptap/react";
 
 import { EditorFileContext } from "@/lib/editorFileContext";
@@ -13,7 +14,7 @@ const MIN_IMAGE_WIDTH = 48;
 const RESIZE_HANDLES = ["nw", "ne", "sw", "se"] as const;
 type ResizeHandle = (typeof RESIZE_HANDLES)[number];
 
-export function ImageView({ node, updateAttributes, selected }: ReactNodeViewProps) {
+export function ImageView({ node, editor, getPos, updateAttributes, selected }: ReactNodeViewProps) {
   const { t } = useTranslation();
   const { filePath } = useContext(EditorFileContext);
   const src = (node.attrs.src as string | null) ?? "";
@@ -115,8 +116,35 @@ export function ImageView({ node, updateAttributes, selected }: ReactNodeViewPro
     window.addEventListener("pointerup", onPointerUp);
   };
 
+  // A tap on the image must not focus the contenteditable: on phones and
+  // tablets that raises the on-screen keyboard for a selection that has nothing
+  // to type into. Select the node directly instead of letting ProseMirror's
+  // mousedown handling focus the view first. A mouse keeps the default path,
+  // and an editor that is already focused stays focused (the keyboard is up
+  // anyway, and Backspace on the selected image should keep working).
+  const selectOnTouch = (event: React.PointerEvent<HTMLElement>) => {
+    if (event.pointerType === "mouse" || event.button !== 0) {
+      return;
+    }
+
+    const pos = getPos();
+
+    if (pos === undefined) {
+      return;
+    }
+
+    event.preventDefault();
+    const { state } = editor;
+    editor.view.dispatch(state.tr.setSelection(NodeSelection.create(state.doc, pos)));
+  };
+
   return (
-    <NodeViewWrapper as="span" className="editor-image-wrapper" data-drag-handle>
+    <NodeViewWrapper
+      as="span"
+      className="editor-image-wrapper"
+      data-drag-handle
+      onPointerDown={selectOnTouch}
+    >
       {displaySrc ? (
         <>
           <img

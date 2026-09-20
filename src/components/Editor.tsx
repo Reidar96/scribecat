@@ -1,9 +1,12 @@
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
+import { X } from "lucide-react";
 
 import { getVaultCapabilities, platform, vaultCapabilityHint } from "@/platform";
 import type { PickedImageFile } from "@/platform/types";
 import { EditorContent, type Editor as TipTapEditor, useEditor } from "@tiptap/react";
+import { NodeSelection } from "@tiptap/pm/state";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
@@ -69,6 +72,7 @@ import {
 } from "@/lib/editor/imageTransfer";
 import { moveLine, moveListItem, toggleTaskItemChecked } from "@/lib/editor/listCommands";
 import { normalizeEscapedCheckboxes } from "@/lib/editor/markdownNormalize";
+import { looksLikeMarkdown, pasteMarkdown } from "@/lib/editor/pasteMarkdown";
 import { normalizePastedSlice } from "@/lib/editor/pasteNormalize";
 import { getEditorMarkdown, getSelectionMarkdown } from "@/lib/editor/markdownStorage";
 import {
@@ -118,6 +122,9 @@ type EditorProps = {
   onAiPendingChange?: (isPending: boolean) => void;
   onAiSettingsRequest: () => void;
   onZenModeRequest: () => void;
+  /** Where the toolbar renders instead of inside the editor (the document
+   *  panel's slot above the title row on desktop); null keeps it inline. */
+  toolbarContainer?: HTMLElement | null;
 };
 
 export type EditorHandle = {
@@ -165,6 +172,17 @@ function selectionText(editor: TipTapEditor): string {
   );
 }
 
+// Turns a node selection (a selected image with its resize handles) into a
+// caret before the node. The resize handles and the toolbar prevent the
+// default on pointer/mouse down, so neither takes focus away from the editor.
+function collapseNodeSelection(editor: TipTapEditor): void {
+  const { selection } = editor.state;
+
+  if (selection instanceof NodeSelection) {
+    editor.commands.setTextSelection(selection.from);
+  }
+}
+
 export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   {
     markdown,
@@ -178,7 +196,8 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     onAiLoadingChange,
     onAiPendingChange,
     onAiSettingsRequest,
-    onZenModeRequest
+    onZenModeRequest,
+    toolbarContainer = null
   },
   ref
 ) {
@@ -187,6 +206,9 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   // The pointer type of the last press inside the editor, for the context
   // menu guard below: the event itself does not always say where it came from.
   const lastPointerTypeRef = useRef<string | null>(null);
+  // Set by Ctrl+Shift+V and consumed by the paste event it triggers: the
+  // clipboard event itself carries no modifier state.
+  const plainPasteRequestedRef = useRef(false);
   const lastSyncedMarkdownRef = useRef(markdown);
   // Kept in a ref so the sync effect below doesn't re-run for a new callback
   // identity: it may only react to actual content changes. Declared up here
@@ -1092,8 +1114,11 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       syncChatSelection(editor);
       refreshSuggestion();
     },
-    onBlur: () => {
+    onBlur: ({ editor: currentEditor }) => {
       closeSuggestion();
+      // A selected image stays selected when the editor loses focus, so a click
+      // outside would leave it highlighted with its resize handles.
+      collapseNodeSelection(currentEditor);
     },
     // Real focus in the editor means the reader is looking at the caret, not
     // hunting for a section anymore — whichever of the several ways back in
@@ -1147,15 +1172,44 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       },
       transformPasted: (slice) => normalizePastedSlice(slice),
       handlePaste: (view, event) => {
+        const plainPasteRequested = plainPasteRequestedRef.current;
+        plainPasteRequestedRef.current = false;
+
         const files = getImageFilesFromClipboard(event.clipboardData);
 
-        if (files.length === 0) {
+        if (files.length > 0) {
+          event.preventDefault();
+
+          void insertImageFiles(files, view.state.selection.from);
+          return true;
+        }
+
+        // Plain text that reads as Markdown is pasted as what it describes.
+        // Not when the clipboard also carries HTML (a copy out of a browser
+        // or Word, which ProseMirror already parses — a "*" in that text is
+        // a character, not emphasis), not into a code block, and not when
+        // the user asked for the raw text with Ctrl+Shift+V.
+        const currentEditor = editorRef.current;
+        const text = event.clipboardData?.getData("text/plain") ?? "";
+        const hasHtml = Boolean(event.clipboardData?.getData("text/html"));
+        const inCode = view.state.selection.$from.parent.type.spec.code === true;
+
+        if (
+          plainPasteRequested ||
+          hasHtml ||
+          inCode ||
+          !currentEditor ||
+          !useEditorSettingsStore.getState().pasteMarkdown ||
+          !looksLikeMarkdown(text)
+        ) {
+          return false;
+        }
+
+        if (!pasteMarkdown(currentEditor, text)) {
           return false;
         }
 
         event.preventDefault();
-
-        void insertImageFiles(files, view.state.selection.from);
         return true;
       },
       handleDOMEvents: {
@@ -1240,6 +1294,19 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         // with the browser, which keeps Ctrl+C native in every other focus.
         const fixedShortcut = matchFixedEditorShortcut(event);
 
+        if (fixedShortcut === "pastePlainText") {
+          // The keystroke stays with the browser, which pastes the plain
+          // text; the flag only tells handlePaste to skip the Markdown
+          // conversion. Cleared shortly after in case no paste follows
+          // (empty clipboard, permission refused).
+          plainPasteRequestedRef.current = true;
+          window.setTimeout(() => {
+            plainPasteRequestedRef.current = false;
+          }, 500);
+
+          return false;
+        }
+
         if (fixedShortcut) {
           if (view.state.selection.empty || fixedShortcut === "copyFormatted") {
             return false;
@@ -1282,12 +1349,8 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
             return moved;
           }
           case "aiCheckDialog":
-            // Without a selection there is nothing to check, but the combo is
-            // still consumed so it never reaches the document.
-            if (!view.state.selection.empty) {
-              event.preventDefault();
-              ai.runAiGrammarCheck();
-            }
+            event.preventDefault();
+            ai.runAiGrammarCheck();
 
             return true;
           case "checkboxToggle":
@@ -1309,6 +1372,16 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
             break;
           case "underline":
             chain()?.toggleUnderline().run();
+            break;
+          case "highlight":
+            // With a selection the combo is a plain format toggle; without one
+            // it switches the marker tool, so the keyboard reaches the same
+            // two behaviours as the toolbar button.
+            if (view.state.selection.empty) {
+              chain()?.toggleHighlighterMode().run();
+            } else {
+              chain()?.toggleHighlight().run();
+            }
             break;
           case "strikethrough":
             chain()?.toggleStrike().run();
@@ -1387,6 +1460,29 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   useEffect(() => {
     editor?.view.dom.classList.toggle(PAPER_SURFACE_CLASS, paperSurface);
   }, [editor, paperSurface]);
+
+  // A tap on an image selects it without focusing the editor (see ImageView),
+  // so there is no blur to clear that selection on. A pointer going down
+  // anywhere outside the editor surface clears it instead.
+  useEffect(() => {
+    if (!editor) {
+      return;
+    }
+
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+
+      if (target && !editor.view.dom.contains(target)) {
+        collapseNodeSelection(editor);
+      }
+    };
+
+    document.addEventListener("pointerdown", onPointerDown, true);
+
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown, true);
+    };
+  }, [editor]);
 
   // A focus request from outside (file tree: Tab) moves focus into the editor
   // with the cursor at the document start, so navigation can continue with
@@ -1547,6 +1643,21 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     return null;
   }
 
+  const toolbar = (
+    <Toolbar
+      editor={editor}
+      onLinkRequest={handleLinkRequest}
+      onImageInsertRequest={handleImageInsertRequest}
+      onAiRequest={ai.openAiDraftFromSelection}
+      onAiCheckRequest={ai.runAiGrammarCheck}
+      onAiSettingsRequest={onAiSettingsRequest}
+      onPrintRequest={printDocument}
+      onDownloadMarkdownRequest={downloadDocument}
+      onSearchRequest={openFindPanel}
+      onZenModeRequest={onZenModeRequest}
+    />
+  );
+
   return (
     <div className="editor-view">
       {stagedChange ? (
@@ -1578,21 +1689,19 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
           aria-live="polite"
         >
           <span className="editor-view__feedback-message">{ai.aiStatus.message}</span>
+          <button
+            type="button"
+            className="editor-view__feedback-dismiss"
+            aria-label={t("common.close")}
+            title={t("common.close")}
+            onClick={() => ai.setAiStatus(null)}
+          >
+            <X aria-hidden="true" />
+          </button>
         </div>
       ) : null}
 
-      <Toolbar
-        editor={editor}
-        onLinkRequest={handleLinkRequest}
-        onImageInsertRequest={handleImageInsertRequest}
-        onAiRequest={ai.openAiDraftFromSelection}
-        onAiCheckRequest={ai.runAiGrammarCheck}
-        onAiSettingsRequest={onAiSettingsRequest}
-        onPrintRequest={printDocument}
-        onDownloadMarkdownRequest={downloadDocument}
-        onSearchRequest={openFindPanel}
-        onZenModeRequest={onZenModeRequest}
-      />
+      {toolbarContainer ? createPortal(toolbar, toolbarContainer) : toolbar}
 
       <EditorFileContext.Provider value={{ folderPath, filePath }}>
         <div className="editor-view__body">

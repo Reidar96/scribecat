@@ -20,6 +20,27 @@ The server reads `index.html` once at startup, so restart it after a new
 the repository root instead (<http://localhost:5173>, API calls are proxied
 to port 3000).
 
+Both halves have to run at the same time, otherwise the proxy answers with
+`ECONNREFUSED`. There are three scripts in the repository root that take
+care of that:
+
+```bash
+scripts/local-web-start.sh              # server and Vite in the background
+scripts/local-web-stop.sh               # stop both again
+scripts/local-web-clean.sh              # stop, then remove logs and PID files
+scripts/local-web-clean.sh --with-vault # also delete the test vault
+```
+
+They default to a vault in `~/scribedog-test-vault` and the password
+`devpassword`; set `SCRIBEDOG_VAULT_PATH` or `SCRIBEDOG_INIT_PASSWORD` to
+change that. Logs land in `scripts/.run/`.
+
+The start script binds Vite to all interfaces and prints the addresses of
+the machine, so the running app can also be opened from a phone in the same
+network. That means anyone in that network can reach the test vault with the
+development password, which is fine on a home network and not fine anywhere
+else.
+
 ## Tests
 
 ```bash

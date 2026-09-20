@@ -84,6 +84,9 @@ function renderRuns(runs: InlineRun[], imageHrefs: Map<string, string>): string 
     if (run.underline) {
       text = `<u>${text}</u>`;
     }
+    if (run.highlight) {
+      text = `<mark>${text}</mark>`;
+    }
     if (run.strike) {
       text = `<s>${text}</s>`;
     }
@@ -215,6 +218,7 @@ h3 { font-size: 1.15em; }
 p { margin: 0 0 0.7em; text-indent: 0; }
 img { max-width: 100%; height: auto; }
 code { font-family: monospace; font-size: 0.9em; }
+mark { background: #fde68a; color: inherit; }
 pre { white-space: pre-wrap; background: #f6f8fa; padding: 0.6em; }
 blockquote { margin: 0.8em 1.2em; font-style: italic; }
 table { border-collapse: collapse; }

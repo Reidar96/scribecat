@@ -83,7 +83,9 @@
    the DOM text — a caret at the start of the title lands after it and a copy
    never takes it along. Slightly muted so it reads as generated, not typed.
    The `{-}` marker that opts a heading out is real text and is dimmed the
-   same way, so it shows as "understood" without being hidden. */
+   same way, so it shows as "understood" without being hidden; with the
+   marker setting on "only in the active line" it is collapsed everywhere
+   but in the heading the cursor is in. */
 .editor-view__surface [data-heading-number]::before {
   content: attr(data-heading-number) "\00a0";
   color: rgba(var(--text-rgb), 0.62);
@@ -95,6 +97,10 @@
 .editor-view__surface .heading-unnumbered-marker {
   color: rgba(var(--muted-rgb), 0.7);
   font-weight: 400;
+}
+
+.editor-view__surface .heading-unnumbered-marker--hidden {
+  display: none;
 }
 
 .editor-view__surface h1 {
@@ -155,15 +161,24 @@
   padding-left: 0;
 }
 
+/* Not a flex row on purpose. A flex item is its own block formatting
+   context, so the prose margins inside the content <div> (paragraphs, a
+   nested list and its last item) stop collapsing with the li margins and add
+   up: a task item got about twice the spacing of a bullet, and one with an
+   indented list below it more still. With the checkbox taken out of the
+   flow, the <div> is an ordinary block and the margins collapse exactly as
+   they do in a bullet list. */
 .editor-view__surface ul[data-type="taskList"] li {
-  display: flex;
-  gap: 0.65rem;
-  align-items: flex-start;
+  position: relative;
+  padding-left: 1.65rem;
 }
 
 .editor-view__surface ul[data-type="taskList"] li > label {
-  flex-shrink: 0;
-  margin-top: 0.2rem;
+  position: absolute;
+  left: 0;
+  /* Centre of the first line (prose line-height 1.75) minus half the box. */
+  top: calc(0.875em - 0.5rem);
+  line-height: 1;
 }
 
 .editor-view__surface ul[data-type="taskList"] input[type="checkbox"] {
@@ -232,6 +247,35 @@
 
 .editor-view__surface.resize-cursor {
   cursor: col-resize;
+}
+
+/* Text-marker highlight. The colour is a token so the paper surface inside
+   the dark UI (tokens.css) resolves to the light value like everything else. */
+.editor-view__surface mark {
+  background: var(--highlight-bg);
+  color: inherit;
+  border-radius: 2px;
+  padding: 0.05em 0;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+/* While the marker tool is on (highlight.ts) the pointer becomes a marker so
+   the mode is visible on the page itself, not only on the toolbar button. */
+.editor-view__surface.editor--highlighter-mode {
+  cursor:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m9 11-6 6v3h9l3-3'/><path d='m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4'/></svg>")
+      3 21,
+    text;
+}
+
+/* Same marker in white on the dark surface; the paper surface stays a light
+   page inside the dark UI and keeps the black one. */
+.dark .editor-view__surface.editor--highlighter-mode:not(.editor-view__surface--paper) {
+  cursor:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m9 11-6 6v3h9l3-3'/><path d='m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4'/></svg>")
+      3 21,
+    text;
 }
 
 .editor-view__surface:focus {

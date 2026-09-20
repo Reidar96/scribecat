@@ -1,4 +1,4 @@
-import { useState, type RefObject } from "react";
+import { Fragment, useState, type RefObject } from "react";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -19,9 +19,11 @@ import { FindReplacePanel } from "@/components/FindReplacePanel";
 import { VersionsPopover } from "@/components/VersionsPopover";
 import { DocumentMenu } from "@/components/app/DocumentMenu";
 import { useLayoutMode } from "@/hooks/useLayoutMode";
+import { getPathCrumbs } from "@/lib/breadcrumbPath";
 import type { FileVersion } from "@/lib/fileVersions";
 import { cn } from "@/lib/utils";
 import { getVaultCapabilities, vaultCapabilityHint } from "@/platform";
+import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
 import { useSearchStore } from "@/store/useSearchStore";
 import { useVersioningSettingsStore } from "@/store/useVersioningSettingsStore";
 
@@ -48,6 +50,8 @@ type DocumentPanelProps = {
   onCommitTitleRename: () => void;
   onCancelTitleRename: () => void;
   onStartTitleRename: () => void;
+  /** Opens a folder's note from a breadcrumb crumb; the path is vault-relative. */
+  onOpenFolderNote: (folderRelativePath: string) => void;
 
   isAiLoading: boolean;
   isSaving: boolean;
@@ -95,6 +99,7 @@ export function DocumentPanel({
   onCommitTitleRename,
   onCancelTitleRename,
   onStartTitleRename,
+  onOpenFolderNote,
   isAiLoading,
   isSaving,
   isDirty,
@@ -119,6 +124,11 @@ export function DocumentPanel({
 }: DocumentPanelProps) {
   const { t } = useTranslation();
   const layout = useLayoutMode();
+  // Desktop: the editor's toolbar is portalled here, above the title row, so
+  // the formatting controls sit at the top of the panel. Tablet and phone keep
+  // it inside the editor, where responsive.css moves it below the text. A
+  // state (not a ref) so the editor re-renders once the slot exists.
+  const [toolbarSlot, setToolbarSlot] = useState<HTMLDivElement | null>(null);
   // Bumped by the header menu's "Versions" entry on the phone, where the
   // popover's own trigger button has no room in the header.
   const [versionsRequestId, setVersionsRequestId] = useState(0);
@@ -126,14 +136,30 @@ export function DocumentPanel({
   const capabilityHint = vaultCapabilityHint();
   const versioningEnabled = useVersioningSettingsStore((state) => state.versioningEnabled);
   const closeFindPanel = useSearchStore((state) => state.closePanel);
-  // Icon-only save button: what the pill used to spell out has to reach the
-  // screen reader through the label instead.
-  const saveStateLabel = isSaving
+  const autoSaveEnabled = useEditorSettingsStore((state) => state.autoSaveEnabled);
+  // Folder notes turn every folder into something that can be opened, so the
+  // crumbs in front of the note become links; with the feature off the same
+  // crumbs are plain text. The ".md" is dropped from the label first, so the
+  // rendered text stays exactly the path the title showed before.
+  const folderNotesEnabled = useEditorSettingsStore((state) => state.folderNotesEnabled);
+  const titleCrumbs = getPathCrumbs((selectedFileLabel ?? "").replace(/\.md$/i, ""));
+
+  // With auto-save on, unsaved edits are a write that is about to happen, not
+  // a task for the user: the button drops the accent and goes quiet instead
+  // of asking for a click. No spinner here, since the state is on for the
+  // whole time someone is typing and a permanently spinning icon reads as
+  // "stuck"; the spinner is kept for the write itself. It still saves on
+  // click, for the impatient. A file removed underneath us stays a decision
+  // either way (useAutoSave leaves it alone).
+  const isAutoSavePending = autoSaveEnabled && isDirty && !isSelectedFileMissing;
+  // The save button's label: visible text on the desktop, the accessible
+  // name of the icon-only button on phone and tablet.
+  const saveStateLabel = isSaving || isAutoSavePending
     ? t("app.statusSaving")
     : isSelectedFileMissing
       ? t("app.statusFileRemoved")
       : isDirty
-        ? t("app.saveButton")
+        ? t("app.saveButtonTitle")
         : t("app.statusSaved");
 
   // Find & replace normally lives inside <Editor> (it needs the ProseMirror
@@ -164,6 +190,7 @@ export function DocumentPanel({
       {selectedFilePath ? (
         <div className="detail-panel__card detail-panel__card--document">
           {standaloneFindPanel}
+          {layout === "desktop" ? <div className="detail-panel__toolbar" ref={setToolbarSlot} /> : null}
           <div className="detail-panel__header">
             <div className="detail-panel__title">
               {layout === "phone" ? (
@@ -241,13 +268,45 @@ export function DocumentPanel({
                     aria-label={t(isSelectedFolderNote ? "app.folderNameLabel" : "app.fileNameLabel")}
                     spellCheck={false}
                   />
-                  {isSelectedFolderNote ? null : (
-                    <span className="detail-panel__title-suffix">.md</span>
-                  )}
                 </h2>
               ) : (
                 <>
-                  <h2 data-testid="note-title">{selectedFileLabel}</h2>
+                  <h2 data-testid="note-title" className="detail-panel__breadcrumb">
+                    {/* One bidi isolate around the crumbs: on tablet and phone
+                        the h2 is laid out RTL so the ellipsis cuts the folders
+                        instead of the file name, and without the isolate the
+                        crumb boxes would be reordered right to left. */}
+                    <span className="detail-panel__breadcrumb-text">
+                      {titleCrumbs.map((crumb, index) => (
+                        <Fragment key={crumb.folderRelativePath ?? `leaf-${index}`}>
+                          {index > 0 ? (
+                            <span className="detail-panel__crumb-separator" aria-hidden="true">
+                              /
+                            </span>
+                          ) : null}
+                          {crumb.folderRelativePath !== null && folderNotesEnabled ? (
+                            <button
+                              type="button"
+                              className="detail-panel__crumb detail-panel__crumb--link"
+                              onClick={() => onOpenFolderNote(crumb.folderRelativePath as string)}
+                              title={t("fileTree.openFolderNote", { path: crumb.folderRelativePath })}
+                            >
+                              {crumb.name}
+                            </button>
+                          ) : (
+                            <span
+                              className={cn(
+                                "detail-panel__crumb",
+                                crumb.folderRelativePath === null && "detail-panel__crumb--leaf"
+                              )}
+                            >
+                              {crumb.name}
+                            </span>
+                          )}
+                        </Fragment>
+                      ))}
+                    </span>
+                  </h2>
                   {isSelectedFolderNote ? (
                     <span
                       className="detail-panel__title-badge"
@@ -301,59 +360,43 @@ export function DocumentPanel({
                   openRequestId={versionsRequestId}
                 />
               ) : null}
-              {layout === "desktop" ? (
-                <div
-                  className={cn(
-                    "detail-panel__status",
-                    isSaving && "detail-panel__status--saving",
-                    isDirty && "detail-panel__status--dirty",
-                    isSelectedFileMissing && "detail-panel__status--warning"
-                  )}
-                  aria-live="polite"
-                  data-testid="status"
-                  data-dirty={isDirty ? "true" : "false"}
-                >
-                  {isSaving
-                    ? t("app.statusSaving")
-                    : isSelectedFileMissing
-                      ? t("app.statusFileRemoved")
-                      : isDirty
-                        ? t("app.statusUnsaved")
-                        : t("app.statusSaved")}
-                </div>
-              ) : (
-                // Without a keyboard there is no Ctrl+S, so the thing showing
-                // the unsaved state is also what saves. Icon only: the word
-                // costs the width the file name needs, and the state is
-                // carried by the colour plus the label that is announced.
-                <Button
-                  type="button"
-                  size="icon-sm"
-                  variant={isDirty && !isSaving ? "default" : "outline"}
-                  className={cn(
-                    "detail-panel__save-button",
-                    isSelectedFileMissing && "detail-panel__save-button--warning"
-                  )}
-                  aria-label={saveStateLabel}
-                  data-testid="status"
-                  data-dirty={isDirty ? "true" : "false"}
-                  disabled={!isDirty || isSaving}
-                  title={isDirty && !isSaving ? t("app.saveButtonTitle") : saveStateLabel}
-                  onClick={onSaveRequest}
-                >
-                  {isSaving ? (
-                    <Loader2 className="animate-spin" />
-                  ) : isSelectedFileMissing ? (
-                    <AlertTriangle />
-                  ) : isDirty ? (
-                    <Save />
-                  ) : (
-                    <Check />
-                  )}
-                </Button>
-              )}
-              {/* A changing aria-label is not announced; the state change the
-                  pill used to speak on the desktop needs its own region. */}
+              {/* The thing showing the save state is also what saves, on
+                  every layout: without a keyboard there is no Ctrl+S, and
+                  with one a click still beats reading a pill. The desktop
+                  has room for the words; phone and tablet keep the icon
+                  alone, since the word costs the width the file name needs,
+                  and carry the state through the colour plus the announced
+                  label. */}
+              <Button
+                type="button"
+                size={layout === "desktop" ? "sm" : "icon-sm"}
+                variant={isDirty && !isSaving && !isAutoSavePending ? "default" : "outline"}
+                className={cn(
+                  "detail-panel__save-button",
+                  isAutoSavePending && "detail-panel__save-button--auto",
+                  isSelectedFileMissing && "detail-panel__save-button--warning"
+                )}
+                aria-label={layout === "desktop" ? undefined : saveStateLabel}
+                data-testid="status"
+                data-dirty={isDirty ? "true" : "false"}
+                disabled={!isDirty || isSaving}
+                title={isDirty && !isSaving ? t("app.saveButtonTitle") : saveStateLabel}
+                onClick={onSaveRequest}
+              >
+                {isSaving ? (
+                  <Loader2 className="animate-spin" />
+                ) : isSelectedFileMissing ? (
+                  <AlertTriangle />
+                ) : isDirty ? (
+                  <Save />
+                ) : (
+                  <Check />
+                )}
+                {layout === "desktop" ? saveStateLabel : null}
+              </Button>
+              {/* A changing aria-label is not announced; where the label is
+                  not visible text, the state change needs its own live
+                  region. */}
               {layout === "desktop" ? null : (
                 <span className="sr-only" role="status" aria-live="polite">
                   {saveStateLabel}
@@ -402,6 +445,7 @@ export function DocumentPanel({
                 onAiPendingChange={onAiPendingChange}
                 onAiSettingsRequest={onAiSettingsRequest}
                 onZenModeRequest={onZenModeRequest}
+                toolbarContainer={layout === "desktop" ? toolbarSlot : null}
               />
             )}
           </div>

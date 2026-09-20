@@ -6,10 +6,13 @@
          and pads itself with the safe-area insets. interactive-widget:
          Chrome shrinks the layout viewport for the on-screen keyboard, so the
          editor toolbar stays above the keys (Safari ignores it and is
-         handled by useViewportHeight). The native shells ignore both. -->
+         handled by useViewportHeight). user-scalable=no: no pinch zoom of
+         the page on phones (responsive.css says the same via touch-action;
+         Zen mode pinches the text size instead, see useZenFontZoom). The
+         native shells ignore all of it. -->
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content"
     />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>ScribeDog</title>

@@ -71,6 +71,7 @@ async function loadPdfMake(): Promise<PdfMakeModule> {
 
 const PAGE_CONTENT_WIDTH = 451; // A4 (595pt) minus the 72pt margins on both sides.
 const CODE_FILL_COLOR = "#f4f4f4";
+const HIGHLIGHT_FILL_COLOR = "#fde68a";
 const BORDER_COLOR = "#c8c8c8";
 const MUTED_COLOR = "#666666";
 
@@ -116,7 +117,7 @@ function runsToPdfText(runs: InlineRun[], images: ExportImageMap): Content[] {
       bold: run.bold || undefined,
       italics: run.italic || undefined,
       decoration: run.underline ? "underline" : run.strike ? "lineThrough" : undefined,
-      background: run.code ? CODE_FILL_COLOR : undefined,
+      background: run.highlight ? HIGHLIGHT_FILL_COLOR : run.code ? CODE_FILL_COLOR : undefined,
       link: run.link ?? undefined,
       color: run.link ? "#0969da" : undefined
     };

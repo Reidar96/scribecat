@@ -2,6 +2,7 @@ import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerE
 import { ArrowLeft } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { useZenFontZoom } from "@/hooks/useZenFontZoom";
 import {
   ZEN_WIDTH_MAX,
   ZEN_WIDTH_MIN,
@@ -18,6 +19,7 @@ export function ZenMode({ onExit, isDirty }: ZenModeProps) {
   const { t } = useTranslation();
   const zenWidth = useEditorSettingsStore((state) => state.zenWidth);
   const setZenWidth = useEditorSettingsStore((state) => state.setZenWidth);
+  const readoutSizePt = useZenFontZoom(true);
 
   // The text column is centred on the viewport, so its half-width equals the
   // pointer's distance from the horizontal centre — the same math for either
@@ -71,6 +73,12 @@ export function ZenMode({ onExit, isDirty }: ZenModeProps) {
       >
         <ArrowLeft className="size-5" />
       </button>
+
+      {readoutSizePt !== null ? (
+        <output className="zen-font-readout" aria-live="polite">
+          {t("settingsDialog.fontSizeValue", { size: readoutSizePt })}
+        </output>
+      ) : null}
 
       {isDirty ? (
         <span

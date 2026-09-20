@@ -96,7 +96,7 @@ async function openNote(page: Page, relativePath: string): Promise<void> {
   }
 
   await treeRow(page, relativePath).click();
-  await expect(page.getByTestId("note-title")).toHaveText(relativePath);
+  await expect(page.getByTestId("note-title")).toHaveText(relativePath.replace(/\.md$/i, ""));
 }
 
 async function ask(page: Page, message: string): Promise<void> {
@@ -151,7 +151,7 @@ test("proposes a new note through the proxy, applies it, and takes it back", asy
 
   // Opening the entry shows the proposal as a review and locks the editor.
   await pendingChanges(page).getByRole("button", { name: path }).click();
-  await expect(page.getByTestId("note-title")).toHaveText(path);
+  await expect(page.getByTestId("note-title")).toHaveText(path.replace(/\.md$/i, ""));
   await expect(page.getByText("This note will be created.")).toBeVisible();
   await expect(page.getByTestId("editor")).toContainText("Written by the mock model.");
   await expect(page.getByTestId("editor")).toHaveAttribute("contenteditable", "false");

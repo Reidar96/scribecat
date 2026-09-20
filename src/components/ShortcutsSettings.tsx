@@ -52,6 +52,11 @@ const FIXED_SHORTCUTS: { id: string; keys: KeyToken[]; descriptionKey: string }[
     descriptionKey: "editorContextMenu.copyPlainText"
   },
   { id: "paste", keys: [{ mod: "ctrl" }, { literal: "V" }], descriptionKey: "shortcutsDialog.items.paste" },
+  {
+    id: "pastePlainText",
+    keys: [{ mod: "ctrl" }, { mod: "shift" }, { literal: "V" }],
+    descriptionKey: "editorContextMenu.pastePlainText"
+  },
   { id: "undo", keys: [{ mod: "ctrl" }, { literal: "Z" }], descriptionKey: "shortcutsDialog.items.undo" },
   { id: "redo", keys: [{ mod: "ctrl" }, { literal: "Y" }], descriptionKey: "shortcutsDialog.items.redo" },
   { id: "closeDialog", keys: [{ special: "esc" }], descriptionKey: "shortcutsDialog.items.closeDialog" }

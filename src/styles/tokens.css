@@ -41,9 +41,7 @@
 
   --overlay-rgb: 15, 23, 42;
   --text-rgb: 15, 23, 42;
-  /* Default (non-emphasized) text opacity. One step darker than the dark
-     theme's value: the same alpha read noticeably lighter against a white
-     page than the near-black --text-rgb does against dark surfaces. */
+  /* Default (non-emphasized) text opacity. */
   --text-default-alpha: 0.82;
   --muted-rgb: 100, 116, 139;
   --surface-rgb: 255, 255, 255;
@@ -75,6 +73,9 @@
   --success-bg-rgb: 220, 252, 231;
   --warning-bg-rgb: 255, 251, 235;
   --info-bg-rgb: 239, 246, 255;
+  /* Text-marker highlight (==text==): a translucent yellow so the text
+     underneath keeps its own colour and stays readable. */
+  --highlight-bg: rgba(253, 224, 71, 0.55);
 
   /* Diff highlights (AI rewrite/suggestion review, grammar check, version
      diff). Kept separate from --error-bg-rgb: that token is a panel/toast
@@ -138,7 +139,7 @@
 
   --overlay-rgb: 255, 255, 255;
   --text-rgb: 226, 232, 240;
-  --text-default-alpha: 0.72;
+  --text-default-alpha: 0.82;
   --muted-rgb: 148, 163, 184;
   --surface-rgb: 24, 24, 26;
   --surface-raised-rgb: 28, 28, 30;
@@ -161,6 +162,9 @@
   --success-bg-rgb: 18, 34, 24;
   --warning-bg-rgb: 69, 49, 7;
   --info-bg-rgb: 15, 33, 62;
+  /* Darker, less saturated than the light value: full yellow behind light
+     text on a near-black page glares and drops the contrast. */
+  --highlight-bg: rgba(202, 138, 4, 0.42);
 
   --diff-removed-bg: rgba(248, 113, 113, 0.26);
   --diff-removed-accent: rgba(252, 165, 165, 0.7);

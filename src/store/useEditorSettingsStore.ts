@@ -11,6 +11,7 @@ import {
   type AppFontId
 } from "@/lib/fonts";
 import { clampOutlineDepth, OUTLINE_DEPTH_MAX } from "@/lib/editor/documentOutline";
+import { clampZenFontSizePt } from "@/lib/zenFontZoom";
 import {
   DEFAULT_HEADING_NUMBERING,
   normalizeHeadingNumberingSettings,
@@ -33,9 +34,12 @@ export const DETAILS_COLLAPSED_STORAGE_KEY = "scribedog-details-collapsed-sectio
 export type DetailsSectionId = "outline" | "fileInfo" | "outgoingLinks" | "backlinks";
 export const ZOOM_STORAGE_KEY = "scribedog-zoom-level";
 export const ZEN_WIDTH_STORAGE_KEY = "scribedog-zen-width";
+export const ZEN_FONT_SIZE_STORAGE_KEY = "scribedog-zen-font-size-pt";
 export const FONT_STORAGE_KEY = "scribedog-font-id";
 export const FONT_SIZE_STORAGE_KEY = "scribedog-font-size-pt";
 export const PAPER_SURFACE_STORAGE_KEY = "scribedog-paper-surface";
+export const AUTO_SAVE_STORAGE_KEY = "scribedog-auto-save-enabled";
+export const PASTE_MARKDOWN_STORAGE_KEY = "scribedog-paste-markdown";
 
 // Zoom level is an offset in percent relative to normal size (0 = 100%).
 export const ZOOM_MIN = -30;
@@ -94,6 +98,28 @@ function persistZenWidth(width: number): void {
   }
 }
 
+function getStoredZenFontSizePt(): number | null {
+  try {
+    const raw = window.localStorage.getItem(ZEN_FONT_SIZE_STORAGE_KEY);
+    const parsed = raw === null ? Number.NaN : Number.parseFloat(raw);
+    return Number.isFinite(parsed) ? clampZenFontSizePt(parsed) : null;
+  } catch {
+    return null;
+  }
+}
+
+function persistZenFontSizePt(sizePt: number | null): void {
+  try {
+    if (sizePt === null) {
+      window.localStorage.removeItem(ZEN_FONT_SIZE_STORAGE_KEY);
+    } else {
+      window.localStorage.setItem(ZEN_FONT_SIZE_STORAGE_KEY, String(sizePt));
+    }
+  } catch {
+    // localStorage may be unavailable in some environments.
+  }
+}
+
 function getStoredSpellcheckEnabled(): boolean {
   try {
     return window.localStorage.getItem(SPELLCHECK_STORAGE_KEY) === "true";
@@ -105,6 +131,43 @@ function getStoredSpellcheckEnabled(): boolean {
 function persistSpellcheckEnabled(enabled: boolean): void {
   try {
     window.localStorage.setItem(SPELLCHECK_STORAGE_KEY, String(enabled));
+  } catch {
+    // localStorage may be unavailable in some environments.
+  }
+}
+
+// Off by default: existing users save with Ctrl+S on purpose, "discard
+// changes" is a free undo level for a whole session that auto-save takes
+// away, and every write is an upload for a synced or remote vault.
+function getStoredAutoSaveEnabled(): boolean {
+  try {
+    return window.localStorage.getItem(AUTO_SAVE_STORAGE_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
+function persistAutoSaveEnabled(enabled: boolean): void {
+  try {
+    window.localStorage.setItem(AUTO_SAVE_STORAGE_KEY, String(enabled));
+  } catch {
+    // localStorage may be unavailable in some environments.
+  }
+}
+
+// On by default: pasted "# Heading" is meant as a heading far more often
+// than as three characters, and Ctrl+Shift+V still pastes the raw text.
+function getStoredPasteMarkdown(): boolean {
+  try {
+    return window.localStorage.getItem(PASTE_MARKDOWN_STORAGE_KEY) !== "false";
+  } catch {
+    return true;
+  }
+}
+
+function persistPasteMarkdown(enabled: boolean): void {
+  try {
+    window.localStorage.setItem(PASTE_MARKDOWN_STORAGE_KEY, String(enabled));
   } catch {
     // localStorage may be unavailable in some environments.
   }
@@ -231,6 +294,19 @@ function persistFontSizePt(sizePt: number): void {
 type EditorSettingsState = {
   spellcheckEnabled: boolean;
   setSpellcheckEnabled: (enabled: boolean) => void;
+  /**
+   * Save the open note on its own once typing has paused (see
+   * hooks/useAutoSave.ts). App-wide, not per vault: it is a way of working,
+   * not a property of a folder.
+   */
+  autoSaveEnabled: boolean;
+  setAutoSaveEnabled: (enabled: boolean) => void;
+  /**
+   * Convert plain-text clipboard content that looks like Markdown on paste
+   * (see lib/editor/pasteMarkdown.ts). Ctrl+Shift+V bypasses it either way.
+   */
+  pasteMarkdown: boolean;
+  setPasteMarkdown: (enabled: boolean) => void;
   /** Open the note that was open in the vault last time when it is opened again. */
   reopenLastNote: boolean;
   setReopenLastNote: (enabled: boolean) => void;
@@ -294,6 +370,15 @@ type EditorSettingsState = {
   setZoomLevel: (level: number) => void;
   zenWidth: number;
   setZenWidth: (width: number) => void;
+  /**
+   * Text size for Zen mode only, set by pinching or Ctrl+wheel there. `null`
+   * until the first gesture: the column then follows fontSizePt, so a user
+   * who never zooms sees the same text as in the normal view. Kept apart
+   * from fontSizePt because that size travels into every export, and a
+   * reading size chosen on the couch must not resize the printed page.
+   */
+  zenFontSizePt: number | null;
+  setZenFontSizePt: (sizePt: number | null) => void;
 };
 
 // Two custom properties drive every editing surface (normal view, Zen mode,
@@ -326,6 +411,16 @@ export const useEditorSettingsStore = create<EditorSettingsState>((set, get) => 
   setSpellcheckEnabled: (enabled: boolean) => {
     persistSpellcheckEnabled(enabled);
     set({ spellcheckEnabled: enabled });
+  },
+  autoSaveEnabled: getStoredAutoSaveEnabled(),
+  setAutoSaveEnabled: (enabled: boolean) => {
+    persistAutoSaveEnabled(enabled);
+    set({ autoSaveEnabled: enabled });
+  },
+  pasteMarkdown: getStoredPasteMarkdown(),
+  setPasteMarkdown: (enabled: boolean) => {
+    persistPasteMarkdown(enabled);
+    set({ pasteMarkdown: enabled });
   },
   reopenLastNote: getStoredReopenLastNote(),
   setReopenLastNote: (enabled: boolean) => {
@@ -431,5 +526,11 @@ export const useEditorSettingsStore = create<EditorSettingsState>((set, get) => 
     const clamped = clampZenWidth(width);
     persistZenWidth(clamped);
     set({ zenWidth: clamped });
+  },
+  zenFontSizePt: getStoredZenFontSizePt(),
+  setZenFontSizePt: (sizePt: number | null) => {
+    const clamped = sizePt === null ? null : clampZenFontSizePt(sizePt);
+    persistZenFontSizePt(clamped);
+    set({ zenFontSizePt: clamped });
   }
 }));

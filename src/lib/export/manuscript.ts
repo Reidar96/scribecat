@@ -130,6 +130,7 @@ function textRun(text: string, bold = false, italic = false): InlineRun {
     bold,
     italic,
     underline: false,
+    highlight: false,
     strike: false,
     code: false,
     link: null

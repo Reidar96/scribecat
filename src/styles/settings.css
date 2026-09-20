@@ -311,6 +311,20 @@
   box-shadow: 0 20px 48px rgba(0, 0, 0, 0.45);
 }
 
+.info-popover__link {
+  display: block;
+  margin-top: 0.4rem;
+  color: rgb(var(--accent-rgb));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.info-popover__link:focus-visible {
+  outline: 2px solid rgba(var(--accent-rgb), 0.6);
+  outline-offset: 1px;
+  border-radius: 0.2rem;
+}
+
 /* Over settings that live in the open folder's .scribedog (the knowledge
    base, the folder's own page): which folder, and that other folders have
    their own. */
@@ -428,4 +442,17 @@
   .setting-row--switch .setting-row__hint {
     margin-left: 0;
   }
+}
+
+/* A section heading in the account tab with the (i) behind it, like the
+   font setting's head: the heading is not a setting row, so it places the
+   icon itself. */
+.account-settings__head {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.account-settings__head h3 {
+  margin: 0;
 }

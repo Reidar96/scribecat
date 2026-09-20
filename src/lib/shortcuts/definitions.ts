@@ -34,6 +34,7 @@ export type ShortcutActionId =
   | "bold"
   | "italic"
   | "underline"
+  | "highlight"
   | "strikethrough"
   | "insertLink"
   | "bulletList"
@@ -256,6 +257,13 @@ export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
     category: "format",
     descriptionKey: "shortcutsDialog.items.underline",
     defaultBinding: letter(CTRL, "U")
+  },
+  {
+    id: "highlight",
+    scope: "editor",
+    category: "format",
+    descriptionKey: "shortcutsDialog.items.highlight",
+    defaultBinding: letter(CTRL_SHIFT, "H")
   },
   {
     id: "strikethrough",

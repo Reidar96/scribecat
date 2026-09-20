@@ -27,6 +27,35 @@
   min-width: 0;
 }
 
+/* Acknowledge button: the banner otherwise stays until the next AI request,
+   and an error nobody can wave away sits above the document indefinitely. */
+.editor-view__feedback-dismiss {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-left: auto;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: inherit;
+  opacity: 0.7;
+  cursor: pointer;
+}
+
+.editor-view__feedback-dismiss:hover,
+.editor-view__feedback-dismiss:focus-visible {
+  opacity: 1;
+  background: rgba(var(--overlay-rgb), 0.12);
+}
+
+.editor-view__feedback-dismiss svg {
+  width: 1rem;
+  height: 1rem;
+}
+
 .editor-view__feedback--error {
   border-color: rgba(248, 113, 113, 0.35);
   background: rgba(var(--error-bg-rgb),0.82);

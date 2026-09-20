@@ -10,7 +10,9 @@ import type { ExportBlock, InlineRun } from "./markdownModel";
 // before any format renders it: the number becomes a plain text run at the
 // front of the heading and the `{-}` marker leaves the title. Every exporter
 // and the print path then carry the numbers without knowing the rules, and a
-// document exports the way the editor and the outline showed it.
+// document exports the way the editor showed it: with the scope on "outline"
+// the numbers stay out of the export too, while the marker still leaves the
+// title since it was understood as a marker, not as part of it.
 
 type HeadingBlock = Extract<ExportBlock, { kind: "heading" }>;
 
@@ -60,6 +62,7 @@ function numberRun(number: string): InlineRun {
     bold: false,
     italic: false,
     underline: false,
+    highlight: false,
     strike: false,
     code: false,
     link: null
@@ -108,7 +111,7 @@ function rewriteBlocks(blocks: ExportBlock[], replacements: Map<HeadingBlock, He
  * The block list with heading numbers written in, or the same list when
  * numbering is off. Headings are visited in document order across nested
  * blocks — the same walk collectHeadings does over the editor document, so
- * the export agrees with the outline.
+ * the export agrees with the editor.
  */
 export function numberExportBlocks(blocks: ExportBlock[], settings: HeadingNumberingSettings | undefined): ExportBlock[] {
   if (!settings?.enabled) {
@@ -123,13 +126,13 @@ export function numberExportBlocks(blocks: ExportBlock[], settings: HeadingNumbe
   }
 
   const titles = headings.map((heading) => ({ level: heading.level, title: runsText(heading.runs).trim() }));
-  const numbers = computeHeadingNumbers(titles, settings);
+  const numbers = settings.scope === "everywhere" ? computeHeadingNumbers(titles, settings) : null;
   const replacements = new Map<HeadingBlock, HeadingBlock>();
 
   headings.forEach((heading, index) => {
     const markerStart = findUnnumberedMarker(runsText(heading.runs));
     let runs = markerStart === -1 ? heading.runs : cutRunsAt(heading.runs, markerStart);
-    const number = numbers[index];
+    const number = numbers?.[index] ?? null;
 
     if (number !== null) {
       runs = [numberRun(number), ...runs];

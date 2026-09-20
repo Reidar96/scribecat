@@ -8,6 +8,8 @@ import { useDismissablePopover } from "@/lib/useDismissablePopover";
 type InfoPopoverProps = {
   /** The long explanation: background, side effects, where a value is stored. */
   text: string;
+  /** Where the full story is, when the popover can only hold the short one. */
+  link?: { href: string; label: string };
 };
 
 type Anchor = { top: number; bottom: number; left: number; right: number };
@@ -27,7 +29,7 @@ const VIEWPORT_MARGIN_PX = 8;
  * referenced through aria-describedby, so a screen reader gets it from the
  * button itself without having to open anything.
  */
-export function InfoPopover({ text }: InfoPopoverProps) {
+export function InfoPopover({ text, link }: InfoPopoverProps) {
   const { t } = useTranslation();
   const descriptionId = useId();
   const [anchor, setAnchor] = useState<Anchor | null>(null);
@@ -149,7 +151,14 @@ export function InfoPopover({ text }: InfoPopoverProps) {
             openAt(event.currentTarget);
           }
         }}
-        onBlur={close}
+        onBlur={(event) => {
+          // Tabbing onto the link inside the popover is not leaving it.
+          if (popoverRef.current?.contains(event.relatedTarget)) {
+            return;
+          }
+
+          close();
+        }}
         onClick={(event) => {
           // The same click must not reach useDismissablePopover's window
           // listener, which would close what was just opened.
@@ -188,8 +197,26 @@ export function InfoPopover({ text }: InfoPopoverProps) {
               // blur closes the popover) nor count as a click outside.
               onMouseDown={(event) => event.preventDefault()}
               onClick={(event) => event.stopPropagation()}
+              onBlur={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget)) {
+                  close();
+                }
+              }}
             >
               {text}
+              {link ? (
+                <a
+                  className="info-popover__link"
+                  href={link.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  // The trigger's mousedown guard keeps focus off the link,
+                  // so the link needs its own for the keyboard path.
+                  onMouseDown={(event) => event.stopPropagation()}
+                >
+                  {link.label}
+                </a>
+              ) : null}
             </div>,
             document.body
           )

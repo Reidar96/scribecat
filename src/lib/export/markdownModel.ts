@@ -1,6 +1,7 @@
 import MarkdownIt from "markdown-it";
 import type Token from "markdown-it/lib/token.mjs";
 import insPlugin from "markdown-it-ins";
+import markPlugin from "markdown-it-mark";
 
 import { calloutMarkdownItPlugin } from "@/lib/editor/extensions/callout";
 
@@ -12,6 +13,7 @@ export type InlineStyle = {
   bold: boolean;
   italic: boolean;
   underline: boolean;
+  highlight: boolean;
   strike: boolean;
   code: boolean;
   link: string | null;
@@ -53,10 +55,12 @@ export type ExportBlock =
   | { kind: "pageBreak" };
 
 // Same underline mapping as the editor (Editor.tsx): "++text++" is parsed by
-// markdown-it-ins; the exporters treat <ins> as underline.
+// markdown-it-ins; the exporters treat <ins> as underline. Likewise "==text=="
+// is the editor's highlight (markdown-it-mark, <mark>).
 export function createExportMarkdownIt(): MarkdownIt {
   const markdownIt = new MarkdownIt({ html: false, linkify: false, breaks: false });
   markdownIt.use(insPlugin);
+  markdownIt.use(markPlugin);
   // Strips the `[!VARIANT]` admonition marker so callouts export as clean
   // blockquotes instead of showing the raw marker text.
   markdownIt.use(calloutMarkdownItPlugin);
@@ -75,7 +79,7 @@ export function normalizeTaskListMarkdown(markdown: string): string {
 const TASK_PREFIX_PATTERN = /^\[( |x|X)\]\s+/;
 
 function emptyStyle(): InlineStyle {
-  return { bold: false, italic: false, underline: false, strike: false, code: false, link: null };
+  return { bold: false, italic: false, underline: false, highlight: false, strike: false, code: false, link: null };
 }
 
 function parseInlineTokens(tokens: Token[]): InlineRun[] {
@@ -112,6 +116,9 @@ function parseInlineTokens(tokens: Token[]): InlineRun[] {
       case "ins_open":
         styleStack.push({ ...currentStyle(), underline: true });
         break;
+      case "mark_open":
+        styleStack.push({ ...currentStyle(), highlight: true });
+        break;
       case "link_open":
         styleStack.push({ ...currentStyle(), link: token.attrGet("href") ?? null });
         break;
@@ -119,6 +126,7 @@ function parseInlineTokens(tokens: Token[]): InlineRun[] {
       case "em_close":
       case "s_close":
       case "ins_close":
+      case "mark_close":
       case "link_close":
         if (styleStack.length > 1) {
           styleStack.pop();

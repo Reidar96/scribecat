@@ -174,15 +174,17 @@
 /* The thinking toggle's own look lives in ai-widgets.css
    (.ai-thinking-toggle), shared with the one in the chat panel. */
 
-/* Phone and tablet only: the select above and the thinking toggle collapse
-   into one trigger (AiQuickSettingsMenu in Toolbar.tsx), which is why these
-   need no media query — the component exists nowhere else. */
+/* Phone and tablet only: the three AI buttons, the select above and the
+   thinking toggle collapse into one accent-coloured trigger (AiMobileMenu in
+   Toolbar.tsx), which is why these need no media query — the component
+   exists nowhere else. */
 .editor-toolbar__ai-settings-trigger {
   position: relative;
 }
 
-/* Which model is chosen is the one thing the icon cannot say, and "none
-   yet" is the case that stops the AI buttons from working at all. */
+/* Whether a model is chosen at all is the one thing the menu no longer
+   shows, and "none yet" is the case that stops every AI action in it from
+   working. */
 .editor-toolbar__ai-settings-trigger[data-unset="true"]::after {
   content: "";
   position: absolute;

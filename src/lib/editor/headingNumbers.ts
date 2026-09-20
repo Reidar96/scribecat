@@ -9,14 +9,32 @@ export type HeadingNumberingSettings = {
   startLevel: 1 | 2;
   /** Deepest heading level that still gets a number, startLevel..6. */
   maxDepth: number;
+  /**
+   * Where the numbers show. "everywhere" paints them in the editor and
+   * writes them into every export; "outline" keeps them to the details
+   * panel, for navigating a long note whose text and PDF should stay clean.
+   * The export follows the editor, never the outline, so what the writer
+   * sees is what the reader gets.
+   */
+  scope: HeadingNumberingScope;
+  /**
+   * When the editor shows the `{-}` marker: always, or only in the heading
+   * the cursor is in. The marker stays in the markdown either way.
+   */
+  marker: HeadingNumberingMarker;
 };
+
+export type HeadingNumberingScope = "everywhere" | "outline";
+export type HeadingNumberingMarker = "always" | "activeLine";
 
 export const HEADING_NUMBERING_DEPTH_MAX = 6;
 
 export const DEFAULT_HEADING_NUMBERING: HeadingNumberingSettings = {
   enabled: false,
   startLevel: 2,
-  maxDepth: HEADING_NUMBERING_DEPTH_MAX
+  maxDepth: HEADING_NUMBERING_DEPTH_MAX,
+  scope: "everywhere",
+  marker: "activeLine"
 };
 
 export function normalizeHeadingNumberingSettings(raw: unknown): HeadingNumberingSettings {
@@ -29,7 +47,9 @@ export function normalizeHeadingNumberingSettings(raw: unknown): HeadingNumberin
   return {
     enabled: source.enabled === true,
     startLevel,
-    maxDepth: Math.min(HEADING_NUMBERING_DEPTH_MAX, Math.max(startLevel, depth))
+    maxDepth: Math.min(HEADING_NUMBERING_DEPTH_MAX, Math.max(startLevel, depth)),
+    scope: source.scope === "outline" ? "outline" : "everywhere",
+    marker: source.marker === "always" ? "always" : "activeLine"
   };
 }
 

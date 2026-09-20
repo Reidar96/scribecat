@@ -1,5 +1,5 @@
 import { Extension } from "@tiptap/core";
-import { Plugin, PluginKey } from "@tiptap/pm/state";
+import { Plugin, PluginKey, type EditorState } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 
@@ -17,21 +17,39 @@ import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
 // nothing about it ever reaches the markdown, the undo history or the
 // clipboard. The `{-}` marker that opts a heading out stays in the text (it
 // is the user's markdown) and is only dimmed, so the reader can see it was
-// understood as a marker rather than as part of the title.
-const headingNumberingKey = new PluginKey<DecorationSet>("headingNumbering");
+// understood as a marker rather than as part of the title; with the marker
+// setting on "activeLine" it is hidden everywhere but in the heading the
+// cursor is in, the way a live-preview editor treats its syntax.
+const headingNumberingKey = new PluginKey<HeadingNumberingState>("headingNumbering");
+
+type HeadingNumberingState = {
+  decorations: DecorationSet;
+  /** Position of the heading the cursor is in, -1 when it is elsewhere. */
+  activeHeadingPos: number;
+};
 
 /** DOM attribute carrying the number; the outline jump highlight reads it too. */
 export const HEADING_NUMBER_ATTRIBUTE = "data-heading-number";
 const NUMBER_ATTRIBUTE = HEADING_NUMBER_ATTRIBUTE;
 const MARKER_CLASS = "heading-unnumbered-marker";
+const MARKER_HIDDEN_CLASS = "heading-unnumbered-marker--hidden";
 
-function buildDecorations(doc: ProseMirrorNode, settings: HeadingNumberingSettings): DecorationSet {
+function activeHeadingPosOf(state: EditorState): number {
+  const $from = state.selection.$from;
+  return $from.parent.type.name === "heading" ? $from.before() : -1;
+}
+
+function buildDecorations(
+  doc: ProseMirrorNode,
+  settings: HeadingNumberingSettings,
+  activeHeadingPos: number
+): DecorationSet {
   if (!settings.enabled) {
     return DecorationSet.empty;
   }
 
   const headings = collectHeadings(doc);
-  const numbers = computeHeadingNumbers(headings, settings);
+  const numbers = settings.scope === "everywhere" ? computeHeadingNumbers(headings, settings) : null;
   const decorations: Decoration[] = [];
 
   headings.forEach((heading, index) => {
@@ -41,7 +59,7 @@ function buildDecorations(doc: ProseMirrorNode, settings: HeadingNumberingSettin
       return;
     }
 
-    const number = numbers[index];
+    const number = numbers?.[index] ?? null;
 
     if (number !== null) {
       decorations.push(
@@ -65,12 +83,21 @@ function buildDecorations(doc: ProseMirrorNode, settings: HeadingNumberingSettin
     }
 
     const lastStart = heading.pos + 1 + node.content.size - last.nodeSize;
+    const hidden = settings.marker === "activeLine" && heading.pos !== activeHeadingPos;
     decorations.push(
-      Decoration.inline(lastStart + markerStart, lastStart + last.text.length, { class: MARKER_CLASS })
+      Decoration.inline(lastStart + markerStart, lastStart + last.text.length, {
+        class: hidden ? `${MARKER_CLASS} ${MARKER_HIDDEN_CLASS}` : MARKER_CLASS
+      })
     );
   });
 
   return DecorationSet.create(doc, decorations);
+}
+
+function buildState(state: EditorState): HeadingNumberingState {
+  const activeHeadingPos = activeHeadingPosOf(state);
+  const settings = useEditorSettingsStore.getState().headingNumbering;
+  return { decorations: buildDecorations(state.doc, settings, activeHeadingPos), activeHeadingPos };
 }
 
 export const HeadingNumbering = Extension.create({
@@ -78,16 +105,22 @@ export const HeadingNumbering = Extension.create({
 
   addProseMirrorPlugins() {
     return [
-      new Plugin<DecorationSet>({
+      new Plugin<HeadingNumberingState>({
         key: headingNumberingKey,
         state: {
-          init: (_, state) => buildDecorations(state.doc, useEditorSettingsStore.getState().headingNumbering),
-          apply(tr, value) {
+          init: (_, state) => buildState(state),
+          apply(tr, value, _oldState, newState) {
             // Recomputed from scratch on every edit rather than mapped: a
             // typed character can move every number below it, and a document
-            // has few headings next to the characters in it.
-            if (tr.docChanged || tr.getMeta(headingNumberingKey)) {
-              return buildDecorations(tr.doc, useEditorSettingsStore.getState().headingNumbering);
+            // has few headings next to the characters in it. A cursor move
+            // only counts once it enters or leaves a heading, since that is
+            // the only thing the marker visibility depends on.
+            if (
+              tr.docChanged ||
+              tr.getMeta(headingNumberingKey) ||
+              (tr.selectionSet && activeHeadingPosOf(newState) !== value.activeHeadingPos)
+            ) {
+              return buildState(newState);
             }
 
             return value;
@@ -95,7 +128,7 @@ export const HeadingNumbering = Extension.create({
         },
         props: {
           decorations(state) {
-            return headingNumberingKey.getState(state) ?? null;
+            return headingNumberingKey.getState(state)?.decorations ?? null;
           }
         },
         view(view) {

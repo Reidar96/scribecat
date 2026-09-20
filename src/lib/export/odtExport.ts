@@ -107,6 +107,7 @@ function textStyleName(run: Extract<InlineRun, { kind: "text" }>): string | null
     run.bold ? "b" : "",
     run.italic ? "i" : "",
     run.underline ? "u" : "",
+    run.highlight ? "h" : "",
     run.strike ? "s" : "",
     run.code ? "c" : ""
   ].join("");
@@ -164,6 +165,7 @@ function textStyleXml(name: string): string {
     flags.includes("i") ? 'fo:font-style="italic"' : "",
     flags.includes("u") ? 'style:text-underline-style="solid" style:text-underline-width="auto"' : "",
     flags.includes("s") ? 'style:text-line-through-style="solid"' : "",
+    flags.includes("h") ? 'fo:background-color="#fde68a"' : "",
     flags.includes("c")
       ? 'style:font-name="Courier New" fo:background-color="#f4f4f4"'
       : ""

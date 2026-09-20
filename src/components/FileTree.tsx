@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { BookOpen, Copy, Download, FileDown, FilePlus, FolderArchive, FolderInput, Pencil, Printer, Trash2 } from "lucide-react";
+import { BookOpen, Copy, Download, FileDown, FilePlus, FolderArchive, FolderInput, FolderPlus, Pencil, Printer, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { getVaultCapabilities, platform, vaultCapabilityHint } from "@/platform";
 import { dirname, join } from "@/platform/paths";
@@ -57,6 +57,7 @@ type FileTreeProps = {
   /** Absolute folder path; the store resolves the note inside it. */
   onOpenFolderNote: (folderPath: string) => Promise<void>;
   onCreateFileRequest: (targetDirectory: string) => void;
+  onCreateFolderRequest: (targetDirectory: string) => void;
   onDeleteFileRequest: (filePath: string) => void;
   onDuplicateFileRequest: (filePath: string) => void;
   onDeleteFolderRequest: (folderPath: string) => void;
@@ -93,6 +94,7 @@ export function FileTree({
   onSelectFilePath,
   onOpenFolderNote,
   onCreateFileRequest,
+  onCreateFolderRequest,
   onDeleteFileRequest,
   onDuplicateFileRequest,
   onDeleteFolderRequest,
@@ -803,6 +805,23 @@ export function FileTree({
                 <FilePlus aria-hidden="true" />
                 {t("sidebar.newFile")}
               </button>
+
+              {contextMenu.kind === "folder" ? (
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="file-tree-context-menu__item"
+                  disabled={!capabilities.create}
+                  title={capabilities.create ? undefined : capabilityHint}
+                  onClick={() => {
+                    void join(folderPath, contextMenu.relativePath).then(onCreateFolderRequest);
+                    setContextMenu(null);
+                  }}
+                >
+                  <FolderPlus aria-hidden="true" />
+                  {t("sidebar.newFolder")}
+                </button>
+              ) : null}
 
               <button
                 type="button"

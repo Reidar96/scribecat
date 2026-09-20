@@ -101,6 +101,7 @@ function runsToDocxChildren(
       bold: run.bold || forceBold,
       italics: run.italic,
       underline: run.underline ? {} : undefined,
+      highlight: run.highlight ? "yellow" : undefined,
       strike: run.strike,
       font: run.code ? MONO_FONT : undefined,
       shading: run.code ? { type: ShadingType.CLEAR, fill: CODE_FILL } : undefined,

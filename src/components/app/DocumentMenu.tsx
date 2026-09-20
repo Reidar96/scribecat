@@ -73,6 +73,8 @@ export function DocumentMenu({
   const setDetailsSheetOpen = useEditorSettingsStore((state) => state.setDetailsSheetOpen);
   const spellcheckEnabled = useEditorSettingsStore((state) => state.spellcheckEnabled);
   const setSpellcheckEnabled = useEditorSettingsStore((state) => state.setSpellcheckEnabled);
+  const autoSaveEnabled = useEditorSettingsStore((state) => state.autoSaveEnabled);
+  const setAutoSaveEnabled = useEditorSettingsStore((state) => state.setAutoSaveEnabled);
   const zoomLevel = useEditorSettingsStore((state) => state.zoomLevel);
   const setZoomLevel = useEditorSettingsStore((state) => state.setZoomLevel);
 
@@ -191,6 +193,14 @@ export function DocumentMenu({
             </MenuItem>
             <div className="editor-toolbar__menu-separator" role="separator" />
 
+            <MenuCheckboxItem
+              checked={autoSaveEnabled}
+              onCheckedChange={(checked) => setAutoSaveEnabled(checked)}
+              data-testid="auto-save-toggle"
+            >
+              {t("toolbar.autoSaveToggle")}
+              <MenuCheckboxItemIndicator />
+            </MenuCheckboxItem>
             <MenuCheckboxItem
               checked={spellcheckEnabled}
               onCheckedChange={(checked) => setSpellcheckEnabled(checked)}

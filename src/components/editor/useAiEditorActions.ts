@@ -410,7 +410,7 @@ export function useAiEditorActions({
     currentEditor: TipTapEditor,
     from: number,
     to: number,
-    selectedText: string
+    text: string
   ) => {
     setIsAiLoading(true);
     setAiStatus({ kind: "info", message: t("app.aiRequestRunning") });
@@ -419,7 +419,7 @@ export function useAiEditorActions({
     aiAbortControllerRef.current = abortController;
 
     try {
-      const issues = await checkGrammar(aiSettings, selectedText, abortController.signal);
+      const issues = await checkGrammar(aiSettings, text, abortController.signal);
 
       aiCheckRangeRef.current = { from, to };
       setAiCheckIssues(issues);
@@ -448,19 +448,18 @@ export function useAiEditorActions({
       return;
     }
 
-    const { from, to, empty } = currentEditor.state.selection;
+    // A selection narrows the check to that passage; without one the whole
+    // document is checked, so the button never has to be disabled.
+    const { doc, selection } = currentEditor.state;
+    const from = selection.empty ? 0 : selection.from;
+    const to = selection.empty ? doc.content.size : selection.to;
+    const text = doc.textBetween(from, to, "\n");
 
-    if (empty) {
+    if (!text.trim()) {
       return;
     }
 
-    const selectedText = currentEditor.state.doc.textBetween(from, to, "\n");
-
-    if (!selectedText.trim()) {
-      return;
-    }
-
-    void performAiGrammarCheck(currentEditor, from, to, selectedText);
+    void performAiGrammarCheck(currentEditor, from, to, text);
   };
 
   const applyAiCheckIssue = (issue: AiCheckIssue) => {

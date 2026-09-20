@@ -2,7 +2,7 @@ import type { TFunction } from "i18next";
 
 import { bindingsConflict, formatBinding, matchesBinding, type ShortcutBinding } from "@/lib/shortcuts/binding";
 
-export type FixedEditorShortcutId = "copyFormatted" | "copyMarkdown" | "copyPlainText";
+export type FixedEditorShortcutId = "copyFormatted" | "copyMarkdown" | "copyPlainText" | "pastePlainText";
 
 export type FixedEditorShortcut = {
   id: FixedEditorShortcutId;
@@ -11,28 +11,31 @@ export type FixedEditorShortcut = {
   labelKey: string;
 };
 
-function copyCombo(modifiers: { alt?: boolean; shift?: boolean }): ShortcutBinding {
+function ctrlCombo(letter: "C" | "V", modifiers: { alt?: boolean; shift?: boolean }): ShortcutBinding {
   return {
     ctrl: true,
     alt: modifiers.alt ?? false,
     shift: modifiers.shift ?? false,
-    code: "KeyC",
-    key: "c",
-    label: "C"
+    code: `Key${letter}`,
+    key: letter.toLowerCase(),
+    label: letter
   };
 }
 
 /**
- * The three ways of copying a selection out of the editor. Unlike everything
- * in `definitions.ts` they are deliberately *not* remappable: Ctrl+C belongs
- * to the platform, and the two variants next to it stay where a user expects
- * them relative to Ctrl+C. They are checked before the registry in the
- * editor's keydown handler and refused by the shortcuts dialog's recorder.
+ * The three ways of copying a selection out of the editor, and the one way
+ * of pasting without Markdown conversion. Unlike everything in
+ * `definitions.ts` they are deliberately *not* remappable: Ctrl+C and Ctrl+V
+ * belong to the platform, and the variants next to them stay where a user
+ * expects them relative to those (Ctrl+Shift+V is "paste as plain text" in
+ * every browser). They are checked before the registry in the editor's
+ * keydown handler and refused by the shortcuts dialog's recorder.
  */
 export const FIXED_EDITOR_SHORTCUTS: FixedEditorShortcut[] = [
-  { id: "copyFormatted", binding: copyCombo({}), labelKey: "editorContextMenu.copyFormatted" },
-  { id: "copyMarkdown", binding: copyCombo({ alt: true }), labelKey: "editorContextMenu.copyMarkdown" },
-  { id: "copyPlainText", binding: copyCombo({ shift: true }), labelKey: "editorContextMenu.copyPlainText" }
+  { id: "copyFormatted", binding: ctrlCombo("C", {}), labelKey: "editorContextMenu.copyFormatted" },
+  { id: "copyMarkdown", binding: ctrlCombo("C", { alt: true }), labelKey: "editorContextMenu.copyMarkdown" },
+  { id: "copyPlainText", binding: ctrlCombo("C", { shift: true }), labelKey: "editorContextMenu.copyPlainText" },
+  { id: "pastePlainText", binding: ctrlCombo("V", { shift: true }), labelKey: "editorContextMenu.pastePlainText" }
 ];
 
 const FIXED_EDITOR_SHORTCUTS_BY_ID = new Map(FIXED_EDITOR_SHORTCUTS.map((shortcut) => [shortcut.id, shortcut]));

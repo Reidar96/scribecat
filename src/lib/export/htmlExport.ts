@@ -44,6 +44,12 @@ const documentCss = (fontStack: string, baseSizePx: number) => `
     overflow-x: auto;
   }
   pre code { background: none; padding: 0; font-size: 0.875em; }
+  mark {
+    background: #fde68a;
+    color: inherit;
+    border-radius: 2px;
+    padding: 0 0.1em;
+  }
   blockquote {
     margin: 0.75em 0;
     padding: 0.1em 1em;
@@ -101,6 +107,9 @@ function renderRuns(runs: InlineRun[], images: ExportImageMap): string {
     }
     if (run.underline) {
       text = `<u>${text}</u>`;
+    }
+    if (run.highlight) {
+      text = `<mark>${text}</mark>`;
     }
     if (run.strike) {
       text = `<s>${text}</s>`;

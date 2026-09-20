@@ -42,6 +42,11 @@ copying are in the header's menu instead: **Copy text as Markdown** and **Copy
 text only**, both greyed out while nothing is selected. The paw button in the
 toolbar is the way to the AI rewrite.
 
+Pinching does not zoom the page on a phone or tablet: the layout is made for
+the width it has. In zen mode a pinch resizes the text instead, like in a
+reader app, and the size you settle on stays for zen mode only. On a desktop
+Ctrl+mouse wheel (Cmd on a Mac) does the same there.
+
 ## Like an app
 
 Add the site to the home screen (Chrome: "Add to Home screen", Safari: share
@@ -49,8 +54,9 @@ sheet, "Add to Home Screen") and it opens without the browser chrome. The
 session lasts 60 days of use, so the password is asked for rarely.
 
 Chrome and Safari on phones show a certificate warning for Caddy's local CA
-just like the desktop browsers; import `scribedog-ca.crt` on the device once
-(see [Getting started](getting-started.md)) or accept the warning.
+just like the desktop browsers; accept the warning once, then download the
+certificate from Settings, Account and install it on the device (see
+[Getting started](getting-started.md)), or keep accepting the warning.
 
 ## Dictation
 

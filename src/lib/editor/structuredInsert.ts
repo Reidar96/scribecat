@@ -50,7 +50,7 @@ function findAncestor($pos: ResolvedPos, typeNames: readonly string[]): Ancestor
  * sentence but is exactly what flattens a proposed list or table into the
  * surrounding paragraph.
  */
-function parseMarkdownBlocks(editor: Editor, markdown: string): Fragment | null {
+export function parseMarkdownBlocks(editor: Editor, markdown: string): Fragment | null {
   const parser = (editor.storage as MarkdownParserStorage).markdown?.parser;
 
   if (!parser) {

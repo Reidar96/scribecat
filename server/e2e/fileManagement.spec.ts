@@ -51,8 +51,8 @@ test("creates, renames and deletes notes and folders, and stores a dropped image
   await expect(titleInput).toBeVisible();
   await titleInput.fill(noteName);
   await titleInput.press("Enter");
-  await expect(page.getByTestId("note-title")).toHaveText(new RegExp(`${escapeRegExp(noteName)}\\.md$`));
-  const notePath = (await page.getByTestId("note-title").textContent()) ?? "";
+  await expect(page.getByTestId("note-title")).toHaveText(new RegExp(`${escapeRegExp(noteName)}$`));
+  const notePath = `${await page.getByTestId("note-title").textContent()}.md`;
   const folderPrefix = notePath.slice(0, notePath.length - `${noteName}.md`.length);
   const renamedPath = `${folderPrefix}${renamedName}.md`;
   await expect(treeRow(page, notePath)).toBeVisible();
@@ -138,7 +138,7 @@ test("keeps a manual sort order on the server", async ({ page }) => {
   const titleInput = page.getByRole("textbox", { name: "File name" }).first();
   await titleInput.fill(`Ordered ${stamp}`);
   await titleInput.press("Enter");
-  const notePath = (await page.getByTestId("note-title").textContent()) ?? "";
+  const notePath = `${await page.getByTestId("note-title").textContent()}.md`;
 
   await expect
     .poll(async () => {

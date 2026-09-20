@@ -172,9 +172,47 @@ describe("parseCheckIssues", () => {
     ).toEqual([{ original: "a", suggestion: "b", explanation: "c" }]);
   });
 
-  it("throws on invalid JSON and on a non-array payload", () => {
+  it("throws when no issue can be recovered at all", () => {
     expect(() => parseCheckIssues("not json")).toThrow();
-    expect(() => parseCheckIssues('{"original":"a"}')).toThrow();
+    expect(() => parseCheckIssues("Here is a list:\n- teh -> the")).toThrow();
+  });
+
+  it("recovers the array from prose around it and a mid-sentence fence", () => {
+    expect(
+      parseCheckIssues('Sure! Here are the issues:\n[{"original":"teh","suggestion":"the"}]\nLet me know if you need more.')
+    ).toEqual([{ original: "teh", suggestion: "the", explanation: "" }]);
+    expect(
+      parseCheckIssues('Here you go: ```json\n[{"original":"teh","suggestion":"the"}]\n``` Done.')
+    ).toEqual([{ original: "teh", suggestion: "the", explanation: "" }]);
+  });
+
+  it("accepts an object wrapping the list and a single issue object", () => {
+    expect(
+      parseCheckIssues('{"issues":[{"original":"teh","suggestion":"the"}]}')
+    ).toEqual([{ original: "teh", suggestion: "the", explanation: "" }]);
+    expect(parseCheckIssues('{"original":"teh","suggestion":"the"}')).toEqual([
+      { original: "teh", suggestion: "the", explanation: "" }
+    ]);
+  });
+
+  it("keeps the entries that parse when one entry or the array end is broken", () => {
+    // Unescaped quote inside the second entry breaks the array as a whole.
+    expect(
+      parseCheckIssues('[{"original":"teh","suggestion":"the"},{"original":"say "hi"","suggestion":"x"},{"original":"a","suggestion":"b"}]')
+    ).toEqual([
+      { original: "teh", suggestion: "the", explanation: "" },
+      { original: "a", suggestion: "b", explanation: "" }
+    ]);
+    // Truncated by the token limit.
+    expect(
+      parseCheckIssues('[{"original":"teh","suggestion":"the"},{"original":"a","sugg')
+    ).toEqual([{ original: "teh", suggestion: "the", explanation: "" }]);
+  });
+
+  it("does not trip over brackets inside strings", () => {
+    expect(
+      parseCheckIssues('[{"original":"list [1]","suggestion":"list [1] }","explanation":"x"}]')
+    ).toEqual([{ original: "list [1]", suggestion: "list [1] }", explanation: "x" }]);
   });
 });
 

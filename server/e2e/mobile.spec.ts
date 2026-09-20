@@ -68,7 +68,14 @@ async function openNote(page: Page, relativePath: string): Promise<void> {
   }
 
   await treeRow(page, relativePath).tap();
-  await expect(page.getByTestId("note-title")).toHaveText(relativePath);
+  await expect(page.getByTestId("note-title")).toHaveText(relativePath.replace(/\.md$/i, ""));
+}
+
+// On phone and tablet the chat toggle sits in the AI menu behind one
+// toolbar button, not in the toolbar itself.
+async function openChat(page: Page) {
+  await page.getByTestId("ai-menu").tap();
+  await page.getByTestId("open-chat").tap();
 }
 
 const SEED = "# Roadmap\n\nSeeded by the mobile e2e run.\n";
@@ -106,7 +113,7 @@ test.describe("phone (Pixel 7)", () => {
     // A reload (which is what returning to the browser on a phone often is)
     // lands on the same note, so the sheet stays closed.
     await page.reload();
-    await expect(page.getByTestId("note-title")).toHaveText(NOTE);
+    await expect(page.getByTestId("note-title")).toHaveText(NOTE.replace(/\.md$/i, ""));
     await expect(sheet).toHaveCount(0);
 
     // Not once the note is gone.
@@ -137,7 +144,7 @@ test.describe("phone (Pixel 7)", () => {
     await page.getByRole("button", { name: "Bold", exact: true }).tap();
 
     const status = page.getByTestId("status");
-    await expect(status).toHaveAccessibleName("Save");
+    await expect(status).toHaveAccessibleName("Save changes");
     await status.tap();
     await expect(status).toHaveAccessibleName("Saved");
     await expect(status).toHaveAttribute("data-dirty", "false");
@@ -145,6 +152,37 @@ test.describe("phone (Pixel 7)", () => {
     const saved = await readOnServer(page, NOTE);
     expect(saved).toContain("Typed on a phone.");
     expect(saved).toContain("**");
+  });
+
+  // The code block is a React node view whose wrapper React mounts after the
+  // view exists. TipTap lets that DOM mutation through on Android, and
+  // prosemirror-view reads an added block element there as an Enter key: the
+  // Enter re-rendered the block, which mounted the wrapper again, and the tab
+  // was gone in that loop. Only the Android user agent triggers it, which the
+  // device preset carries.
+  test("the code block button on a selection does not hang the tab", async ({ page }) => {
+    await signIn(page);
+    await writeOnServer(page, NOTE, SEED);
+    await openNote(page, NOTE);
+
+    const editor = page.locator(".ProseMirror");
+    await editor.locator("p").first().tap();
+    await expect(editor).toHaveClass(/ProseMirror-focused/);
+    await page.keyboard.press("End");
+    await page.keyboard.press("Shift+Home");
+
+    await page.getByRole("button", { name: "Code block", exact: true }).tap();
+
+    // The block renders once, holds the paragraph's text, and the only
+    // paragraph left is the empty one ProseMirror keeps at the end of the
+    // document — while the tab hung, the loop appended hundreds of them.
+    await expect(editor.locator("pre")).toHaveCount(1);
+    await expect(editor.locator("pre")).toContainText("Seeded by the mobile e2e run.");
+    await expect(editor.locator("p")).toHaveCount(1);
+    // Still responsive afterwards: the block takes typing.
+    await editor.locator("pre").tap();
+    await page.keyboard.type("still alive");
+    await expect(editor.locator("pre")).toContainText("still alive");
   });
 
   // The three ways of copying are fixed shortcuts, and on touch the selection
@@ -232,7 +270,7 @@ test.describe("phone (Pixel 7)", () => {
     await expect(page.getByTestId("logout")).toBeVisible();
     await openNote(page, NOTE);
 
-    await page.getByTestId("open-chat").tap();
+    await openChat(page);
     const sheet = page.getByRole("dialog", { name: "AI chat" });
     await expect(sheet).toBeVisible();
     const box = await sheet.boundingBox();
@@ -287,7 +325,7 @@ test.describe("tablet (iPad Mini)", () => {
     await expect(page.getByTestId("open-sidebar")).toHaveCount(0);
     await openNote(page, NOTE);
 
-    await page.getByTestId("open-chat").tap();
+    await openChat(page);
     const sheet = page.getByRole("dialog", { name: "AI chat" });
     await expect(sheet).toBeVisible();
     const box = await sheet.boundingBox();

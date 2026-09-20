@@ -1,4 +1,5 @@
 import { Extension } from "@tiptap/core";
+import BaseTaskItem from "@tiptap/extension-task-item";
 import BaseTaskList from "@tiptap/extension-task-list";
 import type MarkdownIt from "markdown-it";
 
@@ -16,6 +17,67 @@ export const TaskList = BaseTaskList.extend({
       { tag: 'ul[data-type="taskList"]', priority: 51 },
       { tag: 'ol[data-type="taskList"]', priority: 51 }
     ];
+  }
+});
+
+// The stock node view toggles a checkbox through `editor.chain().focus()`,
+// and focusing the contenteditable is what raises the on-screen keyboard on
+// Android: every tick on a checklist brought the keyboard up over the list.
+// This view keeps the stock DOM and update logic but takes the change event
+// before the stock listener (capture phase on the label, stopped there) and
+// writes the attribute in a plain transaction. The caret stays where it was:
+// in the text if the user was typing, nowhere if they were only ticking.
+export const TaskItem = BaseTaskItem.extend({
+  addNodeView() {
+    const parent = this.parent?.();
+
+    if (!parent) {
+      return null;
+    }
+
+    return (props) => {
+      const nodeView = parent(props);
+      const { editor, getPos } = props;
+      const dom = nodeView.dom as HTMLElement;
+      const label = dom.querySelector("label");
+      const checkbox = label?.querySelector<HTMLInputElement>('input[type="checkbox"]');
+
+      if (label && checkbox) {
+        label.addEventListener(
+          "change",
+          (event) => {
+            // Read-only: the stock listener reverts the tick; leave it to it.
+            if (!editor.isEditable || typeof getPos !== "function") {
+              return;
+            }
+
+            event.stopPropagation();
+
+            const position = getPos();
+
+            if (typeof position !== "number") {
+              return;
+            }
+
+            const currentNode = editor.state.doc.nodeAt(position);
+
+            if (!currentNode) {
+              return;
+            }
+
+            editor.view.dispatch(
+              editor.state.tr.setNodeMarkup(position, undefined, {
+                ...currentNode.attrs,
+                checked: checkbox.checked
+              })
+            );
+          },
+          true
+        );
+      }
+
+      return nodeView;
+    };
   }
 });
 

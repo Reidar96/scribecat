@@ -19,6 +19,7 @@ import { findStagedChange, normalizeVaultPath } from "@/lib/chat/vaultStaging";
 import { useStagedChangesStore } from "@/store/useStagedChangesStore";
 import type { BatchEntry, PendingFolderRename } from "@/components/FileTree";
 import { useAppVersion } from "@/hooks/useAppVersion";
+import { useAutoSave } from "@/hooks/useAutoSave";
 import { CHAT_MAX_WIDTH, CHAT_MIN_WIDTH, useChatWidth } from "@/hooks/useChatWidth";
 import { useDeleteTarget } from "@/hooks/useDeleteTarget";
 import { useExportTarget } from "@/hooks/useExportTarget";
@@ -28,6 +29,7 @@ import { useLayoutMode } from "@/hooks/useLayoutMode";
 import { useMoveTarget } from "@/hooks/useMoveTarget";
 import { useRagIndexAutoUpdate } from "@/hooks/useRagIndexAutoUpdate";
 import { useRemoteVaultDialog } from "@/hooks/useRemoteVaultDialog";
+import { useSidebarSwipe } from "@/hooks/useSidebarSwipe";
 import {
   SIDEBAR_MAX_WIDTH,
   SIDEBAR_MIN_WIDTH,
@@ -48,6 +50,7 @@ import {
   isFolderNotePath
 } from "@/lib/folderNotes";
 import { getLastOpenedRelativePath, setLastOpenedRelativePath } from "@/lib/lastOpenedFile";
+import { getZenFontScale } from "@/lib/zenFontZoom";
 import { clearVaultSearchCache } from "@/lib/ragSearch";
 import { findStepIndex } from "@/lib/navigationHistory";
 import { downloadFolderAsArchive, downloadNoteAsMarkdown } from "@/lib/export/markdownDownload";
@@ -252,15 +255,27 @@ function App() {
     useChatWidth();
 
   const zenWidth = useEditorSettingsStore((state) => state.zenWidth);
+  const zenFontSizePt = useEditorSettingsStore((state) => state.zenFontSizePt);
+  const autoSaveEnabled = useEditorSettingsStore((state) => state.autoSaveEnabled);
   const { isZenMode, enterZenMode, exitZenMode, toggleZenMode } = useZenMode({
     canEnter: () => selectedFilePath !== null
   });
 
   useWebviewZoom();
+  useAutoSave({ isAiActionPending, isSelectedFileStaged, isSelectedFileMissing });
   useWindowReveal();
   useViewportHeight();
 
   const layout = useLayoutMode();
+
+  // The chat sheet covers the whole phone screen and Zen mode hides the
+  // sidebar on purpose; a swipe there must not pull the file list over them.
+  useSidebarSwipe({
+    enabled: layout === "phone" && !isChatOpen && !isZenMode,
+    isOpen: isSidebarSheetOpen,
+    onOpen: () => setIsSidebarSheetOpen(true),
+    onClose: () => setIsSidebarSheetOpen(false)
+  });
 
   // A phone has no room for the file list next to the document, and no note
   // means there is nothing but the file list to look at: the sheet opens by
@@ -377,10 +392,35 @@ function App() {
             t("app.pendingTargetOtherFolder")
     : null;
 
+  // Every way of leaving the open note runs through here. With auto-save on,
+  // edits the timer has not written yet are saved on the way out instead of
+  // asked about: the user has already said what should happen to them. Only
+  // when that save cannot be the answer (an AI request is still streaming,
+  // the write failed) does the dialog open.
+  const passUnsavedGuard = async (
+    navigation: NonNullable<typeof pendingNavigation>
+  ): Promise<boolean> => {
+    if (!selectedFilePath || !(isDirty || isAiActionPending)) {
+      return true;
+    }
+
+    if (
+      autoSaveEnabled &&
+      !isAiActionPending &&
+      !isSelectedFileStaged &&
+      !isSelectedFileMissing &&
+      (await saveSelectedFile({ trigger: "auto" }))
+    ) {
+      return true;
+    }
+
+    setPendingNavigation(navigation);
+    setIsUnsavedDialogOpen(true);
+    return false;
+  };
+
   const openFolderSafely = async () => {
-    if (selectedFilePath && (isDirty || isAiActionPending)) {
-      setPendingNavigation({ type: "folder", folderPath: null });
-      setIsUnsavedDialogOpen(true);
+    if (!(await passUnsavedGuard({ type: "folder", folderPath: null }))) {
       return;
     }
 
@@ -391,9 +431,7 @@ function App() {
   // concerned, so it goes through the same unsaved-changes guard as opening
   // another folder does.
   const logoutSafely = async () => {
-    if (selectedFilePath && (isDirty || isAiActionPending)) {
-      setPendingNavigation({ type: "logout" });
-      setIsUnsavedDialogOpen(true);
+    if (!(await passUnsavedGuard({ type: "logout" }))) {
       return;
     }
 
@@ -401,9 +439,7 @@ function App() {
   };
 
   const openRecentFolderSafely = async (targetFolderPath: string) => {
-    if (selectedFilePath && (isDirty || isAiActionPending)) {
-      setPendingNavigation({ type: "folder", folderPath: targetFolderPath });
-      setIsUnsavedDialogOpen(true);
+    if (!(await passUnsavedGuard({ type: "folder", folderPath: targetFolderPath }))) {
       return;
     }
 
@@ -415,9 +451,7 @@ function App() {
       return;
     }
 
-    if (selectedFilePath && (isDirty || isAiActionPending)) {
-      setPendingNavigation({ type: "file", filePath });
-      setIsUnsavedDialogOpen(true);
+    if (!(await passUnsavedGuard({ type: "file", filePath }))) {
       return;
     }
 
@@ -436,9 +470,7 @@ function App() {
       return;
     }
 
-    if (selectedFilePath && (isDirty || isAiActionPending)) {
-      setPendingNavigation({ type: "folderNote", folderPath: targetFolderPath });
-      setIsUnsavedDialogOpen(true);
+    if (!(await passUnsavedGuard({ type: "folderNote", folderPath: targetFolderPath }))) {
       return;
     }
 
@@ -551,9 +583,12 @@ function App() {
     }
   };
 
-  const handleCreateFolder = async () => {
-    const { targetDirectory, insertAfterBasename } = await resolveNewEntryTarget();
-    const newFolderPath = await createNewFolder(targetDirectory ?? undefined, insertAfterBasename);
+  const handleCreateFolder = async (targetDirectory?: string) => {
+    const resolved =
+      targetDirectory !== undefined
+        ? { targetDirectory, insertAfterBasename: undefined as string | null | undefined }
+        : await resolveNewEntryTarget();
+    const newFolderPath = await createNewFolder(resolved.targetDirectory ?? undefined, resolved.insertAfterBasename);
 
     if (newFolderPath) {
       folderRenameRequestIdRef.current += 1;
@@ -906,6 +941,7 @@ function App() {
       onCreateFile={() => void handleCreateFile()}
       onCreateFileRequest={(targetDirectory) => void handleCreateFile(targetDirectory)}
       onCreateFolder={() => void handleCreateFolder()}
+      onCreateFolderRequest={(targetDirectory) => void handleCreateFolder(targetDirectory)}
       onImportRequest={() => void requestImportFiles()}
       onSelectFilePath={async (filePath) => {
         await selectFilePathSafely(filePath);
@@ -959,7 +995,16 @@ function App() {
     <main
       className={cn("app-shell", isZenMode && "app-shell--zen")}
       aria-label={t("app.shellLabel")}
-      style={{ "--zen-width": `${zenWidth}px` } as React.CSSProperties}
+      style={
+        {
+          "--zen-width": `${zenWidth}px`,
+          // Overrides the root's document scale for the Zen column only; the
+          // normal view and the exports keep fontSizePt (useEditorSettingsStore).
+          ...(isZenMode && zenFontSizePt !== null
+            ? { "--document-font-scale": getZenFontScale(zenFontSizePt) }
+            : {})
+        } as React.CSSProperties
+      }
     >
       <div className="workspace">
         <section
@@ -1015,6 +1060,13 @@ function App() {
             onCommitTitleRename={() => void commitTitleRename()}
             onCancelTitleRename={cancelTitleRename}
             onStartTitleRename={() => startTitleRename(selectedFileBaseName, selectedFilePath)}
+            onOpenFolderNote={(folderRelativePath) => {
+              if (!folderPath) {
+                return;
+              }
+
+              void join(folderPath, folderRelativePath).then(openFolderNoteSafely);
+            }}
             isAiLoading={isAiLoading}
             isSaving={isSaving}
             isDirty={isDirty}
