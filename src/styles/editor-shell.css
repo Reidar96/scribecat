@@ -8,7 +8,8 @@
   gap: 0.85rem;
   height: 100%;
   min-height: 0;
-  overflow: hidden;
+  /* clip, not hidden: see .detail-panel in detail-panel.css */
+  overflow: clip;
 }
 
 .editor-view__feedback {
