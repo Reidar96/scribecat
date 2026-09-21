@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { BookOpen, Copy, Download, FileDown, FilePlus, FolderArchive, FolderInput, FolderPlus, Pencil, Pin, PinOff, Printer, Trash2, Undo2, X } from "lucide-react";
+import { BookOpen, Copy, Download, ExternalLink, FileDown, FilePlus, FolderArchive, FolderInput, FolderPlus, Pencil, Pin, PinOff, Printer, Trash2, Undo2, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { getVaultCapabilities, platform, vaultCapabilityHint } from "@/platform";
 import { dirname, join } from "@/platform/paths";
@@ -136,6 +136,7 @@ export function FileTree({
   const offersExport = platform.features.exportFiles || platform.features.downloads;
   const offersMarkdownDownload = canDownloadMarkdown(folderPath);
   const offersFolderArchive = canDownloadFolderArchive(folderPath);
+  const offersRevealInFileManager = platform.shell.openFolderInFileManager !== null;
   const { expandedFolderPaths, toggleFolder, expandAncestorsOf, expandFolders } =
     useExpandedFolders(folderPath);
   const { contextMenu, setContextMenu } = useTreeContextMenu();
@@ -1086,6 +1087,23 @@ export function FileTree({
                 >
                   <Printer aria-hidden="true" />
                   {t("fileTree.print")}
+                </button>
+              ) : null}
+
+              {contextMenu.kind === "folder" && offersRevealInFileManager ? (
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="file-tree-context-menu__item"
+                  onClick={() => {
+                    void join(folderPath, contextMenu.relativePath).then((path) =>
+                      platform.shell.openFolderInFileManager?.(path)
+                    );
+                    setContextMenu(null);
+                  }}
+                >
+                  <ExternalLink aria-hidden="true" />
+                  {t("fileTree.revealInFileManager")}
                 </button>
               ) : null}
 

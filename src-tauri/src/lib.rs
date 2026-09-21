@@ -61,6 +61,25 @@ fn allow_file_scope(app: AppHandle, file_path: String) -> Result<(), String> {
     Ok(())
 }
 
+/// Opens a folder in the OS file manager, positioned *inside* it. The opener
+/// plugin's `reveal_item_in_dir` instead opens the item's parent with the item
+/// selected — correct for a file, but for a folder that lands the user one
+/// level too high, which is not what "open in Explorer" means for a folder row
+/// in the tree.
+#[tauri::command]
+fn open_folder_in_file_manager(folder_path: String) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    let result = std::process::Command::new("explorer").arg(&folder_path).spawn();
+
+    #[cfg(target_os = "macos")]
+    let result = std::process::Command::new("open").arg(&folder_path).spawn();
+
+    #[cfg(all(unix, not(target_os = "macos")))]
+    let result = std::process::Command::new("xdg-open").arg(&folder_path).spawn();
+
+    result.map(|_| ()).map_err(|error| error.to_string())
+}
+
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 struct PortableStatus {
@@ -392,6 +411,7 @@ pub fn run() {
             get_startup_folder_path,
             allow_folder_scope,
             allow_file_scope,
+            open_folder_in_file_manager,
             get_portable_status,
             watch_folder,
             check_spellcheck_dictionary,

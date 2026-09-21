@@ -454,7 +454,15 @@ export type Platform = {
   vault: VaultAccessApi;
 
   app: { getVersion(): Promise<string | null> };
-  shell: { openUrl(url: string): Promise<void> };
+  shell: {
+    openUrl(url: string): Promise<void>;
+    /**
+     * Opens the OS file manager (Explorer/Finder/…) positioned inside the
+     * given folder. Null where there is no native file manager to hand off
+     * to (the browser in the web edition).
+     */
+    openFolderInFileManager: ((folderPath: string) => Promise<void>) | null;
+  };
   http: { fetch(url: string, init?: RequestInit): Promise<Response> };
   window: WindowApi;
   credentials: CredentialsApi;

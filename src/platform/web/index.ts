@@ -105,7 +105,8 @@ export const platform: Platform = {
   shell: {
     openUrl: async (url) => {
       window.open(url, "_blank", "noopener,noreferrer");
-    }
+    },
+    openFolderInFileManager: null
   },
   http: {
     fetch: (url, init) => {

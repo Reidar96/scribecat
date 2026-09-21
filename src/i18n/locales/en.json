@@ -540,6 +540,7 @@
     "exportManuscript": "Export as manuscript…",
     "downloadMarkdown": "Download as Markdown",
     "downloadFolderArchive": "Download as ZIP (Markdown files)",
+    "revealInFileManager": "Reveal in File Explorer",
     "stagedChange": "The agent proposes a change",
     "stagedChangeFolder": "Proposed changes in this folder: {{count}}",
     "openFolderNote": "{{path}} – click opens the folder note, the arrow expands and collapses",

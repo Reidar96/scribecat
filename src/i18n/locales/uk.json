@@ -552,6 +552,7 @@
     "exportManuscript": "Експортувати як рукопис…",
     "downloadMarkdown": "Завантажити як Markdown",
     "downloadFolderArchive": "Завантажити як ZIP (файли Markdown)",
+    "revealInFileManager": "Показати в провіднику",
     "stagedChange": "Агент пропонує зміну",
     "stagedChangeFolder": "Запропонованих змін у цій теці: {{count}}",
     "openFolderNote": "{{path}} – клац відкриває нотатку теки, стрілка розгортає та згортає",

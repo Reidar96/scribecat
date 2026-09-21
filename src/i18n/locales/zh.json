@@ -539,6 +539,7 @@
     "exportManuscript": "导出为书稿…",
     "downloadMarkdown": "下载为 Markdown",
     "downloadFolderArchive": "下载为 ZIP（Markdown 文件）",
+    "revealInFileManager": "在文件资源管理器中显示",
     "stagedChange": "代理提议了一处更改",
     "stagedChangeFolder": "此文件夹中提议的更改：{{count}}",
     "openFolderNote": "{{path}} – 点击打开文件夹笔记，箭头用于展开和折叠",

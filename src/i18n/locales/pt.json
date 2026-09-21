@@ -540,6 +540,7 @@
     "exportManuscript": "Exportar como manuscrito…",
     "downloadMarkdown": "Transferir como Markdown",
     "downloadFolderArchive": "Transferir como ZIP (ficheiros Markdown)",
+    "revealInFileManager": "Mostrar no Explorador de Ficheiros",
     "stagedChange": "O agente propõe uma alteração",
     "stagedChangeFolder": "Alterações propostas nesta pasta: {{count}}",
     "openFolderNote": "{{path}} – um clique abre a nota da pasta, a seta expande e recolhe",

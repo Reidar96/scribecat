@@ -91,7 +91,10 @@ export const platform: Platform = {
   app: {
     getVersion: () => getVersion().catch(() => null)
   },
-  shell: { openUrl },
+  shell: {
+    openUrl,
+    openFolderInFileManager: (folderPath) => invoke("open_folder_in_file_manager", { folderPath })
+  },
   http: { fetch: (url, init) => tauriFetch(url, init) },
   window: {
     // Native webview zoom behaves like browser zoom: the layout reflows and
