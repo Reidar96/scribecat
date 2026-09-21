@@ -54,7 +54,7 @@ export function VersionsPopover({
     setVersions(null);
   };
 
-  useDismissablePopover(isOpen, close);
+  useDismissablePopover(isOpen, close, popoverRef);
   usePopoverOverflowAlign(anchor, popoverRef, setAlign);
 
   const loadVersionsRef = useRef<() => Promise<void>>(async () => undefined);

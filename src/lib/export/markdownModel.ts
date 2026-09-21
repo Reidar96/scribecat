@@ -4,6 +4,7 @@ import insPlugin from "markdown-it-ins";
 import markPlugin from "markdown-it-mark";
 
 import { calloutMarkdownItPlugin } from "@/lib/editor/extensions/callout";
+import { tableLineBreakMarkdownItPlugin } from "@/lib/editor/extensions/table";
 
 // Shared intermediate representation for the PDF/DOCX/ODT exporters: markdown
 // is parsed exactly once into these blocks; each output format only has to
@@ -64,6 +65,8 @@ export function createExportMarkdownIt(): MarkdownIt {
   // Strips the `[!VARIANT]` admonition marker so callouts export as clean
   // blockquotes instead of showing the raw marker text.
   markdownIt.use(calloutMarkdownItPlugin);
+  // The editor writes line breaks inside a table cell as "<br>" (table.ts).
+  markdownIt.use(tableLineBreakMarkdownItPlugin);
   return markdownIt;
 }
 

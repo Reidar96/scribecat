@@ -16,6 +16,7 @@
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  user-select: none;
 }
 
 .versions-popover__empty {
@@ -23,6 +24,7 @@
   padding: 0.6rem 0.25rem;
   color: rgba(var(--text-rgb),0.68);
   font-size: 0.82rem;
+  user-select: none;
 }
 
 .versions-popover__list {
@@ -43,16 +45,13 @@
   padding: 0.35rem 0.25rem 0.35rem 0.45rem;
 }
 
-.versions-popover__item:hover {
-  background: rgba(var(--surface-hover-rgb),1);
-}
-
 .versions-popover__timestamp {
   overflow: hidden;
   color: rgba(var(--text-rgb),0.9);
   font-size: 0.82rem;
   white-space: nowrap;
   text-overflow: ellipsis;
+  user-select: none;
 }
 
 .versions-popover__item-actions {

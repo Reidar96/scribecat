@@ -102,6 +102,7 @@
   /* Keeps the crumbs in reading order inside the RTL-truncated h2 (see
      responsive.css) and picks the direction from the path itself. */
   unicode-bidi: plaintext;
+  user-select: none;
 }
 
 .detail-panel__crumb {

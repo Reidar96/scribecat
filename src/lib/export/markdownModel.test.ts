@@ -42,3 +42,32 @@ describe("parseMarkdownToBlocks inline marks", () => {
     expect(html).toContain("Ein <mark>wichtiger</mark> Satz.");
   });
 });
+
+// The editor writes a line break inside a table cell as "<br>" (the only
+// form a Markdown cell has for it); the export reads it as a break instead
+// of the literal tag.
+describe("parseMarkdownToBlocks table cells", () => {
+  it("reads <br> inside a cell as a line break", () => {
+    const [block] = parseMarkdownToBlocks("| A |\n| --- |\n| one<br>two |\n");
+
+    if (block.kind !== "table") {
+      throw new Error("expected table");
+    }
+
+    expect(block.rows[1][0].runs.map((run) => (run.kind === "text" ? run.text : run.kind))).toEqual([
+      "one",
+      "break",
+      "two"
+    ]);
+  });
+
+  it("leaves <br> outside a table as text", () => {
+    const [block] = parseMarkdownToBlocks("one<br>two\n");
+
+    if (block.kind !== "paragraph") {
+      throw new Error("expected paragraph");
+    }
+
+    expect(block.runs.some((run) => run.kind === "break")).toBe(false);
+  });
+});

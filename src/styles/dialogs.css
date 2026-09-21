@@ -1290,6 +1290,7 @@
   font-size: 0.78rem;
   color: rgba(var(--text-rgb),0.6);
   overflow-wrap: anywhere;
+  user-select: none;
 }
 
 .remote-vault-list__actions {

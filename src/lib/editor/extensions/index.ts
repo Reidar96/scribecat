@@ -1,5 +1,4 @@
 import { Link } from "@tiptap/extension-link";
-import { Table, TableCell, TableHeader, TableRow } from "@tiptap/extension-table";
 import type { Extensions } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { Markdown } from "tiptap-markdown";
@@ -18,6 +17,8 @@ import { Callout } from "./callout";
 import { CodeBlock } from "./codeBlock";
 import { Highlight } from "./highlight";
 import { EditorImage } from "./image";
+import { BulletList, OrderedList } from "./lists";
+import { HardBreak, Table, TableCell, TableHeader, TableRow } from "./table";
 import { TaskItem, TaskList, TaskListMarkdown } from "./taskList";
 import { Underline } from "./underline";
 
@@ -26,8 +27,14 @@ import { Underline } from "./underline";
 // exactly as it will look once accepted.
 function buildContentExtensions(): Extensions {
   return [
-    StarterKit.configure({ codeBlock: false }),
+    // The lists, the hard break and the table are the local variants: they
+    // refuse block content in table cells and serialize a cell without ever
+    // falling back to tiptap-markdown's "[table]" placeholder (table.ts).
+    StarterKit.configure({ codeBlock: false, bulletList: false, orderedList: false, hardBreak: false }),
     CodeBlock,
+    BulletList,
+    OrderedList,
+    HardBreak,
     Callout,
     TaskList,
     TaskItem.configure({ nested: true }),
@@ -43,6 +50,9 @@ function buildContentExtensions(): Extensions {
       linkOnPaste: false,
       openOnClick: false
     }),
+    // html: false — raw HTML in a note stays visible text instead of being
+    // parsed into the document; the price is the placeholder fallback the
+    // table serializer works around.
     Markdown.configure({
       html: false,
       breaks: true

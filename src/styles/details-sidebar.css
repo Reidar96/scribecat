@@ -176,10 +176,13 @@ button.details-sidebar__item:hover {
   color: rgba(var(--text-rgb),0.8);
 }
 
-.details-sidebar__empty {
+/* Spezifität: .detail-panel p (base.css) färbt jeden Absatz im Dokumentbereich,
+   in dem dieses Panel sitzt — eine einzelne Klasse verliert dagegen. */
+.details-sidebar .details-sidebar__empty {
   margin: 0;
+  padding-left: 1.15rem;
   font-size: 0.8rem;
-  color: rgba(var(--muted-rgb),0.9);
+  color: rgba(var(--muted-rgb),0.75);
 }
 
 /* Outline: heading level becomes indentation, type size and weight (the way

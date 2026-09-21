@@ -76,6 +76,7 @@ import { normalizeEscapedCheckboxes } from "@/lib/editor/markdownNormalize";
 import { looksLikeMarkdown, pasteMarkdown } from "@/lib/editor/pasteMarkdown";
 import { normalizePastedSlice } from "@/lib/editor/pasteNormalize";
 import { getEditorMarkdown, getSelectionMarkdown } from "@/lib/editor/markdownStorage";
+import { serializeGuarded } from "@/lib/editor/serializationGuard";
 import {
   copySelectionAsMarkdown,
   copySelectionAsPlainText,
@@ -235,6 +236,11 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     handleDetailsPanelResizeKeyDown
   } = useDetailsPanelWidth();
   const [linkDialog, setLinkDialog] = useState<LinkDialogState | null>(null);
+  // Node types the serializer replaced with a placeholder in the last
+  // serialization (see lib/editor/serializationGuard). While the list is
+  // not empty the document is not reported to the store, so nothing with a
+  // placeholder in it can reach the disk, and a banner says so.
+  const [unserializableNodes, setUnserializableNodes] = useState<string[]>([]);
   // Tab out of the document hands focus to the details panel's outline; the
   // panel watches this counter the way the editor watches editorFocusRequestId.
   const [outlineFocusRequestId, setOutlineFocusRequestId] = useState(0);
@@ -685,6 +691,27 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         }
       : null;
 
+  // Serializes the document and returns the markdown only when it is a
+  // faithful form of it. Null means the serializer fell back to a placeholder
+  // for some node (issue #56: "[table]" for a table with a list in a cell),
+  // and the document must not reach the store, let alone the disk, in that
+  // form. The banner it raises stays until a later serialization comes back
+  // clean.
+  const guardSerialization = (currentEditor: TipTapEditor, fallback: string): string | null => {
+    const { markdown: serialized, lost } = serializeGuarded(currentEditor, fallback);
+
+    setUnserializableNodes((previous) =>
+      previous.length === lost.length && previous.every((name, index) => name === lost[index]) ? previous : lost
+    );
+
+    if (lost.length > 0) {
+      console.error(`Markdown serialization lost nodes (${lost.join(", ")}); the note is not saved in this state.`);
+      return null;
+    }
+
+    return serialized;
+  };
+
   // The tools below back the chat agent's document read/edit tool calls (see
   // src/lib/chat/agentTools.ts) — a lookup indirection is needed because the
   // store that drives the agent loop cannot reach into the editor component
@@ -1085,7 +1112,17 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       lastSyncedMarkdownRef.current = markdown;
     },
     onUpdate: ({ editor, transaction }) => {
-      const nextMarkdown = getEditorMarkdown(editor, markdown);
+      const nextMarkdown = guardSerialization(editor, markdown);
+
+      if (nextMarkdown === null) {
+        // The store keeps the last good form; the banner asks the user to
+        // undo. The rest of the update (selection mirror, suggestions) is
+        // unaffected.
+        syncChatSelection(editor);
+        refreshSuggestion();
+        return;
+      }
+
       lastSyncedMarkdownRef.current = nextMarkdown;
 
       // A document change that only an appended transaction made is not an
@@ -1539,14 +1576,22 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       return;
     }
 
-    let canonicalMarkdown = getEditorMarkdown(currentEditor, "");
-
-    if (markdown !== lastSyncedMarkdownRef.current && markdown !== canonicalMarkdown) {
+    if (
+      markdown !== lastSyncedMarkdownRef.current &&
+      markdown !== getEditorMarkdown(currentEditor, "")
+    ) {
       currentEditor.commands.setContent(markdown, { emitUpdate: false });
-      canonicalMarkdown = getEditorMarkdown(currentEditor, markdown);
     }
 
     lastSyncedMarkdownRef.current = markdown;
+
+    // A file whose content the serializer can't write back must not have
+    // its baseline replaced by the placeholder form either.
+    const canonicalMarkdown = guardSerialization(currentEditor, markdown);
+
+    if (canonicalMarkdown === null) {
+      return;
+    }
 
     // The same document can be written in several equivalent ways, and the
     // editor always serializes the canonical one — so markdown that is valid
@@ -1689,6 +1734,14 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
           isRecording={dictation.status === "recording"}
           message={dictation.status === "recording" ? t("voice.editorRecordingHint") : t("voice.transcribing")}
         />
+      ) : null}
+
+      {unserializableNodes.length > 0 ? (
+        <div className="editor-view__feedback editor-view__feedback--error" role="alert">
+          <span className="editor-view__feedback-message">
+            {t("editor.unserializableContent", { nodes: unserializableNodes.join(", ") })}
+          </span>
+        </div>
       ) : null}
 
       {ai.aiStatus && ai.aiStatus.kind !== "info" ? (
