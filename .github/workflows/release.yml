@@ -5,6 +5,16 @@ on:
     tags:
       - 'v*'
 
+# A tag pushed twice (or re-pushed) would otherwise start a second run that
+# writes into the very same GitHub release as the first one, from four jobs at
+# once. Not cancel-in-progress: the release is published before the portable
+# zip is uploaded, so an abort mid-run can leave a live release with an
+# incomplete asset set — including the .sig files the updater depends on.
+# Queueing the second run instead lets the first finish untouched.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build:
     strategy:

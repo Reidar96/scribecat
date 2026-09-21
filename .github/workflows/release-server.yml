@@ -18,6 +18,15 @@ on:
         description: 'Version to build and push, e.g. 0.11.0'
         required: true
 
+# A tag pushed twice starts a second build of the very same image tag, and the
+# two then race on the ghcr push — which is how the v0.14.1 run sat there for
+# 99 minutes before it was cancelled. Cancelling is safe here (unlike in
+# release.yml): the push is atomic over the digest, so an aborted run leaves
+# nothing half-published behind.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   image:
     runs-on: ubuntu-latest
