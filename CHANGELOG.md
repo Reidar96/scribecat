@@ -3,6 +3,11 @@
 All notable changes to ScribeDog are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.14.1] - 2026-09-21
+
+### Bug Fixes
+- Closing the window with the title bar button works again. 0.14.0 intercepted the close request to write the hot-exit drafts first, but lacked the permission to close the window afterwards, so the app could only be ended from the task manager
+
 ## [0.14.0] - 2026-09-21
 
 ### Highlights
