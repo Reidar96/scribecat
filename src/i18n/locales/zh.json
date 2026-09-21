@@ -750,6 +750,7 @@
     "run": "执行"
   },
   "editor": {
+    "unserializableContent": "保存已暂停：编辑器无法将此笔记写为 Markdown（{{nodes}}）。请撤销最后一次更改以免丢失内容，并报告此问题。",
     "imageRequiresFile": "只有在编辑已打开文件夹中的文件时才能插入图片。",
     "imageInsertFailed": "无法插入图片 “{{fileName}}”：{{error}}",
     "imageDialogTitle": "选择图片",

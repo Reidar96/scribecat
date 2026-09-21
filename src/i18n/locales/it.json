@@ -751,6 +751,7 @@
     "run": "Esegui"
   },
   "editor": {
+    "unserializableContent": "Il salvataggio è in pausa: l'editor non riesce a scrivere questa nota in Markdown ({{nodes}}). Annulla l'ultima modifica per non perdere nulla e segnala il problema.",
     "imageRequiresFile": "Le immagini possono essere inserite solo durante la modifica di un file all'interno di una cartella aperta.",
     "imageInsertFailed": "Impossibile inserire l'immagine \"{{fileName}}\": {{error}}",
     "imageDialogTitle": "Seleziona immagine",

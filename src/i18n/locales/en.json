@@ -751,6 +751,7 @@
     "run": "Run"
   },
   "editor": {
+    "unserializableContent": "Saving is paused: the editor cannot write this note as Markdown ({{nodes}}). Undo the last change so nothing is lost, and please report this.",
     "imageRequiresFile": "Images can only be inserted while editing a file inside an open folder.",
     "imageInsertFailed": "Could not insert image \"{{fileName}}\": {{error}}",
     "imageDialogTitle": "Select image",

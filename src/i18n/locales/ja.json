@@ -750,6 +750,7 @@
     "run": "実行"
   },
   "editor": {
+    "unserializableContent": "保存を一時停止しています: エディターはこのノートを Markdown として書き出せません（{{nodes}}）。何も失われないように直前の変更を元に戻し、この問題を報告してください。",
     "imageRequiresFile": "画像は、開いているフォルダー内のファイルを編集している場合にのみ挿入できます。",
     "imageInsertFailed": "画像「{{fileName}}」を挿入できませんでした：{{error}}",
     "imageDialogTitle": "画像を選択",

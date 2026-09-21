@@ -751,6 +751,7 @@
     "run": "Ausführen"
   },
   "editor": {
+    "unserializableContent": "Speichern ist angehalten: Der Editor kann diese Notiz nicht als Markdown schreiben ({{nodes}}). Mache die letzte Änderung rückgängig, damit nichts verloren geht, und melde das bitte.",
     "imageRequiresFile": "Bilder können nur eingefügt werden, wenn eine Datei in einem geöffneten Ordner bearbeitet wird.",
     "imageInsertFailed": "Bild \"{{fileName}}\" konnte nicht eingefügt werden: {{error}}",
     "imageDialogTitle": "Bild auswählen",

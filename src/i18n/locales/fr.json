@@ -751,6 +751,7 @@
     "run": "Exécuter"
   },
   "editor": {
+    "unserializableContent": "L'enregistrement est suspendu : l'éditeur ne peut pas écrire cette note en Markdown ({{nodes}}). Annulez la dernière modification pour ne rien perdre et signalez ce problème.",
     "imageRequiresFile": "Les images ne peuvent être insérées que lors de l'édition d'un fichier dans un dossier ouvert.",
     "imageInsertFailed": "Impossible d'insérer l'image « {{fileName}} » : {{error}}",
     "imageDialogTitle": "Sélectionner une image",

@@ -751,6 +751,7 @@
     "run": "Executar"
   },
   "editor": {
+    "unserializableContent": "A gravação está em pausa: o editor não consegue escrever esta nota como Markdown ({{nodes}}). Desfaz a última alteração para não perder nada e comunica este problema.",
     "imageRequiresFile": "Imagens só podem ser inseridas ao editar um arquivo dentro de uma pasta aberta.",
     "imageInsertFailed": "Não foi possível inserir a imagem \"{{fileName}}\": {{error}}",
     "imageDialogTitle": "Selecionar imagem",
