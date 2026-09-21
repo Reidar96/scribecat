@@ -545,6 +545,8 @@
     "unsavedChanges": "Незбережені зміни",
     "delete": "Видалити",
     "rename": "Перейменувати",
+    "changeIcon": "Змінити піктограму",
+    "removeIcon": "Видалити піктограму",
     "renameInputLabel": "Назва папки",
     "fileRenameInputLabel": "Ім'я файлу",
     "export": "Експортувати…",

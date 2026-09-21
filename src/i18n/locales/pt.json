@@ -533,6 +533,8 @@
     "unsavedChanges": "Alterações não salvas",
     "delete": "Excluir",
     "rename": "Renomear",
+    "changeIcon": "Alterar ícone",
+    "removeIcon": "Remover ícone",
     "renameInputLabel": "Nome da pasta",
     "fileRenameInputLabel": "Nome do arquivo",
     "export": "Exportar…",

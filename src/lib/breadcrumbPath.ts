@@ -17,6 +17,16 @@ export type PathCrumb = {
    * last crumb — that one is the open document and leads nowhere.
    */
   folderRelativePath: string | null;
+  /**
+   * Vault-relative path of the entry itself, the last crumb included. What
+   * `folderRelativePath` says about navigation, this says about identity: it
+   * is the key an icon is stored under, and every crumb has one.
+   *
+   * For a folder note the label is the folder's path (see App.tsx), so the
+   * last crumb is that folder and carries the folder's icon — the same one
+   * its row in the tree shows.
+   */
+  relativePath: string;
 };
 
 /**
@@ -29,9 +39,13 @@ export type PathCrumb = {
 export function getPathCrumbs(label: string): PathCrumb[] {
   const segments = label.split("/").filter((segment) => segment.length > 0);
 
-  return segments.map((name, index) => ({
-    name,
-    folderRelativePath:
-      index === segments.length - 1 ? null : segments.slice(0, index + 1).join("/")
-  }));
+  return segments.map((name, index) => {
+    const relativePath = segments.slice(0, index + 1).join("/");
+
+    return {
+      name,
+      folderRelativePath: index === segments.length - 1 ? null : relativePath,
+      relativePath
+    };
+  });
 }

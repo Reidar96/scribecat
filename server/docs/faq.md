@@ -112,6 +112,16 @@ version history and backups treat it like any other note; only the file tree
 shows it on the folder row. Switching the setting off leaves the files where
 they are.
 
+**Can I give files and folders their own icons?**
+Yes. Right-click a row in the file tree and pick **Change icon** (the same
+entry removes one again); on the desktop you can also click an icon in the
+path above the note. The icons are stored in the vault, in
+`.scribedog/icons.json`, not in the notes themselves, so setting one is not
+an edit: no unsaved changes, no new version, and nothing shows up in an
+export or in Git. Copy the folder somewhere else and the icons come along;
+rename a file outside ScribeDog and its icon is gone, the same way its place
+in a manual sort order is.
+
 **What is the "In progress" list above the file tree?**
 The notes you pinned as the ones you are working on (double-click, Enter or
 the context menu in the tree); it stays hidden until you pin the first one.

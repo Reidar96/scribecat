@@ -17,7 +17,7 @@ import { registerEditorToolBridge } from "@/lib/chat/agentTools";
 import { setAiSuggestionsEmptyListener } from "@/lib/aiSuggestionWidget";
 import { findStagedChange, normalizeVaultPath } from "@/lib/chat/vaultStaging";
 import { useStagedChangesStore } from "@/store/useStagedChangesStore";
-import type { BatchEntry, PendingFolderRename } from "@/components/FileTree";
+import type { BatchEntry, PendingEntryRename } from "@/components/FileTree";
 import { useAppVersion } from "@/hooks/useAppVersion";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import { CHAT_MAX_WIDTH, CHAT_MIN_WIDTH, useChatWidth } from "@/hooks/useChatWidth";
@@ -67,6 +67,7 @@ import {
 import { sourceFromPath } from "@/lib/import/convert";
 import { IMPORT_FILE_EXTENSIONS, type ImportSource } from "@/lib/import/importer";
 import { cn } from "@/lib/utils";
+import { normalizePathKey } from "@/store/appStore/pathUtils";
 import { useAppStore } from "@/store/useAppStore";
 import type { Assistant } from "@/store/useAssistantsStore";
 import { useAiSettingsStore } from "@/store/useAiSettingsStore";
@@ -105,7 +106,7 @@ function App() {
   const [importInsertAfterBasename, setImportInsertAfterBasename] = useState<string | null | undefined>(
     undefined
   );
-  const [pendingFolderRename, setPendingFolderRename] = useState<PendingFolderRename | null>(
+  const [pendingEntryRename, setPendingEntryRename] = useState<PendingEntryRename | null>(
     null
   );
   const [editorFocusRequestId, setEditorFocusRequestId] = useState(0);
@@ -117,7 +118,10 @@ function App() {
   const [isSidebarSheetOpen, setIsSidebarSheetOpen] = useState(false);
   const appVersion = useAppVersion();
   const editorHandleRef = useRef<EditorHandle | null>(null);
-  const folderRenameRequestIdRef = useRef(0);
+  const entryRenameRequestIdRef = useRef(0);
+  // Set only by handleCreateFolder: the folder whose note should open once the
+  // name is confirmed (folder notes on). Cleared by whoever consumes it.
+  const pendingFolderNoteOpenRef = useRef<string | null>(null);
 
   const openFolder = useAppStore((state) => state.openFolder);
   const openFolderAtPath = useAppStore((state) => state.openFolderAtPath);
@@ -164,6 +168,8 @@ function App() {
   const deleteFolderPath = useAppStore((state) => state.deleteFolderPath);
   const sortMode = useAppStore((state) => state.sortMode);
   const manualOrder = useAppStore((state) => state.manualOrder);
+  const vaultIcons = useAppStore((state) => state.vaultIcons);
+  const setVaultIconFor = useAppStore((state) => state.setVaultIconFor);
   const fileMtimeMs = useAppStore((state) => state.fileMtimeMs);
   const emptyFolderMtimeMs = useAppStore((state) => state.emptyFolderMtimeMs);
   const setSortMode = useAppStore((state) => state.setSortMode);
@@ -485,6 +491,41 @@ function App() {
     await openFolderNote(targetFolderPath);
   };
 
+  /**
+   * The rename that confirms a freshly created folder's name. Only then does
+   * its note open: Escape has to be able to leave the folder as "New folder"
+   * without dragging the user into a document. A folder without notes has
+   * nothing to open — it stays selected and unfolded in the tree, which is
+   * the whole result of creating it.
+   */
+  const renameFolderPathFromTree = async (targetFolderPath: string, newBaseName: string) => {
+    const wasJustCreated =
+      pendingFolderNoteOpenRef.current !== null &&
+      normalizePathKey(pendingFolderNoteOpenRef.current) === normalizePathKey(targetFolderPath);
+    const didRename = await renameFolderPath(targetFolderPath, newBaseName);
+
+    if (!didRename) {
+      return false;
+    }
+
+    pendingFolderNoteOpenRef.current = null;
+
+    if (wasJustCreated && useEditorSettingsStore.getState().folderNotesEnabled) {
+      // The rename moved the folder, so the note lives under the new name.
+      const renamedFolderPath = await join(await dirname(targetFolderPath), newBaseName);
+      await openFolderNoteSafely(renamedFolderPath);
+    }
+
+    return true;
+  };
+
+  /** Clears the pending-note marker when the new folder's name is not confirmed. */
+  const renameFilePathFromTree = async (filePath: string, newBaseName: string) => {
+    pendingFolderNoteOpenRef.current = null;
+
+    return renameFilePath(filePath, newBaseName);
+  };
+
   // Opening a different vault has nothing to do with the previous one's
   // history. Declared before the recording effect below so that a folder switch
   // which immediately selects a file clears first and records afterwards.
@@ -575,6 +616,17 @@ function App() {
     return { targetDirectory: await dirname(entry.path), insertAfterBasename: basename };
   };
 
+  /**
+   * Both create actions end the same way: the new entry is named in the tree,
+   * where its siblings are visible and where a folder can be named at all.
+   * The sidebar sheet stays open on a phone — creating several notes in a row
+   * would otherwise mean reopening it after every one.
+   */
+  const requestEntryRename = (kind: "file" | "folder", path: string) => {
+    entryRenameRequestIdRef.current += 1;
+    setPendingEntryRename({ kind, path, requestId: entryRenameRequestIdRef.current });
+  };
+
   const handleCreateFile = async (targetDirectory?: string) => {
     const resolved =
       targetDirectory !== undefined
@@ -583,11 +635,9 @@ function App() {
     const newFilePath = await createNewFile(resolved.targetDirectory ?? undefined, resolved.insertAfterBasename);
 
     if (newFilePath) {
-      const fileName = newFilePath.replace(/\\/g, "/").split("/").pop() ?? "";
-      startTitleRename(fileName.replace(/\.md$/i, ""), newFilePath);
-      // The new note is open behind the sheet; the rename above wants the eye
-      // on its title.
-      setIsSidebarSheetOpen(false);
+      // createNewFile already selected the note, so the rename below has a
+      // document behind it from the first keystroke.
+      requestEntryRename("file", newFilePath);
     }
   };
 
@@ -599,11 +649,8 @@ function App() {
     const newFolderPath = await createNewFolder(resolved.targetDirectory ?? undefined, resolved.insertAfterBasename);
 
     if (newFolderPath) {
-      folderRenameRequestIdRef.current += 1;
-      setPendingFolderRename({
-        folderPath: newFolderPath,
-        requestId: folderRenameRequestIdRef.current
-      });
+      pendingFolderNoteOpenRef.current = newFolderPath;
+      requestEntryRename("folder", newFolderPath);
     }
   };
 
@@ -896,9 +943,11 @@ function App() {
       }}
       folderError={folderError}
       isLoading={isLoading}
-      pendingFolderRename={pendingFolderRename}
+      pendingEntryRename={pendingEntryRename}
       sortMode={sortMode}
       manualOrder={manualOrder}
+      vaultIcons={vaultIcons}
+      onSetVaultIcon={setVaultIconFor}
       fileMtimeMs={fileMtimeMs}
       emptyFolderMtimeMs={emptyFolderMtimeMs}
       onOpenFolder={openFolderSafely}
@@ -929,8 +978,8 @@ function App() {
       onDownloadMarkdownRequest={handleDownloadMarkdownRequest}
       onDownloadFolderArchiveRequest={handleDownloadFolderArchiveRequest}
       onPrintFileRequest={handlePrintFileRequest}
-      onRenameFolder={renameFolderPath}
-      onRenameFile={renameFilePath}
+      onRenameFolder={renameFolderPathFromTree}
+      onRenameFile={renameFilePathFromTree}
       onMoveEntry={moveTreeEntry}
       onMoveRequest={requestMove}
       onSetSortMode={(mode) => void setSortMode(mode)}
@@ -1011,6 +1060,8 @@ function App() {
           <DocumentPanel
             selectedFilePath={selectedFilePath}
             selectedFileLabel={selectedFileLabel}
+            vaultIcons={vaultIcons}
+            onSetVaultIcon={setVaultIconFor}
             selectedFileDirectoryLabel={selectedFileDirectoryLabel}
             isSelectedFolderNote={isSelectedFolderNote}
             folderPath={folderPath}

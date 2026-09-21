@@ -533,6 +533,8 @@
     "unsavedChanges": "Cambios sin guardar",
     "delete": "Eliminar",
     "rename": "Renombrar",
+    "changeIcon": "Cambiar icono",
+    "removeIcon": "Quitar icono",
     "renameInputLabel": "Nombre de la carpeta",
     "fileRenameInputLabel": "Nombre del archivo",
     "export": "Exportar…",

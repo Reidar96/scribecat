@@ -17,6 +17,7 @@ import { getFolderNotePath, isFolderNotePath } from "@/lib/folderNotes";
 import { isDocumentDirty, isExternallyModified } from "./documents";
 import { discardDraft, flushDrafts, moveDraftFor, scheduleDraft } from "./drafts";
 import { toErrorMessage } from "./errors";
+import { dropVaultIcons, moveVaultIcons } from "./icons";
 import {
   currentChildBasenames,
   ensureManualOrderEntry,
@@ -779,6 +780,7 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
       }
 
       let nextManualOrder = currentState.manualOrder;
+      let nextVaultIcons = currentState.vaultIcons;
 
       if (currentState.folderPath) {
         const parentRelativePath = getRelativeDisplayPath(currentState.folderPath, targetDirectory);
@@ -791,6 +793,12 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
         );
 
         persistManualOrderIfChanged(currentState.folderPath, currentState.manualOrder, nextManualOrder);
+        nextVaultIcons = moveVaultIcons(
+          currentState.folderPath,
+          currentState.vaultIcons,
+          filePath,
+          newFilePath
+        );
       }
 
       const nextWorkingSet = remapWorkingSetPaths(currentState.workingSet, (path) =>
@@ -808,6 +816,7 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
             ? newFilePath
             : currentState.selectedFilePath,
         manualOrder: nextManualOrder,
+        vaultIcons: nextVaultIcons,
         workingSet: nextWorkingSet,
         fileError: null
       });
@@ -857,6 +866,7 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
       let nextEmptyFolderPaths = currentState.emptyFolderPaths;
 
       let nextManualOrder = currentState.manualOrder;
+      let nextVaultIcons = currentState.vaultIcons;
 
       if (folderPath) {
         const parentDirectory = await dirname(filePath);
@@ -864,6 +874,7 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
 
         nextManualOrder = removeManualOrderEntry(nextManualOrder, parentRelativePath, getBasename(filePath));
         persistManualOrderIfChanged(folderPath, currentState.manualOrder, nextManualOrder);
+        nextVaultIcons = dropVaultIcons(folderPath, currentState.vaultIcons, filePath);
 
         // Deleting a folder's note clears the folder's text, it does not
         // delete the folder — but the note may have been the only file that
@@ -892,6 +903,7 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
         selectedFileBaseContent: isSelected ? null : currentState.selectedFileBaseContent,
         isDirty: isSelected ? false : currentState.isDirty,
         manualOrder: nextManualOrder,
+        vaultIcons: nextVaultIcons,
         workingSet: nextWorkingSet,
         fileError: null
       });

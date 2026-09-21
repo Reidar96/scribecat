@@ -533,6 +533,8 @@
     "unsavedChanges": "Ungespeicherte Änderungen",
     "delete": "Löschen",
     "rename": "Umbenennen",
+    "changeIcon": "Symbol ändern",
+    "removeIcon": "Symbol entfernen",
     "renameInputLabel": "Ordnername",
     "fileRenameInputLabel": "Dateiname",
     "export": "Exportieren…",

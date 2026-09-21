@@ -7,6 +7,7 @@ import {
   type HeadingNumberingSettings
 } from "@/lib/editor/headingNumbers";
 import { VAULT_META_DIR_NAME } from "@/lib/fileSystem";
+import { normalizeVaultIcons, type VaultIconMap } from "@/lib/vaultIcons";
 import { normalizeStoredWorkingSet, type StoredWorkingSet } from "@/store/appStore/workingSet";
 
 export type SortMode = "name" | "modified" | "manual";
@@ -19,6 +20,7 @@ const ORDER_FILE_NAME = "order.json";
 const MANUSCRIPT_FILE_NAME = "manuscript.json";
 const HEADING_NUMBERING_FILE_NAME = "heading-numbering.json";
 const FOLDER_NOTES_FILE_NAME = "folder-notes.json";
+const ICONS_FILE_NAME = "icons.json";
 const WORKING_SET_FILE_NAME = "open-files.json";
 const SORT_MODES: SortMode[] = ["name", "modified", "manual"];
 
@@ -230,4 +232,31 @@ export async function writeFolderNotesEnabled(folderPath: string, enabled: boole
     await join(dirPath, FOLDER_NOTES_FILE_NAME),
     JSON.stringify({ enabled }, null, 2)
   );
+}
+
+/**
+ * Per-entry icons (lib/vaultIcons.ts), per vault like the manual order and
+ * for the same reason: they are how *this* folder is meant to look, they
+ * reference its entries by relative path, and they travel with it when the
+ * folder is copied to another machine. Invalid entries are dropped on read,
+ * so a hand-edited or newer file can never break the tree.
+ */
+export async function readVaultIcons(folderPath: string): Promise<VaultIconMap> {
+  try {
+    const filePath = await join(await vaultMetaDirPath(folderPath), ICONS_FILE_NAME);
+
+    if (!(await exists(filePath))) {
+      return {};
+    }
+
+    return normalizeVaultIcons(JSON.parse(await readTextFile(filePath)));
+  } catch {
+    return {};
+  }
+}
+
+export async function writeVaultIcons(folderPath: string, icons: VaultIconMap): Promise<void> {
+  const dirPath = await vaultMetaDirPath(folderPath);
+  await mkdir(dirPath, { recursive: true });
+  await writeTextFile(await join(dirPath, ICONS_FILE_NAME), JSON.stringify(icons, null, 2));
 }

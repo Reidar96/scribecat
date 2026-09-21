@@ -80,6 +80,26 @@
   color: rgba(var(--text-rgb), 0.55);
 }
 
+/* Every row carries an icon box of the same width, whether it holds the
+   default glyph or a picked emoji: the names have to line up, and a row that
+   only sometimes has one reads as a rendering glitch. */
+.file-tree__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
+}
+
+/* An emoji is a glyph, not an svg: it needs its own size, and it must not
+   inherit the muted colour the default folder icon is drawn in. */
+.file-tree__icon--emoji {
+  color: initial;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
 .file-tree__chevron {
   display: inline-flex;
   align-items: center;

@@ -37,7 +37,8 @@ import {
   MenuRadioItemIndicator,
   MenuTrigger
 } from "@/components/ui/menu";
-import { FileTree, type BatchEntry, type PendingFolderRename } from "@/components/FileTree";
+import { FileTree, type BatchEntry, type PendingEntryRename } from "@/components/FileTree";
+import type { VaultIconMap } from "@/lib/vaultIcons";
 import { WorkingSetPanel } from "@/components/sidebar/WorkingSetPanel";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useStoredCollapsed, useWorkingSetHeight } from "@/hooks/useWorkingSetHeight";
@@ -77,9 +78,11 @@ type SidebarProps = {
   workingSet: WorkingSetHandlers;
   folderError: string | null;
   isLoading: boolean;
-  pendingFolderRename: PendingFolderRename | null;
+  pendingEntryRename: PendingEntryRename | null;
   sortMode: SortMode;
   manualOrder: ManualOrderMap;
+  vaultIcons: VaultIconMap;
+  onSetVaultIcon: (entryPath: string, icon: string | null) => void;
   fileMtimeMs: Record<string, number>;
   emptyFolderMtimeMs: Record<string, number>;
   onOpenFolder: () => void;
@@ -133,9 +136,11 @@ export function Sidebar({
   workingSet,
   folderError,
   isLoading,
-  pendingFolderRename,
+  pendingEntryRename,
   sortMode,
   manualOrder,
+  vaultIcons,
+  onSetVaultIcon,
   fileMtimeMs,
   emptyFolderMtimeMs,
   onOpenFolder,
@@ -703,9 +708,11 @@ export function Sidebar({
             onUnpinWorkingSetEntry={workingSet.onUnpin}
             onCloseWorkingSetEntry={workingSet.onClose}
             onDiscardChangesRequest={workingSet.onDiscardChanges}
-            pendingFolderRename={pendingFolderRename}
+            pendingEntryRename={pendingEntryRename}
             sortMode={sortMode}
             manualOrder={manualOrder}
+            vaultIcons={vaultIcons}
+            onSetVaultIcon={onSetVaultIcon}
             fileMtimeMs={fileMtimeMs}
             emptyFolderMtimeMs={emptyFolderMtimeMs}
             onSelectFilePath={onSelectFilePath}

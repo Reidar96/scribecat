@@ -532,6 +532,8 @@
     "unsavedChanges": "未保存的更改",
     "delete": "删除",
     "rename": "重命名",
+    "changeIcon": "更改图标",
+    "removeIcon": "移除图标",
     "renameInputLabel": "文件夹名称",
     "fileRenameInputLabel": "文件名",
     "export": "导出…",

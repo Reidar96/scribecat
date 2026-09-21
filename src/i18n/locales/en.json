@@ -533,6 +533,8 @@
     "unsavedChanges": "Unsaved changes",
     "delete": "Delete",
     "rename": "Rename",
+    "changeIcon": "Change icon",
+    "removeIcon": "Remove icon",
     "renameInputLabel": "Folder name",
     "fileRenameInputLabel": "File name",
     "export": "Export…",

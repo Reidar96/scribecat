@@ -28,6 +28,7 @@ import {
 import { deleteFolderDraftsFor, flushDrafts, moveFolderDraftsFor } from "./drafts";
 import { toErrorMessage } from "./errors";
 import { buildFileMtimeMap, createLoadedFolderState } from "./folderState";
+import { dropVaultIcons, moveVaultIcons } from "./icons";
 import { initialAppData } from "./initialState";
 import {
   currentChildBasenames,
@@ -389,6 +390,7 @@ export const createFolderSlice: AppSlice<FolderSlice> = (set, get) => ({
       );
 
       let nextManualOrder = currentState.manualOrder;
+      let nextVaultIcons = currentState.vaultIcons;
 
       if (currentState.folderPath) {
         const vaultRootPath = currentState.folderPath;
@@ -405,6 +407,12 @@ export const createFolderSlice: AppSlice<FolderSlice> = (set, get) => ({
         nextManualOrder = rekeyManualOrderFolderPrefix(nextManualOrder, oldRelativePath, newRelativePath);
 
         persistManualOrderIfChanged(vaultRootPath, currentState.manualOrder, nextManualOrder);
+        nextVaultIcons = moveVaultIcons(
+          vaultRootPath,
+          currentState.vaultIcons,
+          folderPath,
+          newFolderPath
+        );
       }
 
       set({
@@ -413,6 +421,7 @@ export const createFolderSlice: AppSlice<FolderSlice> = (set, get) => ({
         fileDocuments: nextDocuments,
         selectedFilePath: nextSelectedFilePath,
         manualOrder: nextManualOrder,
+        vaultIcons: nextVaultIcons,
         workingSet: nextWorkingSet,
         fileError: null
       });
@@ -449,6 +458,7 @@ export const createFolderSlice: AppSlice<FolderSlice> = (set, get) => ({
       }
 
       let nextManualOrder = currentState.manualOrder;
+      let nextVaultIcons = currentState.vaultIcons;
 
       if (currentState.folderPath) {
         const vaultRootPath = currentState.folderPath;
@@ -460,6 +470,7 @@ export const createFolderSlice: AppSlice<FolderSlice> = (set, get) => ({
         nextManualOrder = removeManualOrderFolderPrefix(nextManualOrder, ownRelativePath);
 
         persistManualOrderIfChanged(vaultRootPath, currentState.manualOrder, nextManualOrder);
+        nextVaultIcons = dropVaultIcons(vaultRootPath, currentState.vaultIcons, folderPath);
       }
 
       const nextWorkingSet = pruneWorkingSet(
@@ -480,6 +491,7 @@ export const createFolderSlice: AppSlice<FolderSlice> = (set, get) => ({
         selectedFileBaseContent: isSelectedInside ? null : currentState.selectedFileBaseContent,
         isDirty: isSelectedInside ? false : currentState.isDirty,
         manualOrder: nextManualOrder,
+        vaultIcons: nextVaultIcons,
         workingSet: nextWorkingSet,
         fileError: null
       });

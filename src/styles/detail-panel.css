@@ -98,9 +98,38 @@
    the feature off the crumbs are plain text, since there would be nothing to
    open. The rendered text stays exactly the path string the title showed
    before, so nothing that reads the title sees a different value. */
+.detail-panel__breadcrumb {
+  /* The path scrolls instead of being truncated: on a narrow viewport an
+     ellipsis can only ever show one end of it, and the folders it hides are
+     exactly what says where the note lives. Scrolled to the end on open, so
+     the file name is what's on screen — the same thing the old RTL cut
+     achieved, except the rest stays reachable. Scrollbar hidden: it would
+     take a line of its own in a row sized to the text. */
+  min-width: 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  white-space: nowrap;
+  /* Scrolled to the end, the file name would otherwise end exactly on the
+     box's edge and touch the buttons next to it. Padding rather than a wider
+     header gap: it scrolls with the text instead of costing layout width in
+     a row that has none to spare. */
+  padding-right: 0.5rem;
+  /* Says there is more to the left without taking layout space. */
+  mask-image: linear-gradient(to right, transparent 0, #000 1.25rem);
+}
+
+.detail-panel__breadcrumb--at-start {
+  mask-image: none;
+}
+
+.detail-panel__breadcrumb::-webkit-scrollbar {
+  display: none;
+}
+
 .detail-panel__breadcrumb-text {
-  /* Keeps the crumbs in reading order inside the RTL-truncated h2 (see
-     responsive.css) and picks the direction from the path itself. */
+  /* Picks the direction from the path itself, so an RTL note name reads
+     correctly without reordering the crumb boxes around it. */
   unicode-bidi: plaintext;
   user-select: none;
 }
@@ -131,6 +160,30 @@
   color: rgba(var(--text-rgb),0.95);
   text-decoration: underline;
   text-underline-offset: 0.2em;
+}
+
+/* Shown only where an icon is actually set (see CrumbIcon): inline, like the
+   crumbs themselves, so the bidi algorithm keeps it next to its own name. */
+.detail-panel__crumb-icon {
+  display: inline;
+  padding-right: 0.25em;
+  font-size: 0.95em;
+  line-height: 1;
+}
+
+.detail-panel__crumb-icon--button {
+  border: none;
+  background: none;
+  padding: 0 0.25em 0 0;
+  font: inherit;
+  cursor: pointer;
+  opacity: 0.9;
+  transition: opacity 120ms ease;
+}
+
+.detail-panel__crumb-icon--button:hover,
+.detail-panel__crumb-icon--button:focus-visible {
+  opacity: 1;
 }
 
 .detail-panel__crumb-separator {

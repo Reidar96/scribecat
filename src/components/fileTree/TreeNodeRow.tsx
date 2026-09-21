@@ -1,7 +1,10 @@
+import type { ReactNode } from "react";
+
 import {
   ChevronDown,
   ChevronRight,
   Ellipsis,
+  FileText,
   Folder,
   FolderOpen,
   PawPrint
@@ -14,6 +17,7 @@ import { carriesExternalFiles } from "@/lib/dragDrop/droppedSources";
 import { FILE_LINK_DRAG_MIME } from "@/lib/editor/fileLinks";
 import { getNodeMtimeMs, type FileTreeFolderNode, type FileTreeNode } from "@/lib/fileTree";
 import { getNoteDisplayName } from "@/lib/folderNotes";
+import { getVaultIcon, type VaultIconMap } from "@/lib/vaultIcons";
 import type { SortMode } from "@/lib/vaultMeta";
 import { DROP_DIRECTORY_ATTRIBUTE, useImportDropStore } from "@/store/useImportDropStore";
 import { getVaultCapabilities } from "@/platform";
@@ -65,6 +69,8 @@ type TreeNodeRowProps = {
   renamingTarget: RenamingTarget | null;
   renameDraft: string;
   renameInputRef: React.RefObject<HTMLInputElement | null>;
+  /** Per-entry icons, keyed vault-relative (lib/vaultIcons.ts). */
+  vaultIcons: VaultIconMap;
   sortMode: SortMode;
   dragSourceKeys: string[];
   dropIndicator: DropIndicator | null;
@@ -85,6 +91,28 @@ type TreeNodeRowProps = {
   /** Absolute paths this drag carries — the row itself, or the whole selection. */
   resolveDragFilePaths: (node: FileTreeNode) => string[];
 };
+
+/**
+ * A row's icon: the emoji the user picked for this entry, or the default
+ * lucide glyph for its kind. Every row carries one — a tree where only some
+ * rows have an icon reads as broken rather than as customized, and the
+ * default is also what the user clicks to pick an icon in the first place.
+ *
+ * Rendered as an image role with an empty alt: the name next to it already
+ * says which entry this is, and "📕 emoji, Rezepte" is noise in a screen
+ * reader walking a file list.
+ */
+function RowIcon({ icon, fallback }: { icon: string | null; fallback: ReactNode }) {
+  if (icon) {
+    return (
+      <span className="file-tree__icon file-tree__icon--emoji" aria-hidden="true">
+        {icon}
+      </span>
+    );
+  }
+
+  return <span className="file-tree__icon">{fallback}</span>;
+}
 
 /**
  * The row's context menu without a right-click. Only shown for a coarse
@@ -135,6 +163,7 @@ export function TreeNodeRow({
   renamingTarget,
   renameDraft,
   renameInputRef,
+  vaultIcons,
   sortMode,
   dragSourceKeys,
   dropIndicator,
@@ -297,7 +326,10 @@ export function TreeNodeRow({
             <span className="file-tree__chevron" aria-hidden="true">
               {isExpanded ? <ChevronDown /> : <ChevronRight />}
             </span>
-            {isExpanded ? <FolderOpen aria-hidden="true" /> : <Folder aria-hidden="true" />}
+            <RowIcon
+              icon={getVaultIcon(vaultIcons, node.relativePath)}
+              fallback={isExpanded ? <FolderOpen aria-hidden="true" /> : <Folder aria-hidden="true" />}
+            />
             <input
               ref={renameInputRef}
               type="text"
@@ -380,7 +412,10 @@ export function TreeNodeRow({
             >
               {isExpanded ? <ChevronDown /> : <ChevronRight />}
             </span>
-            {isExpanded ? <FolderOpen aria-hidden="true" /> : <Folder aria-hidden="true" />}
+            <RowIcon
+              icon={getVaultIcon(vaultIcons, node.relativePath)}
+              fallback={isExpanded ? <FolderOpen aria-hidden="true" /> : <Folder aria-hidden="true" />}
+            />
             <span className="file-tree__name">{node.name}</span>
             {shownMatchCount > 0 ? (
               <span
@@ -444,6 +479,7 @@ export function TreeNodeRow({
                 renamingTarget={renamingTarget}
                 renameDraft={renameDraft}
                 renameInputRef={renameInputRef}
+                vaultIcons={vaultIcons}
                 sortMode={sortMode}
                 dragSourceKeys={dragSourceKeys}
                 dropIndicator={dropIndicator}
@@ -534,6 +570,10 @@ export function TreeNodeRow({
           {...dragHandlers}
         >
           <span className="file-tree__chevron" aria-hidden="true" />
+          <RowIcon
+            icon={getVaultIcon(vaultIcons, node.relativePath)}
+            fallback={<FileText aria-hidden="true" />}
+          />
           {/* Every note is a .md file, so the extension says nothing. */}
           <span className="file-tree__name">{getNoteDisplayName(node.name)}</span>
           {searchMatchCount > 0 ? (

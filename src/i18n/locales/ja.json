@@ -532,6 +532,8 @@
     "unsavedChanges": "未保存の変更",
     "delete": "削除",
     "rename": "名前を変更",
+    "changeIcon": "アイコンを変更",
+    "removeIcon": "アイコンを削除",
     "renameInputLabel": "フォルダー名",
     "fileRenameInputLabel": "ファイル名",
     "export": "エクスポート…",

@@ -126,6 +126,60 @@ function EmojiMartPicker({ language, onEmojiSelect }: EmojiMartPickerProps) {
   return <div ref={hostRef} />;
 }
 
+/**
+ * The picker itself, anchored to a point on screen instead of to a trigger of
+ * its own. Opened from somewhere that already is a menu (a tree row's context
+ * menu, a breadcrumb crumb), where a second button would have nowhere to sit.
+ *
+ * The caller owns whether it is open, so the entry that opens it can close its
+ * own menu first; dismissing is handled here, as it is for the trigger form.
+ */
+export function EmojiPickerPopover({
+  anchor: requestedAnchor,
+  onSelect,
+  onClose
+}: {
+  /** Where the picker should hang, in client coordinates. */
+  anchor: PopoverAnchor;
+  onSelect: (emoji: string) => void;
+  onClose: () => void;
+}) {
+  const { t, i18n } = useTranslation();
+  const language = (i18n.resolvedLanguage ?? i18n.language) as SupportedLanguage;
+  const [align, setAlign] = useState<"left" | "right">("left");
+  const [valign, setValign] = useState<"below" | "above">("below");
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const isSheet = useLayoutMode() === "phone";
+
+  useDismissablePopover(true, onClose);
+  usePopoverOverflowAlign(requestedAnchor, popoverRef, setAlign, setValign);
+
+  return createPortal(
+    <div
+      ref={popoverRef}
+      className={isSheet ? "editor-popover editor-popover--sheet emoji-picker" : "editor-popover emoji-picker"}
+      role="menu"
+      aria-label={t("emojiPicker.selectEmoji")}
+      style={isSheet ? undefined : popoverStyle(requestedAnchor, align, valign)}
+      onClick={(event) => event.stopPropagation()}
+    >
+      <EmojiMartPicker
+        language={language}
+        onEmojiSelect={(emoji) => {
+          const value = emoji.native ?? emoji.shortcodes;
+
+          if (value) {
+            onSelect(value);
+          }
+
+          onClose();
+        }}
+      />
+    </div>,
+    document.body
+  );
+}
+
 export function EmojiPicker({ editor, onSelect, trigger }: EmojiPickerProps) {
   const { t, i18n } = useTranslation();
   const language = (i18n.resolvedLanguage ?? i18n.language) as SupportedLanguage;

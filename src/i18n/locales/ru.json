@@ -545,6 +545,8 @@
     "unsavedChanges": "Несохранённые изменения",
     "delete": "Удалить",
     "rename": "Переименовать",
+    "changeIcon": "Изменить значок",
+    "removeIcon": "Удалить значок",
     "renameInputLabel": "Имя папки",
     "fileRenameInputLabel": "Имя файла",
     "export": "Экспортировать…",

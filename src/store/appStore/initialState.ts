@@ -22,6 +22,7 @@ export const initialAppData: AppData = {
   workingSet: [],
   sortMode: DEFAULT_SORT_MODE,
   manualOrder: {},
+  vaultIcons: {},
   fileMtimeMs: {},
   emptyFolderMtimeMs: {}
 };

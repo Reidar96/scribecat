@@ -18,8 +18,13 @@ import { Editor, type EditorHandle } from "@/components/Editor";
 import { FindReplacePanel } from "@/components/FindReplacePanel";
 import { VersionsPopover } from "@/components/VersionsPopover";
 import { DocumentMenu } from "@/components/app/DocumentMenu";
+import { join } from "@/platform/paths";
+import { EmojiPickerPopover } from "@/components/EmojiPicker";
+import { useBreadcrumbScroll } from "@/hooks/useBreadcrumbScroll";
 import { useLayoutMode } from "@/hooks/useLayoutMode";
 import { getPathCrumbs } from "@/lib/breadcrumbPath";
+import { getVaultIcon, type VaultIconMap } from "@/lib/vaultIcons";
+import { anchorForTrigger, type PopoverAnchor } from "@/lib/usePopoverOverflowAlign";
 import type { FileVersion } from "@/lib/fileVersions";
 import { cn } from "@/lib/utils";
 import { getVaultCapabilities, vaultCapabilityHint } from "@/platform";
@@ -30,6 +35,9 @@ import { useVersioningSettingsStore } from "@/store/useVersioningSettingsStore";
 type DocumentPanelProps = {
   selectedFilePath: string | null;
   selectedFileLabel: string | null;
+  vaultIcons: VaultIconMap;
+  /** Sets one entry's icon; the path is absolute. Only wired on the desktop. */
+  onSetVaultIcon: (entryPath: string, icon: string | null) => void;
   selectedFileDirectoryLabel: string;
   /** The open note is a folder's note: titled after the folder, renaming renames the folder. */
   isSelectedFolderNote: boolean;
@@ -80,9 +88,63 @@ type DocumentPanelProps = {
   onSaveRequest: () => void;
 };
 
+/** Every note is a .md file, so the extension says nothing in a crumb. */
+function crumbDisplayName(name: string): string {
+  return name.replace(/\.md$/i, "");
+}
+
+/**
+ * A crumb's icon. Only shown when one is set — the breadcrumb is the row
+ * under the most pressure for space, and a default glyph in front of every
+ * folder would cost exactly where the path is already too long. The tree is
+ * where an icon is picked for an entry that has none.
+ *
+ * With a pointer, an icon that is there is also the shortcut to change it;
+ * on touch (no `onPick`) it is a plain glyph, since a target this small
+ * sitting inside a scrolling row is one a finger only hits by accident.
+ */
+function CrumbIcon({
+  icon,
+  onPick,
+  label
+}: {
+  icon: string | null;
+  onPick?: (anchor: PopoverAnchor) => void;
+  label: string;
+}) {
+  if (!icon) {
+    return null;
+  }
+
+  if (!onPick) {
+    return (
+      <span className="detail-panel__crumb-icon" aria-hidden="true">
+        {icon}
+      </span>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      className="detail-panel__crumb-icon detail-panel__crumb-icon--button"
+      aria-label={label}
+      title={label}
+      onClick={(event) => {
+        event.stopPropagation();
+        onPick(anchorForTrigger(event.currentTarget.getBoundingClientRect()));
+      }}
+    >
+      <span aria-hidden="true">{icon}</span>
+    </button>
+  );
+}
+
 export function DocumentPanel({
   selectedFilePath,
   selectedFileLabel,
+  vaultIcons,
+  onSetVaultIcon,
   selectedFileDirectoryLabel,
   isSelectedFolderNote,
   folderPath,
@@ -142,7 +204,18 @@ export function DocumentPanel({
   // crumbs are plain text. The ".md" is dropped from the label first, so the
   // rendered text stays exactly the path the title showed before.
   const folderNotesEnabled = useEditorSettingsStore((state) => state.folderNotesEnabled);
-  const titleCrumbs = getPathCrumbs((selectedFileLabel ?? "").replace(/\.md$/i, ""));
+  // Split on the full label: the crumbs carry the paths icons are keyed by,
+  // and those keep the extension. Only the rendered name drops it, since
+  // every note is a .md file and the suffix says nothing.
+  const titleCrumbs = getPathCrumbs(selectedFileLabel ?? "");
+  const breadcrumbScroll = useBreadcrumbScroll<HTMLHeadingElement>(selectedFileLabel ?? null);
+  const [crumbIconPicker, setCrumbIconPicker] = useState<{
+    relativePath: string;
+    anchor: PopoverAnchor;
+  } | null>(null);
+  // Desktop only: see CrumbIcon. Tablet counts as touch here — the row is
+  // already tight there, and the tree is one tap away.
+  const canPickCrumbIcon = layout === "desktop" && folderPath !== null;
 
   // With auto-save on, unsaved edits are a write that is about to happen, not
   // a task for the user: the button drops the accent and goes quiet instead
@@ -271,11 +344,17 @@ export function DocumentPanel({
                 </h2>
               ) : (
                 <>
-                  <h2 data-testid="note-title" className="detail-panel__breadcrumb">
-                    {/* One bidi isolate around the crumbs: on tablet and phone
-                        the h2 is laid out RTL so the ellipsis cuts the folders
-                        instead of the file name, and without the isolate the
-                        crumb boxes would be reordered right to left. */}
+                  <h2
+                    data-testid="note-title"
+                    ref={breadcrumbScroll.elementRef}
+                    onScroll={breadcrumbScroll.onScroll}
+                    className={cn(
+                      "detail-panel__breadcrumb",
+                      breadcrumbScroll.isAtStart && "detail-panel__breadcrumb--at-start"
+                    )}
+                  >
+                    {/* One bidi isolate around the crumbs, so a path mixing
+                        scripts keeps its crumb boxes in reading order. */}
                     <span className="detail-panel__breadcrumb-text">
                       {titleCrumbs.map((crumb, index) => (
                         <Fragment key={crumb.folderRelativePath ?? `leaf-${index}`}>
@@ -284,6 +363,16 @@ export function DocumentPanel({
                               /
                             </span>
                           ) : null}
+                          <CrumbIcon
+                            icon={getVaultIcon(vaultIcons, crumb.relativePath)}
+                            onPick={
+                              canPickCrumbIcon
+                                ? (anchor) =>
+                                    setCrumbIconPicker({ relativePath: crumb.relativePath, anchor })
+                                : undefined
+                            }
+                            label={t("fileTree.changeIcon")}
+                          />
                           {crumb.folderRelativePath !== null && folderNotesEnabled ? (
                             <button
                               type="button"
@@ -291,7 +380,7 @@ export function DocumentPanel({
                               onClick={() => onOpenFolderNote(crumb.folderRelativePath as string)}
                               title={t("fileTree.openFolderNote", { path: crumb.folderRelativePath })}
                             >
-                              {crumb.name}
+                              {crumbDisplayName(crumb.name)}
                             </button>
                           ) : (
                             <span
@@ -300,13 +389,24 @@ export function DocumentPanel({
                                 crumb.folderRelativePath === null && "detail-panel__crumb--leaf"
                               )}
                             >
-                              {crumb.name}
+                              {crumbDisplayName(crumb.name)}
                             </span>
                           )}
                         </Fragment>
                       ))}
                     </span>
                   </h2>
+                  {crumbIconPicker && folderPath ? (
+                    <EmojiPickerPopover
+                      anchor={crumbIconPicker.anchor}
+                      onSelect={(emoji) => {
+                        void join(folderPath, crumbIconPicker.relativePath).then((path) =>
+                          onSetVaultIcon(path, emoji)
+                        );
+                      }}
+                      onClose={() => setCrumbIconPicker(null)}
+                    />
+                  ) : null}
                   {isSelectedFolderNote ? (
                     <span
                       className="detail-panel__title-badge"

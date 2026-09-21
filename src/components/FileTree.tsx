@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
-import { BookOpen, Copy, Download, ExternalLink, FileDown, FilePlus, FolderArchive, FolderInput, FolderPlus, Pencil, Pin, PinOff, Printer, Trash2, Undo2, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { BookOpen, Copy, Download, Eraser, ExternalLink, FileDown, FilePlus, FolderArchive, FolderInput, FolderPlus, Pencil, Pin, PinOff, Printer, Smile, Trash2, Undo2, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { getVaultCapabilities, platform, vaultCapabilityHint } from "@/platform";
 import { dirname, join } from "@/platform/paths";
@@ -18,6 +18,9 @@ import { buildFileTree, type FileTreeFolderNode, type FileTreeNode } from "@/lib
 import { getFolderNoteFolderPath, getFolderNotePath, isFolderNotePath } from "@/lib/folderNotes";
 import type { ManualOrderMap, SortMode } from "@/lib/vaultMeta";
 import { normalizePathKey } from "@/store/appStore/pathUtils";
+import { EmojiPickerPopover } from "@/components/EmojiPicker";
+import { getVaultIcon, type VaultIconMap } from "@/lib/vaultIcons";
+import { anchorForTrigger, type PopoverAnchor } from "@/lib/usePopoverOverflowAlign";
 import type { MoveTreeEntryInput } from "@/store/useAppStore";
 import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
 import { useSearchStore } from "@/store/useSearchStore";
@@ -39,9 +42,9 @@ import {
   getNodeKey,
   getTopLevelSelection
 } from "./fileTree/treeNavigation";
-import type { BatchEntry, PendingFolderRename } from "./fileTree/types";
+import type { BatchEntry, FileContextMenuState, PendingEntryRename } from "./fileTree/types";
 
-export type { BatchEntry, PendingFolderRename } from "./fileTree/types";
+export type { BatchEntry, PendingEntryRename } from "./fileTree/types";
 
 type FileTreeProps = {
   folderPath: string;
@@ -57,9 +60,12 @@ type FileTreeProps = {
   onCloseWorkingSetEntry: (filePath: string) => void;
   /** Throws away a dirty note's unsaved edits without asking. */
   onDiscardChangesRequest: (filePath: string) => void;
-  pendingFolderRename?: PendingFolderRename | null;
+  pendingEntryRename?: PendingEntryRename | null;
   sortMode: SortMode;
   manualOrder: ManualOrderMap;
+  vaultIcons: VaultIconMap;
+  /** Sets or, with a null icon, clears one entry's icon; the path is absolute. */
+  onSetVaultIcon: (entryPath: string, icon: string | null) => void;
   fileMtimeMs: Record<string, number>;
   emptyFolderMtimeMs: Record<string, number>;
   onSelectFilePath: (filePath: string) => Promise<void>;
@@ -89,6 +95,25 @@ type FileTreeProps = {
   onSelectionChange?: (entries: BatchEntry[]) => void;
 };
 
+/**
+ * The vault-relative path a context menu stands for, or null for a
+ * multi-selection — an icon is set on one entry at a time.
+ */
+function getContextMenuRelativePath(
+  contextMenu: FileContextMenuState,
+  folderPath: string
+): string | null {
+  if (contextMenu.kind === "folder") {
+    return contextMenu.relativePath;
+  }
+
+  if (contextMenu.kind === "file") {
+    return getRelativeDisplayPath(folderPath, contextMenu.filePath);
+  }
+
+  return null;
+}
+
 export function FileTree({
   folderPath,
   filePaths,
@@ -100,9 +125,11 @@ export function FileTree({
   onUnpinWorkingSetEntry,
   onCloseWorkingSetEntry,
   onDiscardChangesRequest,
-  pendingFolderRename,
+  pendingEntryRename,
   sortMode,
   manualOrder,
+  vaultIcons,
+  onSetVaultIcon,
   fileMtimeMs,
   emptyFolderMtimeMs,
   onSelectFilePath,
@@ -140,8 +167,16 @@ export function FileTree({
   const { expandedFolderPaths, toggleFolder, expandAncestorsOf, expandFolders } =
     useExpandedFolders(folderPath);
   const { contextMenu, setContextMenu } = useTreeContextMenu();
+  // The entry whose icon is being picked, kept after the menu that opened it
+  // has closed.
+  const [iconPicker, setIconPicker] = useState<{
+    relativePath: string;
+    anchor: PopoverAnchor;
+  } | null>(null);
+  const contextMenuIcon =
+    contextMenu === null ? null : getVaultIcon(vaultIcons, getContextMenuRelativePath(contextMenu, folderPath) ?? "");
   const fileMatchCounts = useSearchStore((state) => state.fileMatchCounts);
-  const lastHandledFolderRenameRequestIdRef = useRef<number | undefined>(undefined);
+  const lastHandledEntryRenameRequestIdRef = useRef<number | undefined>(undefined);
 
   const stagedChanges = useStagedChangesStore((state) => state.changes);
   // Folder notes on: a click on a folder's name opens its note and only the
@@ -354,24 +389,30 @@ export function FileTree({
     );
   }, [folderPath, selectedFilePath, expandAncestorsOf]);
 
-  // After creating a new folder (sidebar button), switch straight into
-  // rename mode, mirroring the title rename for new files.
+  // A freshly created file or folder is named where it lives, next to its
+  // siblings: the tree is the only place that can do both, and it shows the
+  // names the new one has to be distinct from while it is being typed.
   useEffect(() => {
-    if (!pendingFolderRename) {
+    if (!pendingEntryRename) {
       return;
     }
 
-    if (lastHandledFolderRenameRequestIdRef.current === pendingFolderRename.requestId) {
+    if (lastHandledEntryRenameRequestIdRef.current === pendingEntryRename.requestId) {
       return;
     }
 
-    lastHandledFolderRenameRequestIdRef.current = pendingFolderRename.requestId;
+    lastHandledEntryRenameRequestIdRef.current = pendingEntryRename.requestId;
 
-    const relativePath = getRelativeDisplayPath(folderPath, pendingFolderRename.folderPath);
+    const relativePath = getRelativeDisplayPath(folderPath, pendingEntryRename.path);
 
     expandAncestorsOf(relativePath);
-    startFolderRename(relativePath);
-  }, [pendingFolderRename, folderPath, expandAncestorsOf, startFolderRename]);
+
+    if (pendingEntryRename.kind === "folder") {
+      startFolderRename(relativePath);
+    } else {
+      startFileRename(relativePath);
+    }
+  }, [pendingEntryRename, folderPath, expandAncestorsOf, startFileRename, startFolderRename]);
 
   // While a project-wide search is running, opening a collapsed folder that
   // carries hits unfolds its whole matching subtree at once — the badge only
@@ -692,6 +733,7 @@ export function FileTree({
           <TreeNodeRow
             key={node.relativePath}
             node={node}
+            vaultIcons={vaultIcons}
             depth={0}
             expandedFolderPaths={expandedFolderPaths}
             folderMatchCounts={folderMatchCounts}
@@ -906,6 +948,53 @@ export function FileTree({
                 <Pencil aria-hidden="true" />
                 {t("fileTree.rename")}
               </button>
+
+              {/* Files and folders take the same two entries: an icon is a
+                  property of the row, and which kind of entry it stands for
+                  makes no difference to picking one. */}
+              <button
+                type="button"
+                role="menuitem"
+                className="file-tree-context-menu__item"
+                onClick={(event) => {
+                  const relativePath = getContextMenuRelativePath(contextMenu, folderPath);
+
+                  if (relativePath !== null) {
+                    // Anchored to the menu entry, not to the pointer: the menu
+                    // closes with this click, so the picker has to hang
+                    // somewhere the eye is already looking.
+                    setIconPicker({
+                      relativePath,
+                      anchor: anchorForTrigger(event.currentTarget.getBoundingClientRect())
+                    });
+                  }
+
+                  setContextMenu(null);
+                }}
+              >
+                <Smile aria-hidden="true" />
+                {t("fileTree.changeIcon")}
+              </button>
+
+              {contextMenuIcon !== null ? (
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="file-tree-context-menu__item"
+                  onClick={() => {
+                    const relativePath = getContextMenuRelativePath(contextMenu, folderPath);
+
+                    if (relativePath !== null) {
+                      void join(folderPath, relativePath).then((path) => onSetVaultIcon(path, null));
+                    }
+
+                    setContextMenu(null);
+                  }}
+                >
+                  <Eraser aria-hidden="true" />
+                  {t("fileTree.removeIcon")}
+                </button>
+              ) : null}
 
               {contextMenu.kind === "file" ? (
                 <button
@@ -1129,6 +1218,18 @@ export function FileTree({
             </>
           )}
         </ContextMenuSurface>
+      ) : null}
+
+      {iconPicker ? (
+        <EmojiPickerPopover
+          anchor={iconPicker.anchor}
+          onSelect={(emoji) => {
+            void join(folderPath, iconPicker.relativePath).then((path) =>
+              onSetVaultIcon(path, emoji)
+            );
+          }}
+          onClose={() => setIconPicker(null)}
+        />
       ) : null}
     </>
   );

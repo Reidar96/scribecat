@@ -213,30 +213,17 @@
     max-width: calc(100vw - 1rem);
   }
 
-  /* The title gives way, the buttons next to it do not. It's a path
-     ("Projects/TTTT/Test2/…"), so the end — the actual file name — is what
-     matters; truncating from the end would hide it behind an ellipsis while
-     the parent folders stay visible. Flipping direction moves the ellipsis
-     to the visual start instead: the LTR path text itself still reads
-     left-to-right, only the cut end moves. */
+  /* The title gives way, the buttons next to it do not. The breadcrumb
+     scrolls (detail-panel.css) rather than being cut, so nothing here has to
+     arrange for the file name to survive an ellipsis. */
   .detail-panel__title h2 {
     flex: 1;
     min-width: 0;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-    direction: rtl;
-    text-align: left;
     font-size: 1.25rem;
   }
 
-  /* The rename form is that same h2 as a flex row (prefix, input). RTL would
-     reverse the row and put the input in front of its own folder path. Here
-     the folder path is the part that gives way, so the input stays reachable. */
-  .detail-panel__title h2.detail-panel__title-edit {
-    direction: ltr;
-  }
-
+  /* The rename form is that same h2 as a flex row (prefix, input): the folder
+     path is the part that gives way, so the input stays reachable. */
   .detail-panel__title h2.detail-panel__title-edit .detail-panel__title-prefix {
     min-width: 0;
     overflow: hidden;
@@ -642,9 +629,17 @@
     display: inline-flex;
   }
 
+  /* Renaming happens in the tree on touch, next to the row being renamed:
+     the title row is the first thing truncated here, and a target that small
+     between the path and the status icons is one a finger keeps missing. The
+     pencil stays on the desktop, where it is the shortcut for the note that
+     is already open. */
+  .detail-panel__title-edit-button {
+    display: none;
+  }
+
   .detail-panel__status-group button,
   .detail-panel__sidebar-button,
-  .detail-panel__title-edit-button,
   .editor-toolbar button,
   .chat-panel__header-button,
   .details-sidebar__header button,

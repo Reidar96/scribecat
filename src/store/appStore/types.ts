@@ -1,6 +1,7 @@
 import type { StateCreator } from "zustand";
 
 import type { ManualOrderMap, SortMode } from "@/lib/vaultMeta";
+import type { VaultIconMap } from "@/lib/vaultIcons";
 
 import type { WorkingSetEntry } from "./workingSet";
 
@@ -58,6 +59,8 @@ export type AppData = {
   workingSet: WorkingSetEntry[];
   sortMode: SortMode;
   manualOrder: ManualOrderMap;
+  /** Per-entry emoji icons, keyed by vault-relative path (lib/vaultIcons.ts). */
+  vaultIcons: VaultIconMap;
   fileMtimeMs: Record<string, number>;
   emptyFolderMtimeMs: Record<string, number>;
 };
@@ -138,6 +141,9 @@ export type FileSlice = {
 /** How the tree is ordered, and moving entries within it. */
 export type TreeSlice = {
   setSortMode: (mode: SortMode) => Promise<void>;
+  /** Sets or, with a null icon, clears the icon of one file or folder (absolute path). */
+  setVaultIconFor: (entryPath: string, icon: string | null) => void;
+
   reorderWithinFolder: (parentDirectory: string, orderedBasenames: string[]) => Promise<boolean>;
   moveTreeEntry: (input: MoveTreeEntryInput) => Promise<boolean>;
 };

@@ -10,9 +10,10 @@
   it on the folder row instead of listing it next to its siblings;
 - `images/` for pictures inserted, pasted or dropped into notes;
 - `.scribedog/` with the same sidecars the desktop app keeps (version
-  history, manual sort order, chat sessions, the agent's pending proposals
-  and checkpoints, and the settings that belong to the folder rather than to
-  the app, such as heading numbering and the folder-notes switch), written by
+  history, manual sort order, the icons picked for files and folders, chat
+  sessions, the agent's pending proposals and checkpoints, and the settings
+  that belong to the folder rather than to the app, such as heading numbering
+  and the folder-notes switch), written by
   the app through the server, plus `.scribedog/server-data-version`, which
   says which layout the folder is in (see [Updating](updating.md));
 - `.scribedog/server/` with the server's own files: `auth.json` (the

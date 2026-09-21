@@ -1,5 +1,5 @@
 import { readMarkdownFile, type MarkdownFileRecord } from "@/lib/fileSystem";
-import { readManualOrder, readSortMode } from "@/lib/vaultMeta";
+import { readManualOrder, readSortMode, readVaultIcons } from "@/lib/vaultMeta";
 
 import { loadDraftDocuments } from "./drafts";
 import { reconcileManualOrder } from "./manualOrder";
@@ -18,17 +18,19 @@ export function buildFileMtimeMap(markdownFiles: MarkdownFileRecord[]): Record<s
 
 /**
  * The complete state of a freshly opened vault: file list, mtimes, the
- * persisted sort mode and a manual order reconciled against what is actually
- * on disk. The selection is reset; the document map starts with the drafts
- * left behind last time (hot exit), so those notes come back dirty.
+ * persisted sort mode, the per-entry icons and a manual order reconciled
+ * against what is actually on disk. The selection is reset; the document map
+ * starts with the drafts left behind last time (hot exit), so those notes come
+ * back dirty.
  */
 export async function createLoadedFolderState(
   folderPath: string,
   markdownFiles: MarkdownFileRecord[]
 ) {
-  const [sortMode, storedManualOrder, fileDocuments] = await Promise.all([
+  const [sortMode, storedManualOrder, vaultIcons, fileDocuments] = await Promise.all([
     readSortMode(folderPath),
     readManualOrder(folderPath),
+    readVaultIcons(folderPath),
     loadDraftDocuments(folderPath, markdownFiles, readMarkdownFile)
   ]);
 
@@ -54,6 +56,7 @@ export async function createLoadedFolderState(
     workingSet,
     sortMode,
     manualOrder,
+    vaultIcons,
     fileMtimeMs: buildFileMtimeMap(markdownFiles),
     emptyFolderMtimeMs: {} as Record<string, number>
   };

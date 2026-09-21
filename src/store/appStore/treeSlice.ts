@@ -11,11 +11,13 @@ import {
   writeMarkdownFile
 } from "@/lib/fileSystem";
 import { isDescendantRelativePath } from "@/lib/fileTree";
+import { setVaultIcon } from "@/lib/vaultIcons";
 import { writeManualOrder, writeSortMode, type SortMode } from "@/lib/vaultMeta";
 
 import { isDocumentDirty } from "./documents";
 import { moveDraftFor, moveFolderDraftsFor, scheduleDraft } from "./drafts";
 import { toErrorMessage } from "./errors";
+import { moveVaultIcons, persistVaultIconsIfChanged } from "./icons";
 import { currentChildBasenames, ensureManualOrderEntry } from "./manualOrder";
 import {
   getBasename,
@@ -42,6 +44,26 @@ export const createTreeSlice: AppSlice<TreeSlice> = (set, get) => ({
     }
 
     void writeSortMode(folderPath, mode).catch(() => undefined);
+  },
+  setVaultIconFor: (entryPath: string, icon: string | null) => {
+    const { folderPath, vaultIcons } = get();
+
+    if (!folderPath) {
+      return;
+    }
+
+    const nextVaultIcons = setVaultIcon(
+      vaultIcons,
+      getRelativeDisplayPath(folderPath, entryPath),
+      icon
+    );
+
+    if (nextVaultIcons === vaultIcons) {
+      return;
+    }
+
+    set({ vaultIcons: nextVaultIcons });
+    persistVaultIconsIfChanged(folderPath, vaultIcons, nextVaultIcons);
   },
   reorderWithinFolder: async (parentDirectory: string, orderedBasenames: string[]) => {
     const { folderPath, manualOrder } = get();
@@ -260,6 +282,12 @@ export const createTreeSlice: AppSlice<TreeSlice> = (set, get) => ({
 
       void writeManualOrder(folderPath, withoutSource).catch(() => undefined);
 
+      // Only a move between folders changes a path; a drop inside the same
+      // parent is a reorder, and the icons are keyed by path.
+      const nextVaultIcons = isSameParent
+        ? state.vaultIcons
+        : moveVaultIcons(folderPath, state.vaultIcons, sourcePath, newPath);
+
       // The editor renders selectedFileContent, not fileDocuments. Without
       // mirroring the moved document into these fields, an open file keeps
       // showing its pre-move markdown — with the image paths that the move
@@ -269,6 +297,7 @@ export const createTreeSlice: AppSlice<TreeSlice> = (set, get) => ({
         : undefined;
 
       set({
+        vaultIcons: nextVaultIcons,
         filePaths: nextFilePaths,
         emptyFolderPaths: nextEmptyFolderPaths,
         fileDocuments: nextDocuments,
