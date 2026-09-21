@@ -542,7 +542,7 @@
     "exportManuscript": "Als Manuskript exportieren …",
     "downloadMarkdown": "Als Markdown herunterladen",
     "downloadFolderArchive": "Als ZIP herunterladen (Markdown-Dateien)",
-    "revealInFileManager": "Im Explorer öffnen",
+    "revealInFileManager": "Im Dateimanager öffnen",
     "stagedChange": "Der Agent schlägt eine Änderung vor",
     "stagedChangeFolder": "Vorgeschlagene Änderungen in diesem Ordner: {{count}}",
     "openFolderNote": "{{path}} – Klick öffnet die Ordnernotiz, der Pfeil klappt auf und zu",

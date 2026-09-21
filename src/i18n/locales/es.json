@@ -542,7 +542,7 @@
     "exportManuscript": "Exportar como manuscrito…",
     "downloadMarkdown": "Descargar como Markdown",
     "downloadFolderArchive": "Descargar como ZIP (archivos Markdown)",
-    "revealInFileManager": "Mostrar en el explorador de archivos",
+    "revealInFileManager": "Abrir en el gestor de archivos",
     "stagedChange": "El agente propone un cambio",
     "stagedChangeFolder": "Cambios propuestos en esta carpeta: {{count}}",
     "openFolderNote": "{{path}} – un clic abre la nota de la carpeta, la flecha la despliega y pliega",

@@ -541,7 +541,7 @@
     "exportManuscript": "原稿として書き出す…",
     "downloadMarkdown": "Markdown としてダウンロード",
     "downloadFolderArchive": "ZIP としてダウンロード（Markdown ファイル）",
-    "revealInFileManager": "エクスプローラーで表示",
+    "revealInFileManager": "ファイルマネージャーで開く",
     "stagedChange": "エージェントが変更を提案しています",
     "stagedChangeFolder": "このフォルダー内の提案された変更：{{count}}",
     "openFolderNote": "{{path}} – クリックでフォルダーノートを開き、矢印で展開・折りたたみ",
