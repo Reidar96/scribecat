@@ -3,6 +3,21 @@
 All notable changes to ScribeDog are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.15.0] - 2026-09-22
+
+### Highlights
+- Tables in the editor: insert, edit, add and remove rows and columns, with a guard that stops content the Markdown export cannot represent from being silently lost
+- Icons for files and folders: pick an emoji from a row's context menu, or click an icon in the path above a note. Icons are stored in the vault (`.scribedog/icons.json`), not in the notes, so setting one is not an edit: no unsaved changes, no new version, nothing in an export or a diff. They travel with the folder and follow a file when it is renamed or moved inside ScribeDog
+- Open a folder in the system file manager from its context menu in the tree
+
+### Improvements
+- New files and folders are named in the file tree now, next to the siblings whose names they have to differ from, instead of in the path above the editor. On a phone the file list stays open, so creating several notes in a row no longer means reopening it every time. A new folder opens its folder note once the name is confirmed, so Escape leaves it as "New folder" instead of pulling you into a document
+- The path above a note scrolls instead of being cut off. Truncating could only ever show one end of it, and the folders it hid are what says where a note lives; on a phone renaming has moved to the file tree with it
+
+### Bug Fixes
+- Image selection and stray blank lines in the editor
+- The banner that pauses saving when a note cannot be written as Markdown showed no text
+
 ## [0.14.1] - 2026-09-21
 
 ### Bug Fixes
