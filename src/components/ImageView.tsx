@@ -140,7 +140,7 @@ export function ImageView({ node, editor, getPos, updateAttributes, selected }: 
 
   return (
     <NodeViewWrapper
-      as="span"
+      as="div"
       className="editor-image-wrapper"
       data-drag-handle
       onPointerDown={selectOnTouch}

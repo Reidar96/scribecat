@@ -1,6 +1,7 @@
 import Image from "@tiptap/extension-image";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { ReactNodeViewRenderer } from "@tiptap/react";
+import type MarkdownIt from "markdown-it";
 
 import { ImageView } from "@/components/ImageView";
 
@@ -35,6 +36,33 @@ const rawStringAttribute = (name: string) => ({
 const attributeAsString = (value: unknown): string =>
   value === null || value === undefined ? "" : String(value);
 
+// With `breaks: true` every newline inside a paragraph becomes a <br>, so
+// "![a](a.png)" + newline + "![b](b.png)" arrives as one paragraph holding
+// image, softbreak, image. The image node is a block node, so ProseMirror
+// splits that paragraph around each image when it parses the HTML — and the softbreak that sat
+// between two images is left over as a paragraph containing nothing but a hard
+// break. That is the empty line users see between images they never typed.
+// A line break directly before or after a block-level image has no visible
+// effect anyway (the image already starts its own block), so it is dropped
+// here, at the point where the information about its neighbours still exists.
+export function imageLineBreakMarkdownItPlugin(markdownit: MarkdownIt): void {
+  markdownit.core.ruler.push("scribedog_image_line_break", (state) => {
+    for (const token of state.tokens) {
+      if (token.type !== "inline" || !token.children) {
+        continue;
+      }
+
+      token.children = token.children.filter((child, index, children) => {
+        if (child.type !== "softbreak" && child.type !== "hardbreak") {
+          return true;
+        }
+
+        return children[index - 1]?.type !== "image" && children[index + 1]?.type !== "image";
+      });
+    }
+  });
+}
+
 export const EditorImage = Image.extend({
   addAttributes() {
     return {
@@ -65,7 +93,15 @@ export const EditorImage = Image.extend({
     };
   },
   addNodeView() {
-    return ReactNodeViewRenderer(ImageView);
+    // trackNodeViewPosition keeps the NodeView's cached position in sync when
+    // the document shifts around it. Without it the cache is only refreshed
+    // when the node view itself updates, so typing in a paragraph *above* an
+    // image left every image below it holding the position it had before the
+    // edit. Selection is decided against that cached value, so a click on such
+    // an image no longer marked it selected: no outline, no resize handles,
+    // and Backspace hit the wrong place. It also feeds the getPos() that
+    // ImageView's own touch handler builds its NodeSelection from.
+    return ReactNodeViewRenderer(ImageView, { trackNodeViewPosition: true });
   },
   addStorage() {
     return {
@@ -87,7 +123,11 @@ export const EditorImage = Image.extend({
           // flushClose in prosemirror-markdown's to_markdown.ts.
           state.closeBlock(node);
         },
-        parse: {}
+        parse: {
+          setup(markdownit: MarkdownIt) {
+            markdownit.use(imageLineBreakMarkdownItPlugin);
+          }
+        }
       }
     };
   }

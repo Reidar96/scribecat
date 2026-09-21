@@ -64,3 +64,43 @@ describe("image markdown round-trip", () => {
     expect(markdown.trim()).toBe('![foto](images/foto.png "width=300")');
   });
 });
+
+// The image node is a block node, but `breaks: true` makes markdown-it put a
+// softbreak between two image lines inside one paragraph. ProseMirror then
+// splits the paragraph around each image and the leftover break becomes a
+// paragraph of its own — a blank line between images nobody typed, and one
+// more block the caret gets stuck in.
+describe("line breaks around images", () => {
+  function blockTypes(doc: JSONNode): string[] {
+    return (doc.content ?? []).map((child) => child.type ?? "");
+  }
+
+  it("does not leave an empty paragraph between consecutive images", () => {
+    const { doc } = roundTrip(
+      "![a](images/a.png)\n![b](images/b.png)\n![c](images/c.png)\n"
+    );
+
+    expect(blockTypes(doc)).toEqual(["image", "image", "image"]);
+  });
+
+  it("drops the break between a paragraph and the image below it", () => {
+    const { doc } = roundTrip("Test\nsecond\n![a](images/a.png)\n![b](images/b.png)\n");
+
+    expect(blockTypes(doc)).toEqual(["paragraph", "image", "image"]);
+
+    // The break that used to sit between "second" and the image is gone; the
+    // one between the two text lines has to stay.
+    const paragraph = doc.content?.[0];
+    expect((paragraph?.content ?? []).map((child) => child.type)).toEqual([
+      "text",
+      "hardBreak",
+      "text"
+    ]);
+  });
+
+  it("keeps hard breaks between plain text lines", () => {
+    const { markdown } = roundTrip("Test\nsecond\nthird\n");
+
+    expect(markdown.trim()).toBe("Test\\\nsecond\\\nthird");
+  });
+});
