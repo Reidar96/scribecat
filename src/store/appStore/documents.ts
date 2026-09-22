@@ -2,8 +2,6 @@ import { readMarkdownFile } from "@/lib/fileSystem";
 import { isFolderNotePath } from "@/lib/folderNotes";
 import type { MarkdownFileRecord } from "@/platform/types";
 
-import { normalizePathKey } from "./pathUtils";
-import { stagedOnlyPathKeys } from "./stagedPaths";
 import type { FileDocumentState } from "./types";
 
 export function isDocumentDirty(document: FileDocumentState): boolean {
@@ -41,13 +39,6 @@ export function pruneDocumentsToCurrentFolder(
   selectedFilePath: string | null
 ): Record<string, FileDocumentState> {
   const filePathSet = new Set(filePaths);
-  // A note the agent has only proposed is not on disk, and its document is not
-  // dirty either — so both rules below would throw it away, and the file the
-  // user just opened to review would close itself on the next watcher tick.
-  // "Not on disk" means deleted for every other file and "not written yet" for
-  // this one, which is the whole distinction.
-  const stagedOnly = stagedOnlyPathKeys();
-  const isStagedOnly = (filePath: string) => stagedOnly.has(normalizePathKey(filePath));
   // A folder note that has not been written yet is the same case, but only
   // while it is the one on screen: opened from the tree, empty and clean, and
   // nothing on disk until the first save. Unselected and clean it is dropped
@@ -60,7 +51,6 @@ export function pruneDocumentsToCurrentFolder(
     if (
       filePathSet.has(filePath) ||
       isDocumentDirty(document) ||
-      isStagedOnly(filePath) ||
       isOpenUnwrittenFolderNote(filePath)
     ) {
       nextDocuments[filePath] = document;
@@ -70,7 +60,6 @@ export function pruneDocumentsToCurrentFolder(
   if (
     selectedFilePath &&
     !filePathSet.has(selectedFilePath) &&
-    !isStagedOnly(selectedFilePath) &&
     !isOpenUnwrittenFolderNote(selectedFilePath)
   ) {
     const selectedDocument = nextDocuments[selectedFilePath];
