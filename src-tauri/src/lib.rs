@@ -13,10 +13,10 @@ use notify::{Config, Event, RecommendedWatcher, RecursiveMode, Watcher};
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_fs::FsExt;
 
-pub(crate) const FOLDER_FILES_CHANGED_EVENT: &str = "scribedog-folder-files-changed";
+pub(crate) const FOLDER_FILES_CHANGED_EVENT: &str = "scribecat-folder-files-changed";
 
 /// Mirrors VAULT_META_DIR_NAME in src/lib/fileSystem.ts.
-const VAULT_META_DIR_NAME: &str = ".scribedog";
+const VAULT_META_DIR_NAME: &str = ".scribecat";
 
 // The app writes its own state into the vault (staged changes, chat sessions,
 // checkpoints, sort order), and every one of those writes lands under the
@@ -122,7 +122,7 @@ fn watch_folder(
     let folder_path = PathBuf::from(folder_path);
 
     if !folder_path.is_dir() {
-        return Err("Der Ordner konnte nicht überwacht werden.".to_string());
+        return Err("The folder could not be watched.".to_string());
     }
 
     // Only one vault is open at a time: a server vault's live connection,
@@ -155,7 +155,7 @@ fn watch_folder(
     let mut watcher_slot = folder_watch_state
         .watcher
         .lock()
-        .map_err(|_| "Der Ordner-Watcher konnte nicht aktualisiert werden.".to_string())?;
+        .map_err(|_| "The folder watcher could not be updated.".to_string())?;
     *watcher_slot = Some(watcher);
 
     Ok(())
@@ -264,7 +264,7 @@ fn check_spellcheck_dictionary(language: String) -> SpellcheckDictionaryStatus {
     }
 }
 
-pub(crate) const KEYRING_SERVICE: &str = "scribedog";
+pub(crate) const KEYRING_SERVICE: &str = "scribecat";
 // Pre-multi-provider versions kept every provider's key under this one
 // account. Each provider now gets its own account (see api_key_entry); this
 // legacy account is only ever read once, to migrate that single leftover key
