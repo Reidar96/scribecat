@@ -1,10 +1,10 @@
-name: Custom server image
+name: ScribeCat server image
 
 on:
   push:
     branches:
       - main
-      - per-folder-attachments
+      - scribecat-rework
   pull_request:
     branches:
       - main
@@ -21,8 +21,26 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Build server image
-        run: docker build -f server/Dockerfile -t scribedog-custom:test .
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build web app
+        run: npm run build:web
+
+      - name: Build server
+        run: |
+          cd server
+          npm ci
+          npm run build
+
+      - name: Build Docker image
+        run: docker build -f server/Dockerfile -t scribecat-server:test .
 
   publish:
     if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
@@ -39,11 +57,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push custom server image
+      - name: Build and push ScribeCat server image
         run: |
           docker build -f server/Dockerfile \
-            -t ghcr.io/reidar96/scribedog-server:attachments \
-            -t ghcr.io/reidar96/scribedog-server:0.15.1-attachments \
+            -t ghcr.io/reidar96/scribecat-server:latest \
+            -t ghcr.io/reidar96/scribecat-server:0.15.1 \
             .
-          docker push ghcr.io/reidar96/scribedog-server:attachments
-          docker push ghcr.io/reidar96/scribedog-server:0.15.1-attachments
+          docker push ghcr.io/reidar96/scribecat-server:latest
+          docker push ghcr.io/reidar96/scribecat-server:0.15.1
