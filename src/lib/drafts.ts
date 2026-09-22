@@ -3,8 +3,7 @@ import { join } from "@/platform/paths";
 import { isRemoteVaultPath } from "@/platform/remote/vaultRoot";
 import { exists, mkdir, readDir, readTextFile, remove, writeTextFile } from "@/platform/vaultFs";
 
-import { normalizeVaultPath, vaultPathKey } from "@/lib/chat/vaultStaging";
-import { VAULT_META_DIR_NAME } from "@/lib/vaultPaths";
+import { normalizeVaultPath, VAULT_META_DIR_NAME, vaultPathKey } from "@/lib/vaultPaths";
 
 /**
  * Hot exit: the unsaved content of every dirty note, kept outside the note
@@ -15,7 +14,7 @@ import { VAULT_META_DIR_NAME } from "@/lib/vaultPaths";
  * draft is a copy of what is in the editor, and it is deleted the moment the
  * document is saved or becomes clean again.
  *
- * Layout mirrors fileVersions.ts and chat/checkpoints.ts (index plus blobs):
+ * Layout mirrors fileVersions.ts (an index plus content blobs):
  *   .scribecat/drafts/index.json   -> { version: 1, entries: { "<vault-relative path>": entry } }
  *   .scribecat/drafts/<blobId>.md  -> the draft content
  *
