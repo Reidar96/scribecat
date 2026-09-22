@@ -202,8 +202,12 @@ jobs:
 
           p = "src/components/ShortcutsSettings.tsx"
           c = read(p)
-          c = re.sub(r'\n  \{\n    id: "aiEditContextMenu",[\s\S]*?\n  \},', '', c, count=1)
-          c = re.sub(r'\n  \{ id: "aiSubmit",[\s\S]*?\},', '', c, count=1)
+          c = c.replace('''\n  {
+    id: "aiEditContextMenu",
+    keys: [{ special: "rightClick" }],
+    descriptionKey: "shortcutsDialog.items.aiEditDialog"
+  },''', "")
+          c = c.replace('''\n  { id: "aiSubmit", keys: [{ mod: "ctrl" }, { special: "enter" }], descriptionKey: "shortcutsDialog.items.aiSubmit" },''', "")
           c = c.replace("Like fonts, assistants and versioning, its\n * bindings apply immediately through useShortcutsStore, without the AI\n * settings' save button.",
                         "Like fonts and versioning, its bindings apply immediately through useShortcutsStore.")
           write(p, c)
@@ -275,6 +279,18 @@ jobs:
                               'const DEFAULT_LANGUAGE: SupportedLanguage = "en";')
           write(p, c)
 
+      - name: Commit cleanup
+        run: |
+          if git diff --quiet; then
+            echo "Nothing to commit"
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add -A
+            git commit -m "Remove visible AI tools from ScribeCat [skip ci]"
+            git push origin HEAD:scribecat-rework
+          fi
+
       - name: Install frontend dependencies
         run: npm ci
 
@@ -286,15 +302,3 @@ jobs:
           cd server
           npm ci
           npm run build
-
-      - name: Commit cleanup
-        run: |
-          if git diff --quiet; then
-            echo "Nothing to commit"
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "Remove visible AI tools from ScribeCat [skip ci]"
-          git push origin HEAD:scribecat-rework
