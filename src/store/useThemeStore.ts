@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export const THEME_STORAGE_KEY = "scribedog-theme";
+export const THEME_STORAGE_KEY = "scribecat-theme";
 export const THEMES = ["light", "dark", "system"] as const;
 export type Theme = (typeof THEMES)[number];
 export type ResolvedTheme = "light" | "dark";
