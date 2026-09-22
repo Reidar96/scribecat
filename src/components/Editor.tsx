@@ -568,8 +568,18 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 
     for (const { fileName, mimeType, data } of payloads) {
       try {
-        const rootRelativePath = await saveImageToFolder(folderPath, fileName, mimeType, data);
-        const markdownPath = await getRelativeImageMarkdownPath(folderPath, filePath, rootRelativePath);
+        const rootRelativePath = await saveImageToFolder(
+          folderPath,
+          filePath,
+          fileName,
+          mimeType,
+          data
+        );
+        const markdownPath = await getRelativeImageMarkdownPath(
+          folderPath,
+          filePath,
+          rootRelativePath
+        );
         const altText = fileName.replace(/\.[^.]+$/, "");
 
         const sizeBefore = currentEditor.state.doc.content.size;
