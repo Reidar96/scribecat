@@ -10,12 +10,8 @@ import { NodeSelection } from "@tiptap/pm/state";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { AiCheckDialog } from "@/components/AiCheckDialog";
 import { FindReplacePanel } from "@/components/FindReplacePanel";
-import { AiRewriteDialog } from "@/components/AiRewriteDialog";
 import { LinkDialog, type LinkDialogResult } from "@/components/LinkDialog";
-import { VoiceModelDownloadDialog } from "@/components/VoiceModelDownloadDialog";
-import { VoiceRecordingBanner } from "@/components/VoiceRecordingBanner";
 import { Toolbar } from "@/components/Toolbar";
 import { FileLinkSuggestionPopover } from "@/components/editor/FileLinkSuggestionPopover";
 import { DetailsPanel } from "@/components/editor/DetailsPanel";
@@ -29,7 +25,6 @@ import {
   useDetailsPanelWidth
 } from "@/hooks/useDetailsPanelWidth";
 import { useAiEditorActions } from "@/components/editor/useAiEditorActions";
-import { useEditorDictation } from "@/components/editor/useEditorDictation";
 import { useFileLinkSuggestion } from "@/components/editor/useFileLinkSuggestion";
 import { useContextMenuState } from "@/components/fileTree/useContextMenuState";
 import {
@@ -122,7 +117,6 @@ type EditorProps = {
   onRequestFileOpen?: (filePath: string) => void;
   onAiLoadingChange?: (isLoading: boolean) => void;
   onAiPendingChange?: (isPending: boolean) => void;
-  onAiSettingsRequest: () => void;
   onZenModeRequest: () => void;
   /** Where the toolbar renders instead of inside the editor (the document
    *  panel's slot above the title row on desktop); null keeps it inline. */
@@ -197,7 +191,6 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     onRequestFileOpen,
     onAiLoadingChange,
     onAiPendingChange,
-    onAiSettingsRequest,
     onZenModeRequest,
     toolbarContainer = null
   },
@@ -283,12 +276,6 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   );
 
   const ai = useAiEditorActions({ editorRef, markdown, filePath, onAiLoadingChange, onAiPendingChange });
-  const { dictation, toggleDictation } = useEditorDictation({
-    editorRef,
-    setStatus: ai.setAiStatus,
-    isDiffActive: ai.isDiffActive,
-    isBusyForDictation: ai.isBusyForDictation
-  });
   const { contextMenu: selectionMenu, setContextMenu: setSelectionMenu } =
     useContextMenuState<SelectionContextMenuState>();
 
@@ -317,9 +304,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     void copy(currentEditor).then(reportCopyResult);
   };
 
-  // Right-click on a selection offers the AI rewrite next to the three ways of
-  // copying; without a selection there is nothing to copy, so the AI dialog
-  // opens directly in insert mode as before.
+  // Right-click on a selection offers clipboard actions.
   const handleEditorContextMenu = (event: React.MouseEvent<HTMLDivElement>) => {
     const currentEditor = editorRef.current;
 
@@ -1407,11 +1392,6 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 
             return moved;
           }
-          case "aiCheckDialog":
-            event.preventDefault();
-            ai.runAiGrammarCheck();
-
-            return true;
           case "checkboxToggle":
             event.preventDefault();
             toggleTaskItemChecked(view);
@@ -1476,18 +1456,6 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
             chain()?.toggleHeading({ level }).run();
             break;
           }
-          case "aiVoiceDialog":
-            // Opens the AI dialog and immediately starts voice input into the
-            // prompt field (issue #7).
-            ai.setVoiceStartRequestId((id) => id + 1);
-            ai.openAiDraftFromSelection();
-            break;
-          case "aiEditDialog":
-            ai.openAiDraftFromSelection();
-            break;
-          case "dictation":
-            toggleDictation();
-            break;
           default:
             break;
         }
@@ -1715,9 +1683,6 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       editor={editor}
       onLinkRequest={handleLinkRequest}
       onImageInsertRequest={handleImageInsertRequest}
-      onAiRequest={ai.openAiDraftFromSelection}
-      onAiCheckRequest={ai.runAiGrammarCheck}
-      onAiSettingsRequest={onAiSettingsRequest}
       onPrintRequest={printDocument}
       onDownloadMarkdownRequest={downloadDocument}
       onSearchRequest={openFindPanel}
@@ -1738,13 +1703,6 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         />
       ) : null}
 
-      {dictation.status === "recording" || dictation.status === "transcribing" ? (
-        <VoiceRecordingBanner
-          level={dictation.level}
-          isRecording={dictation.status === "recording"}
-          message={dictation.status === "recording" ? t("voice.editorRecordingHint") : t("voice.transcribing")}
-        />
-      ) : null}
 
       {unserializableNodes.length > 0 ? (
         <div className="editor-view__feedback editor-view__feedback--error" role="alert">
@@ -1899,8 +1857,6 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         <SelectionContextMenu
           x={selectionMenu.x}
           y={selectionMenu.y}
-          canAiEdit={Boolean(editor?.isEditable) && !ai.isDiffActive()}
-          onAiEdit={ai.openAiDraftFromSelection}
           onCopyFormatted={() => copySelection("formatted")}
           onCopyMarkdown={() => copySelection("markdown")}
           onCopyPlainText={() => copySelection("plainText")}
@@ -1921,20 +1877,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         onCancel={ai.closeAiDraft}
       />
 
-      <VoiceModelDownloadDialog
-        open={dictation.isModelDialogOpen}
-        onClose={dictation.closeModelDialog}
-        onDownloaded={dictation.handleModelDownloaded}
-      />
 
-      <AiCheckDialog
-        open={ai.aiCheckIssues !== null}
-        issues={ai.aiCheckIssues ?? []}
-        resolvedCount={ai.aiCheckResolvedCount}
-        onApply={ai.applyAiCheckIssue}
-        onApplyAll={ai.applyAllAiCheckIssues}
-        onClose={ai.closeAiCheckDialog}
-      />
     </div>
   );
 });
