@@ -166,6 +166,7 @@ async function extractPlacedImage(
 
     const rootRelativePath = await saveImageToFolder(
       vaultRoot,
+      targetFilePath,
       `${imageBaseName}.png`,
       "image/png",
       pngBytes
@@ -189,8 +190,8 @@ async function extractPlacedImage(
 /**
  * Converts a PDF to markdown via pdf.js: text with a heading/paragraph
  * heuristic, vector-drawn checkboxes as task-list items, bordered tables as
- * pipe tables, and embedded raster images extracted into the vault's
- * "images/" folder at their displayed size and position. Layout
+ * pipe tables, and embedded raster images extracted into an "_attachments/"
+ * folder next to the target markdown file at their displayed size and position. Layout
  * reconstruction is deliberately best effort.
  *
  * Called without the vault arguments the image pass is skipped entirely — that
