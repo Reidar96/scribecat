@@ -324,7 +324,7 @@ export async function saveImageToFolder(
   await mkdir(attachmentsDirPath, { recursive: true });
 
   const sanitizedFileName = sanitizeImageFileName(fileName, mimeType);
-  const { filePath, fileName: uniqueFileName } = await resolveUniqueImagePath(
+  const { filePath } = await resolveUniqueImagePath(
     attachmentsDirPath,
     sanitizedFileName
   );
