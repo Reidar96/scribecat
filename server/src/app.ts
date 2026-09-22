@@ -10,7 +10,6 @@ import { authRoutes } from "./auth/routes.js";
 import type { SessionConfig } from "./auth/session.js";
 import type { TokenStore } from "./auth/tokenStore.js";
 import type { ServerConfig } from "./config.js";
-import type { SecretStore } from "./secrets/secretStore.js";
 import { eventRoutes } from "./vault/eventRoutes.js";
 import { exportRoutes } from "./vault/exportRoutes.js";
 import type { Vault } from "./vault/files.js";
@@ -21,8 +20,6 @@ import { staticSite } from "./web/staticSite.js";
 export type AppDependencies = {
   config: ServerConfig;
   authStore: AuthStore;
-  /** Encrypted compatibility store used by the existing authentication format. */
-  secrets: SecretStore;
   /** Personal access tokens for clients without a browser (the desktop app). */
   tokens: TokenStore;
   vault: Vault;
@@ -43,7 +40,7 @@ const BODY_LIMIT = 64 * 1024 * 1024;
  * instances behind one port there is no right answer for it.
  */
 export async function buildApp(deps: AppDependencies): Promise<FastifyInstance> {
-  const { config, authStore, secrets, tokens, vault } = deps;
+  const { config, authStore, tokens, vault } = deps;
 
   // Fastify's own types do not take the hop count proxy-addr supports, so the
   // number is expressed as the predicate it stands for: trust the first n
@@ -88,7 +85,7 @@ export async function buildApp(deps: AppDependencies): Promise<FastifyInstance> 
       // lives under the base path like everything else.
       scoped.get("/api/health", async () => ({ ok: true }));
 
-      await scoped.register(authRoutes, { authStore, session, secrets, throttle, tokens, requireSession, prefix: "/api/auth" });
+      await scoped.register(authRoutes, { authStore, session, throttle, tokens, requireSession, prefix: "/api/auth" });
       await scoped.register(fileRoutes, { vault, requireSession, prefix: "/api" });
       await scoped.register(exportRoutes, { vault, requireSession, prefix: "/api" });
       if (deps.watcher) {
