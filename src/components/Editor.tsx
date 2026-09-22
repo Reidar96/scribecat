@@ -10,9 +10,7 @@ import { NodeSelection } from "@tiptap/pm/state";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { AiCheckDialog } from "@/components/AiCheckDialog";
 import { FindReplacePanel } from "@/components/FindReplacePanel";
-import { AiRewriteDialog } from "@/components/AiRewriteDialog";
 import { LinkDialog, type LinkDialogResult } from "@/components/LinkDialog";
 import { VoiceModelDownloadDialog } from "@/components/VoiceModelDownloadDialog";
 import { VoiceRecordingBanner } from "@/components/VoiceRecordingBanner";
@@ -122,7 +120,6 @@ type EditorProps = {
   onRequestFileOpen?: (filePath: string) => void;
   onAiLoadingChange?: (isLoading: boolean) => void;
   onAiPendingChange?: (isPending: boolean) => void;
-  onAiSettingsRequest: () => void;
   onZenModeRequest: () => void;
   /** Where the toolbar renders instead of inside the editor (the document
    *  panel's slot above the title row on desktop); null keeps it inline. */
@@ -197,7 +194,6 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     onRequestFileOpen,
     onAiLoadingChange,
     onAiPendingChange,
-    onAiSettingsRequest,
     onZenModeRequest,
     toolbarContainer = null
   },
@@ -350,13 +346,11 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       return;
     }
 
-    event.preventDefault();
-
     if (currentEditor.state.selection.empty) {
-      ai.openAiDraftFromSelection();
       return;
     }
 
+    event.preventDefault();
     setSelectionMenu({ x: event.clientX, y: event.clientY });
   };
 
@@ -1407,11 +1401,6 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 
             return moved;
           }
-          case "aiCheckDialog":
-            event.preventDefault();
-            ai.runAiGrammarCheck();
-
-            return true;
           case "checkboxToggle":
             event.preventDefault();
             toggleTaskItemChecked(view);
@@ -1476,18 +1465,6 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
             chain()?.toggleHeading({ level }).run();
             break;
           }
-          case "aiVoiceDialog":
-            // Opens the AI dialog and immediately starts voice input into the
-            // prompt field (issue #7).
-            ai.setVoiceStartRequestId((id) => id + 1);
-            ai.openAiDraftFromSelection();
-            break;
-          case "aiEditDialog":
-            ai.openAiDraftFromSelection();
-            break;
-          case "dictation":
-            toggleDictation();
-            break;
           default:
             break;
         }
@@ -1715,9 +1692,6 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       editor={editor}
       onLinkRequest={handleLinkRequest}
       onImageInsertRequest={handleImageInsertRequest}
-      onAiRequest={ai.openAiDraftFromSelection}
-      onAiCheckRequest={ai.runAiGrammarCheck}
-      onAiSettingsRequest={onAiSettingsRequest}
       onPrintRequest={printDocument}
       onDownloadMarkdownRequest={downloadDocument}
       onSearchRequest={openFindPanel}
@@ -1899,8 +1873,6 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         <SelectionContextMenu
           x={selectionMenu.x}
           y={selectionMenu.y}
-          canAiEdit={Boolean(editor?.isEditable) && !ai.isDiffActive()}
-          onAiEdit={ai.openAiDraftFromSelection}
           onCopyFormatted={() => copySelection("formatted")}
           onCopyMarkdown={() => copySelection("markdown")}
           onCopyPlainText={() => copySelection("plainText")}
@@ -1908,18 +1880,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         />
       ) : null}
 
-      <AiRewriteDialog
-        open={ai.aiDraft !== null}
-        mode={ai.aiDraft?.mode ?? "insert"}
-        selectedText={ai.aiDraft?.selectedText ?? ""}
-        selectedMarkdown={ai.aiDraft?.selectedMarkdown ?? ""}
-        isLoading={ai.isAiLoading}
-        voiceStartRequestId={ai.voiceStartRequestId}
-        onSubmit={(prompt, includeDocument, preserveFormatting) => {
-          void ai.runAiDraft(prompt, includeDocument, preserveFormatting);
-        }}
-        onCancel={ai.closeAiDraft}
-      />
+
 
       <VoiceModelDownloadDialog
         open={dictation.isModelDialogOpen}
@@ -1927,14 +1888,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         onDownloaded={dictation.handleModelDownloaded}
       />
 
-      <AiCheckDialog
-        open={ai.aiCheckIssues !== null}
-        issues={ai.aiCheckIssues ?? []}
-        resolvedCount={ai.aiCheckResolvedCount}
-        onApply={ai.applyAiCheckIssue}
-        onApplyAll={ai.applyAllAiCheckIssues}
-        onClose={ai.closeAiCheckDialog}
-      />
+
     </div>
   );
 });
