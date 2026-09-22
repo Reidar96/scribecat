@@ -113,7 +113,7 @@ type SidebarProps = {
   onMoveEntry: (input: MoveTreeEntryInput) => Promise<boolean>;
   onMoveRequest: (entries: BatchEntry[]) => void;
   onSetSortMode: (mode: SortMode) => void;
-  onAiSettingsRequest: () => void;
+  onSettingsRequest: () => void;
   onRequestEditorFocus: () => void;
   sidebarFocusRequestId: number;
   onFileTreeSelectionChange: (entries: BatchEntry[]) => void;
@@ -170,7 +170,7 @@ export function Sidebar({
   onMoveEntry,
   onMoveRequest,
   onSetSortMode,
-  onAiSettingsRequest,
+  onSettingsRequest,
   onRequestEditorFocus,
   sidebarFocusRequestId,
   onFileTreeSelectionChange,
@@ -210,8 +210,8 @@ export function Sidebar({
   // the list has entries; both fold states and the list's height ceiling
   // are app-wide, and a folded section never unfolds on its own.
   const hasWorkingSet = folderPath !== null && workingSet.entries.length > 0;
-  const [isWorkingSetCollapsed, toggleWorkingSetCollapsed] = useStoredCollapsed("scribedog-working-set-collapsed");
-  const [isTreeCollapsed, toggleTreeCollapsed] = useStoredCollapsed("scribedog-file-tree-collapsed");
+  const [isWorkingSetCollapsed, toggleWorkingSetCollapsed] = useStoredCollapsed("scribecat-working-set-collapsed");
+  const [isTreeCollapsed, toggleTreeCollapsed] = useStoredCollapsed("scribecat-file-tree-collapsed");
   const sectionsRef = useRef<HTMLDivElement>(null);
   const workingSetListRef = useRef<HTMLUListElement>(null);
   const {
@@ -441,7 +441,7 @@ export function Sidebar({
             type="button"
             variant="outline"
             size="sm"
-            onClick={onAiSettingsRequest}
+            onClick={onSettingsRequest}
             aria-label={t("sidebar.settings")}
             title={t("sidebar.settings")}
             data-testid="settings"
