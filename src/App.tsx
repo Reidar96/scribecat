@@ -1047,21 +1047,6 @@ function App() {
         onDismissConflict={dismissSaveConflict}
         isSettingsOpen={isSettingsOpen}
         settingsInitialTab={settingsInitialTab}
-        aiSettings={aiSettings}
-        onSaveSettings={updateAiSettings}
-        onCloseSettings={() => setIsSettingsOpen(false)}
-        onAssistantEditRequest={(assistant) => {
-          // Editing happens in its own modal; the settings dialog closes and
-          // reopens on the assistants tab once editing is done.
-          setIsSettingsOpen(false);
-          setAssistantEditTarget({ assistant });
-        }}
-        assistantEditTarget={assistantEditTarget}
-        onCloseAssistantEdit={() => {
-          setAssistantEditTarget(null);
-          setSettingsInitialTab("assistants");
-          setIsSettingsOpen(true);
-        }}
         moveRequest={moveRequest}
         fileRelativePaths={fileRelativePaths}
         emptyFolderRelativePaths={emptyFolderRelativePaths}
