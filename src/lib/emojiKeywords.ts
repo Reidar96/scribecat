@@ -85,5 +85,13 @@ export function buildLocalizedEmojiData(emojibaseData: EmojibaseEntry[]): EmojiM
   return {
     ...sourceData,
     emojis: emojisWithKeywords,
+    // Copied, not shared: emoji-mart mutates this array on init (it unshifts
+    // the "frequently used" category into it) and filters it on every later
+    // init. A spread would hand all ten locales — and the imported module
+    // itself — the very same array, so opening a picker in one language
+    // would rearrange the categories for the next one.
+    categories: sourceData.categories.map((category) =>
+      typeof category === "object" && category !== null ? { ...category } : category
+    ),
   };
 }

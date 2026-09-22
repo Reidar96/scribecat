@@ -337,6 +337,22 @@ fn collect_startup_folder_path() -> Option<String> {
     })
 }
 
+/// Why `dangerousDisableAssetCspModification: ["style-src"]` is in
+/// tauri.conf.json, despite the name:
+///
+/// Tauri adds a nonce to the CSP at runtime, and the CSP spec says a nonce
+/// makes the browser *ignore* `'unsafe-inline'`. Everything that styles itself
+/// from script is blocked from that moment on — the webview says "Applying
+/// inline style violates ... 'unsafe-inline' is ignored if either a hash or
+/// nonce value is present". It only shows up in a packaged build: the dev
+/// server and the browser build never see this CSP, which is why the emoji
+/// picker rendered as a bare grid with no search or categories there and
+/// nowhere else (emoji-mart injects its stylesheet into a shadow root), while
+/// ProseMirror's inline styles were refused alongside it.
+///
+/// Only the style directive is exempted. `script-src` keeps its nonce, and
+/// that is the one that stops injected code; an inline stylesheet cannot
+/// execute anything.
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // Resolved before anything else: creating the webview is what reads
