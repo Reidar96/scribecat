@@ -861,7 +861,7 @@ function App() {
       onMoveEntry={moveTreeEntry}
       onMoveRequest={requestMove}
       onSetSortMode={(mode) => void setSortMode(mode)}
-      onAiSettingsRequest={() => {
+      onSettingsRequest={() => {
         setSettingsInitialTab("application");
         setIsSettingsOpen(true);
       }}
