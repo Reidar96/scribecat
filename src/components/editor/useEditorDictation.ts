@@ -6,14 +6,17 @@ import type { Editor as TipTapEditor } from "@tiptap/react";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
 import { updateVoiceInsertWidget } from "@/lib/voiceInsertWidget";
 
-import type { AiStatus } from "./useAiEditorActions";
+type EditorFeedbackStatus = {
+  kind: "info" | "error" | "success";
+  message: string;
+} | null;
 
 type UseEditorDictationOptions = {
   editorRef: RefObject<TipTapEditor | null>;
-  setStatus: (status: AiStatus) => void;
+  setStatus: (status: EditorFeedbackStatus) => void;
   // Dictation shares the read-only state with the diff review; while a diff is
   // active it must not lift setEditable, and it can't be started at all while
-  // any AI flow is busy.
+  // any other editor flow is busy.
   isDiffActive: () => boolean;
   isBusyForDictation: () => boolean;
 };
@@ -46,7 +49,7 @@ export function useEditorDictation({
   dictationRef.current = dictation;
 
   const toggleDictation = () => {
-    // While the AI dialog or a diff review is open, dictation into the
+    // While the other dialog or a diff review is open, dictation into the
     // document would fight with those flows — the dialog has its own mic.
     if (isBusyForDictation()) {
       return;
