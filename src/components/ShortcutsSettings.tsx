@@ -25,12 +25,6 @@ type KeyToken = { mod: "ctrl" | "alt" | "shift" } | { special: "esc" | "enter" |
  */
 const FIXED_SHORTCUTS: { id: string; keys: KeyToken[]; descriptionKey: string }[] = [
   { id: "renameEntry", keys: [{ literal: "F2" }], descriptionKey: "shortcutsDialog.items.renameEntry" },
-  {
-    id: "aiEditContextMenu",
-    keys: [{ special: "rightClick" }],
-    descriptionKey: "shortcutsDialog.items.aiEditDialog"
-  },
-  { id: "aiSubmit", keys: [{ mod: "ctrl" }, { special: "enter" }], descriptionKey: "shortcutsDialog.items.aiSubmit" },
   // Not a key combination but typed text, so it can neither be rebound nor
   // conflict with one — it still belongs in this list to be discoverable.
   { id: "insertFileLink", keys: [{ literal: "[[" }], descriptionKey: "shortcutsDialog.items.insertFileLink" },
@@ -83,9 +77,8 @@ type RecordingError =
   | { kind: "conflict"; conflictingLabelKey: string };
 
 /**
- * The "Shortcuts" settings tab. Like fonts, assistants and versioning, its
- * bindings apply immediately through useShortcutsStore, without the AI
- * settings' save button.
+ * The "Shortcuts" settings tab. Like fonts and versioning, its bindings apply
+ * immediately through useShortcutsStore.
  */
 export function ShortcutsSettings() {
   const { t } = useTranslation();
