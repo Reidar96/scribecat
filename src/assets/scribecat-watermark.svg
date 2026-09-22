@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="ScribeCat watermark">
+  <g fill="none" stroke="currentColor" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M150 187 119 92l92 61c28-13 62-13 90 0l92-61-31 95c22 28 34 64 34 104 0 95-63 151-140 151S116 386 116 291c0-40 12-76 34-104Z"/>
+    <path d="M256 318v38M218 360c12 18 25 26 38 26s26-8 38-26M168 330 88 314M169 355l-75 18M344 330l80-16M343 355l75 18"/>
+  </g>
+  <g fill="currentColor" font-family="Impact, Haettenschweiler, sans-serif" font-weight="700" text-anchor="middle">
+    <text x="202" y="286" font-size="84">#</text><text x="309" y="286" font-size="92">*</text>
+  </g>
+</svg>
