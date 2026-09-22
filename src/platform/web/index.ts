@@ -29,10 +29,8 @@ export const platform: Platform = {
     updater: false,
     voiceInput: false,
     portableMode: false,
-    knowledgeIndex: false,
     spellcheckDictionary: false,
     session: true,
-    browserLocalModels: false,
     remoteVaults: false
   },
 
@@ -84,11 +82,6 @@ export const platform: Platform = {
       }
     }
   },
-  credentials: {
-    storeApiKey: async () => undefined,
-    getApiKey: async () => "",
-    getStatus: async () => ({ state: "ready", discardedAt: null })
-  },
   portable: {
     getStatus: async () => ({ mode: "off", configDir: "" })
   },
@@ -128,7 +121,6 @@ export const platform: Platform = {
   downloads: browserDownloads,
   voice: null,
   updater: null,
-  knowledgeIndex: null,
   session: {
     getStatus: () => serverApi.session(),
     login: async (password) => {
@@ -165,6 +157,5 @@ export const platform: Platform = {
     revokeDevice: (id) => serverApi.revokeToken(id),
     onUnauthorized
   },
-  localModels: null,
   remoteVaults: null
 };
