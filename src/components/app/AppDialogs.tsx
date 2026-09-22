@@ -1,6 +1,5 @@
 import type { AppUpdate } from "@/platform/types";
 
-import { AssistantEditDialog } from "@/components/AssistantEditDialog";
 import { DeleteFileDialog } from "@/components/DeleteFileDialog";
 import { ExportDialog, type ExportDialogTarget } from "@/components/ExportDialog";
 import type { MarkdownFileRecord } from "@/lib/fileSystem";
@@ -14,8 +13,6 @@ import { VersionDiffDialog, type VersionDiffTarget } from "@/components/VersionD
 import type { DeleteTarget } from "@/hooks/useDeleteTarget";
 import type { FileVersion } from "@/lib/fileVersions";
 import type { ImportSource } from "@/lib/import/importer";
-import type { AiSettings } from "@/store/useAiSettingsStore";
-import type { Assistant } from "@/store/useAssistantsStore";
 
 type AppDialogsProps = {
   // Closing a dirty entry of the "In progress" list (hooks/useWorkingSetActions.ts)
@@ -31,16 +28,9 @@ type AppDialogsProps = {
   onDismissConflict: () => void;
 
   // Settings
-  isAiSettingsOpen: boolean;
+  isSettingsOpen: boolean;
   settingsInitialTab: SettingsTab;
-  aiSettings: AiSettings;
-  onSaveSettings: (nextSettings: Partial<AiSettings>) => void;
   onCloseSettings: () => void;
-  onAssistantEditRequest: (assistant: Assistant | null) => void;
-
-  // Assistant edit
-  assistantEditTarget: { assistant: Assistant | null } | null;
-  onCloseAssistantEdit: () => void;
 
   // Move to folder (tree context menu)
   moveRequest: MoveRequest | null;
@@ -93,14 +83,9 @@ export function AppDialogs({
   isSaving,
   onOverwriteConflict,
   onDismissConflict,
-  isAiSettingsOpen,
+  isSettingsOpen,
   settingsInitialTab,
-  aiSettings,
-  onSaveSettings,
   onCloseSettings,
-  onAssistantEditRequest,
-  assistantEditTarget,
-  onCloseAssistantEdit,
   moveRequest,
   fileRelativePaths,
   emptyFolderRelativePaths,
@@ -151,21 +136,9 @@ export function AppDialogs({
       />
 
       <SettingsDialog
-        open={isAiSettingsOpen}
+        open={isSettingsOpen}
         initialTab={settingsInitialTab}
-        settings={aiSettings}
-        onSave={(nextSettings) => {
-          onSaveSettings(nextSettings);
-          onCloseSettings();
-        }}
         onClose={onCloseSettings}
-        onAssistantEditRequest={onAssistantEditRequest}
-      />
-
-      <AssistantEditDialog
-        open={assistantEditTarget !== null}
-        assistant={assistantEditTarget?.assistant ?? null}
-        onClose={onCloseAssistantEdit}
       />
 
       <MoveToDialog
