@@ -652,28 +652,12 @@ function App() {
 
 
 
-  // The knowledge base's own connection is app-wide like the AI settings, and
-  // has to be in memory before the first lookup: its API key comes from the OS
-  // credential store, and a search that starts before it arrives would fall
-  // back to keyword search without saying why.
   // Custom key bindings are app-wide (shortcuts.json in the app config dir),
   // so they are loaded once at startup rather than per opened folder.
   useEffect(() => {
     void loadShortcutOverrides();
   }, [loadShortcutOverrides]);
 
-  // Chat sessions are vault-scoped (persisted into .scribecat/); reload them
-  // whenever the opened folder changes.
-  // The agent's staged file changes and their undo checkpoints are vault-scoped
-  // in the same way, and for the same reason: they name paths inside this
-  // folder and mean nothing in the next one.
-  // The staging layer's marker for the open document has to go when its
-  // proposals do — whether the user clicked accept/discard on a widget or the
-  // chat settled them (see setAiSuggestionsEmptyListener).
-  // Same for the knowledge base's settings — which folders the AI may read is
-  // consent given for one vault, and must never carry over to the next one.
-  // Clearing the search cache alongside makes sure no passage of the previous
-  // vault can still be returned.
   // Safety net for files dropped anywhere no handler claims them: without it
   // the webview follows the drop and navigates the whole app away to the file,
   // which looks exactly like a crash. Handlers that took the drop have called
