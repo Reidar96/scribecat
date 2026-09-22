@@ -75,8 +75,6 @@ function App() {
   const navigationIntentRef = useRef<{ filePath: string; index: number } | null>(null);
   // A one-line, self-dismissing hint at the bottom of the window; the place
   // for "not now, because ..." answers that do not deserve a dialog.
-  const [notice, setNotice] = useState<string | null>(null);
-  const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [settingsInitialTab, setSettingsInitialTab] = useState<SettingsTab>("application");
   const [versionDiffTarget, setVersionDiffTarget] = useState<VersionDiffTarget | null>(null);
@@ -155,6 +153,8 @@ function App() {
   const emptyFolderMtimeMs = useAppStore((state) => state.emptyFolderMtimeMs);
   const setSortMode = useAppStore((state) => state.setSortMode);
   const moveTreeEntry = useAppStore((state) => state.moveTreeEntry);
+  const navigationHistory = useNavigationHistoryStore((state) => state.history);
+  const loadShortcutOverrides = useShortcutsStore((state) => state.loadOverrides);
   const logout = useSessionStore((state) => state.logout);
 
   const dirtyFilePaths = useMemo(
@@ -352,14 +352,6 @@ function App() {
           : deleteTarget.path
       : null;
 
-  const showNotice = (message: string) => {
-    if (noticeTimerRef.current) {
-      clearTimeout(noticeTimerRef.current);
-    }
-
-    setNotice(message);
-    noticeTimerRef.current = setTimeout(() => setNotice(null), 4000);
-  };
 
   // Every way of leaving the open note runs through here. Unsaved edits are
   // no reason to ask any more: they stay in the document map for the session
@@ -994,11 +986,7 @@ function App() {
         onCancel={remoteVaultDialog.close}
       />
 
-      {notice ? (
-        <div className="app-notice" role="status">
-          {notice}
-        </div>
-      ) : null}
+
 
       <AppDialogs
         closingFileLabel={
