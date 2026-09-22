@@ -8,8 +8,7 @@ import {
   Loader2,
   PanelLeft,
   Pencil,
-  Save,
-  Square
+  Save
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
