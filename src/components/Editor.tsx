@@ -60,7 +60,6 @@ import {
 } from "@/lib/editor/selectionClipboard";
 import {
   getLastOpenedFolderPath,
-  getRelativeDisplayPath,
   getRelativeImageMarkdownPath,
   saveImageToFolder
 } from "@/lib/fileSystem";
@@ -729,7 +728,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       // itself moving, so the mirror is refreshed from here too.
       refreshSuggestion();
     },
-    onSelectionUpdate: ({ editor }) => {
+    onSelectionUpdate: () => {
       refreshSuggestion();
     },
     onBlur: ({ editor: currentEditor }) => {
@@ -1177,7 +1176,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         </div>
       ) : null}
 
-      {feedback && feedback.kind !== "info" ? (
+      {feedback ? (
         <div
           className={
             feedback.kind === "error"
