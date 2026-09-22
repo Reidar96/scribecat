@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="ScribeCat">
+  <defs>
+    <linearGradient id="catGradient" x1="90" y1="80" x2="430" y2="430" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fefb0a"/>
+      <stop offset=".28" stop-color="#a9fc3c"/>
+      <stop offset=".58" stop-color="#07e6cb"/>
+      <stop offset="1" stop-color="#fe68fe"/>
+      <animateTransform attributeName="gradientTransform" type="rotate" from="0 256 256" to="360 256 256" dur="24s" repeatCount="indefinite"/>
+    </linearGradient>
+    <radialGradient id="bg" cx="50%" cy="42%" r="65%">
+      <stop offset="0" stop-color="#2a174f"/>
+      <stop offset="1" stop-color="#0d0d11"/>
+    </radialGradient>
+    <filter id="glow" x="-25%" y="-25%" width="150%" height="150%">
+      <feGaussianBlur stdDeviation="5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <style>
+      .eye { transform-box: fill-box; transform-origin: center; animation: pulse 4s ease-in-out infinite; }
+      .eye.r { animation-delay: .8s; }
+      @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.72;transform:scale(.96)} }
+    </style>
+  </defs>
+  <rect x="22" y="22" width="468" height="468" rx="110" fill="url(#bg)"/>
+  <g fill="none" stroke="url(#catGradient)" stroke-width="19" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)">
+    <path d="M150 187 119 92l92 61c28-13 62-13 90 0l92-61-31 95c22 28 34 64 34 104 0 95-63 151-140 151S116 386 116 291c0-40 12-76 34-104Z"/>
+    <path d="M256 318v38"/>
+    <path d="M218 360c12 18 25 26 38 26s26-8 38-26"/>
+    <path d="M168 330 88 314M169 355l-75 18M344 330l80-16M343 355l75 18"/>
+  </g>
+  <g fill="url(#catGradient)" font-family="Impact, Haettenschweiler, sans-serif" font-weight="700" text-anchor="middle">
+    <text class="eye" x="202" y="286" font-size="84">#</text>
+    <text class="eye r" x="309" y="286" font-size="92">*</text>
+  </g>
+  <path d="M242 315q14 12 28 0" fill="none" stroke="url(#catGradient)" stroke-width="13" stroke-linecap="round" filter="url(#glow)"/>
+</svg>
