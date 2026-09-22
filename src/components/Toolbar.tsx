@@ -78,6 +78,53 @@ type ToolbarProps = {
   onZenModeRequest: () => void;
 };
 
+type ToggleButtonProps = {
+  pressed: boolean;
+  label: string;
+  title: string;
+  onClick: () => void;
+  disabled?: boolean;
+  children: ReactNode;
+};
+
+function ToggleButton({
+  pressed,
+  label,
+  title,
+  onClick,
+  disabled,
+  children
+}: ToggleButtonProps) {
+  return (
+    <Toggle
+      pressed={pressed}
+      aria-label={label}
+      title={title}
+      onClick={onClick}
+      disabled={disabled}
+    >
+      {children}
+    </Toggle>
+  );
+}
+
+function DetailsPanelToggle() {
+  const { t } = useTranslation();
+  const detailsPanelVisible = useEditorSettingsStore((state) => state.detailsPanelVisible);
+  const setDetailsPanelVisible = useEditorSettingsStore((state) => state.setDetailsPanelVisible);
+
+  return (
+    <Toggle
+      pressed={detailsPanelVisible}
+      aria-label={t("toolbar.detailsPanel")}
+      title={t("toolbar.detailsPanelTitle")}
+      onClick={() => setDetailsPanelVisible(!detailsPanelVisible)}
+    >
+      <PanelRight />
+    </Toggle>
+  );
+}
+
 type MissingDictionary = {
   language: string;
   installCommand: string | null;
