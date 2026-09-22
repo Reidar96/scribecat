@@ -2,7 +2,7 @@
  * The seam between the shared React frontend and whatever runs underneath it.
  *
  * ScribeCat has one frontend and two shells: the Tauri desktop app, where the
- * Rust process owns the filesystem, dialogs, microphone and credential store,
+ * Rust process owns the filesystem, dialogs and microphone,
  * and the server edition, where a browser talks to the ScribeCat server over
  * HTTP. Everything the frontend needs from its shell goes through this
  * interface. The two implementations live in `./desktop` and `./web`; the Vite
@@ -252,76 +252,6 @@ export type SpellcheckDictionaryStatus = {
   installCommand: string | null;
 };
 
-/**
- * "ready": keys can be read and written.
- * "locked": the store is there but this session cannot open it. In the
- * browser that means the session predates the encrypted storage or a password
- * change; signing in again is the way back. The desktop credential store is
- * never locked.
- */
-export type CredentialsStatus = {
-  state: "ready" | "locked";
-  /**
-   * Set when stored keys had to be discarded because the password was reset
-   * (the key that encrypted them is gone with the old password). The settings
-   * dialog says so once; entering a key clears it.
-   */
-  discardedAt: string | null;
-};
-
-/**
- * Where API keys are kept: the OS credential store on the desktop, encrypted
- * in the data volume on the server (see server/src/secrets/).
- *
- * `getApiKey` does not promise to return the key itself. The server edition
- * answers with a placeholder (see ../secretRef.ts) that stands for "a key is
- * stored", travels through the AI client unchanged and is resolved by the
- * server on its way out. Anything that displays the value has to handle that.
- */
-export type CredentialsApi = {
-  storeApiKey(id: string, apiKey: string): Promise<void>;
-  getApiKey(id: string): Promise<string>;
-  getStatus(): Promise<CredentialsStatus>;
-};
-
-/**
- * The vault search index and its per-vault vector store. Both live in the
- * Rust process on the desktop; the server edition has no equivalent yet.
- */
-export type KnowledgeIndexApi = {
-  call<T>(command: string, args?: Record<string, unknown>): Promise<T>;
-};
-
-/**
- * Why a request to a model server on the user's own machine failed, as far
- * as the browser can tell. Every one of these surfaces as the same
- * "Failed to fetch"; the console knows more, the page does not, so this is
- * pieced together from a permission query and a probe (see
- * web/localModels.ts).
- *
- * - "permission": the browser refused to reach the local network for this
- *   site (Chrome's local network access permission was denied).
- * - "cors": the server answered but does not accept requests from this
- *   page's origin; the user has to allow the origin on the server side.
- * - "unreachable": nothing answered, or the browser asked for permission
- *   and got no answer, which looks the same from here.
- */
-export type LocalEndpointDiagnosis = "ok" | "permission" | "cors" | "unreachable";
-
-/**
- * A model running on the device the browser runs on (Ollama, Jan.ai, LM
- * Studio). Web only: on the desktop the app process talks to it directly and
- * none of the browser's rules apply. In the browser the tab talks to it,
- * which is what makes "localhost" the user's own machine again rather than
- * the server, at the price of the browser's local network rules and the
- * server's CORS policy.
- */
-export type LocalModelsApi = {
-  /** The page's origin, which the local server has to allow. */
-  origin: string;
-  diagnose(provider: string, apiUrl: string): Promise<LocalEndpointDiagnosis>;
-};
-
 export type SessionStatus = {
   authenticated: boolean;
 };
@@ -381,10 +311,8 @@ export type SessionApi = {
   logout(): Promise<void>;
   /**
    * Replaces the password. Every other session ends (the server bumps the
-   * session epoch), this one keeps working, and the stored API keys are
-   * re-encrypted under the new password. Rejects with `SessionError`
-   * ("invalid_password" for a wrong current password, "weak_password" for a
-   * new one the server refuses).
+   * session epoch), while this one receives a fresh session. Rejects with
+   * `SessionError` for a wrong current password or a rejected new password.
    */
   changePassword(currentPassword: string, newPassword: string): Promise<void>;
   /** The devices (desktop apps) that hold an access token for this server. */
@@ -423,20 +351,12 @@ export type PlatformFeatures = {
   updater: boolean;
   voiceInput: boolean;
   portableMode: boolean;
-  /** Knowledge base (vault search index, embeddings). */
-  knowledgeIndex: boolean;
   /** Linux dictionary check for the spellchecker. */
   spellcheckDictionary: boolean;
   /** Password login/logout. */
   session: boolean;
   /** Vaults on a ScribeCat server next to local folders (see RemoteVaultsApi). */
   remoteVaults: boolean;
-  /**
-   * Local model servers are reached by the browser itself (see
-   * LocalModelsApi), so their failures need explaining and the settings a
-   * note about what the server has to allow.
-   */
-  browserLocalModels: boolean;
 };
 
 export type Platform = {
@@ -465,7 +385,6 @@ export type Platform = {
   };
   http: { fetch(url: string, init?: RequestInit): Promise<Response> };
   window: WindowApi;
-  credentials: CredentialsApi;
   portable: { getStatus(): Promise<PortableStatus> };
   spellcheck: { checkDictionary(language: string): Promise<SpellcheckDictionaryStatus> };
 
@@ -474,8 +393,6 @@ export type Platform = {
   downloads: DownloadsApi | null;
   voice: VoiceApi | null;
   updater: UpdaterApi | null;
-  knowledgeIndex: KnowledgeIndexApi | null;
   session: SessionApi | null;
-  localModels: LocalModelsApi | null;
   remoteVaults: RemoteVaultsApi | null;
 };
