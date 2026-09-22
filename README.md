@@ -5,7 +5,7 @@
 # ScribeCat
 
 **A clean, self-hosted WYSIWYG Markdown editor.**  
-**Plain files, no AI layer, no subscription, no lock-in.**
+**All AI tools and AI integrations have been removed — plain files, no subscription, no lock-in.**
 
 </div>
 
@@ -30,9 +30,9 @@ Your notes remain plain `.md` files in a normal folder. Images are stored beside
 
 ## What ScribeCat intentionally leaves out
 
-ScribeCat has no AI assistant, model selector, AI rewriting, agent chat, knowledge-base AI, model-provider settings, AI OCR, or built-in AI dictation.
+All AI writing tools and AI integrations have been removed from ScribeCat: no AI assistant, model selector, AI rewriting, agent chat, knowledge-base AI, model-provider settings, AI OCR, LLM proxy, or AI credential storage.
 
-The goal is a quieter writing tool: open a folder, write, organize, and keep the files yours.
+Local offline dictation is kept as a normal non-AI writing feature. The goal is a quieter writing tool: open a folder, write, organize, and keep the files yours.
 
 ## Language
 
