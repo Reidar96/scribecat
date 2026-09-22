@@ -10,7 +10,6 @@ import { authRoutes } from "./auth/routes.js";
 import type { SessionConfig } from "./auth/session.js";
 import type { TokenStore } from "./auth/tokenStore.js";
 import type { ServerConfig } from "./config.js";
-import { secretRoutes } from "./secrets/routes.js";
 import type { SecretStore } from "./secrets/secretStore.js";
 import { eventRoutes } from "./vault/eventRoutes.js";
 import { exportRoutes } from "./vault/exportRoutes.js";
@@ -92,7 +91,6 @@ export async function buildApp(deps: AppDependencies): Promise<FastifyInstance> 
       await scoped.register(authRoutes, { authStore, session, secrets, throttle, tokens, requireSession, prefix: "/api/auth" });
       await scoped.register(fileRoutes, { vault, requireSession, prefix: "/api" });
       await scoped.register(exportRoutes, { vault, requireSession, prefix: "/api" });
-      await scoped.register(secretRoutes, { secrets, authStore, session, requireSession, prefix: "/api" });
       if (deps.watcher) {
         await scoped.register(eventRoutes, { watcher: deps.watcher, tokens, requireSession, prefix: "/api" });
       }
