@@ -68,7 +68,7 @@ test("creates, renames and deletes notes and folders, and stores a dropped image
   expect(created.ok()).toBe(true);
   expect(((await created.json()) as { content: string }).content).toContain("Written in the browser.");
 
-  // Drop an image onto the editor: it lands in images/ and the note refers to it.
+  // Drop an image onto the editor: it lands in the note folder's _attachments/ directory.
   const box = await editor.boundingBox();
   expect(box).not.toBeNull();
   await editor.evaluate(
@@ -85,9 +85,9 @@ test("creates, renames and deletes notes and folders, and stores a dropped image
   await page.keyboard.press("Control+s");
   await expect(page.getByTestId("status")).toHaveAttribute("data-dirty", "false");
   const withImage = (await (await page.request.get(fsUrl(page, "text", notePath))).json()) as { content: string };
-  const imageRef = /\]\(((?:\.\.\/)*images\/[^)]+\.png)\)/.exec(withImage.content)?.[1];
+  const imageRef = /\]\((_attachments\/[^)]+\.png)\)/.exec(withImage.content)?.[1];
   expect(imageRef).toBeTruthy();
-  const imagePath = `images/${imageRef!.split("/").pop()}`;
+  const imagePath = `${folderPrefix}${imageRef}`;
   const stored = await page.request.get(fsUrl(page, "file", imagePath));
   expect(stored.ok()).toBe(true);
   expect(stored.headers()["content-type"]).toBe("image/png");

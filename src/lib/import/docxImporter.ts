@@ -25,9 +25,9 @@ function base64ToBytes(base64: string): Uint8Array {
 }
 
 /**
- * Converts a DOCX file to markdown. Embedded images are written into the
- * vault's root-level "images/" folder and referenced relative to the target
- * markdown file, matching how pasted editor images behave.
+ * Converts a DOCX file to markdown. Embedded images are written into an
+ * "_attachments/" folder next to the target markdown file, matching how
+ * pasted editor images behave.
  *
  * Called without the vault arguments the images are dropped instead — that is
  * the chat's mode, where nothing may be written to disk and an image would only
@@ -58,6 +58,7 @@ export async function convertDocxToMarkdown(
 
         const rootRelativePath = await saveImageToFolder(
           vaultRoot,
+          targetFilePath,
           `${imageBaseName}.${extension}`,
           mimeType,
           base64ToBytes(base64)

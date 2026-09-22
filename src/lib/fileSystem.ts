@@ -17,7 +17,7 @@ export type { MarkdownFileRecord };
 
 export const ABSOLUTE_URL_PATTERN = /^[a-z][a-z0-9+.-]*:/i;
 
-const IMAGES_FOLDER_NAME = "images";
+const ATTACHMENTS_FOLDER_NAME = "_attachments";
 
 const EXTENSION_BY_MIME_TYPE: Record<string, string> = {
   "image/png": "png",
@@ -305,33 +305,39 @@ async function resolveUniqueImagePath(
 }
 
 /**
- * Saves image data into the "images" folder at the root of the open folder
- * and returns the root-relative path (e.g. "images/foto.png").
+ * Saves image data into an "_attachments" folder next to the current markdown
+ * file and returns the saved image path relative to the vault root.
+ *
+ * Example: for "/vault/2026/09-2026.md" this writes
+ * "/vault/2026/_attachments/foto.png" and returns
+ * "2026/_attachments/foto.png".
  */
 export async function saveImageToFolder(
   folderPath: string,
+  currentFilePath: string,
   fileName: string,
   mimeType: string,
   data: Uint8Array
 ): Promise<string> {
-  const imagesDirPath = await join(folderPath, IMAGES_FOLDER_NAME);
-  await mkdir(imagesDirPath, { recursive: true });
+  const currentFileDir = await dirname(currentFilePath);
+  const attachmentsDirPath = await join(currentFileDir, ATTACHMENTS_FOLDER_NAME);
+  await mkdir(attachmentsDirPath, { recursive: true });
 
   const sanitizedFileName = sanitizeImageFileName(fileName, mimeType);
   const { filePath, fileName: uniqueFileName } = await resolveUniqueImagePath(
-    imagesDirPath,
+    attachmentsDirPath,
     sanitizedFileName
   );
 
   await writeFile(filePath, data);
 
-  return `${IMAGES_FOLDER_NAME}/${uniqueFileName}`;
+  return getRelativeDisplayPath(folderPath, filePath);
 }
 
 /**
- * Computes the markdown image path relative to the currently open file,
- * since "images/" always sits at the root while the markdown file itself
- * can be in a subfolder (e.g. "../images/foto.png").
+ * Computes a markdown image path relative to the currently open file from a
+ * vault-relative image path. For note-local attachments this normally turns
+ * "2026/_attachments/foto.png" into "_attachments/foto.png".
  */
 export async function getRelativeImageMarkdownPath(
   folderPath: string,
@@ -339,14 +345,27 @@ export async function getRelativeImageMarkdownPath(
   rootRelativeImagePath: string
 ): Promise<string> {
   const currentFileDir = await dirname(currentFilePath);
-  const currentDirRelative = getRelativeDisplayPath(folderPath, currentFileDir);
+  const currentDirRelative = normalizeDisplayPath(
+    getRelativeDisplayPath(folderPath, currentFileDir)
+  );
+  const targetRelative = normalizeDisplayPath(rootRelativeImagePath);
 
-  if (!currentDirRelative) {
-    return rootRelativeImagePath;
+  const currentSegments = currentDirRelative.split("/").filter(Boolean);
+  const targetSegments = targetRelative.split("/").filter(Boolean);
+
+  let commonSegments = 0;
+  while (
+    commonSegments < currentSegments.length &&
+    commonSegments < targetSegments.length &&
+    currentSegments[commonSegments] === targetSegments[commonSegments]
+  ) {
+    commonSegments += 1;
   }
 
-  const depth = currentDirRelative.split("/").length;
-  return `${"../".repeat(depth)}${rootRelativeImagePath}`;
+  const up = "../".repeat(currentSegments.length - commonSegments);
+  const down = targetSegments.slice(commonSegments).join("/");
+
+  return `${up}${down}`;
 }
 
 const IMAGE_MARKDOWN_PATTERN = /!\[[^\]]*\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g;
@@ -396,8 +415,7 @@ async function resolveImageRootRelativePaths(
 
 /**
  * Rewrites relative image references in markdown so they keep pointing at
- * the correct location after the file itself moved to a different folder
- * depth (the "images/" folder always stays at the vault root).
+ * the same image location after the markdown file itself moves.
  */
 export async function rewriteRelativeImagePaths(
   markdown: string,
@@ -464,10 +482,9 @@ export async function rewriteRelativeImagePaths(
 }
 
 /**
- * Deletes images from the "images" folder that were removed from the
- * markdown by saving this file — but only if no other document in the folder
- * still references them. Runs deliberately on save so undo before saving
- * still finds the file on disk.
+ * Deletes local image files that were removed from the markdown by saving this
+ * file — but only if no other document in the vault still references them.
+ * Runs deliberately on save so undo before saving still finds the file on disk.
  */
 export async function cleanupOrphanedImages(
   folderPath: string,

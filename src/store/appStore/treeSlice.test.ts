@@ -46,7 +46,7 @@ vi.mock("@/lib/vaultMeta", async (importOriginal) => ({
   writeSortMode: vi.fn(async () => undefined)
 }));
 
-const { writeMarkdownFile, renameMarkdownFile } = await import("@/lib/fileSystem");
+const { getRelativeImageMarkdownPath, writeMarkdownFile, renameMarkdownFile } = await import("@/lib/fileSystem");
 const { useAppStore } = await import("@/store/useAppStore");
 
 const VAULT = "/vault";
@@ -85,6 +85,18 @@ async function moveNote(sourcePath: string, targetParentDirectory: string) {
 async function moveNoteIntoSub() {
   return moveNote(NOTE, "/vault/sub");
 }
+
+describe("note-local attachment paths", () => {
+  it("uses a clean _attachments path for an image beside a note in a year folder", async () => {
+    await expect(
+      getRelativeImageMarkdownPath(
+        VAULT,
+        "/vault/2026/09-2026.md",
+        "2026/_attachments/photo.jpg"
+      )
+    ).resolves.toBe("_attachments/photo.jpg");
+  });
+});
 
 describe("moveTreeEntry image path rewriting", () => {
   beforeEach(() => {
