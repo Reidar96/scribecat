@@ -1,6 +1,6 @@
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 
-import { normalizeImageSrc } from "@/lib/chat/imageAttachments";
+import { normalizeImageSrc } from "@/lib/editor/imagePaths";
 import { findImagePosition } from "@/lib/editor/documentImages";
 import { findTextRange } from "@/lib/editor/textSearch";
 
