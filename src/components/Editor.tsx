@@ -1864,18 +1864,6 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         />
       ) : null}
 
-      <AiRewriteDialog
-        open={ai.aiDraft !== null}
-        mode={ai.aiDraft?.mode ?? "insert"}
-        selectedText={ai.aiDraft?.selectedText ?? ""}
-        selectedMarkdown={ai.aiDraft?.selectedMarkdown ?? ""}
-        isLoading={ai.isAiLoading}
-        voiceStartRequestId={ai.voiceStartRequestId}
-        onSubmit={(prompt, includeDocument, preserveFormatting) => {
-          void ai.runAiDraft(prompt, includeDocument, preserveFormatting);
-        }}
-        onCancel={ai.closeAiDraft}
-      />
 
 
     </div>
