@@ -98,8 +98,7 @@ function App() {
   const [editorFocusRequestId, setEditorFocusRequestId] = useState(0);
   const [sidebarFocusRequestId, setSidebarFocusRequestId] = useState(0);
   const [fileTreeSelection, setFileTreeSelection] = useState<BatchEntry[]>([]);
-  const [isAiLoading, setIsAiLoading] = useState(false);
-  const [isAiActionPending, setIsAiActionPending] = useState(false);
+  const isAiActionPending = false;
   // Phone layout only: the file list is a sheet over the document.
   const [isSidebarSheetOpen, setIsSidebarSheetOpen] = useState(false);
   const appVersion = useAppVersion();
@@ -688,11 +687,6 @@ function App() {
     registerImportedFiles(createdFilePaths, parentRelativePath, importInsertAfterBasename);
   };
 
-  useEffect(() => {
-    setIsAiLoading(false);
-    setIsAiActionPending(false);
-  }, [selectedFilePath]);
-
 
   // Custom key bindings are app-wide (shortcuts.json in the app config dir),
   // so they are loaded once at startup rather than per opened folder.
@@ -985,7 +979,6 @@ function App() {
 
               void join(folderPath, folderRelativePath).then(openFolderNoteSafely);
             }}
-            isAiLoading={isAiLoading}
             isSaving={isSaving}
             isDirty={isDirty}
             isSelectedFileMissing={isSelectedFileMissing}
@@ -998,8 +991,6 @@ function App() {
             onCanonicalMarkdown={adoptCanonicalFileContent}
             onRequestSidebarFocus={() => setSidebarFocusRequestId((id) => id + 1)}
             onRequestFileOpen={(targetFilePath) => void selectFilePathSafely(targetFilePath)}
-            onAiLoadingChange={setIsAiLoading}
-            onAiPendingChange={setIsAiActionPending}
             onZenModeRequest={enterZenMode}
             onVersionDiffRequest={handleVersionDiffRequest}
             onVersionRestoreRequest={(version) => void handleVersionRestore(version)}
