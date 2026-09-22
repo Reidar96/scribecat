@@ -4,11 +4,11 @@ import path from "node:path";
 import { VAULT_META_DIR_NAME } from "./paths.js";
 
 /**
- * The data folder's own version number, kept in `.scribedog/server-data-version`.
+ * The data folder's own version number, kept in `.scribecat/server-data-version`.
  *
  * It has nothing to do with the app's version: it counts only changes to the
- * layout on disk (the sidecars in `.scribedog/`, the server's files under
- * `.scribedog/server/`). Two things hang off it.
+ * layout on disk (the sidecars in `.scribecat/`, the server's files under
+ * `.scribecat/server/`). Two things hang off it.
  *
  * - **Migrations.** A folder written by an older server is brought forward on
  *   startup, once, before anything serves a request.
@@ -106,7 +106,7 @@ export async function ensureDataVersion(vaultPath: string, log: DataVersionLog):
 
   if (found > CURRENT_DATA_VERSION) {
     throw new DataVersionError(
-      `This data folder was written by a newer ScribeDog server (data version ${found}); this one understands version ${CURRENT_DATA_VERSION}. ` +
+      `This data folder was written by a newer ScribeCat server (data version ${found}); this one understands version ${CURRENT_DATA_VERSION}. ` +
         "Start the newer image again, or restore a backup of the folder from before the upgrade."
     );
   }
