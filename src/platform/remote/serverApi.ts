@@ -31,12 +31,6 @@ export type RemoteFileInfo = {
   birthtimeMs: number | null;
 };
 
-export type RemoteSecretStatus = {
-  state: "ready" | "locked";
-  ids: string[];
-  discardedAt: string | null;
-};
-
 /** One entry of the server's "signed-in devices" list; never the token itself. */
 export type RemoteAccessToken = {
   id: string;
@@ -204,10 +198,7 @@ export function createServerApi(transport: ServerTransport) {
         // A 401 here means "the current password is wrong", not "your session
         // ended"; it must not pull the login form over a settings dialog.
         isLogin: true
-      }),
-    secretStatus: () => request<RemoteSecretStatus>("/secrets"),
-    storeSecret: (id: string, value: string) =>
-      request<void>(`/secrets/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify({ value }) })
+      })
   };
 
   return { api, onUnauthorized };
