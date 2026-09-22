@@ -1,5 +1,4 @@
 mod portable;
-mod rag;
 mod remote_vault;
 mod voice;
 mod window_state;
@@ -370,7 +369,6 @@ pub fn run() {
         })
         .manage(FolderWatchState::default())
         .manage(voice::VoiceState::default())
-        .manage(rag::RagState::default())
         .manage(remote_vault::RemoteVaultState::default())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
@@ -443,16 +441,7 @@ pub fn run() {
             voice::download_voice_model,
             voice::start_voice_recording,
             voice::stop_voice_recording,
-            voice::cancel_voice_recording,
-            rag::rag_search_text,
-            rag::rag_read_note,
-            rag::rag_clear_cache,
-            rag::rag_index_status,
-            rag::rag_file_chunks,
-            rag::rag_store_file_vectors,
-            rag::rag_prune_index,
-            rag::rag_clear_index,
-            rag::rag_search_vectors
+            voice::cancel_voice_recording
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
