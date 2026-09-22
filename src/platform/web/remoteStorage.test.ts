@@ -68,8 +68,8 @@ describe("remote vault storage (web platform)", () => {
     expect(api.mkdir).toHaveBeenCalledWith("A/B", true);
 
     api.exists.mockResolvedValue(true);
-    await expect(remoteVaultStorage.exists("/vault/.scribedog/order.json")).resolves.toBe(true);
-    expect(api.exists).toHaveBeenCalledWith(".scribedog/order.json");
+    await expect(remoteVaultStorage.exists("/vault/.scribecat/order.json")).resolves.toBe(true);
+    expect(api.exists).toHaveBeenCalledWith(".scribecat/order.json");
 
     // The root itself is a valid directory to list.
     api.readDir.mockResolvedValue([{ name: "Notes", isDirectory: true, isFile: false, isSymlink: false }]);

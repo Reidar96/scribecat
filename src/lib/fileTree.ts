@@ -2,7 +2,7 @@ import type { MarkdownFileRecord } from "@/lib/fileSystem";
 import { isFolderNotePath } from "@/lib/folderNotes";
 import type { ManualOrderMap, SortMode } from "@/lib/vaultMeta";
 
-const TREE_EXPANSION_STORAGE_KEY_PREFIX = "scribedog:treeExpansion:";
+const TREE_EXPANSION_STORAGE_KEY_PREFIX = "scribecat:treeExpansion:";
 
 export type FileTreeFileNode = {
   kind: "file";

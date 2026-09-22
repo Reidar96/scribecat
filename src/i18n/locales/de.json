@@ -18,7 +18,7 @@
     "close": "Schließen"
   },
   "app": {
-    "shellLabel": "ScribeDog App-Shell",
+    "shellLabel": "ScribeCat App-Shell",
     "workspaceLabel": "Editor-Arbeitsbereich",
     "documentAreaLabel": "Dokumentenbereich",
     "navigateBack": "Zurück",
@@ -60,8 +60,8 @@
   "saveConflictDialog": {
     "eyebrow": "Datei wurde außerhalb geändert",
     "title": "Änderungen auf der Festplatte überschreiben?",
-    "descriptionWithName": "Die Datei {{fileLabel}} wurde inzwischen außerhalb von ScribeDog geändert.",
-    "descriptionGeneric": "Die Datei wurde inzwischen außerhalb von ScribeDog geändert.",
+    "descriptionWithName": "Die Datei {{fileLabel}} wurde inzwischen außerhalb von ScribeCat geändert.",
+    "descriptionGeneric": "Die Datei wurde inzwischen außerhalb von ScribeCat geändert.",
     "versioningOn": "Beim Überschreiben wird die Fassung von der Festplatte vorher als Version gesichert; du kannst sie danach im Versionsverlauf vergleichen.",
     "versioningOff": "Die Versionierung ist aus, die andere Fassung geht beim Überschreiben verloren.",
     "overwrite": "Überschreiben"
@@ -200,7 +200,7 @@
     "outlineDepthShort": "Welche Überschriftenebenen die Gliederung im Details-Panel auflistet.",
     "folderNotes": "Ordnernotizen",
     "folderNotesShort": "Ein Klick auf den Ordnernamen öffnet dessen eigene Notiz, der Pfeil klappt den Ordner auf.",
-    "folderNotesHint": "Die Notiz liegt als .scribedog-foldernote.md im Ordner selbst und wird erst beim ersten Speichern angelegt. Sie wandert also mit dem Ordner mit, auch wenn du ihn im Explorer verschiebst oder umbenennst. Der Schalter steuert nur die Darstellung im Baum, vorhandene Ordnernotizen bleiben beim Ausschalten erhalten.",
+    "folderNotesHint": "Die Notiz liegt als .scribecat-foldernote.md im Ordner selbst und wird erst beim ersten Speichern angelegt. Sie wandert also mit dem Ordner mit, auch wenn du ihn im Explorer verschiebst oder umbenennst. Der Schalter steuert nur die Darstellung im Baum, vorhandene Ordnernotizen bleiben beim Ausschalten erhalten.",
     "folderNotesHidden_one": "{{count}} Ordnernotiz ist ausgeblendet, weil dieses Feature deaktiviert ist.",
     "folderNotesHidden_other": "{{count}} Ordnernotizen sind ausgeblendet, weil dieses Feature deaktiviert ist.",
     "folderNotesEnableNow": "Jetzt aktivieren",
@@ -225,7 +225,7 @@
     "headingNumberingMarkerAlways": "Immer",
     "vaultScopeTitle": "Geöffneter Ordner: {{name}}",
     "vaultScopeNoFolder": "Kein Ordner geöffnet",
-    "vaultScopeHint": "Diese Einstellungen werden in {{name}}/.scribedog gespeichert und gelten nur dort. Andere Ordner haben ihre eigenen.",
+    "vaultScopeHint": "Diese Einstellungen werden in {{name}}/.scribecat gespeichert und gelten nur dort. Andere Ordner haben ihre eigenen.",
     "vaultScopeNoFolderHint": "Öffne einen Ordner, um diese Einstellungen zu verwenden: Sie werden mit dem Ordner gespeichert, nicht mit der Anwendung.",
     "reopenLastNote": "Zuletzt geöffnete Notiz beim Start wieder öffnen",
     "reopenLastNoteShort": "Merkt sich pro Ordner und pro Gerät, welche Notiz offen war.",
@@ -293,7 +293,7 @@
     "agentMaxIterationsHint": "Wie viele Werkzeug-Aufrufe ein Arbeitsschritt höchstens braucht, bevor abgebrochen wird. Höher bei umfangreichen Aufträgen, niedriger, wenn sich ein Modell verrennt.",
     "agentMaxPlanStepsLabel": "Schritte je Aufgabenliste",
     "agentMaxPlanStepsHint": "Obergrenze für die Länge einer Aufgabenliste.",
-    "localProviderBrowserHint": "{{provider}} läuft auf diesem Gerät, und der Browser spricht es direkt an. Deshalb muss es Anfragen von {{origin}} annehmen: {{instruction}}. Wird ScribeDog über eine öffentliche Adresse geöffnet, fragt der Browser außerdem einmal nach dem Zugriff auf das lokale Netzwerk.",
+    "localProviderBrowserHint": "{{provider}} läuft auf diesem Gerät, und der Browser spricht es direkt an. Deshalb muss es Anfragen von {{origin}} annehmen: {{instruction}}. Wird ScribeCat über eine öffentliche Adresse geöffnet, fragt der Browser außerdem einmal nach dem Zugriff auf das lokale Netzwerk.",
     "tabServer": "Server",
     "restoreWorkingSet": "Notizen in Arbeit beim nächsten Start wiederherstellen",
     "restoreWorkingSetShort": "Die Liste „In Arbeit“ wird pro Ordner gemerkt.",
@@ -303,7 +303,7 @@
     "autoAdmitWorkingSetHint": "Ungespeicherte Änderungen bleiben unabhängig davon erhalten und sind im Baum am gelben Punkt zu erkennen; ein Ring am zugeklappten Ordner zeigt, dass darin etwas ungespeichert ist."
   },
   "assistants": {
-    "defaultName": "ScribeDog (Standard)",
+    "defaultName": "ScribeCat (Standard)",
     "defaultDescription": "Dein treuer Begleiter beim Schreiben.",
     "addAssistant": "Assistent hinzufügen",
     "editAssistant": "Assistent bearbeiten",
@@ -364,14 +364,14 @@
       "whatTitle": "Was bringt mir das?",
       "whatBody": "Du kannst die KI nach Dingen fragen, die irgendwo in deinen Notizen stehen — auch wenn die betreffende Datei gerade gar nicht geöffnet ist. Zum Beispiel: „Was hatte ich mit Kunde A zum Liefertermin besprochen?“ Die KI durchsucht deine Notizen, antwortet aus dem, was dort steht, und zeigt dir darunter die Dateien an, aus denen sie das hat. Ein Klick darauf bringt dich an die Stelle.",
       "howTitle": "Wie funktioniert das?",
-      "howBody": "ScribeDog durchsucht deine Dokumente nach den Wörtern aus deiner Frage und gibt der KI die passendsten Textstellen zum Lesen. Die Suche selbst läuft vollständig auf deinem Gerät — es wird nichts vorbereitet, hochgeladen oder dauerhaft gespeichert. Deine Notizen bleiben unverändert; sie werden nur gelesen.",
+      "howBody": "ScribeCat durchsucht deine Dokumente nach den Wörtern aus deiner Frage und gibt der KI die passendsten Textstellen zum Lesen. Die Suche selbst läuft vollständig auf deinem Gerät — es wird nichts vorbereitet, hochgeladen oder dauerhaft gespeichert. Deine Notizen bleiben unverändert; sie werden nur gelesen.",
       "dataTitle": "Was passiert mit meinen Texten?",
-      "dataBody": "An die KI gehen nur die Textstellen, die zu deiner Frage gefunden wurden — nicht dein gesamter Ordner. Wohin sie gehen, hängt davon ab, was du unter „KI-Einstellungen“ eingestellt hast: Bei einem Dienst auf deinem eigenen Gerät (etwa Ollama) verlässt nichts den Computer. Bei einem Anbieter im Internet werden die gefundenen Textstellen dorthin übertragen. Ohne dass du die Wissensbasis einschaltest, passiert nichts davon — und an ScribeDog selbst wird zu keinem Zeitpunkt etwas gesendet.",
+      "dataBody": "An die KI gehen nur die Textstellen, die zu deiner Frage gefunden wurden — nicht dein gesamter Ordner. Wohin sie gehen, hängt davon ab, was du unter „KI-Einstellungen“ eingestellt hast: Bei einem Dienst auf deinem eigenen Gerät (etwa Ollama) verlässt nichts den Computer. Bei einem Anbieter im Internet werden die gefundenen Textstellen dorthin übertragen. Ohne dass du die Wissensbasis einschaltest, passiert nichts davon — und an ScribeCat selbst wird zu keinem Zeitpunkt etwas gesendet.",
       "undoTitle": "Wie werde ich das wieder los?",
       "undoBody": "Schalte den Regler oben einfach aus. Die KI kann dann sofort nur noch das Dokument sehen, das du gerade geöffnet hast. Du kannst auch einzelne Ordner dauerhaft ausschließen, indem du ihren Haken entfernst — private Ordner bleiben so außen vor, während der Rest weiter durchsuchbar ist. Deine Notizen selbst werden dabei nie verändert oder gelöscht.",
-      "howBodySemantic": "ScribeDog zerlegt deine Notizen in Abschnitte und lässt zu jedem Abschnitt eine Art Inhaltsangabe berechnen, mit der sich nach Bedeutung suchen lässt und nicht nur nach exakten Wörtern (Fachbegriff: Embeddings). Diese Inhaltsangaben liegen als Datei im Ordner .scribedog in deinem eigenen Ordner. Nach den Wörtern deiner Frage wird zusätzlich gesucht, und beide Ergebnisse werden zusammengeführt.",
-      "dataBodySemantic": "Zum Vorbereiten werden alle Dateien der markierten Ordner vollständig an den Dienst gesendet, den du für die Wissensbasis eingestellt hast; danach nur noch geänderte Dateien. Beim Beantworten gehen zusätzlich die gefundenen Textstellen an die KI. Bei einem Dienst auf deinem eigenen Gerät (etwa Ollama) verlässt dabei nichts den Computer, bei einem Anbieter im Internet schon. Ohne dass du die Wissensbasis einschaltest, passiert nichts davon — und an ScribeDog selbst wird zu keinem Zeitpunkt etwas gesendet, auch nicht zum Trainieren.",
-      "undoBodySemantic": "Schalte den Regler oben aus, dann sieht die KI sofort nur noch das geöffnete Dokument. Mit „Gespeichertes löschen“ verschwindet auch die vorbereitete Datei; sie liegt im Ordner .scribedog in deinem eigenen Ordner, und wer diesen Ordner löscht, ist alles davon los. Deine Notizen selbst werden dabei nie verändert oder gelöscht."
+      "howBodySemantic": "ScribeCat zerlegt deine Notizen in Abschnitte und lässt zu jedem Abschnitt eine Art Inhaltsangabe berechnen, mit der sich nach Bedeutung suchen lässt und nicht nur nach exakten Wörtern (Fachbegriff: Embeddings). Diese Inhaltsangaben liegen als Datei im Ordner .scribecat in deinem eigenen Ordner. Nach den Wörtern deiner Frage wird zusätzlich gesucht, und beide Ergebnisse werden zusammengeführt.",
+      "dataBodySemantic": "Zum Vorbereiten werden alle Dateien der markierten Ordner vollständig an den Dienst gesendet, den du für die Wissensbasis eingestellt hast; danach nur noch geänderte Dateien. Beim Beantworten gehen zusätzlich die gefundenen Textstellen an die KI. Bei einem Dienst auf deinem eigenen Gerät (etwa Ollama) verlässt dabei nichts den Computer, bei einem Anbieter im Internet schon. Ohne dass du die Wissensbasis einschaltest, passiert nichts davon — und an ScribeCat selbst wird zu keinem Zeitpunkt etwas gesendet, auch nicht zum Trainieren.",
+      "undoBodySemantic": "Schalte den Regler oben aus, dann sieht die KI sofort nur noch das geöffnete Dokument. Mit „Gespeichertes löschen“ verschwindet auch die vorbereitete Datei; sie liegt im Ordner .scribecat in deinem eigenen Ordner, und wer diesen Ordner löscht, ist alles davon los. Deine Notizen selbst werden dabei nie verändert oder gelöscht."
     },
     "warningCloudEmbedding": "Achtung: {{provider}} läuft nicht auf diesem Gerät. Beim Vorbereiten verlassen deine Notizen damit deinen Computer.",
     "warningSemantic": "Für die Suche nach Bedeutung werden deine Notizen einmal vollständig gelesen und an den unten eingestellten Dienst gesendet — nicht nur die Stellen, die zu einer Frage passen. Das wiederholt sich, sobald du eine Datei änderst.",
@@ -410,7 +410,7 @@
     },
     "rebuild": {
       "title": "Deine Wissensbasis muss neu aufgebaut werden",
-      "body": "Du hast das Modell gewechselt, das deine Notizen durchsuchbar macht. Was ScribeDog bisher über deine Notizen gespeichert hat, kann das neue Modell nicht verwenden — es wird gelöscht und neu erstellt.",
+      "body": "Du hast das Modell gewechselt, das deine Notizen durchsuchbar macht. Was ScribeCat bisher über deine Notizen gespeichert hat, kann das neue Modell nicht verwenden — es wird gelöscht und neu erstellt.",
       "transfer": "Dabei werden alle Dateien in den markierten Ordnern noch einmal vollständig gelesen und an {{service}} gesendet.",
       "notesUnchanged": "Deine Notizen selbst ändern sich dabei nicht.",
       "count": "Betroffene Dateien: {{files}}",
@@ -419,7 +419,7 @@
     "remoteVault": "Die Wissensbasis ist für ein Vault auf einem Server nicht verfügbar: der Index liest Notizen von der Festplatte dieses Rechners. Öffne das Vault auf dem Server als lokalen Ordner oder nutze es ohne Wissensbasis."
   },
   "versioningSettings": {
-    "scope": "Der Schalter gilt für die ganze Anwendung. Die Versionen selbst liegen im jeweils geöffneten Ordner unter .scribedog.",
+    "scope": "Der Schalter gilt für die ganze Anwendung. Die Versionen selbst liegen im jeweils geöffneten Ordner unter .scribecat.",
     "enable": "Versionierung aktivieren",
     "enableShort": "Bei jedem Speichern wird die vorherige Fassung der Datei aufgehoben.",
     "enableHint": "Speichern ohne Änderung legt keine doppelte Version an. Wird die Versionierung ausgeschaltet, entstehen keine neuen Versionen, der vorhandene Verlauf bleibt erhalten.",
@@ -849,7 +849,7 @@
   },
   "updateNotification": {
     "title": "Update {{version}} verfügbar",
-    "body": "Eine neue Version von ScribeDog steht bereit.",
+    "body": "Eine neue Version von ScribeCat steht bereit.",
     "install": "Installieren",
     "installing": "Installiert …",
     "installError": "Das Update konnte nicht installiert werden.",
@@ -1024,8 +1024,8 @@
     "pageBreakBetweenChapters": "Jedes Kapitel auf einer neuen Seite beginnen"
   },
   "login": {
-    "title": "ScribeDog",
-    "lead": "Melde dich mit dem Passwort dieses ScribeDog-Servers an.",
+    "title": "ScribeCat",
+    "lead": "Melde dich mit dem Passwort dieses ScribeCat-Servers an.",
     "sessionExpired": "Deine Sitzung ist abgelaufen. Melde dich erneut an, um weiterzuarbeiten; ungespeicherte Änderungen bleiben erhalten.",
     "password": "Passwort",
     "submit": "Anmelden",
@@ -1056,7 +1056,7 @@
     "certificateDownload": "Zertifikat herunterladen"
   },
   "platform": {
-    "notAvailable": "Diese Funktion ist in dieser Ausgabe von ScribeDog nicht verfügbar.",
+    "notAvailable": "Diese Funktion ist in dieser Ausgabe von ScribeCat nicht verfügbar.",
     "serverNotYetAvailable": "Diese Aktion ist in der Server-Edition noch nicht verfügbar.",
     "pathOutsideVault": "„{{path}}“ liegt außerhalb des Vaults."
   },
@@ -1096,8 +1096,8 @@
     "urlMustBeHttps": "Die Server-Adresse muss HTTPS verwenden; nur localhost darf einfaches HTTP nutzen.",
     "unknownServer": "Dieser Server steht nicht in der Liste.",
     "notSignedIn": "Für diesen Server ist kein Zugriffsschlüssel gespeichert.",
-    "defaultDeviceName": "ScribeDog Desktop",
-    "defaultDeviceNameOn": "ScribeDog auf {{os}}",
+    "defaultDeviceName": "ScribeCat Desktop",
+    "defaultDeviceNameOn": "ScribeCat auf {{os}}",
     "settingsTitle": "Server-Vaults",
     "settingsHint": "Server, auf denen diese App ein Vault öffnen kann. Hinzufügen geht über das Vault-Menü in der Seitenleiste. Jeder Server zeigt die Geräte mit Zugriffsschlüssel; ein verlorenes Gerät widerrufst du dort.",
     "none": "Noch kein Server hinzugefügt.",

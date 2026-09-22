@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from "react";
 
-const DETAILS_PANEL_WIDTH_STORAGE_KEY = "scribedog-details-panel-width";
+const DETAILS_PANEL_WIDTH_STORAGE_KEY = "scribecat-details-panel-width";
 const MIN_DETAILS_PANEL_WIDTH = 220;
 const MAX_DETAILS_PANEL_WIDTH = 480;
 const DEFAULT_DETAILS_PANEL_WIDTH = 240;

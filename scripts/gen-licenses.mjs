@@ -118,13 +118,13 @@ function readProductionLicenses(cwd) {
 
 const pkgs = { ...readProductionLicenses(root), ...readProductionLicenses(resolve(root, 'server')) };
 
-let out = `# Third-Party Licenses\n\nScribeDog bundles the following third-party software. Each component is the property of its respective authors and is licensed under the terms below.\n\n## JavaScript / npm packages\n\n`;
+let out = `# Third-Party Licenses\n\nScribeCat bundles the following third-party software. Each component is the property of its respective authors and is licensed under the terms below.\n\n## JavaScript / npm packages\n\n`;
 
 const names = Object.keys(pkgs).sort();
 let npmCount = 0;
 for (const name of names) {
   const p = pkgs[name];
-  if (p.path && [root, resolve(root, 'server')].some((self) => resolve(p.path).toLowerCase() === self.toLowerCase())) continue; // scribedog itself
+  if (p.path && [root, resolve(root, 'server')].some((self) => resolve(p.path).toLowerCase() === self.toLowerCase())) continue; // scribecat itself
   npmCount++;
   out += `### ${name}\n\n`;
   out += `- License: ${p.licenses}\n`;
@@ -159,7 +159,7 @@ const meta = JSON.parse(
 out += `## Rust crates (Tauri backend)\n\n| Crate | Version | License |\n|---|---|---|\n`;
 const seen = new Set();
 for (const p of meta.packages.sort((a, b) => a.name.localeCompare(b.name))) {
-  if (p.name === 'scribedog') continue;
+  if (p.name === 'scribecat') continue;
   const key = p.name + p.version;
   if (seen.has(key)) continue;
   seen.add(key);

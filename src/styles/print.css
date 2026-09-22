@@ -10,22 +10,22 @@
 }
 
 @media print {
-  html.scribedog-printing {
+  html.scribecat-printing {
     color-scheme: light !important;
   }
 
-  html.scribedog-printing body {
+  html.scribecat-printing body {
     background: #ffffff !important;
     overflow: visible !important;
     /* The UI zoom level must not scale the printed document. */
     zoom: 1 !important;
   }
 
-  html.scribedog-printing #root {
+  html.scribecat-printing #root {
     display: none !important;
   }
 
-  html.scribedog-printing .print-root {
+  html.scribecat-printing .print-root {
     display: block;
     color: #1f2328;
     background: #ffffff;

@@ -23,8 +23,8 @@ reverse proxy the count follows `X-Forwarded-For`, so one attacker does not
 lock out the household. The lock applies to every route that takes the
 password: the login, the password change and the desktop app's key request.
 
-**Forgotten it?** Delete `.scribedog/server/auth.json` in the data folder,
-set `SCRIBEDOG_INIT_PASSWORD` again and restart. Your notes are untouched,
+**Forgotten it?** Delete `.scribecat/server/auth.json` in the data folder,
+set `SCRIBECAT_INIT_PASSWORD` again and restart. Your notes are untouched,
 but the stored API keys are not: they are encrypted with a key derived from
 the old password and cannot be recovered. The app says so once and asks you
 to enter them again. Desktop apps need to be signed in again as well.
@@ -78,7 +78,7 @@ foreign page.
 
 ## API keys of the AI providers
 
-They are stored encrypted in `.scribedog/server/secrets.json`, under a key
+They are stored encrypted in `.scribecat/server/secrets.json`, under a key
 derived from your login password, and only ever leave the server on their
 way to the provider you chose. The browser sees a placeholder. See [AI](ai.md).
 
@@ -93,7 +93,7 @@ access keys would travel in clear text. The bundled Caddy provides HTTPS; see
 The notes are plain Markdown files in a folder on the host, on purpose:
 readable with any editor, greppable, free of lock-in. Consequences:
 
-- **Whoever can read the folder can read the notes**, whether ScribeDog is
+- **Whoever can read the folder can read the notes**, whether ScribeCat is
   running or not. Folder permissions keep other users of the host out; full
   disk encryption keeps out whoever takes the disk. See
   [Your data and backups](data-and-backups.md).
@@ -101,6 +101,6 @@ readable with any editor, greppable, free of lock-in. Consequences:
   and the server edition does not try to: that would take encrypting the
   notes in the browser, which would break search and the agent's file tools.
   The host's administrator is someone you trust, or yourself.
-- **The password hash is readable** in `.scribedog/server/auth.json`. That is
+- **The password hash is readable** in `.scribecat/server/auth.json`. That is
   what a hash is for; it is scrypt with a random salt, and a stolen hash does
   not sign anyone in.

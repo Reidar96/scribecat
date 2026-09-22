@@ -131,7 +131,7 @@ function findListTokenIndex(tokens: MarkdownItToken[], itemIndex: number): numbe
 // non-empty one. Escaped brackets ("- \[ \]") keep their backslashes in
 // token.content and stay plain text, same as in markdown-it-task-lists.
 export function emptyTaskItemMarkdownItPlugin(md: MarkdownIt): void {
-  md.core.ruler.after("inline", "scribedog_empty_task_item", (state) => {
+  md.core.ruler.after("inline", "scribecat_empty_task_item", (state) => {
     const tokens = state.tokens;
 
     for (let i = 2; i < tokens.length; i++) {

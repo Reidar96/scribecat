@@ -29,7 +29,7 @@ export async function printMarkdown(markdown: string, markdownFilePath: string |
   printRoot.innerHTML = renderHtmlBody(blocks, images);
 
   document.body.appendChild(printRoot);
-  document.documentElement.classList.add("scribedog-printing");
+  document.documentElement.classList.add("scribecat-printing");
 
   let cleanedUp = false;
   const cleanup = () => {
@@ -37,7 +37,7 @@ export async function printMarkdown(markdown: string, markdownFilePath: string |
       return;
     }
     cleanedUp = true;
-    document.documentElement.classList.remove("scribedog-printing");
+    document.documentElement.classList.remove("scribecat-printing");
     printRoot.remove();
   };
 

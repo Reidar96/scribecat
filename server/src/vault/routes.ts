@@ -74,7 +74,7 @@ export function vaultErrorHandler(error: FastifyError, request: FastifyRequest, 
  * The file API. `/files` lists the notes; everything under `/fs` is the
  * frontend's filesystem layer (`VaultStorage` in src/platform/types.ts)
  * one call per primitive, on any path inside the vault except the server's
- * own `.scribedog/server/`. Mounted under `${basePath}/api`; every route runs
+ * own `.scribecat/server/`. Mounted under `${basePath}/api`; every route runs
  * behind requireSession.
  */
 export async function fileRoutes(app: FastifyInstance, options: FileRoutesOptions): Promise<void> {

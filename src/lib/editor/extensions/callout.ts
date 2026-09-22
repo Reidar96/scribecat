@@ -52,7 +52,7 @@ const CALLOUT_MARKER_PATTERN = /^\s*\[!(\w+)\]\s*/;
 // a blockquote, but the `[!VARIANT]` marker line gets stripped so it no longer
 // shows up as literal text.
 export function calloutMarkdownItPlugin(md: MarkdownIt): void {
-  md.core.ruler.after("inline", "scribedog_callout", (state) => {
+  md.core.ruler.after("inline", "scribecat_callout", (state) => {
     const tokens = state.tokens;
 
     for (let i = 0; i < tokens.length - 2; i++) {

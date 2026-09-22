@@ -4,7 +4,7 @@ import { listen } from "@tauri-apps/api/event";
 import type { RemoteVaultsApi } from "@/platform/types";
 
 /** Fired by the Rust live-update client when the server refuses the token. */
-export const REMOTE_VAULT_UNAUTHORIZED_EVENT = "scribedog-remote-vault-unauthorized";
+export const REMOTE_VAULT_UNAUTHORIZED_EVENT = "scribecat-remote-vault-unauthorized";
 
 type RustRequest = {
   url: string;

@@ -242,7 +242,7 @@ const LINE_BREAK_SPLIT_PATTERN = /(<br\s*\/?>)/i;
 // stays text, so the two can't be confused. Exported for the export
 // pipeline, which parses the same files with its own markdown-it.
 export function tableLineBreakMarkdownItPlugin(md: MarkdownIt): void {
-  md.core.ruler.after("inline", "scribedog_table_line_break", (state) => {
+  md.core.ruler.after("inline", "scribecat_table_line_break", (state) => {
     let tableDepth = 0;
 
     for (const token of state.tokens) {

@@ -18,7 +18,7 @@
     "close": "关闭"
   },
   "app": {
-    "shellLabel": "ScribeDog 应用外壳",
+    "shellLabel": "ScribeCat 应用外壳",
     "workspaceLabel": "编辑器工作区",
     "documentAreaLabel": "文档区域",
     "navigateBack": "后退",
@@ -60,8 +60,8 @@
   "saveConflictDialog": {
     "eyebrow": "文件已在应用外被修改",
     "title": "覆盖磁盘上的更改？",
-    "descriptionWithName": "文件 {{fileLabel}} 在此期间已在 ScribeDog 之外被修改。",
-    "descriptionGeneric": "该文件在此期间已在 ScribeDog 之外被修改。",
+    "descriptionWithName": "文件 {{fileLabel}} 在此期间已在 ScribeCat 之外被修改。",
+    "descriptionGeneric": "该文件在此期间已在 ScribeCat 之外被修改。",
     "versioningOn": "覆盖前会先把磁盘上的版本保存到历史记录，之后可以对比两者。",
     "versioningOff": "版本管理已关闭，覆盖后另一个版本将丢失。",
     "overwrite": "覆盖"
@@ -200,7 +200,7 @@
     "outlineDepthShort": "详情面板中的大纲显示哪些标题层级。",
     "folderNotes": "文件夹笔记",
     "folderNotesShort": "点击文件夹名称即可打开它自己的笔记，箭头用于展开文件夹。",
-    "folderNotesHint": "笔记以 .scribedog-foldernote.md 的形式保存在文件夹内部，首次保存时才会创建，因此会随文件夹一起移动，即使你在资源管理器或访达中移动或重命名该文件夹。此开关只控制树中的显示；关闭后，现有的文件夹笔记会保留。",
+    "folderNotesHint": "笔记以 .scribecat-foldernote.md 的形式保存在文件夹内部，首次保存时才会创建，因此会随文件夹一起移动，即使你在资源管理器或访达中移动或重命名该文件夹。此开关只控制树中的显示；关闭后，现有的文件夹笔记会保留。",
     "folderNotesHidden_other": "由于此功能已关闭，{{count}} 条文件夹笔记被隐藏。",
     "folderNotesEnableNow": "立即开启",
     "outlineDepthAll": "所有标题",
@@ -224,7 +224,7 @@
     "headingNumberingMarkerAlways": "始终显示",
     "vaultScopeTitle": "打开的文件夹：{{name}}",
     "vaultScopeNoFolder": "未打开文件夹",
-    "vaultScopeHint": "这些设置保存在 {{name}}/.scribedog 中，仅对该文件夹生效。其他文件夹有各自的设置。",
+    "vaultScopeHint": "这些设置保存在 {{name}}/.scribecat 中，仅对该文件夹生效。其他文件夹有各自的设置。",
     "vaultScopeNoFolderHint": "请先打开一个文件夹再使用这些设置：它们随文件夹保存，而不是随应用程序保存。",
     "reopenLastNote": "启动时重新打开上次的笔记",
     "reopenLastNoteShort": "按文件夹和设备分别记住上次打开的是哪条笔记。",
@@ -292,7 +292,7 @@
     "agentMaxIterationsHint": "一个工作步骤最多可以调用多少次工具，超过就中止。任务大时调高，模型绕圈时调低。",
     "agentMaxPlanStepsLabel": "任务清单的步骤数",
     "agentMaxPlanStepsHint": "任务清单长度的上限。",
-    "localProviderBrowserHint": "{{provider}} 在此设备上运行，浏览器直接与它通信，因此它必须接受来自 {{origin}} 的请求：{{instruction}}。如果通过公网地址打开 ScribeDog，浏览器还会询问一次是否允许访问本地网络。",
+    "localProviderBrowserHint": "{{provider}} 在此设备上运行，浏览器直接与它通信，因此它必须接受来自 {{origin}} 的请求：{{instruction}}。如果通过公网地址打开 ScribeCat，浏览器还会询问一次是否允许访问本地网络。",
     "tabServer": "服务器",
     "restoreWorkingSet": "下次启动时恢复进行中的笔记",
     "restoreWorkingSetShort": "“进行中”列表按文件夹记住。",
@@ -302,7 +302,7 @@
     "autoAdmitWorkingSetHint": "未保存的更改无论如何都会保留，并在树中以黄点显示；折叠文件夹上的圆环表示其中有未保存的内容。"
   },
   "assistants": {
-    "defaultName": "ScribeDog (默认)",
+    "defaultName": "ScribeCat (默认)",
     "defaultDescription": "你忠实的写作伙伴。",
     "addAssistant": "添加助手",
     "editAssistant": "编辑助手",
@@ -363,14 +363,14 @@
       "whatTitle": "它有什么用？",
       "whatBody": "你可以向 AI 询问记在笔记中某处的内容，即使那个文件根本没有打开。例如：“我和客户 A 就交付日期谈定了什么？”AI 会搜索你的笔记，根据其中写的内容作答，并在下方列出信息的来源文件。点击即可直接跳转到相应位置。",
       "howTitle": "它是如何工作的？",
-      "howBody": "ScribeDog 会在你的文档中搜索问题里的词语，并把最贴切的段落交给 AI 阅读。搜索本身完全在你的设备上运行——不会预先处理、上传或长期保存任何内容。你的笔记不会被改动，只会被读取。",
+      "howBody": "ScribeCat 会在你的文档中搜索问题里的词语，并把最贴切的段落交给 AI 阅读。搜索本身完全在你的设备上运行——不会预先处理、上传或长期保存任何内容。你的笔记不会被改动，只会被读取。",
       "dataTitle": "我的文字会怎样被处理？",
-      "dataBody": "只有针对你的问题找到的段落会交给 AI，而不是整个文件夹。它们的去向取决于你在“AI 设置”中的配置：若使用运行在本机上的服务（例如 Ollama），任何内容都不会离开这台电脑；若使用互联网上的服务商，找到的段落会被传送过去。只要你不开启知识库，这些都不会发生——而且任何内容都绝不会发送给 ScribeDog 本身。",
+      "dataBody": "只有针对你的问题找到的段落会交给 AI，而不是整个文件夹。它们的去向取决于你在“AI 设置”中的配置：若使用运行在本机上的服务（例如 Ollama），任何内容都不会离开这台电脑；若使用互联网上的服务商，找到的段落会被传送过去。只要你不开启知识库，这些都不会发生——而且任何内容都绝不会发送给 ScribeCat 本身。",
       "undoTitle": "如何撤销？",
       "undoBody": "只需关闭上方的开关。AI 会立即恢复为只能看到你打开的文档。你也可以通过取消勾选来永久排除个别文件夹——这样私人文件夹被排除在外，其余部分仍可被检索。你的笔记本身绝不会因此被修改或删除。",
-      "howBodySemantic": "ScribeDog 会把你的笔记拆分成段落，并为每个段落计算一种“内容摘要”，从而可以按含义搜索，而不只是按确切的词（专业术语叫 Embeddings）。这些摘要保存在你自己文件夹内的 .scribedog 文件夹中的一个文件里。你问题中的词语仍会被搜索，两种结果会合并在一起。",
-      "dataBodySemantic": "准备时，已勾选文件夹中的所有文件都会被完整发送到你为知识库设置的服务；之后只发送有改动的文件。回答时，找到的文本片段还会发送给 AI。如果服务在你自己的设备上运行（例如 Ollama），这些内容不会离开电脑；如果是互联网上的提供商，则会。只要你不启用知识库，这些都不会发生——并且任何时候都不会向 ScribeDog 本身发送任何内容，也不会用于训练。",
-      "undoBodySemantic": "关掉上方的开关，AI 立刻就只能看到你当前打开的文档。使用“删除已保存的数据”也会删除已准备的文件；它位于你自己文件夹内的 .scribedog 文件夹中，删除该文件夹即可清除全部内容。你的笔记本身永远不会被修改或删除。"
+      "howBodySemantic": "ScribeCat 会把你的笔记拆分成段落，并为每个段落计算一种“内容摘要”，从而可以按含义搜索，而不只是按确切的词（专业术语叫 Embeddings）。这些摘要保存在你自己文件夹内的 .scribecat 文件夹中的一个文件里。你问题中的词语仍会被搜索，两种结果会合并在一起。",
+      "dataBodySemantic": "准备时，已勾选文件夹中的所有文件都会被完整发送到你为知识库设置的服务；之后只发送有改动的文件。回答时，找到的文本片段还会发送给 AI。如果服务在你自己的设备上运行（例如 Ollama），这些内容不会离开电脑；如果是互联网上的提供商，则会。只要你不启用知识库，这些都不会发生——并且任何时候都不会向 ScribeCat 本身发送任何内容，也不会用于训练。",
+      "undoBodySemantic": "关掉上方的开关，AI 立刻就只能看到你当前打开的文档。使用“删除已保存的数据”也会删除已准备的文件；它位于你自己文件夹内的 .scribecat 文件夹中，删除该文件夹即可清除全部内容。你的笔记本身永远不会被修改或删除。"
     },
     "warningCloudEmbedding": "注意：{{provider}} 不在本机运行。准备笔记时，你的笔记会离开这台电脑。",
     "warningSemantic": "语义搜索需要把你的笔记完整读取一次并发送到下方设置的服务，而不仅仅是与问题相关的片段。每当你修改文件时，这一过程会再次进行。",
@@ -409,7 +409,7 @@
     },
     "rebuild": {
       "title": "你的知识库需要重新建立",
-      "body": "你更换了让笔记可被搜索的模型。ScribeDog 此前保存的内容无法被新模型使用——它将被删除并重新创建。",
+      "body": "你更换了让笔记可被搜索的模型。ScribeCat 此前保存的内容无法被新模型使用——它将被删除并重新创建。",
       "transfer": "所有已勾选文件夹中的文件都会被再次完整读取并发送到 {{service}}。",
       "notesUnchanged": "你的笔记本身不会因此改变。",
       "count": "涉及的文件：{{files}}",
@@ -418,7 +418,7 @@
     "remoteVault": "知识库不适用于服务器上的保管库：索引从这台电脑的磁盘读取笔记。请在服务器上将保管库作为本地文件夹打开，或在不使用知识库的情况下使用它。"
   },
   "versioningSettings": {
-    "scope": "此开关对整个应用程序生效。版本本身保存在当前打开的文件夹的 .scribedog 中。",
+    "scope": "此开关对整个应用程序生效。版本本身保存在当前打开的文件夹的 .scribecat 中。",
     "enable": "启用版本管理",
     "enableShort": "每次保存都会先保留文件之前的内容。",
     "enableHint": "没有改动的保存不会创建重复版本。关闭版本管理只会停止创建新版本；现有的历史记录会保留。",
@@ -848,7 +848,7 @@
   },
   "updateNotification": {
     "title": "有可用更新 {{version}}",
-    "body": "ScribeDog 的新版本已准备就绪。",
+    "body": "ScribeCat 的新版本已准备就绪。",
     "install": "安装",
     "installing": "安装中……",
     "installError": "无法安装更新。",
@@ -1023,8 +1023,8 @@
     "pageBreakBetweenChapters": "每章另起一页"
   },
   "login": {
-    "title": "ScribeDog",
-    "lead": "使用此 ScribeDog 服务器的密码登录。",
+    "title": "ScribeCat",
+    "lead": "使用此 ScribeCat 服务器的密码登录。",
     "sessionExpired": "会话已过期。请重新登录以继续；未保存的更改会保留。",
     "password": "密码",
     "submit": "登录",
@@ -1055,7 +1055,7 @@
     "certificateDownload": "下载证书"
   },
   "platform": {
-    "notAvailable": "此功能在这个版本的 ScribeDog 中不可用。",
+    "notAvailable": "此功能在这个版本的 ScribeCat 中不可用。",
     "serverNotYetAvailable": "此操作在服务器版中暂不可用。",
     "pathOutsideVault": "“{{path}}”位于笔记库之外。"
   },
@@ -1095,8 +1095,8 @@
     "urlMustBeHttps": "服务器地址必须使用 HTTPS；只有 localhost 可以使用普通 HTTP。",
     "unknownServer": "此服务器不在列表中。",
     "notSignedIn": "此服务器没有保存的访问密钥。",
-    "defaultDeviceName": "ScribeDog 桌面版",
-    "defaultDeviceNameOn": "{{os}} 上的 ScribeDog",
+    "defaultDeviceName": "ScribeCat 桌面版",
+    "defaultDeviceNameOn": "{{os}} 上的 ScribeCat",
     "settingsTitle": "服务器保管库",
     "settingsHint": "此应用可以打开保管库的服务器。在侧边栏的保管库菜单中添加。每个服务器会列出持有访问密钥的设备；丢失的设备可在那里撤销。",
     "none": "尚未添加任何服务器。",

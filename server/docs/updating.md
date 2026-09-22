@@ -10,7 +10,7 @@ Images are published per version, with no `latest` tag: you pick a version
 and keep it until you decide to move. Put the one you want in `.env`,
 
 ```dotenv
-SCRIBEDOG_IMAGE=ghcr.io/snooky234/scribedog-server:0.15.1
+SCRIBECAT_IMAGE=ghcr.io/snooky234/scribecat-server:0.15.1
 ```
 
 and update with
@@ -39,7 +39,7 @@ the other way round), the release notes say so.
 ## Going back a version
 
 Going back is fine as long as the data folder's layout has not moved on. The
-server writes its layout version to `.scribedog/server-data-version`, brings
+server writes its layout version to `.scribecat/server-data-version`, brings
 an older folder forward on start, and refuses to start on a folder written by
 a newer server rather than reading a format it does not know. If that
 happens, start the newer version again, or restore the folder from a backup

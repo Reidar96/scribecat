@@ -1,6 +1,6 @@
 # Multiple users on one host
 
-ScribeDog has one password and one vault per instance, on purpose: there are
+ScribeCat has one password and one vault per instance, on purpose: there are
 no accounts, no sharing rules and no permissions to get wrong. Two or more
 people on one box therefore get one instance each, every one under its own
 path prefix, behind a single shared Caddy.
@@ -26,17 +26,17 @@ Pick the section below that matches your situation.
 ### 1. Get the three files the compose stack needs
 
 ```bash
-mkdir -p scribedog-multi && cd scribedog-multi
-curl -fsSL -o docker-compose.yml https://raw.githubusercontent.com/snooky234/scribedog/main/server/examples/multi-instance/docker-compose.yml
-curl -fsSL -o Caddyfile https://raw.githubusercontent.com/snooky234/scribedog/main/server/examples/multi-instance/Caddyfile
-curl -fsSL -o .env https://raw.githubusercontent.com/snooky234/scribedog/main/server/examples/multi-instance/.env.example
+mkdir -p scribecat-multi && cd scribecat-multi
+curl -fsSL -o docker-compose.yml https://raw.githubusercontent.com/snooky234/scribecat/main/server/examples/multi-instance/docker-compose.yml
+curl -fsSL -o Caddyfile https://raw.githubusercontent.com/snooky234/scribecat/main/server/examples/multi-instance/Caddyfile
+curl -fsSL -o .env https://raw.githubusercontent.com/snooky234/scribecat/main/server/examples/multi-instance/.env.example
 ```
 
 Starting with a different number of people than two? Do this next, before
 your first `docker compose up`:
 
 - **Just one person:** delete `PERSON2`'s parts: its five `PERSON2_*`
-  lines in `.env`, its `scribedog-2` block in `docker-compose.yml` (plus its
+  lines in `.env`, its `scribecat-2` block in `docker-compose.yml` (plus its
   entry in `depends_on` and in Caddy's `environment:`), and its `handle`
   block in the Caddyfile.
 - **More than two people:** copy a `PERSON<N>` slot the same way
@@ -57,10 +57,10 @@ your first `docker compose up`:
   moving the folder on disk yourself first (see [Moving an existing single
   instance here](#moving-an-existing-single-instance-here) for the same
   move done on purpose).
-- `SCRIBEDOG_SITE_ADDRESS`: the box's LAN IP or host name, not `localhost`,
+- `SCRIBECAT_SITE_ADDRESS`: the box's LAN IP or host name, not `localhost`,
   unless every person opens the app on this same machine (see
   [Getting started](getting-started.md#install)).
-- `SCRIBEDOG_HTTP_PORT` / `SCRIBEDOG_HTTPS_PORT`: only if 80/443 are
+- `SCRIBECAT_HTTP_PORT` / `SCRIBECAT_HTTPS_PORT`: only if 80/443 are
   already used on this host (see
   [Troubleshooting](getting-started.md#troubleshooting)).
 
@@ -102,11 +102,11 @@ applies unchanged, one instance at a time:
 ## Adding another person later
 
 1. Open `docker-compose.yml` and:
-   - Copy the last `scribedog-<N>` service block, bump the number
-     (`scribedog-2` copied becomes `scribedog-3`), and point its
-     `SCRIBEDOG_BASE_PATH`, `SCRIBEDOG_INIT_PASSWORD`, `PUID`, `PGID` and
+   - Copy the last `scribecat-<N>` service block, bump the number
+     (`scribecat-2` copied becomes `scribecat-3`), and point its
+     `SCRIBECAT_BASE_PATH`, `SCRIBECAT_INIT_PASSWORD`, `PUID`, `PGID` and
      volume at the matching `PERSON3_*` variables.
-   - Add `- scribedog-3` to the `caddy` service's `depends_on:` list.
+   - Add `- scribecat-3` to the `caddy` service's `depends_on:` list.
    - Add `PERSON3_BASE_PATH: ${PERSON3_BASE_PATH:-/PERSON3_UNSET}` to the
      `caddy` service's `environment:` block, next to
      `PERSON1_BASE_PATH` / `PERSON2_BASE_PATH`.
@@ -114,7 +114,7 @@ applies unchanged, one instance at a time:
    again just the next number:
    ```caddyfile
    handle {$PERSON3_BASE_PATH:/PERSON3_UNSET}* {
-       reverse_proxy scribedog-3:3000
+       reverse_proxy scribecat-3:3000
    }
    ```
 3. Open `.env` and add the `PERSON3_*` group next to the other two:
@@ -152,20 +152,20 @@ step 4, and even then it is a move, not a copy.
 1. Stop the single instance: `docker compose down` in its folder.
 2. Get the three multi-instance files into a new folder, as in step 1 of
    "Setting it up from scratch" above.
-3. Move that person's data folder (`./scribedog-data` in the single-instance
+3. Move that person's data folder (`./scribecat-data` in the single-instance
    default) next to the new files, and change `PERSON1_DATA_DIR` in `.env` to
-   its name (e.g. `PERSON1_DATA_DIR=scribedog-data`) so nothing needs
+   its name (e.g. `PERSON1_DATA_DIR=scribecat-data`) so nothing needs
    renaming on disk. Set `PERSON1_BASE_PATH` to a path for that person (their
-   old address if `SCRIBEDOG_BASE_PATH` was already set, otherwise pick one,
+   old address if `SCRIBECAT_BASE_PATH` was already set, otherwise pick one,
    e.g. `/anna`) and `PERSON1_PUID`/`PERSON1_PGID` to whatever the single
    instance used (its own `.env` already had these).
 4. Fill in `PERSON2_*` for the second person (see step 2 of "Setting it up
-   from scratch"), and match `SCRIBEDOG_SITE_ADDRESS` and the ports to what
+   from scratch"), and match `SCRIBECAT_SITE_ADDRESS` and the ports to what
    the existing instance already had.
 5. Start it: `docker compose up -d` (or `--build` if you build from source).
 
 If the single instance served the bare `https://<host>/` before
-(`SCRIBEDOG_BASE_PATH` empty), it now answers under `PERSON1_BASE_PATH`
+(`SCRIBECAT_BASE_PATH` empty), it now answers under `PERSON1_BASE_PATH`
 instead. Update any bookmarks and the desktop app's server-vault connection
 to the new address.
 
@@ -179,7 +179,7 @@ bundled one:
   otherwise neither find its assets nor scope its cookie.
 - A browser that opens the site by IP address sends no server name, and with
   more than one site Caddy needs `default_sni` to pick a certificate (see
-  `SCRIBEDOG_DEFAULT_SNI` in [Configuration](configuration.md)).
+  `SCRIBECAT_DEFAULT_SNI` in [Configuration](configuration.md)).
 
 ## Keeping the folders apart
 

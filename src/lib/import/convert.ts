@@ -21,7 +21,7 @@ export const CONVERT_DOCUMENT_EXTENSIONS = ["docx", "pdf"] as const;
 
 // Transcribed by the configured AI model, so these only work with a model set
 // up — the callers check isAiOcrConfigured() before offering them.
-export const CONVERT_IMAGE_EXTENSIONS = ["png", "jpg", "jpeg", "gif", "webp"] as const;
+export const CONVERT_IMAGE_EXTENSIONS = [] as const;
 
 // Read as text and either kept as-is, rendered into a table or fenced as code.
 // Anything not listed is refused rather than guessed at: a binary decoded as
@@ -332,11 +332,6 @@ export async function convertToMarkdown(
 
   if (kind === "markdown" || kind === "text") {
     return convertTextSource(source, extension);
-  }
-
-  if (kind === "image") {
-    const { convertImageToMarkdown } = await import("./imageImporter");
-    return convertImageToMarkdown(await source.bytes(), source.name, signal);
   }
 
   if (extension === "docx") {

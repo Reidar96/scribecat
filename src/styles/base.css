@@ -13,7 +13,8 @@ body,
 body {
   min-height: 100vh;
   background:
-    radial-gradient(circle at top, rgba(var(--overlay-rgb),0.06), transparent 40%),
+    radial-gradient(circle at 12% 0%, rgba(168, 85, 247, 0.07), transparent 32%),
+    radial-gradient(circle at 88% 100%, rgba(7, 230, 203, 0.035), transparent 34%),
     linear-gradient(180deg, var(--body-bg-start) 0%, var(--body-bg-end) 100%);
 }
 
@@ -40,7 +41,7 @@ body {
   width: 28rem;
   height: 28rem;
   border-radius: 9999px;
-  background: radial-gradient(circle, rgba(var(--overlay-rgb),0.08), transparent 70%);
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.035), transparent 70%);
   pointer-events: none;
   filter: blur(12px);
 }
@@ -75,15 +76,6 @@ body {
   overflow: hidden;
 }
 
-/* No `gap` here: grid `gap` applies to every column boundary at once, which
-   would double up the sidebar/content spacing that the 1.25rem resizer
-   column to its left already provides. The equivalent 1.25rem resizer
-   column before the chat panel is the actual gap for that boundary. */
-.workspace-grid--chat-open {
-  grid-template-columns:
-    var(--sidebar-width, 320px) 1.25rem minmax(0, 1fr) 1.25rem var(--chat-width, 380px);
-}
-
 .workspace-resizer {
   position: relative;
   display: flex;
@@ -113,7 +105,6 @@ body {
 }
 
 body.is-resizing-sidebar,
-body.is-resizing-chat,
 body.is-resizing-details-panel {
   cursor: col-resize;
   user-select: none;

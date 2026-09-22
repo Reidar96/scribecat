@@ -18,7 +18,7 @@
     "close": "Close"
   },
   "app": {
-    "shellLabel": "ScribeDog app shell",
+    "shellLabel": "ScribeCat app shell",
     "workspaceLabel": "Editor workspace",
     "documentAreaLabel": "Document area",
     "navigateBack": "Back",
@@ -60,8 +60,8 @@
   "saveConflictDialog": {
     "eyebrow": "File changed outside the app",
     "title": "Overwrite the changes on disk?",
-    "descriptionWithName": "The file {{fileLabel}} has been changed outside ScribeDog in the meantime.",
-    "descriptionGeneric": "The file has been changed outside ScribeDog in the meantime.",
+    "descriptionWithName": "The file {{fileLabel}} has been changed outside ScribeCat in the meantime.",
+    "descriptionGeneric": "The file has been changed outside ScribeCat in the meantime.",
     "versioningOn": "Overwriting saves the version on disk to the history first, so you can compare the two afterwards.",
     "versioningOff": "Versioning is off, so the other version is lost when you overwrite.",
     "overwrite": "Overwrite"
@@ -200,7 +200,7 @@
     "outlineDepthShort": "Which heading levels the outline in the details panel lists.",
     "folderNotes": "Folder notes",
     "folderNotesShort": "Clicking a folder's name opens its own note, the arrow expands the folder.",
-    "folderNotesHint": "The note lives inside the folder as .scribedog-foldernote.md and is created on the first save, so it moves with the folder, even when you move or rename the folder in Explorer or Finder. The switch only controls what the tree shows; existing folder notes stay when it is turned off.",
+    "folderNotesHint": "The note lives inside the folder as .scribecat-foldernote.md and is created on the first save, so it moves with the folder, even when you move or rename the folder in Explorer or Finder. The switch only controls what the tree shows; existing folder notes stay when it is turned off.",
     "folderNotesHidden_one": "{{count}} folder note is hidden because this feature is turned off.",
     "folderNotesHidden_other": "{{count}} folder notes are hidden because this feature is turned off.",
     "folderNotesEnableNow": "Turn on now",
@@ -225,7 +225,7 @@
     "headingNumberingMarkerAlways": "Always",
     "vaultScopeTitle": "Open folder: {{name}}",
     "vaultScopeNoFolder": "No folder open",
-    "vaultScopeHint": "These settings are saved in {{name}}/.scribedog and apply only there. Other folders have their own.",
+    "vaultScopeHint": "These settings are saved in {{name}}/.scribecat and apply only there. Other folders have their own.",
     "vaultScopeNoFolderHint": "Open a folder to use these settings: they are saved with the folder, not with the application.",
     "reopenLastNote": "Reopen the last note on start",
     "reopenLastNoteShort": "Remembers per folder and per device which note was open.",
@@ -293,7 +293,7 @@
     "agentMaxIterationsHint": "How many tool calls one work step may take before it is stopped. Higher for large requests, lower when a model runs in circles.",
     "agentMaxPlanStepsLabel": "Steps per task list",
     "agentMaxPlanStepsHint": "Upper bound on how long a task list may get.",
-    "localProviderBrowserHint": "{{provider}} runs on this device and the browser talks to it directly, so it has to accept requests from {{origin}}: {{instruction}}. When you open ScribeDog through a public address, the browser also asks once for local network access.",
+    "localProviderBrowserHint": "{{provider}} runs on this device and the browser talks to it directly, so it has to accept requests from {{origin}}: {{instruction}}. When you open ScribeCat through a public address, the browser also asks once for local network access.",
     "tabServer": "Servers",
     "restoreWorkingSet": "Restore notes in progress on the next start",
     "restoreWorkingSetShort": "The \"In progress\" list is remembered per folder.",
@@ -303,7 +303,7 @@
     "autoAdmitWorkingSetHint": "Unsaved changes are kept either way and show as the yellow dot in the tree; a ring on a collapsed folder means something inside it is unsaved."
   },
   "assistants": {
-    "defaultName": "ScribeDog (Default)",
+    "defaultName": "ScribeCat (Default)",
     "defaultDescription": "Your loyal writing companion.",
     "addAssistant": "Add assistant",
     "editAssistant": "Edit assistant",
@@ -364,14 +364,14 @@
       "whatTitle": "What do I get out of it?",
       "whatBody": "You can ask the AI about things written down somewhere in your notes — even when that file is not open at all. For example: “What did I agree with client A about the delivery date?” The AI searches your notes, answers from what is written there, and lists the files it took that from underneath. Clicking one takes you straight there.",
       "howTitle": "How does it work?",
-      "howBody": "ScribeDog searches your documents for the words in your question and gives the AI the most fitting passages to read. The search itself runs entirely on your device — nothing is prepared, uploaded or stored permanently. Your notes stay unchanged; they are only read.",
+      "howBody": "ScribeCat searches your documents for the words in your question and gives the AI the most fitting passages to read. The search itself runs entirely on your device — nothing is prepared, uploaded or stored permanently. Your notes stay unchanged; they are only read.",
       "dataTitle": "What happens to my texts?",
-      "dataBody": "Only the passages found for your question go to the AI — not your entire folder. Where they go depends on what you set under “AI settings”: with a service on your own device (such as Ollama) nothing leaves the computer. With a provider on the internet, the passages found are transmitted there. None of this happens unless you switch the knowledge base on — and nothing is ever sent to ScribeDog itself.",
+      "dataBody": "Only the passages found for your question go to the AI — not your entire folder. Where they go depends on what you set under “AI settings”: with a service on your own device (such as Ollama) nothing leaves the computer. With a provider on the internet, the passages found are transmitted there. None of this happens unless you switch the knowledge base on — and nothing is ever sent to ScribeCat itself.",
       "undoTitle": "How do I undo this?",
       "undoBody": "Just switch the toggle above off. The AI can then immediately only see the document you have open. You can also exclude individual folders permanently by unticking them — private folders stay out that way while the rest remains searchable. Your notes themselves are never changed or deleted by any of this.",
-      "howBodySemantic": "ScribeDog splits your notes into passages and has a kind of summary computed for each one, which makes it possible to search by meaning rather than only by exact words (the technical term is embeddings). Those summaries sit in a file in the .scribedog folder inside your own folder. The words of your question are searched for as well, and both results are merged.",
-      "dataBodySemantic": "To prepare them, all files in the ticked folders are sent in full to the service you configured for the knowledge base; after that, only changed files are. When answering, the passages found are also sent to the AI. With a service on your own device (such as Ollama) nothing leaves the computer; with a provider on the internet it does. None of this happens unless you switch the knowledge base on — and nothing is ever sent to ScribeDog itself, not for training either.",
-      "undoBodySemantic": "Switch the toggle above off and the AI immediately sees nothing but the open document. \"Delete stored data\" also removes the prepared file; it sits in the .scribedog folder inside your own folder, and deleting that folder removes all of it. Your notes themselves are never changed or deleted."
+      "howBodySemantic": "ScribeCat splits your notes into passages and has a kind of summary computed for each one, which makes it possible to search by meaning rather than only by exact words (the technical term is embeddings). Those summaries sit in a file in the .scribecat folder inside your own folder. The words of your question are searched for as well, and both results are merged.",
+      "dataBodySemantic": "To prepare them, all files in the ticked folders are sent in full to the service you configured for the knowledge base; after that, only changed files are. When answering, the passages found are also sent to the AI. With a service on your own device (such as Ollama) nothing leaves the computer; with a provider on the internet it does. None of this happens unless you switch the knowledge base on — and nothing is ever sent to ScribeCat itself, not for training either.",
+      "undoBodySemantic": "Switch the toggle above off and the AI immediately sees nothing but the open document. \"Delete stored data\" also removes the prepared file; it sits in the .scribecat folder inside your own folder, and deleting that folder removes all of it. Your notes themselves are never changed or deleted."
     },
     "warningCloudEmbedding": "Careful: {{provider}} does not run on this device. Preparing your notes therefore sends them off your computer.",
     "warningSemantic": "For meaning search your notes are read in full once and sent to the service configured below — not just the passages that match a question. This happens again whenever you change a file.",
@@ -410,7 +410,7 @@
     },
     "rebuild": {
       "title": "Your knowledge base has to be rebuilt",
-      "body": "You changed the model that makes your notes searchable. What ScribeDog has stored about your notes so far cannot be used by the new model — it will be deleted and created again.",
+      "body": "You changed the model that makes your notes searchable. What ScribeCat has stored about your notes so far cannot be used by the new model — it will be deleted and created again.",
       "transfer": "All files in the ticked folders will be read in full once more and sent to {{service}}.",
       "notesUnchanged": "Your notes themselves do not change.",
       "count": "Files affected: {{files}}",
@@ -419,7 +419,7 @@
     "remoteVault": "The knowledge base is not available for a vault on a server: the index reads notes from this computer's disk. Open the vault as a local folder on the server, or use it without the knowledge base."
   },
   "versioningSettings": {
-    "scope": "The switch applies to the whole application. The versions themselves live in whichever folder is open, under .scribedog.",
+    "scope": "The switch applies to the whole application. The versions themselves live in whichever folder is open, under .scribecat.",
     "enable": "Enable versioning",
     "enableShort": "Every save keeps the file's previous content first.",
     "enableHint": "A save that changes nothing does not create a duplicate version. Turning versioning off only stops new versions from being created; the existing history is kept.",
@@ -849,7 +849,7 @@
   },
   "updateNotification": {
     "title": "Update {{version}} available",
-    "body": "A new version of ScribeDog is ready.",
+    "body": "A new version of ScribeCat is ready.",
     "install": "Install",
     "installing": "Installing …",
     "installError": "The update could not be installed.",
@@ -1024,8 +1024,8 @@
     "pageBreakBetweenChapters": "Start every chapter on a new page"
   },
   "login": {
-    "title": "ScribeDog",
-    "lead": "Sign in with the password of this ScribeDog server.",
+    "title": "ScribeCat",
+    "lead": "Sign in with the password of this ScribeCat server.",
     "sessionExpired": "Your session has expired. Sign in again to continue; unsaved changes are kept.",
     "password": "Password",
     "submit": "Sign in",
@@ -1056,7 +1056,7 @@
     "certificateDownload": "Download certificate"
   },
   "platform": {
-    "notAvailable": "This feature is not available in this edition of ScribeDog.",
+    "notAvailable": "This feature is not available in this edition of ScribeCat.",
     "serverNotYetAvailable": "This action is not available in the server edition yet.",
     "pathOutsideVault": "\"{{path}}\" is outside the vault."
   },
@@ -1096,8 +1096,8 @@
     "urlMustBeHttps": "The server address must use HTTPS; only localhost may use plain HTTP.",
     "unknownServer": "This server is not on the list.",
     "notSignedIn": "No access key is stored for this server.",
-    "defaultDeviceName": "ScribeDog desktop",
-    "defaultDeviceNameOn": "ScribeDog on {{os}}",
+    "defaultDeviceName": "ScribeCat desktop",
+    "defaultDeviceNameOn": "ScribeCat on {{os}}",
     "settingsTitle": "Server vaults",
     "settingsHint": "Servers this app can open a vault on. Add one from the vault menu in the sidebar. Each server lists the devices that hold an access key; revoke a lost device there.",
     "none": "No server has been added yet.",

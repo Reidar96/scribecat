@@ -9,7 +9,7 @@ import { useAppStore } from "@/store/useAppStore";
 import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
 
 /**
- * Settings stored in the open folder's `.scribedog` rather than with the
+ * Settings stored in the open folder's `.scribecat` rather than with the
  * app: heading numbering and folder notes. Both apply the moment they change
  * (no Save button); without an open folder the controls stay visible but
  * disabled, and the line above them says why.

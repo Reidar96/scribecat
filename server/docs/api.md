@@ -2,7 +2,7 @@
 
 Everything the web app and the desktop app do goes through this API, so a
 script or a tool of your own can do the same. All routes live under the base
-path (`/api/...`, or `/anna/api/...` with `SCRIBEDOG_BASE_PATH=/anna`).
+path (`/api/...`, or `/anna/api/...` with `SCRIBECAT_BASE_PATH=/anna`).
 
 ## Authentication
 
@@ -53,7 +53,7 @@ curl -s 'https://notes.example.com/api/export/zip?path=' -H 'authorization: Bear
 | `PUT` | `/api/fs/file?path=…` | body as `application/octet-stream` creates or overwrites |
 | `POST` | `/api/fs/rename` | `{ "from": "…", "to": "…" }` (files and folders) |
 | `POST` | `/api/fs/remove` | `{ "path": "…", "recursive": true }` (a folder without `recursive` must be empty) |
-| `GET` | `/api/export/zip?path=Notes` | the folder's files as a ZIP archive (`path=` for the whole vault), streamed; `.scribedog` metadata and symlinks are left out |
+| `GET` | `/api/export/zip?path=Notes` | the folder's files as a ZIP archive (`path=` for the whole vault), streamed; `.scribecat` metadata and symlinks are left out |
 | `GET` | `/api/secrets` | which API keys are stored, never their values |
 | `PUT` | `/api/secrets/:id` | `{ "value": "..." }` stores a key (an empty value removes it) |
 | `DELETE` | `/api/secrets/:id` | removes a key |
@@ -65,12 +65,12 @@ curl -s 'https://notes.example.com/api/export/zip?path=' -H 'authorization: Bear
 
 The `/fs` routes are the app's filesystem layer, one call per primitive.
 Paths are relative to the vault and may not point outside it (symlinks
-included) or into `.scribedog/server/`; the vault root, `.scribedog` itself
+included) or into `.scribecat/server/`; the vault root, `.scribecat` itself
 and the data-version marker cannot be renamed or removed.
 
 `/export/zip` is not one of those primitives: it packs a folder the way you
 would copy it, so the archive has the notes, the images and any other file
-in real subfolders, but no `.scribedog` directory at any level and nothing
+in real subfolders, but no `.scribecat` directory at any level and nothing
 reached through a symlink. The rendered formats (PDF, DOCX, ODT, EPUB) are
 made in the browser or the desktop app, not on the server, so there is no
 route for them.

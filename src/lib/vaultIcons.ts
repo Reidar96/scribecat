@@ -1,6 +1,6 @@
 /**
  * Icons for files and folders: an emoji per entry, stored in the vault's
- * `.scribedog/` directory rather than in the documents themselves.
+ * `.scribecat/` directory rather than in the documents themselves.
  *
  * That placement is the design. An icon is how the tree looks to the person
  * who set it, not something the note says about itself — it has no business
@@ -10,7 +10,7 @@
  * place where files and folders can work the same way.
  *
  * The price is that entries are keyed by vault-relative path: renaming or
- * moving inside ScribeDog carries the icon along (the store calls
+ * moving inside ScribeCat carries the icon along (the store calls
  * `renameIconPath`), renaming in the OS does not — the watcher only sees one
  * path gone and another appeared. `order.json` makes the same trade.
  *

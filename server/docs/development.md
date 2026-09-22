@@ -12,7 +12,7 @@ npm run build:web
 # server
 cd server
 npm install
-SCRIBEDOG_VAULT_PATH=/path/to/notes SCRIBEDOG_INIT_PASSWORD=devpassword SCRIBEDOG_COOKIE_SECURE=false npm run dev   # http://localhost:3000
+SCRIBECAT_VAULT_PATH=/path/to/notes SCRIBECAT_INIT_PASSWORD=devpassword SCRIBECAT_COOKIE_SECURE=false npm run dev   # http://localhost:3000
 ```
 
 The server reads `index.html` once at startup, so restart it after a new
@@ -31,10 +31,10 @@ scripts/local-web-clean.sh              # stop, then remove logs and PID files
 scripts/local-web-clean.sh --with-vault # also delete the test vault
 ```
 
-They default to a vault in `~/scribedog-test-vault` and the password
-`devpassword`; set `SCRIBEDOG_VAULT_PATH` or `SCRIBEDOG_INIT_PASSWORD` to
+They default to a vault in `~/scribecat-test-vault` and the password
+`devpassword`; set `SCRIBECAT_VAULT_PATH` or `SCRIBECAT_INIT_PASSWORD` to
 change that. Logs land in `scripts/.run/`. Note that `--with-vault` removes
-the whole folder `SCRIBEDOG_VAULT_PATH` points to, notes included, so only
+the whole folder `SCRIBECAT_VAULT_PATH` points to, notes included, so only
 point it at a folder you can afford to lose.
 
 The start script binds Vite to all interfaces and prints the addresses of
@@ -59,13 +59,13 @@ the tests on port 9081), so start the stack with both files:
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.e2e.yml up -d --build
 npx playwright install chromium
-SCRIBEDOG_E2E_URL=https://localhost/ SCRIBEDOG_E2E_PASSWORD=... npm run test:e2e
+SCRIBECAT_E2E_URL=https://localhost/ SCRIBECAT_E2E_PASSWORD=... npm run test:e2e
 # or, with a base path:
-SCRIBEDOG_E2E_URL=https://localhost/anna/ SCRIBEDOG_E2E_PASSWORD=... npm run test:e2e
+SCRIBECAT_E2E_URL=https://localhost/anna/ SCRIBECAT_E2E_PASSWORD=... npm run test:e2e
 ```
 
 They expect a note `Projects/Roadmap.md` in the vault (override with
-`SCRIBEDOG_E2E_NOTE`) and overwrite it. `SCRIBEDOG_E2E_MOCK_URL` points them
+`SCRIBECAT_E2E_NOTE`) and overwrite it. `SCRIBECAT_E2E_MOCK_URL` points them
 at the mock if its port differs. The e2e compose file is for tests only: it
 turns certificate checks off in the server container so it accepts the
 mock's certificate from Caddy's local CA.

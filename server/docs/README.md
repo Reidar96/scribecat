@@ -1,6 +1,6 @@
-# ScribeDog Server Edition: User Guide
+# ScribeCat Server Edition: User Guide
 
-ScribeDog Server Edition runs the ScribeDog note editor as a self-hosted web
+ScribeCat Server Edition runs the ScribeCat note editor as a self-hosted web
 app. Your notes live in a folder on your own server, you edit them in the
 browser or in the desktop app, and one password protects the instance.
 
@@ -17,7 +17,7 @@ for when you need it.
 3. [Configuration](configuration.md): every setting, running under a path
    prefix, TLS and reverse proxies.
 4. [The desktop app as a client](desktop-app.md): open the server vault in
-   ScribeDog on your computer, with AI and dictation running locally.
+   ScribeCat on your computer, with AI and dictation running locally.
 5. [Phones and tablets](phones-and-tablets.md): how the app lays itself out
    on a small screen, and how to dictate.
 6. [AI](ai.md): cloud providers through the server, a model on your own

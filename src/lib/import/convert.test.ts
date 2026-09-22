@@ -40,7 +40,7 @@ describe("classifyExtension", () => {
     expect(classifyExtension("md")).toBe("markdown");
     expect(classifyExtension("csv")).toBe("text");
     expect(classifyExtension("pdf")).toBe("document");
-    expect(classifyExtension("png")).toBe("image");
+    expect(classifyExtension("png")).toBe("unsupported");
   });
 
   it("names the legacy .doc format apart from unsupported ones", () => {

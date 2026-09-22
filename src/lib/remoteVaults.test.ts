@@ -125,7 +125,7 @@ describe("remote vault registry and token flow", () => {
     });
     expect(shell.allowed).toEqual(["https://notes.example.com"]);
     expect(shell.tokens.get(entry.root)).toBe("sdt_tok1_secret");
-    expect(window.localStorage.getItem("scribedog:remoteVaults")).not.toContain("secret");
+    expect(window.localStorage.getItem("scribecat:remoteVaults")).not.toContain("secret");
     expect(remoteVaults.listRemoteVaults().map((vault) => vault.root)).toEqual([entry.root]);
     expect(remoteVaults.remoteVaultFor(entry.root)?.name).toBe("notes.example.com");
     expect(remoteVaults.remoteVaultFor("C:\\Notes")).toBeNull();
@@ -187,7 +187,7 @@ describe("remote vault registry and token flow", () => {
   it("forgets a server: revokes its own token, deletes it locally and keeps the markers", async () => {
     shell.setResponder(() => json({ id: "own", name: "d", token: "sdt_own_s", createdAt: "" }, 201));
     const entry = await remoteVaults.addRemoteVault({ url: "https://notes.example.com", password: "pw", name: "", deviceName: "d" });
-    window.localStorage.setItem(`scribedog-last-file:${entry.root}`, "Idea.md");
+    window.localStorage.setItem(`scribecat-last-file:${entry.root}`, "Idea.md");
 
     shell.setResponder(() => new Response(null, { status: 204 }));
     await remoteVaults.removeRemoteVault(entry.root);
@@ -197,7 +197,7 @@ describe("remote vault registry and token flow", () => {
     expect(revoke?.url).toBe("https://notes.example.com/api/auth/tokens/own");
     expect(shell.tokens.has(entry.root)).toBe(false);
     expect(remoteVaults.listRemoteVaults()).toEqual([]);
-    expect(window.localStorage.getItem(`scribedog-last-file:${entry.root}`)).toBe("Idea.md");
+    expect(window.localStorage.getItem(`scribecat-last-file:${entry.root}`)).toBe("Idea.md");
   });
 
   it("starts the live connection with the server's event stream and the token", async () => {

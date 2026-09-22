@@ -4,12 +4,12 @@ import { exists, mkdir, readTextFile, remove, writeTextFile } from "@/platform/v
 import { VAULT_META_DIR_NAME } from "@/lib/fileSystem";
 
 /**
- * Automatic per-file version history, stored inside the vault's `.scribedog/`
+ * Automatic per-file version history, stored inside the vault's `.scribecat/`
  * metadata folder next to the other per-vault state.
  *
  * Layout:
- *   .scribedog/versions/index.json   -> { files: { "<vault-relative path>": [entry, ...] } }
- *   .scribedog/versions/<id>.md      -> full copy of the file content
+ *   .scribecat/versions/index.json   -> { files: { "<vault-relative path>": [entry, ...] } }
+ *   .scribecat/versions/<id>.md      -> full copy of the file content
  *
  * Full copies rather than patch chains: with a small per-file cap the size is
  * uncritical, and restoring stays trivially correct.

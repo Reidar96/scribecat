@@ -19,11 +19,11 @@ describe("assertVaultPath", () => {
   });
 
   it("lets the frontend reach its own sidecars, but never the server's", () => {
-    expect(assertVaultPath(".scribedog")).toBe(".scribedog");
-    expect(assertVaultPath(".scribedog/order.json")).toBe(".scribedog/order.json");
-    expect(assertVaultPath(".scribedog/versions/abc.md")).toBe(".scribedog/versions/abc.md");
+    expect(assertVaultPath(".scribecat")).toBe(".scribecat");
+    expect(assertVaultPath(".scribecat/order.json")).toBe(".scribecat/order.json");
+    expect(assertVaultPath(".scribecat/versions/abc.md")).toBe(".scribecat/versions/abc.md");
 
-    for (const bad of [".scribedog/server", ".scribedog/server/auth.json", ".SCRIBEDOG/Server/session-secret", ".scribedog/server/"]) {
+    for (const bad of [".scribecat/server", ".scribecat/server/auth.json", ".SCRIBECAT/Server/session-secret", ".scribecat/server/"]) {
       expect(() => assertVaultPath(bad), bad).toThrow(VaultPathError);
     }
   });
@@ -71,7 +71,7 @@ describe("resolveVaultEntry", () => {
   let outsidePath: string;
 
   beforeAll(async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "scribedog-paths-test-"));
+    const root = await mkdtemp(path.join(os.tmpdir(), "scribecat-paths-test-"));
     vaultPath = path.join(root, "vault");
     outsidePath = path.join(root, "outside");
     await mkdir(path.join(vaultPath, "Notes"), { recursive: true });

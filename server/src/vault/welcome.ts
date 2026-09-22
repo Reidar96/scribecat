@@ -5,7 +5,7 @@ import type { Vault } from "./files.js";
 
 const WELCOME_FILE_NAME = "Welcome.md";
 
-const WELCOME_CONTENT = `# Welcome to ScribeDog
+const WELCOME_CONTENT = `# Welcome to ScribeCat
 
 This is your vault. Every \`.md\` file in the mounted data folder shows up in the tree on the left, and whatever you write here is saved back as plain Markdown.
 

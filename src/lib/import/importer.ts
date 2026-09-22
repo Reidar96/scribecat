@@ -23,9 +23,7 @@ export type ImportErrorKey =
   | "errorUnsupported"
   | "errorTooLarge"
   | "errorConvert"
-  | "errorWrite"
-  | "errorOcrNoModel"
-  | "errorOcrProvider";
+  | "errorWrite";
 
 /**
  * One file to import. `relativeDirectory` is the folder structure to recreate
@@ -107,8 +105,8 @@ async function resolveTargetDirectory(
   return directory;
 }
 
-function classifyError(extension: string): ImportErrorKey {
-  return classifyExtension(extension) === "image" ? "errorOcrProvider" : "errorConvert";
+function classifyError(): ImportErrorKey {
+  return "errorConvert";
 }
 
 /**
@@ -168,15 +166,7 @@ export async function importFiles(
         continue;
       }
 
-      if (kind === "image") {
-        const { isAiOcrConfigured } = await import("./imageImporter");
 
-        if (!isAiOcrConfigured()) {
-          item.status = "error";
-          item.errorKey = "errorOcrNoModel";
-          continue;
-        }
-      }
 
       const baseName = sanitizeBaseName(baseNameOf(item.sourceName));
       const directory = await resolveTargetDirectory(
@@ -210,7 +200,7 @@ export async function importFiles(
       } else {
         item.status = "error";
         item.errorKey =
-          error instanceof SourceTooLargeError ? "errorTooLarge" : classifyError(extension);
+          error instanceof SourceTooLargeError ? "errorTooLarge" : classifyError();
         item.errorDetail = error instanceof Error ? error.message : String(error);
       }
     } finally {

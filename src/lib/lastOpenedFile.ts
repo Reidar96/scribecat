@@ -5,7 +5,7 @@
  * different notes open.
  */
 
-const STORAGE_KEY_PREFIX = "scribedog-last-file:";
+const STORAGE_KEY_PREFIX = "scribecat-last-file:";
 
 export function getLastOpenedRelativePath(folderPath: string): string | null {
   try {

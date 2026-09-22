@@ -1,5 +1,4 @@
 import i18n from "@/i18n";
-import { isHttpsUrl, isLocalApiUrl } from "@/lib/aiClient";
 import { platform, setActiveVaultStorage, SessionError } from "@/platform";
 import { createRemoteVaultStorage } from "@/platform/remote/remoteStorage";
 import { createServerApi, type RemoteAccessToken, type ServerApi, type ServerTransport } from "@/platform/remote/serverApi";
@@ -7,6 +6,23 @@ import { isRemoteVaultPath, remoteVaultRootFor } from "@/platform/remote/vaultRo
 
 export { isRemoteVaultPath };
 export type { RemoteAccessToken };
+
+function isHttpsUrl(input: string): boolean {
+  try {
+    return new URL(input).protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function isLocalServerUrl(input: string): boolean {
+  try {
+    const host = new URL(input).hostname.toLowerCase();
+    return host === "localhost" || host === "127.0.0.1" || host === "::1";
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Server vaults in the desktop app: the list of servers the user added, the
@@ -35,11 +51,10 @@ export type RemoteVaultEntry = {
   addedAt: string;
 };
 
-const STORAGE_KEY = "scribedog:remoteVaults";
+const STORAGE_KEY = "scribecat:remoteVaults";
 
 /**
- * The same rule the AI endpoints follow (assertValidEndpoint in aiClient):
- * HTTPS everywhere except on the machine itself. Returns the URL in the form
+ * Remote vaults require HTTPS except for a server on the same machine. Returns the URL in the form
  * the identity is built from.
  */
 export function normalizeServerUrl(input: string): string {
@@ -56,7 +71,7 @@ export function normalizeServerUrl(input: string): string {
     throw new Error(i18n.t("remoteVaults.invalidUrl"));
   }
 
-  if (!isHttpsUrl(url.toString()) && !isLocalApiUrl(url.toString())) {
+  if (!isHttpsUrl(url.toString()) && !isLocalServerUrl(url.toString())) {
     throw new Error(i18n.t("remoteVaults.urlMustBeHttps"));
   }
 

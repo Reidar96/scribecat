@@ -167,7 +167,7 @@ export async function openVault(vaultPath: string): Promise<Vault> {
 
   /**
    * Entries the API never changes: the root and the metadata directory itself
-   * (removing `.scribedog` would take the server's own files with it), and the
+   * (removing `.scribecat` would take the server's own files with it), and the
    * data-version marker, which belongs to the server's startup check rather
    * than to any client. The frontend asks for none of them.
    */

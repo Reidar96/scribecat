@@ -34,10 +34,10 @@ RUN npm ci --omit=dev
 # ---- runtime -------------------------------------------------------------------
 FROM node:24-alpine
 ENV NODE_ENV=production \
-    SCRIBEDOG_VAULT_PATH=/data \
-    SCRIBEDOG_HOST=0.0.0.0 \
-    SCRIBEDOG_PORT=3000 \
-    SCRIBEDOG_WEB_DIST_DIR=/app/dist-web
+    SCRIBECAT_VAULT_PATH=/data \
+    SCRIBECAT_HOST=0.0.0.0 \
+    SCRIBECAT_PORT=3000 \
+    SCRIBECAT_WEB_DIST_DIR=/app/dist-web
 WORKDIR /app/server
 # su-exec drops from root to PUID:PGID in the entrypoint (see docker-entrypoint.sh).
 RUN apk add --no-cache su-exec

@@ -26,7 +26,7 @@ import { localFs, localVaultStorage } from "./fs";
 import { desktopRemoteVaults } from "./remoteVaults";
 
 /** Fired by the Rust file watcher (`watch_folder`) with the watched folder path. */
-export const FOLDER_FILES_CHANGED_EVENT = "scribedog-folder-files-changed";
+export const FOLDER_FILES_CHANGED_EVENT = "scribecat-folder-files-changed";
 
 const NOT_PORTABLE: PortableStatus = { mode: "off", configDir: "" };
 
@@ -52,10 +52,8 @@ export const platform: Platform = {
     updater: true,
     voiceInput: true,
     portableMode: true,
-    knowledgeIndex: true,
     spellcheckDictionary: true,
     session: false,
-    browserLocalModels: false,
     remoteVaults: true
   },
 
@@ -131,13 +129,6 @@ export const platform: Platform = {
         }
       });
     }
-  },
-  credentials: {
-    storeApiKey: (id, apiKey) => invoke("store_api_key", { provider: id, apiKey }),
-    getApiKey: (id) => invoke<string>("get_api_key", { provider: id }),
-    // The OS credential store is unlocked whenever the user's desktop session
-    // is; there is no state to report.
-    getStatus: async () => ({ state: "ready", discardedAt: null })
   },
   portable: {
     // Resolved once per session: the Rust side detects the mode once at
@@ -225,12 +216,12 @@ export const platform: Platform = {
     stopRecording: (language) => invoke<string>("stop_voice_recording", { language }),
     cancelRecording: () => invoke("cancel_voice_recording"),
     onModelDownloadProgress: (handler) =>
-      listen<VoiceModelDownloadProgress>("scribedog-voice-model-download-progress", (event) =>
+      listen<VoiceModelDownloadProgress>("scribecat-voice-model-download-progress", (event) =>
         handler(event.payload)
       ),
     // Fires ~every 80 ms while a recording runs; payload is the RMS loudness
     // of the latest microphone chunk (0 = silence, speech typically 0.02-0.2).
-    onLevel: (handler) => listen<number>("scribedog-voice-level", (event) => handler(event.payload))
+    onLevel: (handler) => listen<number>("scribecat-voice-level", (event) => handler(event.payload))
   },
   updater: {
     check: async () => {
@@ -240,10 +231,6 @@ export const platform: Platform = {
     },
     relaunch
   },
-  knowledgeIndex: {
-    call: (command, args) => invoke(command, args)
-  },
   session: null,
-  localModels: null,
   remoteVaults: desktopRemoteVaults
 };

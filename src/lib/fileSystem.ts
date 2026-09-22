@@ -28,8 +28,8 @@ const EXTENSION_BY_MIME_TYPE: Record<string, string> = {
   "image/bmp": "bmp"
 };
 
-const LAST_FOLDER_PATH_STORAGE_KEY = "scribedog:lastFolderPath";
-const RECENT_FOLDER_PATHS_STORAGE_KEY = "scribedog:recentFolderPaths";
+const LAST_FOLDER_PATH_STORAGE_KEY = "scribecat:lastFolderPath";
+const RECENT_FOLDER_PATHS_STORAGE_KEY = "scribecat:recentFolderPaths";
 export const RECENT_FOLDER_PATHS_MAX = 8;
 
 export type FileTimestamps = {

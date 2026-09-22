@@ -46,7 +46,7 @@ const attributeAsString = (value: unknown): string =>
 // effect anyway (the image already starts its own block), so it is dropped
 // here, at the point where the information about its neighbours still exists.
 export function imageLineBreakMarkdownItPlugin(markdownit: MarkdownIt): void {
-  markdownit.core.ruler.push("scribedog_image_line_break", (state) => {
+  markdownit.core.ruler.push("scribecat_image_line_break", (state) => {
     for (const token of state.tokens) {
       if (token.type !== "inline" || !token.children) {
         continue;

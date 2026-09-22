@@ -20,12 +20,12 @@ describe("export API: folder as ZIP", () => {
     cookie = await context.login();
 
     // The temp vault has Welcome.md, Notes/Idea.md, Notes/not-markdown.txt
-    // and .scribedog/secret.md; add the server's own files, an image and an
+    // and .scribecat/secret.md; add the server's own files, an image and an
     // empty folder to see what the archive does with each.
-    await mkdir(path.join(context.vaultPath, ".scribedog", "server"), { recursive: true });
-    await writeFile(path.join(context.vaultPath, ".scribedog", "server", "auth.json"), "{}");
-    await mkdir(path.join(context.vaultPath, "Notes", ".scribedog", "versions"), { recursive: true });
-    await writeFile(path.join(context.vaultPath, "Notes", ".scribedog", "versions", "Idea.md.1"), "old");
+    await mkdir(path.join(context.vaultPath, ".scribecat", "server"), { recursive: true });
+    await writeFile(path.join(context.vaultPath, ".scribecat", "server", "auth.json"), "{}");
+    await mkdir(path.join(context.vaultPath, "Notes", ".scribecat", "versions"), { recursive: true });
+    await writeFile(path.join(context.vaultPath, "Notes", ".scribecat", "versions", "Idea.md.1"), "old");
     await mkdir(path.join(context.vaultPath, "images"), { recursive: true });
     await writeFile(path.join(context.vaultPath, "images", "pic.png"), Buffer.from([0x89, 0x50, 0x4e, 0x47]));
     await mkdir(path.join(context.vaultPath, "Empty"), { recursive: true });
@@ -35,7 +35,7 @@ describe("export API: folder as ZIP", () => {
     await context.cleanup();
   });
 
-  it("packs the whole vault without any .scribedog directory", async () => {
+  it("packs the whole vault without any .scribecat directory", async () => {
     const response = await get(zipUrl(""));
 
     expect(response.statusCode).toBe(200);
@@ -69,7 +69,7 @@ describe("export API: folder as ZIP", () => {
   });
 
   it("refuses the metadata directory in every spelling, and paths that are no folder", async () => {
-    for (const relativePath of [".scribedog", ".scribedog/server", ".SCRIBEDOG/versions", "Notes/.scribedog"]) {
+    for (const relativePath of [".scribecat", ".scribecat/server", ".SCRIBECAT/versions", "Notes/.scribecat"]) {
       const response = await get(zipUrl(relativePath));
       expect(response.statusCode, relativePath).toBe(400);
       expect(response.json().error).toBe("invalid_path");

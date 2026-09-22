@@ -16,11 +16,11 @@ import { assertVaultPath, resolveVaultEntry, VAULT_META_DIR_NAME, VaultPathError
  *
  * What goes in: every regular file below the folder, notes and images and
  * whatever else the user keeps there, in real subdirectories. What stays
- * out: the `.scribedog/` metadata at every level (versions, checkpoints,
- * chat sessions, and the server's own `.scribedog/server/` with the
+ * out: the `.scribecat/` metadata at every level (versions, checkpoints,
+ * chat sessions, and the server's own `.scribecat/server/` with the
  * password hash), and anything reached through a symlink, which could
  * point anywhere on the disk. Skipping the whole metadata directory is
- * what keeps `.scribedog/server/` out of a recursive archive without a
+ * what keeps `.scribecat/server/` out of a recursive archive without a
  * second rule for it.
  */
 

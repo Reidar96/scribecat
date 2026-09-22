@@ -8,8 +8,7 @@ import {
   Loader2,
   PanelLeft,
   Pencil,
-  Save,
-  Square
+  Save
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -61,7 +60,6 @@ type DocumentPanelProps = {
   /** Opens a folder's note from a breadcrumb crumb; the path is vault-relative. */
   onOpenFolderNote: (folderRelativePath: string) => void;
 
-  isAiLoading: boolean;
   isSaving: boolean;
   isDirty: boolean;
   isSelectedFileMissing: boolean;
@@ -75,9 +73,6 @@ type DocumentPanelProps = {
   onCanonicalMarkdown: (filePath: string, markdown: string) => void;
   onRequestSidebarFocus: () => void;
   onRequestFileOpen: (targetFilePath: string) => void;
-  onAiLoadingChange: (isLoading: boolean) => void;
-  onAiPendingChange: (isPending: boolean) => void;
-  onAiSettingsRequest: () => void;
   onZenModeRequest: () => void;
   onVersionDiffRequest: (version: FileVersion) => void;
   onVersionRestoreRequest: (version: FileVersion) => void;
@@ -162,7 +157,6 @@ export function DocumentPanel({
   onCancelTitleRename,
   onStartTitleRename,
   onOpenFolderNote,
-  isAiLoading,
   isSaving,
   isDirty,
   isSelectedFileMissing,
@@ -175,9 +169,6 @@ export function DocumentPanel({
   onCanonicalMarkdown,
   onRequestSidebarFocus,
   onRequestFileOpen,
-  onAiLoadingChange,
-  onAiPendingChange,
-  onAiSettingsRequest,
   onZenModeRequest,
   onVersionDiffRequest,
   onVersionRestoreRequest,
@@ -436,20 +427,6 @@ export function DocumentPanel({
               )}
             </div>
             <div className="detail-panel__status-group">
-              {isAiLoading ? (
-                <div className="detail-panel__ai-chip" aria-live="polite">
-                  <span className="detail-panel__ai-chip-message">{t("app.aiRequestRunning")}</span>
-                  <button
-                    type="button"
-                    className="detail-panel__ai-chip-cancel"
-                    onClick={() => editorHandleRef.current?.cancelAiRequest()}
-                    aria-label={t("app.aiRequestCancel")}
-                    title={t("app.aiRequestCancel")}
-                  >
-                    <Square size={10} fill="currentColor" strokeWidth={0} />
-                  </button>
-                </div>
-              ) : null}
               {versioningEnabled ? (
                 <VersionsPopover
                   folderPath={folderPath}
@@ -541,9 +518,6 @@ export function DocumentPanel({
                 editorFocusRequestId={editorFocusRequestId}
                 onRequestSidebarFocus={onRequestSidebarFocus}
                 onRequestFileOpen={onRequestFileOpen}
-                onAiLoadingChange={onAiLoadingChange}
-                onAiPendingChange={onAiPendingChange}
-                onAiSettingsRequest={onAiSettingsRequest}
                 onZenModeRequest={onZenModeRequest}
                 toolbarContainer={layout === "desktop" ? toolbarSlot : null}
               />
@@ -568,7 +542,7 @@ export function DocumentPanel({
               >
                 <PanelLeft />
               </Button>
-              <span className="detail-panel__app-name">ScribeDog</span>
+              <span className="detail-panel__app-name">ScribeCat</span>
             </div>
           ) : null}
           <p className="detail-panel__eyebrow">{t("app.emptyEyebrow")}</p>

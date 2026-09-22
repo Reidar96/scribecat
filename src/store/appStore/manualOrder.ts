@@ -8,7 +8,7 @@ import { getRelativeDisplayPath, type MarkdownFileRecord } from "@/lib/fileSyste
  * end (alphabetically among themselves), and drops entries for basenames or
  * folders that no longer exist. No-ops (and never touches disk) when there
  * is no manual order yet, so vaults that never use Manual mode never get a
- * `.scribedog/` folder created for them.
+ * `.scribecat/` folder created for them.
  */
 export async function reconcileManualOrder(
   vaultFolderPath: string,

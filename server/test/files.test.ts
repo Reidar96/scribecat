@@ -36,7 +36,7 @@ describe("file API", () => {
     const root = await get("/api/fs/entries?path=");
     expect(root.statusCode).toBe(200);
     const names = (root.json().entries as Array<{ name: string; isDirectory: boolean; isFile: boolean }>).map((e) => e.name).sort();
-    expect(names).toEqual([".scribedog", "Notes", "Welcome.md"]);
+    expect(names).toEqual([".scribecat", "Notes", "Welcome.md"]);
 
     const notes = await get(`/api/fs/entries?${q("Notes")}`);
     expect(notes.json().entries).toEqual(
@@ -63,7 +63,7 @@ describe("file API", () => {
 
     expect((await get(`/api/fs/exists?${q("Notes/Idea.md")}`)).json()).toEqual({ exists: true });
     expect((await get(`/api/fs/exists?${q("Nope.md")}`)).json()).toEqual({ exists: false });
-    expect((await get(`/api/fs/exists?${q(".scribedog/server/auth.json")}`)).statusCode).toBe(400);
+    expect((await get(`/api/fs/exists?${q(".scribecat/server/auth.json")}`)).statusCode).toBe(400);
   });
 
   it("reads and writes text, creating new files in existing folders", async () => {
@@ -83,9 +83,9 @@ describe("file API", () => {
     expect((await putJson("/api/fs/text", { path: "Missing/New.md", content: "" })).statusCode).toBe(404);
 
     // Sidecars the frontend keeps are ordinary files here.
-    expect((await post("/api/fs/mkdir", { path: ".scribedog/versions", recursive: true })).statusCode).toBe(204);
-    expect((await putJson("/api/fs/text", { path: ".scribedog/versions/index.json", content: "{}" })).statusCode).toBe(200);
-    expect((await get(`/api/fs/text?${q(".scribedog/versions/index.json")}`)).json()).toEqual({ content: "{}" });
+    expect((await post("/api/fs/mkdir", { path: ".scribecat/versions", recursive: true })).statusCode).toBe(204);
+    expect((await putJson("/api/fs/text", { path: ".scribecat/versions/index.json", content: "{}" })).statusCode).toBe(200);
+    expect((await get(`/api/fs/text?${q(".scribecat/versions/index.json")}`)).json()).toEqual({ content: "{}" });
   });
 
   it("reads and writes bytes with a content type for images", async () => {
@@ -159,17 +159,17 @@ describe("file API", () => {
   });
 
   it("never lets the root or the metadata directory be renamed or removed", async () => {
-    for (const target of ["", ".scribedog", ".SCRIBEDOG"]) {
+    for (const target of ["", ".scribecat", ".SCRIBECAT"]) {
       expect((await post("/api/fs/remove", { path: target, recursive: true })).statusCode, target).toBe(400);
       expect((await post("/api/fs/rename", { from: target, to: "gone" })).statusCode, target).toBe(400);
       expect((await post("/api/fs/rename", { from: "Notes", to: target })).statusCode, target).toBe(400);
     }
 
-    expect(await readFile(path.join(context.vaultPath, ".scribedog", "server", "auth.json"), "utf8")).toContain("passwordHash");
+    expect(await readFile(path.join(context.vaultPath, ".scribecat", "server", "auth.json"), "utf8")).toContain("passwordHash");
   });
 
   it("answers 400 for paths outside the rules on every route", async () => {
-    for (const bad of ["../x.md", "/etc/passwd", ".scribedog/server/auth.json", ".scribedog/server", "a/../../b"]) {
+    for (const bad of ["../x.md", "/etc/passwd", ".scribecat/server/auth.json", ".scribecat/server", "a/../../b"]) {
       expect((await get(`/api/fs/text?${q(bad)}`)).statusCode, bad).toBe(400);
       expect((await get(`/api/fs/file?${q(bad)}`)).statusCode, bad).toBe(400);
       expect((await get(`/api/fs/stat?${q(bad)}`)).statusCode, bad).toBe(400);

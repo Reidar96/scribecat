@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export const CHECK_FOR_UPDATES_STORAGE_KEY = "scribedog-check-for-updates";
+export const CHECK_FOR_UPDATES_STORAGE_KEY = "scribecat-check-for-updates";
 
 function getStoredCheckForUpdates(): boolean {
   try {

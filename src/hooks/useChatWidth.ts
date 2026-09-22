@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from "react";
 
-const CHAT_WIDTH_STORAGE_KEY = "scribedog-chat-width";
+const CHAT_WIDTH_STORAGE_KEY = "scribecat-chat-width";
 const MIN_CHAT_WIDTH = 300;
 const MAX_CHAT_WIDTH = 640;
 const DEFAULT_CHAT_WIDTH = 380;

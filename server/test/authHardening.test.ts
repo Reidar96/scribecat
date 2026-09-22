@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createLoginThrottle } from "../src/auth/loginThrottle.js";
 import { SESSION_COOKIE_NAME } from "../src/auth/session.js";
-import { KEY_COOKIE_NAME } from "../src/secrets/keyCookie.js";
 import { createTestContext, TEST_PASSWORD, type TestContext } from "./helpers.js";
 
 describe("login throttle", () => {
@@ -69,7 +68,7 @@ describe("login route with throttling", () => {
   let context: TestContext;
 
   beforeEach(async () => {
-    context = await createTestContext({ SCRIBEDOG_LOGIN_MAX_ATTEMPTS: "2", SCRIBEDOG_LOGIN_LOCK_SECONDS: "60" });
+    context = await createTestContext({ SCRIBECAT_LOGIN_MAX_ATTEMPTS: "2", SCRIBECAT_LOGIN_LOCK_SECONDS: "60" });
   });
 
   afterEach(async () => {
@@ -138,7 +137,7 @@ describe("origin check", () => {
   let context: TestContext;
 
   beforeEach(async () => {
-    context = await createTestContext({ SCRIBEDOG_ALLOWED_ORIGINS: "https://notes.example.com" });
+    context = await createTestContext({ SCRIBECAT_ALLOWED_ORIGINS: "https://notes.example.com" });
   });
 
   afterEach(async () => {
@@ -208,7 +207,7 @@ describe("origin check", () => {
     ).toBe(204);
   });
 
-  it("accepts an origin from SCRIBEDOG_ALLOWED_ORIGINS", async () => {
+  it("accepts an origin from SCRIBECAT_ALLOWED_ORIGINS", async () => {
     const cookie = await context.login();
     const response = await context.app.inject({
       method: "POST",
@@ -307,10 +306,9 @@ describe("changing the password", () => {
     // response.
     expect((await context.app.inject({ method: "GET", url: "/api/files", headers: { cookie: other } })).statusCode).toBe(401);
 
-    const refreshed = response.cookies
-      .filter((entry) => [SESSION_COOKIE_NAME, KEY_COOKIE_NAME].includes(entry.name))
-      .map((entry) => `${entry.name}=${entry.value}`)
-      .join("; ");
+    const refreshedCookie = response.cookies.find((entry) => entry.name === SESSION_COOKIE_NAME);
+    expect(refreshedCookie).toBeDefined();
+    const refreshed = `${refreshedCookie!.name}=${refreshedCookie!.value}`;
 
     expect((await context.app.inject({ method: "GET", url: "/api/files", headers: { cookie: refreshed } })).statusCode).toBe(200);
 

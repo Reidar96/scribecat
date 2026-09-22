@@ -1,7 +1,7 @@
 /**
  * Folder notes: a folder's own text, stored *inside* the folder under one
  * reserved file name. That placement is the whole design — moving, renaming
- * or deleting the folder (in ScribeDog or in the OS) carries the note along
+ * or deleting the folder (in ScribeCat or in the OS) carries the note along
  * without any mapping, id or repair step. The file is a normal markdown file
  * for everything except the tree: search, versioning, export and the agent
  * treat it like any other note, only the sidebar attaches it to the folder
@@ -12,7 +12,7 @@
  * their tests mock the fs layer.
  */
 
-export const FOLDER_NOTE_FILE_NAME = ".scribedog-foldernote.md";
+export const FOLDER_NOTE_FILE_NAME = ".scribecat-foldernote.md";
 
 function toPosix(path: string): string {
   return path.replace(/\\/g, "/");
@@ -29,7 +29,7 @@ export function isFolderNotePath(path: string): boolean {
 
 /**
  * The folder a note belongs to, in the same spelling the note was given:
- * "Rezepte/.scribedog-foldernote.md" -> "Rezepte", "/v/Rezepte/.scribedog-foldernote.md"
+ * "Rezepte/.scribecat-foldernote.md" -> "Rezepte", "/v/Rezepte/.scribecat-foldernote.md"
  * -> "/v/Rezepte". A note directly in the vault root yields "" for a relative
  * path — the root has no folder row, so such a file is shown as an ordinary
  * note rather than hidden (see buildFileTree).

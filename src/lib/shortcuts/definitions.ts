@@ -8,7 +8,7 @@ import type { ShortcutBinding } from "@/lib/shortcuts/binding";
 export type ShortcutScope = "global" | "editor";
 
 /** Grouping in the shortcuts dialog only. */
-export type ShortcutCategory = "app" | "ai" | "format";
+export type ShortcutCategory = "app" | "format";
 
 export type ShortcutActionId =
   | "openFolder"
@@ -25,13 +25,7 @@ export type ShortcutActionId =
   | "navigateBack"
   | "navigateForward"
   | "closeWorkingSetEntry"
-  | "toggleChat"
-  | "newChat"
   | "toggleDetailsPanel"
-  | "aiEditDialog"
-  | "aiVoiceDialog"
-  | "dictation"
-  | "aiCheckDialog"
   | "bold"
   | "italic"
   | "underline"
@@ -197,53 +191,11 @@ export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
     defaultBinding: letter(CTRL, "W")
   },
   {
-    id: "toggleChat",
-    scope: "global",
-    category: "ai",
-    descriptionKey: "shortcutsDialog.items.toggleChat",
-    defaultBinding: letter(CTRL_SHIFT, "A")
-  },
-  {
-    id: "newChat",
-    scope: "global",
-    category: "ai",
-    descriptionKey: "shortcutsDialog.items.newChat",
-    defaultBinding: letter(CTRL_SHIFT, "N")
-  },
-  {
     id: "toggleDetailsPanel",
     scope: "global",
     category: "app",
     descriptionKey: "shortcutsDialog.items.toggleDetailsPanel",
     defaultBinding: letter(CTRL_SHIFT, "D")
-  },
-  {
-    id: "aiEditDialog",
-    scope: "editor",
-    category: "ai",
-    descriptionKey: "shortcutsDialog.items.aiEditDialog",
-    defaultBinding: letter(CTRL, "E")
-  },
-  {
-    id: "aiVoiceDialog",
-    scope: "editor",
-    category: "ai",
-    descriptionKey: "shortcutsDialog.items.aiVoiceDialog",
-    defaultBinding: letter(CTRL_SHIFT, "E")
-  },
-  {
-    id: "dictation",
-    scope: "editor",
-    category: "ai",
-    descriptionKey: "shortcutsDialog.items.dictation",
-    defaultBinding: letter(CTRL_SHIFT, "W")
-  },
-  {
-    id: "aiCheckDialog",
-    scope: "editor",
-    category: "ai",
-    descriptionKey: "shortcutsDialog.items.aiCheckDialog",
-    defaultBinding: letter(CTRL_SHIFT, "X")
   },
   {
     id: "bold",
@@ -399,7 +351,7 @@ export const SHORTCUT_DEFINITIONS_BY_ID = new Map<ShortcutActionId, ShortcutDefi
   SHORTCUT_DEFINITIONS.map((definition) => [definition.id, definition])
 );
 
-export const SHORTCUT_CATEGORY_ORDER: ShortcutCategory[] = ["app", "ai", "format"];
+export const SHORTCUT_CATEGORY_ORDER: ShortcutCategory[] = ["app", "format"];
 
 export function isShortcutActionId(value: string): value is ShortcutActionId {
   return SHORTCUT_DEFINITIONS_BY_ID.has(value as ShortcutActionId);

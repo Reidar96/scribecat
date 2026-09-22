@@ -11,14 +11,14 @@ import { expect, test, type Page } from "@playwright/test";
  * halfway through.
  */
 
-const PASSWORD = process.env.SCRIBEDOG_E2E_PASSWORD ?? "e2e-test-password";
+const PASSWORD = process.env.SCRIBECAT_E2E_PASSWORD ?? "e2e-test-password";
 const NEW_PASSWORD = "e2e-changed-password";
 
 let currentPassword = PASSWORD;
 
 test.beforeEach(async ({ context }) => {
   await context.addInitScript(() => {
-    window.localStorage.setItem("scribedog-language", "en");
+    window.localStorage.setItem("scribecat-language", "en");
   });
 });
 
@@ -55,7 +55,7 @@ test("changing the password signs other devices out and keeps this one", async (
   // A second device, signed in before the change.
   const otherContext = await browser.newContext({ ignoreHTTPSErrors: true });
   const other = await otherContext.newPage();
-  await other.addInitScript(() => window.localStorage.setItem("scribedog-language", "en"));
+  await other.addInitScript(() => window.localStorage.setItem("scribecat-language", "en"));
   await signIn(other);
 
   await openSettings(page, "Account");

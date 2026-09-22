@@ -17,7 +17,7 @@ export type WorkingSetEntry = {
   pinned: boolean;
 };
 
-/** What `.scribedog/open-files.json` holds: vault-relative paths, like order.json. */
+/** What `.scribecat/open-files.json` holds: vault-relative paths, like order.json. */
 export type StoredWorkingSet = {
   version: 1;
   entries: { path: string; pinned: boolean }[];

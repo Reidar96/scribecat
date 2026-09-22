@@ -1,7 +1,7 @@
 import { SessionError } from "@/platform/errors";
 
 /**
- * The HTTP client for the ScribeDog server, mirroring the routes in
+ * The HTTP client for the ScribeCat server, mirroring the routes in
  * server/src (auth, tokens and file API). Two shells use it: the browser,
  * where the session cookie rides along with every request, and the desktop
  * app opening a server vault, where the Rust side sends the request with an
@@ -29,12 +29,6 @@ export type RemoteFileInfo = {
   size: number;
   mtimeMs: number | null;
   birthtimeMs: number | null;
-};
-
-export type RemoteSecretStatus = {
-  state: "ready" | "locked";
-  ids: string[];
-  discardedAt: string | null;
 };
 
 /** One entry of the server's "signed-in devices" list; never the token itself. */
@@ -204,10 +198,7 @@ export function createServerApi(transport: ServerTransport) {
         // A 401 here means "the current password is wrong", not "your session
         // ended"; it must not pull the login form over a settings dialog.
         isLogin: true
-      }),
-    secretStatus: () => request<RemoteSecretStatus>("/secrets"),
-    storeSecret: (id: string, value: string) =>
-      request<void>(`/secrets/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify({ value }) })
+      })
   };
 
   return { api, onUnauthorized };

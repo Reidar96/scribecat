@@ -1,12 +1,12 @@
 import { expect, test, type Download, type Page } from "@playwright/test";
 import { strFromU8, unzipSync } from "fflate";
 
-const PASSWORD = process.env.SCRIBEDOG_E2E_PASSWORD ?? "e2e-test-password";
-const NOTE = process.env.SCRIBEDOG_E2E_NOTE ?? "Projects/Roadmap.md";
+const PASSWORD = process.env.SCRIBECAT_E2E_PASSWORD ?? "e2e-test-password";
+const NOTE = process.env.SCRIBECAT_E2E_NOTE ?? "Projects/Roadmap.md";
 
 test.beforeEach(async ({ context }) => {
   await context.addInitScript(() => {
-    window.localStorage.setItem("scribedog-language", "en");
+    window.localStorage.setItem("scribecat-language", "en");
   });
 });
 
@@ -81,7 +81,7 @@ test("downloads a note as Markdown, a folder as ZIP and a rendered export", asyn
   const unpacked = unzipSync(new Uint8Array(await downloadBytes(zip)));
   expect(Object.keys(unpacked)).toContain(`${noteName}.md`);
   expect(strFromU8(unpacked[`${noteName}.md`])).toBe(SEED);
-  expect(Object.keys(unpacked).some((name) => name.split("/").includes(".scribedog"))).toBe(false);
+  expect(Object.keys(unpacked).some((name) => name.split("/").includes(".scribecat"))).toBe(false);
 
   // 3. A rendered export through the dialog: no destination to choose, the
   // browser saves the file. HTML is the format whose result can be read here.
@@ -108,5 +108,5 @@ test("downloads a note as Markdown, a folder as ZIP and a rendered export", asyn
   expect(vault.suggestedFilename()).toMatch(/\.zip$/);
   const vaultFiles = Object.keys(unzipSync(new Uint8Array(await downloadBytes(vault))));
   expect(vaultFiles).toContain(NOTE);
-  expect(vaultFiles.some((name) => name.split("/").includes(".scribedog"))).toBe(false);
+  expect(vaultFiles.some((name) => name.split("/").includes(".scribecat"))).toBe(false);
 });

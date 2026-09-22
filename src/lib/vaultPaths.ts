@@ -4,7 +4,7 @@
  * Re-exported from lib/fileSystem.ts, where callers have always found them.
  */
 
-export const VAULT_META_DIR_NAME = ".scribedog";
+export const VAULT_META_DIR_NAME = ".scribecat";
 
 export function isMarkdownFileName(name: string): boolean {
   return name.toLowerCase().endsWith(".md");
@@ -12,6 +12,16 @@ export function isMarkdownFileName(name: string): boolean {
 
 export function normalizeDisplayPath(path: string): string {
   return path.replace(/\\/g, "/").replace(/\/+$/, "");
+}
+
+/** Normalizes a path that is meant to be relative to the vault root. */
+export function normalizeVaultPath(path: string): string {
+  return path.replace(/\\/g, "/").replace(/^\.\//, "").replace(/^\/+/, "").replace(/\/+$/, "");
+}
+
+/** Comparison key for vault-relative paths; Windows vaults are case-insensitive. */
+export function vaultPathKey(path: string): string {
+  return normalizeVaultPath(path).toLowerCase();
 }
 
 /**

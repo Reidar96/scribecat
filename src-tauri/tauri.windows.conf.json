@@ -6,7 +6,7 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IENBMzcwNjBFMTlFRUU3ODkKUldTSjUrNFpEZ1kzeWxHM1lpQmNEOVJob3Z5enFmeUd6dmlac3A2MUJ4K21SeTdpQlNwMHdaY3gK",
       "endpoints": [
-        "https://github.com/snooky234/scribedog/releases/latest/download/latest.json"
+        "https://github.com/snooky234/scribecat/releases/latest/download/latest.json"
       ]
     }
   }

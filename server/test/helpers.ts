@@ -9,8 +9,6 @@ import { openAuthStore, type AuthStore } from "../src/auth/authStore.js";
 import { SESSION_COOKIE_NAME } from "../src/auth/session.js";
 import { openTokenStore, type TokenStore } from "../src/auth/tokenStore.js";
 import { loadConfig, type ServerConfig } from "../src/config.js";
-import { KEY_COOKIE_NAME } from "../src/secrets/keyCookie.js";
-import { openSecretStore, type SecretStore } from "../src/secrets/secretStore.js";
 import { openVault, type Vault } from "../src/vault/files.js";
 import { createVaultWatcher, type VaultWatcher } from "../src/vault/watcher.js";
 
@@ -23,27 +21,23 @@ export type TestContext = {
   config: ServerConfig;
   vault: Vault;
   authStore: AuthStore;
-  secrets: SecretStore;
   tokens: TokenStore;
   app: FastifyInstance;
   /** Only when created with `watch: true`. */
   watcher: VaultWatcher | null;
-  /**
-   * Logs in and returns the Cookie header value for subsequent requests,
-   * session token and key cookie together, the way a browser sends them.
-   */
+  /** Logs in and returns the session Cookie header value for subsequent requests. */
   login(password?: string): Promise<string>;
   cleanup(): Promise<void>;
 };
 
 export async function createTempVault(): Promise<string> {
-  const root = await mkdtemp(path.join(os.tmpdir(), "scribedog-server-test-"));
+  const root = await mkdtemp(path.join(os.tmpdir(), "scribecat-server-test-"));
   await writeFile(path.join(root, "Welcome.md"), "# Welcome\n\nHello.\n");
   await mkdir(path.join(root, "Notes"), { recursive: true });
   await writeFile(path.join(root, "Notes", "Idea.md"), "# Idea\n");
   await writeFile(path.join(root, "Notes", "not-markdown.txt"), "plain\n");
-  await mkdir(path.join(root, ".scribedog"), { recursive: true });
-  await writeFile(path.join(root, ".scribedog", "secret.md"), "# not for the API\n");
+  await mkdir(path.join(root, ".scribecat"), { recursive: true });
+  await writeFile(path.join(root, ".scribecat", "secret.md"), "# not for the API\n");
   return root;
 }
 
@@ -53,20 +47,18 @@ export async function createTestContext(
 ): Promise<TestContext> {
   const vaultPath = await createTempVault();
   const config = loadConfig({
-    SCRIBEDOG_VAULT_PATH: vaultPath,
-    SCRIBEDOG_INIT_PASSWORD: TEST_PASSWORD,
-    SCRIBEDOG_COOKIE_SECURE: "false",
+    SCRIBECAT_VAULT_PATH: vaultPath,
+    SCRIBECAT_INIT_PASSWORD: TEST_PASSWORD,
+    SCRIBECAT_COOKIE_SECURE: "false",
     ...env
   });
   const vault = await openVault(config.vaultPath);
   const authStore = await openAuthStore({ vaultPath: vault.realPath, initPassword: config.initPassword, log: silentLog });
-  const secrets = openSecretStore(vault.realPath);
   const tokens = await openTokenStore({ vaultPath: vault.realPath, log: silentLog });
   const watcher = options.watch ? createVaultWatcher(vault.realPath, silentLog) : null;
   const app = await buildApp({
     config,
     authStore,
-    secrets,
     tokens,
     vault,
     watcher: watcher ?? undefined,
@@ -78,7 +70,6 @@ export async function createTestContext(
     config,
     vault,
     authStore,
-    secrets,
     tokens,
     app,
     watcher,
@@ -99,11 +90,7 @@ export async function createTestContext(
         throw new Error("login did not set a session cookie");
       }
 
-      const keyCookie = response.cookies.find((entry) => entry.name === KEY_COOKIE_NAME && entry.value.length > 0);
-
-      return [`${cookie.name}=${cookie.value}`, keyCookie ? `${keyCookie.name}=${keyCookie.value}` : null]
-        .filter((entry): entry is string => entry !== null)
-        .join("; ");
+      return `${cookie.name}=${cookie.value}`;
     },
     async cleanup() {
       watcher?.close();

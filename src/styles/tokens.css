@@ -11,8 +11,8 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  /* The app's accent color (AI buttons, links, the vault agent's paw and
-     plan checkmark, …). Defaults to the violet ramp the app shipped with;
+  /* The app's accent color for links, controls and highlights. Defaults to
+     the violet ramp inherited from the original design;
      src/store/useAccentColorStore.ts overwrites these as inline styles on
      <html> once a user picks a different color, and persists the choice
      across restarts — these values are only the pre-JS/fallback ramp.
@@ -63,8 +63,8 @@
      theme below, where the two diverge. */
   --chrome-rgb: 100, 115, 136;
   --backdrop-rgb: 100, 116, 139;
-  --body-bg-start: #f8fafc;
-  --body-bg-end: #f2f4f7;
+  --body-bg-start: #f7f7f9;
+  --body-bg-end: #f0f1f4;
   --amber-fg: #92400e;
   --blue-fg: #1d4ed8;
   --error-fg: #b91c1c;
@@ -134,7 +134,7 @@
 
 .dark {
   color-scheme: dark;
-  background: #111214;
+  background: #0f1013;
   color: rgb(226, 232, 240);
 
   --overlay-rgb: 255, 255, 255;
@@ -152,8 +152,8 @@
   --selection-rgb: 160, 160, 164;
   --chrome-rgb: 160, 160, 164;
   --backdrop-rgb: 6, 8, 11;
-  --body-bg-start: #111214;
-  --body-bg-end: #090a0c;
+  --body-bg-start: #0f1013;
+  --body-bg-end: #090a0d;
   --amber-fg: #fde68a;
   --blue-fg: #bfdbfe;
   --error-fg: #fecaca;

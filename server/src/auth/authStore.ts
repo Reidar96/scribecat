@@ -5,11 +5,11 @@ import path from "node:path";
 import { assertPasswordPolicy, hashPassword, verifyPassword } from "./password.js";
 
 /**
- * Where the server keeps its own state inside the vault. `.scribedog/` is the
+ * Where the server keeps its own state inside the vault. `.scribecat/` is the
  * same metadata directory the desktop app uses for versions and checkpoints
  * (and skips when listing notes); `server/` underneath keeps the two apart.
  */
-export const SERVER_META_DIR = path.join(".scribedog", "server");
+export const SERVER_META_DIR = path.join(".scribecat", "server");
 const AUTH_FILE_NAME = "auth.json";
 const SESSION_SECRET_FILE_NAME = "session-secret";
 const SESSION_SECRET_BYTES = 32;
@@ -131,20 +131,20 @@ export async function openAuthStore(options: OpenAuthStoreOptions): Promise<Auth
 
     if (options.initPassword !== null) {
       options.log.warn(
-        "SCRIBEDOG_INIT_PASSWORD is set but ignored because a password already exists. You can remove the variable from your compose file."
+        "SCRIBECAT_INIT_PASSWORD is set but ignored because a password already exists. You can remove the variable from your compose file."
       );
     }
   } else {
     if (options.initPassword === null) {
       throw new AuthSetupError(
-        "No password has been set for this vault yet. Set SCRIBEDOG_INIT_PASSWORD for the first start (it is only used until a password exists)."
+        "No password has been set for this vault yet. Set SCRIBECAT_INIT_PASSWORD for the first start (it is only used until a password exists)."
       );
     }
 
     try {
       assertPasswordPolicy(options.initPassword);
     } catch (error) {
-      throw new AuthSetupError(`SCRIBEDOG_INIT_PASSWORD rejected: ${(error as Error).message}`);
+      throw new AuthSetupError(`SCRIBECAT_INIT_PASSWORD rejected: ${(error as Error).message}`);
     }
 
     authFile = {
@@ -154,7 +154,7 @@ export async function openAuthStore(options: OpenAuthStoreOptions): Promise<Auth
       updatedAt: new Date().toISOString()
     };
     await writeFileAtomically(authFilePath, `${JSON.stringify(authFile, null, 2)}\n`);
-    options.log.info("Initial password stored from SCRIBEDOG_INIT_PASSWORD. The variable can now be removed.");
+    options.log.info("Initial password stored from SCRIBECAT_INIT_PASSWORD. The variable can now be removed.");
   }
 
   let current = authFile;

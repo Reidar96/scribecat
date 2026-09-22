@@ -179,18 +179,18 @@ describe("loadDraftDocuments", () => {
   // has to be there.
   it("restores an unwritten folder note while its folder exists", async () => {
     storage.loadDrafts.mockResolvedValueOnce([
-      { relativePath: "Notes/.scribedog-foldernote.md", content: "about notes", baseMtimeMs: null, updatedAt: 0 },
-      { relativePath: ".scribedog-foldernote.md", content: "about the vault", baseMtimeMs: null, updatedAt: 0 },
-      { relativePath: "Gone/.scribedog-foldernote.md", content: "orphan", baseMtimeMs: null, updatedAt: 0 }
+      { relativePath: "Notes/.scribecat-foldernote.md", content: "about notes", baseMtimeMs: null, updatedAt: 0 },
+      { relativePath: ".scribecat-foldernote.md", content: "about the vault", baseMtimeMs: null, updatedAt: 0 },
+      { relativePath: "Gone/.scribecat-foldernote.md", content: "orphan", baseMtimeMs: null, updatedAt: 0 }
     ]);
 
     const documents = await loadDraftDocuments(VAULT, files, readFile);
 
     expect(documents).toEqual({
-      "D:/Vault/Notes/.scribedog-foldernote.md": { content: "about notes", baseContent: "", baseMtimeMs: null },
-      "D:/Vault/.scribedog-foldernote.md": { content: "about the vault", baseContent: "", baseMtimeMs: null }
+      "D:/Vault/Notes/.scribecat-foldernote.md": { content: "about notes", baseContent: "", baseMtimeMs: null },
+      "D:/Vault/.scribecat-foldernote.md": { content: "about the vault", baseContent: "", baseMtimeMs: null }
     });
-    expect(storage.deleteDraft).toHaveBeenCalledWith(VAULT, "Gone/.scribedog-foldernote.md");
+    expect(storage.deleteDraft).toHaveBeenCalledWith(VAULT, "Gone/.scribecat-foldernote.md");
   });
 
   it("keeps a draft whose file cannot be read right now", async () => {

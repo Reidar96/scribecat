@@ -56,13 +56,6 @@ export type ServerConfig = {
    */
   allowedOrigins: string[];
   /**
-   * Hosts the LLM proxy may forward to. Cloud provider APIs cannot be called
-   * from the browser directly (CORS, and the API key would have to travel to
-   * the tab), so the server forwards those requests; this list is what keeps
-   * that from becoming a way to reach anything else.
-   */
-  llmAllowedHosts: string[];
-  /**
    * Directory with the built web client (`npm run build:web` in the repo
    * root). Defaults to `../dist-web` relative to the server package, which
    * is where that build lands in a checkout and where the Docker image
@@ -98,7 +91,7 @@ export function normalizeBasePath(raw: string | undefined): string {
   for (const segment of segments) {
     if (segment === "." || segment === ".." || !BASE_PATH_SEGMENT.test(segment)) {
       throw new ConfigError(
-        `SCRIBEDOG_BASE_PATH "${raw}" is not a usable path prefix. Use letters, digits, "-", "_" and "." only, e.g. "/anna".`
+        `SCRIBECAT_BASE_PATH "${raw}" is not a usable path prefix. Use letters, digits, "-", "_" and "." only, e.g. "/anna".`
       );
     }
   }
@@ -178,13 +171,6 @@ function parseList(raw: string | undefined, fallback: string[]): string[] {
     .filter((entry) => entry.length > 0);
 }
 
-/**
- * The cloud providers ScribeDog knows (see PROVIDER_DEFAULT_API_URL in
- * src/lib/aiClient.ts). Anyone pointing the app at a gateway of their own adds
- * its host through SCRIBEDOG_LLM_ALLOWED_HOSTS.
- */
-export const DEFAULT_LLM_HOSTS = ["api.openai.com", "api.anthropic.com", "api.mistral.ai"];
-
 function parseOrigins(raw: string | undefined): string[] {
   return parseList(raw, []).map((entry) => {
     let url: URL;
@@ -192,11 +178,11 @@ function parseOrigins(raw: string | undefined): string[] {
     try {
       url = new URL(entry);
     } catch {
-      throw new ConfigError(`SCRIBEDOG_ALLOWED_ORIGINS entry "${entry}" is not a URL, expected e.g. "https://notes.example.com".`);
+      throw new ConfigError(`SCRIBECAT_ALLOWED_ORIGINS entry "${entry}" is not a URL, expected e.g. "https://notes.example.com".`);
     }
 
     if (url.protocol !== "http:" && url.protocol !== "https:") {
-      throw new ConfigError(`SCRIBEDOG_ALLOWED_ORIGINS entry "${entry}" must be http or https.`);
+      throw new ConfigError(`SCRIBECAT_ALLOWED_ORIGINS entry "${entry}" must be http or https.`);
     }
 
     return url.origin;
@@ -204,26 +190,25 @@ function parseOrigins(raw: string | undefined): string[] {
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
-  const vaultPath = path.resolve(env.SCRIBEDOG_VAULT_PATH?.trim() || "/data");
-  const initPassword = env.SCRIBEDOG_INIT_PASSWORD ?? null;
+  const vaultPath = path.resolve(env.SCRIBECAT_VAULT_PATH?.trim() || "/data");
+  const initPassword = env.SCRIBECAT_INIT_PASSWORD ?? null;
 
   return {
     vaultPath,
-    basePath: normalizeBasePath(env.SCRIBEDOG_BASE_PATH),
-    host: env.SCRIBEDOG_HOST?.trim() || "0.0.0.0",
-    port: parseInteger(env.SCRIBEDOG_PORT, 3000, "SCRIBEDOG_PORT"),
+    basePath: normalizeBasePath(env.SCRIBECAT_BASE_PATH),
+    host: env.SCRIBECAT_HOST?.trim() || "0.0.0.0",
+    port: parseInteger(env.SCRIBECAT_PORT, 3000, "SCRIBECAT_PORT"),
     initPassword: initPassword && initPassword.length > 0 ? initPassword : null,
-    cookieSecure: parseBoolean(env.SCRIBEDOG_COOKIE_SECURE, true),
-    trustProxy: parseTrustProxy(env.SCRIBEDOG_TRUST_PROXY),
-    webDistDir: path.resolve(env.SCRIBEDOG_WEB_DIST_DIR?.trim() || path.join(process.cwd(), "..", "dist-web")),
+    cookieSecure: parseBoolean(env.SCRIBECAT_COOKIE_SECURE, true),
+    trustProxy: parseTrustProxy(env.SCRIBECAT_TRUST_PROXY),
+    webDistDir: path.resolve(env.SCRIBECAT_WEB_DIST_DIR?.trim() || path.join(process.cwd(), "..", "dist-web")),
     sessionMaxAgeDays: Math.min(
-      parseInteger(env.SCRIBEDOG_SESSION_MAX_AGE_DAYS, 60, "SCRIBEDOG_SESSION_MAX_AGE_DAYS"),
+      parseInteger(env.SCRIBECAT_SESSION_MAX_AGE_DAYS, 60, "SCRIBECAT_SESSION_MAX_AGE_DAYS"),
       60
     ),
-    loginMaxAttempts: parseInteger(env.SCRIBEDOG_LOGIN_MAX_ATTEMPTS, 5, "SCRIBEDOG_LOGIN_MAX_ATTEMPTS"),
-    loginLockSeconds: parseInteger(env.SCRIBEDOG_LOGIN_LOCK_SECONDS, 60, "SCRIBEDOG_LOGIN_LOCK_SECONDS"),
-    loginLockMaxSeconds: parseInteger(env.SCRIBEDOG_LOGIN_LOCK_MAX_SECONDS, 900, "SCRIBEDOG_LOGIN_LOCK_MAX_SECONDS"),
-    allowedOrigins: parseOrigins(env.SCRIBEDOG_ALLOWED_ORIGINS),
-    llmAllowedHosts: parseList(env.SCRIBEDOG_LLM_ALLOWED_HOSTS, DEFAULT_LLM_HOSTS).map((host) => host.toLowerCase())
+    loginMaxAttempts: parseInteger(env.SCRIBECAT_LOGIN_MAX_ATTEMPTS, 5, "SCRIBECAT_LOGIN_MAX_ATTEMPTS"),
+    loginLockSeconds: parseInteger(env.SCRIBECAT_LOGIN_LOCK_SECONDS, 60, "SCRIBECAT_LOGIN_LOCK_SECONDS"),
+    loginLockMaxSeconds: parseInteger(env.SCRIBECAT_LOGIN_LOCK_MAX_SECONDS, 900, "SCRIBECAT_LOGIN_LOCK_MAX_SECONDS"),
+    allowedOrigins: parseOrigins(env.SCRIBECAT_ALLOWED_ORIGINS)
   };
 }
