@@ -113,7 +113,7 @@ type SidebarProps = {
   onMoveEntry: (input: MoveTreeEntryInput) => Promise<boolean>;
   onMoveRequest: (entries: BatchEntry[]) => void;
   onSetSortMode: (mode: SortMode) => void;
-  onAiSettingsRequest: () => void;
+  onSettingsRequest: () => void;
   onRequestEditorFocus: () => void;
   sidebarFocusRequestId: number;
   onFileTreeSelectionChange: (entries: BatchEntry[]) => void;
@@ -170,7 +170,7 @@ export function Sidebar({
   onMoveEntry,
   onMoveRequest,
   onSetSortMode,
-  onAiSettingsRequest,
+  onSettingsRequest,
   onRequestEditorFocus,
   sidebarFocusRequestId,
   onFileTreeSelectionChange,
@@ -441,7 +441,7 @@ export function Sidebar({
             type="button"
             variant="outline"
             size="sm"
-            onClick={onAiSettingsRequest}
+            onClick={onSettingsRequest}
             aria-label={t("sidebar.settings")}
             title={t("sidebar.settings")}
             data-testid="settings"
