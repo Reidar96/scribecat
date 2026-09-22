@@ -3,7 +3,6 @@ import { buildApp } from "./app.js";
 import { AuthSetupError, openAuthStore } from "./auth/authStore.js";
 import { openTokenStore, TokenStoreError } from "./auth/tokenStore.js";
 import { ConfigError, loadConfig } from "./config.js";
-import { openSecretStore } from "./secrets/secretStore.js";
 import { DataVersionError, ensureDataVersion } from "./vault/dataVersion.js";
 import { openVault } from "./vault/files.js";
 import { createVaultWatcher } from "./vault/watcher.js";
@@ -34,14 +33,12 @@ async function main(): Promise<void> {
     log: bootLog
   });
 
-  const secrets = openSecretStore(vault.realPath);
   const tokens = await openTokenStore({ vaultPath: vault.realPath, log: bootLog });
   const watcher = createVaultWatcher(vault.realPath, bootLog);
 
   const app = await buildApp({
     config,
     authStore,
-    secrets,
     tokens,
     vault,
     watcher,
