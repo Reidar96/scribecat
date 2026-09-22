@@ -345,14 +345,27 @@ export async function getRelativeImageMarkdownPath(
   rootRelativeImagePath: string
 ): Promise<string> {
   const currentFileDir = await dirname(currentFilePath);
-  const currentDirRelative = getRelativeDisplayPath(folderPath, currentFileDir);
+  const currentDirRelative = normalizeDisplayPath(
+    getRelativeDisplayPath(folderPath, currentFileDir)
+  );
+  const targetRelative = normalizeDisplayPath(rootRelativeImagePath);
 
-  if (!currentDirRelative) {
-    return rootRelativeImagePath;
+  const currentSegments = currentDirRelative.split("/").filter(Boolean);
+  const targetSegments = targetRelative.split("/").filter(Boolean);
+
+  let commonSegments = 0;
+  while (
+    commonSegments < currentSegments.length &&
+    commonSegments < targetSegments.length &&
+    currentSegments[commonSegments] === targetSegments[commonSegments]
+  ) {
+    commonSegments += 1;
   }
 
-  const depth = currentDirRelative.split("/").length;
-  return `${"../".repeat(depth)}${rootRelativeImagePath}`;
+  const up = "../".repeat(currentSegments.length - commonSegments);
+  const down = targetSegments.slice(commonSegments).join("/");
+
+  return `${up}${down}`;
 }
 
 const IMAGE_MARKDOWN_PATTERN = /!\[[^\]]*\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g;
