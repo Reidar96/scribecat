@@ -3,6 +3,11 @@
 All notable changes to ScribeDog are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.15.1] - 2026-09-22
+
+### Bug Fixes
+- The emoji picker showed a bare grid with no search and no categories in the installed app, and inline styles were refused elsewhere in the editor. Tauri adds a nonce to the app's content security policy, and a nonce makes the browser ignore the "unsafe-inline" that lets a stylesheet be applied from script. Only the desktop builds were affected; the browser edition never sees that policy
+
 ## [0.15.0] - 2026-09-22
 
 ### Highlights
