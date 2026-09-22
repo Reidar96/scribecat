@@ -75,7 +75,27 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      # Two attempts, because the arm64 half is emulated: QEMU occasionally
+      # dies with "uncaught target signal 4 (Illegal instruction)" inside
+      # `npm ci`, and the build then sits on that layer until someone cancels
+      # it (v0.15.0 sat for 25 minutes; the retry finished in 8). The crash is
+      # not reproducible — the same commit built cleanly on the next run — so
+      # a second attempt is the fix, not a workaround for something in the
+      # image. The first attempt's layers are in the gha cache by then, so the
+      # retry only redoes what actually failed.
+      #
+      # continue-on-error rather than a failure gate: the second step decides
+      # the job's outcome, and a first attempt that died must not colour the
+      # run red when the retry succeeds. That red is what used to leave a
+      # cancelled check on the release commit.
       - name: Build and push
+        id: build
+        continue-on-error: true
+        # A QEMU crash does not fail the step, it wedges it: the layer never
+        # finishes and the build would sit there until the job's own 6h limit.
+        # Successful runs take 5-10 minutes, so 20 turns that wedge into a
+        # failure the retry below can act on.
+        timeout-minutes: 20
         uses: docker/build-push-action@v6
         with:
           # The whole repository: the image needs the frontend under /src as
@@ -84,6 +104,24 @@ jobs:
           file: server/Dockerfile
           # arm64 is not an afterthought here: a Raspberry Pi is the typical
           # box this runs on.
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/scribedog-server:${{ steps.version.outputs.version }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/scribedog-server:${{ steps.version.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Pushing the same tag twice is safe: the registry addresses the image by
+      # digest, so an identical rebuild replaces nothing and a failed attempt
+      # leaves nothing half-published behind.
+      - name: Build and push (retry)
+        if: steps.build.outcome == 'failure'
+        timeout-minutes: 20
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: server/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
