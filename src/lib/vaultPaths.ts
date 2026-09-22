@@ -14,6 +14,16 @@ export function normalizeDisplayPath(path: string): string {
   return path.replace(/\\/g, "/").replace(/\/+$/, "");
 }
 
+/** Normalizes a path that is meant to be relative to the vault root. */
+export function normalizeVaultPath(path: string): string {
+  return path.replace(/\\/g, "/").replace(/^\.\//, "").replace(/^\/+/, "").replace(/\/+$/, "");
+}
+
+/** Comparison key for vault-relative paths; Windows vaults are case-insensitive. */
+export function vaultPathKey(path: string): string {
+  return normalizeVaultPath(path).toLowerCase();
+}
+
 /**
  * Whether an already-resolved absolute path still lies inside the vault.
  * Case-insensitive, because Windows paths are.
