@@ -52,7 +52,7 @@ export const platform: Platform = {
     updater: true,
     voiceInput: true,
     portableMode: true,
-    knowledgeIndex: true,
+    knowledgeIndex: false,
     spellcheckDictionary: true,
     session: false,
     browserLocalModels: false,
@@ -240,9 +240,7 @@ export const platform: Platform = {
     },
     relaunch
   },
-  knowledgeIndex: {
-    call: (command, args) => invoke(command, args)
-  },
+  knowledgeIndex: null,
   session: null,
   localModels: null,
   remoteVaults: desktopRemoteVaults
