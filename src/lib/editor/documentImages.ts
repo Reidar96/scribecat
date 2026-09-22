@@ -1,6 +1,6 @@
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 
-import { normalizeImageSrc } from "@/lib/chat/imageAttachments";
+import { normalizeImageSrc } from "@/lib/editor/imagePaths";
 
 // An image is an atom node with no text, so it exists in two places that never
 // meet: as a node in the document, and as ![alt](path) in whatever markdown a
