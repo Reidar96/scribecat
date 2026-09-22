@@ -25,24 +25,24 @@ import {
 } from "@/lib/vaultMeta";
 import { setAutoAdmitWorkingSetProvider, setRestoreWorkingSetProvider } from "@/store/appStore/workingSetSlice";
 
-export const SPELLCHECK_STORAGE_KEY = "scribedog-spellcheck-enabled";
-export const REOPEN_LAST_NOTE_STORAGE_KEY = "scribedog-reopen-last-note";
-export const DETAILS_PANEL_STORAGE_KEY = "scribedog-details-panel-visible";
-export const OUTLINE_DEPTH_STORAGE_KEY = "scribedog-outline-max-depth";
-export const DETAILS_COLLAPSED_STORAGE_KEY = "scribedog-details-collapsed-sections";
+export const SPELLCHECK_STORAGE_KEY = "scribecat-spellcheck-enabled";
+export const REOPEN_LAST_NOTE_STORAGE_KEY = "scribecat-reopen-last-note";
+export const DETAILS_PANEL_STORAGE_KEY = "scribecat-details-panel-visible";
+export const OUTLINE_DEPTH_STORAGE_KEY = "scribecat-outline-max-depth";
+export const DETAILS_COLLAPSED_STORAGE_KEY = "scribecat-details-collapsed-sections";
 
 /** The details panel's sections, each of which can be folded away. */
 export type DetailsSectionId = "outline" | "fileInfo" | "outgoingLinks" | "backlinks";
-export const ZOOM_STORAGE_KEY = "scribedog-zoom-level";
-export const ZEN_WIDTH_STORAGE_KEY = "scribedog-zen-width";
-export const ZEN_FONT_SIZE_STORAGE_KEY = "scribedog-zen-font-size-pt";
-export const FONT_STORAGE_KEY = "scribedog-font-id";
-export const FONT_SIZE_STORAGE_KEY = "scribedog-font-size-pt";
-export const PAPER_SURFACE_STORAGE_KEY = "scribedog-paper-surface";
-export const AUTO_SAVE_STORAGE_KEY = "scribedog-auto-save-enabled";
-export const RESTORE_WORKING_SET_STORAGE_KEY = "scribedog-restore-working-set";
-export const AUTO_ADMIT_WORKING_SET_STORAGE_KEY = "scribedog-auto-admit-working-set";
-export const PASTE_MARKDOWN_STORAGE_KEY = "scribedog-paste-markdown";
+export const ZOOM_STORAGE_KEY = "scribecat-zoom-level";
+export const ZEN_WIDTH_STORAGE_KEY = "scribecat-zen-width";
+export const ZEN_FONT_SIZE_STORAGE_KEY = "scribecat-zen-font-size-pt";
+export const FONT_STORAGE_KEY = "scribecat-font-id";
+export const FONT_SIZE_STORAGE_KEY = "scribecat-font-size-pt";
+export const PAPER_SURFACE_STORAGE_KEY = "scribecat-paper-surface";
+export const AUTO_SAVE_STORAGE_KEY = "scribecat-auto-save-enabled";
+export const RESTORE_WORKING_SET_STORAGE_KEY = "scribecat-restore-working-set";
+export const AUTO_ADMIT_WORKING_SET_STORAGE_KEY = "scribecat-auto-admit-working-set";
+export const PASTE_MARKDOWN_STORAGE_KEY = "scribecat-paste-markdown";
 
 // Zoom level is an offset in percent relative to normal size (0 = 100%).
 export const ZOOM_MIN = -30;
@@ -390,7 +390,7 @@ type EditorSettingsState = {
    * folder's own note. Controls only what the tree offers — the note files
    * themselves stay on disk, in the search and in the history whether this
    * is on or off, so switching it off never loses anything. Per vault like
-   * headingNumbering (.scribedog/folder-notes.json), loaded by the same call.
+   * headingNumbering (.scribecat/folder-notes.json), loaded by the same call.
    */
   folderNotesEnabled: boolean;
   setFolderNotesEnabled: (enabled: boolean) => void;
@@ -411,7 +411,7 @@ type EditorSettingsState = {
    * Automatic "1.2." numbering of headings, shared by the editor, the outline
    * and every export; computed from structure, never written into the note.
    * Unlike the rest of this store it belongs to the open vault
-   * (.scribedog/heading-numbering.json, see lib/vaultMeta), so it is the
+   * (.scribecat/heading-numbering.json, see lib/vaultMeta), so it is the
    * defaults while no vault is open and reloads with every vault switch.
    */
   headingNumbering: HeadingNumberingSettings;
