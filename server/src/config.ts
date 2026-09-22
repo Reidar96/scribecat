@@ -56,13 +56,6 @@ export type ServerConfig = {
    */
   allowedOrigins: string[];
   /**
-   * Hosts the LLM proxy may forward to. Cloud provider APIs cannot be called
-   * from the browser directly (CORS, and the API key would have to travel to
-   * the tab), so the server forwards those requests; this list is what keeps
-   * that from becoming a way to reach anything else.
-   */
-  llmAllowedHosts: string[];
-  /**
    * Directory with the built web client (`npm run build:web` in the repo
    * root). Defaults to `../dist-web` relative to the server package, which
    * is where that build lands in a checkout and where the Docker image
@@ -178,13 +171,6 @@ function parseList(raw: string | undefined, fallback: string[]): string[] {
     .filter((entry) => entry.length > 0);
 }
 
-/**
- * The cloud providers ScribeCat knows (see PROVIDER_DEFAULT_API_URL in
- * src/lib/aiClient.ts). Anyone pointing the app at a gateway of their own adds
- * its host through SCRIBECAT_LLM_ALLOWED_HOSTS.
- */
-export const DEFAULT_LLM_HOSTS = ["api.openai.com", "api.anthropic.com", "api.mistral.ai"];
-
 function parseOrigins(raw: string | undefined): string[] {
   return parseList(raw, []).map((entry) => {
     let url: URL;
@@ -223,7 +209,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
     loginMaxAttempts: parseInteger(env.SCRIBECAT_LOGIN_MAX_ATTEMPTS, 5, "SCRIBECAT_LOGIN_MAX_ATTEMPTS"),
     loginLockSeconds: parseInteger(env.SCRIBECAT_LOGIN_LOCK_SECONDS, 60, "SCRIBECAT_LOGIN_LOCK_SECONDS"),
     loginLockMaxSeconds: parseInteger(env.SCRIBECAT_LOGIN_LOCK_MAX_SECONDS, 900, "SCRIBECAT_LOGIN_LOCK_MAX_SECONDS"),
-    allowedOrigins: parseOrigins(env.SCRIBECAT_ALLOWED_ORIGINS),
-    llmAllowedHosts: parseList(env.SCRIBECAT_LLM_ALLOWED_HOSTS, DEFAULT_LLM_HOSTS).map((host) => host.toLowerCase())
+    allowedOrigins: parseOrigins(env.SCRIBECAT_ALLOWED_ORIGINS)
   };
 }
