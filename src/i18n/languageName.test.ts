@@ -23,7 +23,7 @@ describe("getCurrentLanguageEnglishName", () => {
     await withLanguage("de-DE", () => expect(getCurrentLanguageEnglishName()).toBe("German"));
   });
 
-  it("falls back to German for an unsupported language", async () => {
-    await withLanguage("xx", () => expect(getCurrentLanguageEnglishName()).toBe("German"));
+  it("falls back to English for an unsupported language", async () => {
+    await withLanguage("xx", () => expect(getCurrentLanguageEnglishName()).toBe("English"));
   });
 });
