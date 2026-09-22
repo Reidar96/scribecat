@@ -107,8 +107,8 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/scribedog-server:${{ steps.version.outputs.version }}
-            ${{ secrets.DOCKERHUB_USERNAME }}/scribedog-server:${{ steps.version.outputs.version }}
+            ghcr.io/${{ github.repository_owner }}/scribecat-server:${{ steps.version.outputs.version }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/scribecat-server:${{ steps.version.outputs.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -125,7 +125,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/scribedog-server:${{ steps.version.outputs.version }}
-            ${{ secrets.DOCKERHUB_USERNAME }}/scribedog-server:${{ steps.version.outputs.version }}
+            ghcr.io/${{ github.repository_owner }}/scribecat-server:${{ steps.version.outputs.version }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/scribecat-server:${{ steps.version.outputs.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
