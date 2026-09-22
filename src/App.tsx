@@ -11,16 +11,9 @@ import { RemoteVaultDialog } from "@/components/remote/RemoteVaultDialog";
 import { DocumentPanel } from "@/components/app/DocumentPanel";
 import { MobileSheet } from "@/components/app/MobileSheet";
 import { ZenMode } from "@/components/app/ZenMode";
-import { ChatPanel } from "@/components/chat/ChatPanel";
-import { ChatSessionOverview } from "@/components/chat/ChatSessionOverview";
-import { registerEditorToolBridge } from "@/lib/chat/agentTools";
-import { setAiSuggestionsEmptyListener } from "@/lib/aiSuggestionWidget";
-import { findStagedChange, normalizeVaultPath } from "@/lib/chat/vaultStaging";
-import { useStagedChangesStore } from "@/store/useStagedChangesStore";
 import type { BatchEntry, PendingEntryRename } from "@/components/FileTree";
 import { useAppVersion } from "@/hooks/useAppVersion";
 import { useAutoSave } from "@/hooks/useAutoSave";
-import { CHAT_MAX_WIDTH, CHAT_MIN_WIDTH, useChatWidth } from "@/hooks/useChatWidth";
 import { useDeleteTarget } from "@/hooks/useDeleteTarget";
 import { useDraftFlush } from "@/hooks/useDraftFlush";
 import { useExportTarget } from "@/hooks/useExportTarget";
@@ -28,7 +21,6 @@ import { useFolderWatcher } from "@/hooks/useFolderWatcher";
 import { useGlobalShortcuts } from "@/hooks/useGlobalShortcuts";
 import { useLayoutMode } from "@/hooks/useLayoutMode";
 import { useMoveTarget } from "@/hooks/useMoveTarget";
-import { useRagIndexAutoUpdate } from "@/hooks/useRagIndexAutoUpdate";
 import { useRemoteVaultDialog } from "@/hooks/useRemoteVaultDialog";
 import { useSidebarSwipe } from "@/hooks/useSidebarSwipe";
 import {
@@ -53,7 +45,6 @@ import {
 } from "@/lib/folderNotes";
 import { getLastOpenedRelativePath, setLastOpenedRelativePath } from "@/lib/lastOpenedFile";
 import { getZenFontScale } from "@/lib/zenFontZoom";
-import { clearVaultSearchCache } from "@/lib/ragSearch";
 import { findStepIndex } from "@/lib/navigationHistory";
 import { downloadFolderAsArchive, downloadNoteAsMarkdown } from "@/lib/export/markdownDownload";
 import { printMarkdown } from "@/lib/print";
@@ -69,11 +60,6 @@ import { IMPORT_FILE_EXTENSIONS, type ImportSource } from "@/lib/import/importer
 import { cn } from "@/lib/utils";
 import { normalizePathKey } from "@/store/appStore/pathUtils";
 import { useAppStore } from "@/store/useAppStore";
-import type { Assistant } from "@/store/useAssistantsStore";
-import { useAiSettingsStore } from "@/store/useAiSettingsStore";
-import { useChatStore } from "@/store/useChatStore";
-import { useRagEmbeddingStore } from "@/store/useRagEmbeddingStore";
-import { useRagSettingsStore } from "@/store/useRagSettingsStore";
 import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
 import { useNavigationHistoryStore } from "@/store/useNavigationHistoryStore";
 import { useSessionStore } from "@/store/useSessionStore";
@@ -91,13 +77,10 @@ function App() {
   // for "not now, because ..." answers that do not deserve a dialog.
   const [notice, setNotice] = useState<string | null>(null);
   const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [isAiSettingsOpen, setIsAiSettingsOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [settingsInitialTab, setSettingsInitialTab] = useState<SettingsTab>("application");
   const [versionDiffTarget, setVersionDiffTarget] = useState<VersionDiffTarget | null>(null);
   const [isRestoringVersion, setIsRestoringVersion] = useState(false);
-  // Wrapped in an object so "create new assistant" (assistant: null) is
-  // distinguishable from "no edit in progress" (whole value null).
-  const [assistantEditTarget, setAssistantEditTarget] = useState<{ assistant: Assistant | null } | null>(null);
   const [importFileList, setImportFileList] = useState<ImportSource[] | null>(null);
   const [importTargetFolder, setImportTargetFolder] = useState<string | null>(null);
   // What a dropped folder contributed beyond the importable files themselves.
@@ -112,8 +95,6 @@ function App() {
   const [editorFocusRequestId, setEditorFocusRequestId] = useState(0);
   const [sidebarFocusRequestId, setSidebarFocusRequestId] = useState(0);
   const [fileTreeSelection, setFileTreeSelection] = useState<BatchEntry[]>([]);
-  const [isAiLoading, setIsAiLoading] = useState(false);
-  const [isAiActionPending, setIsAiActionPending] = useState(false);
   // Phone layout only: the file list is a sheet over the document.
   const [isSidebarSheetOpen, setIsSidebarSheetOpen] = useState(false);
   const appVersion = useAppVersion();
@@ -174,16 +155,6 @@ function App() {
   const emptyFolderMtimeMs = useAppStore((state) => state.emptyFolderMtimeMs);
   const setSortMode = useAppStore((state) => state.setSortMode);
   const moveTreeEntry = useAppStore((state) => state.moveTreeEntry);
-  const loadAiSettings = useAiSettingsStore((state) => state.loadSettings);
-  const loadShortcutOverrides = useShortcutsStore((state) => state.loadOverrides);
-  const aiSettings = useAiSettingsStore((state) => state.settings);
-  const updateAiSettings = useAiSettingsStore((state) => state.updateSettings);
-  const navigationHistory = useNavigationHistoryStore((state) => state.history);
-  const isChatOpen = useChatStore((state) => state.isOpen);
-  const chatView = useChatStore((state) => state.view);
-  const setChatFolder = useChatStore((state) => state.setFolder);
-  const loadRagSettings = useRagSettingsStore((state) => state.loadForFolder);
-  const loadRagEmbeddingSettings = useRagEmbeddingStore((state) => state.load);
   const logout = useSessionStore((state) => state.logout);
 
   const dirtyFilePaths = useMemo(
@@ -235,33 +206,15 @@ function App() {
       t("app.folderNoteLabel", { path: folder })
     );
 
-  // A note the agent has proposed into existence is not on disk either, but it
-  // was never removed — it has not been applied yet. Without this it opens
-  // under a warning saying the file is gone, which is both wrong and the
-  // opposite of what is about to happen to it.
-  const stagedChanges = useStagedChangesStore((state) => state.changes);
-  const isSelectedFileStaged =
-    selectedFilePath !== null &&
-    folderPath !== null &&
-    Boolean(
-      findStagedChange(
-        stagedChanges,
-        normalizeVaultPath(getRelativeDisplayPath(folderPath, selectedFilePath))
-      )
-    );
-
   // A folder note is on disk only once it has been saved with content; until
   // then it is an empty document that was never removed.
   const isSelectedFileMissing =
     selectedFilePath !== null &&
     !filePaths.includes(selectedFilePath) &&
-    !isSelectedFileStaged &&
     !isSelectedFolderNote;
 
   const { sidebarWidth, isResizingSidebar, handleResizeStart, handleResizeKeyDown } =
     useSidebarWidth();
-  const { chatWidth, isResizingChat, handleChatResizeStart, handleChatResizeKeyDown } =
-    useChatWidth();
 
   const zenWidth = useEditorSettingsStore((state) => state.zenWidth);
   const zenFontSizePt = useEditorSettingsStore((state) => state.zenFontSizePt);
@@ -271,12 +224,12 @@ function App() {
   });
 
   useWebviewZoom();
-  useAutoSave({ isAiActionPending, isSelectedFileStaged, isSelectedFileMissing });
+  useAutoSave({ isAiActionPending: false, isSelectedFileStaged: false, isSelectedFileMissing });
   useDraftFlush({
     // Closing the app with auto-save on saves the open note the way leaving
     // it would; without auto-save the draft is what comes back.
     onBeforeClose: async () => {
-      if (isDirty && autoSaveEnabled && !isAiActionPending && !isSelectedFileStaged && !isSelectedFileMissing) {
+      if (isDirty && autoSaveEnabled && !isSelectedFileMissing) {
         await saveSelectedFile({ trigger: "auto" });
       }
     }
@@ -289,7 +242,7 @@ function App() {
   // The chat sheet covers the whole phone screen and Zen mode hides the
   // sidebar on purpose; a swipe there must not pull the file list over them.
   useSidebarSwipe({
-    enabled: layout === "phone" && !isChatOpen && !isZenMode,
+    enabled: layout === "phone" && !isZenMode,
     isOpen: isSidebarSheetOpen,
     onOpen: () => setIsSidebarSheetOpen(true),
     onClose: () => setIsSidebarSheetOpen(false)
@@ -420,13 +373,8 @@ function App() {
       return true;
     }
 
-    if (isAiActionPending) {
-      navigationIntentRef.current = null;
-      showNotice(t("app.aiPendingNotice"));
-      return false;
-    }
 
-    if (isDirty && autoSaveEnabled && !isSelectedFileStaged && !isSelectedFileMissing) {
+    if (isDirty && autoSaveEnabled && !isSelectedFileMissing) {
       await saveSelectedFile({ trigger: "auto" });
     }
 
@@ -472,8 +420,6 @@ function App() {
     // A file the agent has only proposed is in the tree but not on disk; this
     // gives it an in-memory document so opening it shows the proposal instead
     // of a read error.
-    useStagedChangesStore.getState().seedCreatedDocument(filePath);
-
     await selectFilePath(filePath);
   };
 
@@ -712,29 +658,12 @@ function App() {
     registerImportedFiles(createdFilePaths, parentRelativePath, importInsertAfterBasename);
   };
 
-  useEffect(() => {
-    setIsAiLoading(false);
-    setIsAiActionPending(false);
 
-    // A selection belongs to the document it was made in. The editor pushes its
-    // own selection changes into the chat store, but it cannot cover the two
-    // cases handled here: a file switch remounts it with a fresh, empty
-    // selection, and closing the file unmounts it entirely.
-    useChatStore.getState().setEditorSelection("");
-  }, [selectedFilePath]);
-
-  useEffect(() => {
-    void loadAiSettings();
-  }, [loadAiSettings]);
 
   // The knowledge base's own connection is app-wide like the AI settings, and
   // has to be in memory before the first lookup: its API key comes from the OS
   // credential store, and a search that starts before it arrives would fall
   // back to keyword search without saying why.
-  useEffect(() => {
-    void loadRagEmbeddingSettings();
-  }, [loadRagEmbeddingSettings]);
-
   // Custom key bindings are app-wide (shortcuts.json in the app config dir),
   // so they are loaded once at startup rather than per opened folder.
   useEffect(() => {
@@ -743,61 +672,16 @@ function App() {
 
   // Chat sessions are vault-scoped (persisted into .scribecat/); reload them
   // whenever the opened folder changes.
-  useEffect(() => {
-    void setChatFolder(folderPath);
-  }, [folderPath, setChatFolder]);
-
   // The agent's staged file changes and their undo checkpoints are vault-scoped
   // in the same way, and for the same reason: they name paths inside this
   // folder and mean nothing in the next one.
-  useEffect(() => {
-    void useStagedChangesStore.getState().setFolder(folderPath);
-  }, [folderPath]);
-
   // The staging layer's marker for the open document has to go when its
   // proposals do — whether the user clicked accept/discard on a widget or the
   // chat settled them (see setAiSuggestionsEmptyListener).
-  useEffect(() => {
-    setAiSuggestionsEmptyListener(() => useStagedChangesStore.getState().clearEditorProposal());
-
-    return () => setAiSuggestionsEmptyListener(null);
-  }, []);
-
   // Same for the knowledge base's settings — which folders the AI may read is
   // consent given for one vault, and must never carry over to the next one.
   // Clearing the search cache alongside makes sure no passage of the previous
   // vault can still be returned.
-  useEffect(() => {
-    void loadRagSettings(folderPath);
-    void clearVaultSearchCache();
-  }, [folderPath, loadRagSettings]);
-
-  // The chat agent's document tools (src/lib/chat/agentTools.ts) reach the
-  // editor through this bridge rather than through props, since the store
-  // that drives the agent loop has no path down into the editor component.
-  useEffect(() => {
-    registerEditorToolBridge({
-      // The editor component is only mounted while a note is open, so its
-      // handle is exactly the "is there a document" answer the agent needs.
-      hasDocument: () => editorHandleRef.current !== null,
-      getDocument: () => editorHandleRef.current?.getMarkdown() ?? "",
-      getSelection: () => editorHandleRef.current?.getSelectionText() ?? "",
-      listImageSources: () => editorHandleRef.current?.listImageSources() ?? [],
-      listPendingProposals: () => editorHandleRef.current?.listPendingProposals() ?? [],
-      acceptPendingProposals: () => editorHandleRef.current?.acceptPendingProposals() ?? 0,
-      discardPendingProposals: () => editorHandleRef.current?.discardPendingProposals() ?? 0,
-      proposeSelectionReplacement: (text) =>
-        editorHandleRef.current?.proposeSelectionReplacement(text) ?? "failed",
-      proposeInsertion: (text, anchorText) =>
-        editorHandleRef.current?.proposeInsertion(text, anchorText) ?? "failed",
-      proposePassageReplacement: (oldText, newText) =>
-        editorHandleRef.current?.proposePassageReplacement(oldText, newText) ?? "failed",
-      setImageWidth: (src, request) => editorHandleRef.current?.setImageWidth(src, request) ?? null
-    });
-
-    return () => registerEditorToolBridge(null);
-  }, []);
-
   // Safety net for files dropped anywhere no handler claims them: without it
   // the webview follows the drop and navigates the whole app away to the file,
   // which looks exactly like a crash. Handlers that took the drop have called
@@ -851,11 +735,6 @@ function App() {
     setVersionDiffTarget(null);
   }, [selectedFilePath]);
 
-  const openAssistantSettings = () => {
-    setSettingsInitialTab("assistants");
-    setIsAiSettingsOpen(true);
-  };
-
   useStartupFolder(openFolderAtPath);
   useFolderWatcher(refreshFolderFiles);
   const remoteVaultDialog = useRemoteVaultDialog({ openVault: openRecentFolderSafely });
@@ -905,7 +784,6 @@ function App() {
       setLastOpenedRelativePath(folderPath, null);
     }
   }, [folderPath, isLoading, filePaths, reopenLastNote, selectedFilePath, selectFilePath]);
-  useRagIndexAutoUpdate();
   useGlobalShortcuts({
     selectedFilePath,
     saveSelectedFile,
@@ -913,7 +791,7 @@ function App() {
     createFile: handleCreateFile,
     showShortcuts: () => {
       setSettingsInitialTab("shortcuts");
-      setIsAiSettingsOpen(true);
+      setIsSettingsOpen(true);
     },
     toggleZenMode,
     navigateBack: () => navigateHistory(backStepIndex),
@@ -985,7 +863,7 @@ function App() {
       onSetSortMode={(mode) => void setSortMode(mode)}
       onAiSettingsRequest={() => {
         setSettingsInitialTab("application");
-        setIsAiSettingsOpen(true);
+        setIsSettingsOpen(true);
       }}
       onRequestEditorFocus={() => setEditorFocusRequestId((id) => id + 1)}
       sidebarFocusRequestId={sidebarFocusRequestId}
@@ -997,15 +875,7 @@ function App() {
     />
   );
 
-  const chatContent =
-    chatView === "overview" ? (
-      <ChatSessionOverview />
-    ) : (
-      <ChatPanel
-        canEditDocument={selectedFilePath !== null}
-        onAssistantSettingsRequest={openAssistantSettings}
-      />
-    );
+
 
   return (
     <main
@@ -1026,14 +896,12 @@ function App() {
         <section
           className={cn(
             "workspace-grid",
-            isZenMode && "workspace-grid--zen",
-            isChatOpen && layout === "desktop" && "workspace-grid--chat-open"
+            isZenMode && "workspace-grid--zen"
           )}
           aria-label={t("app.workspaceLabel")}
           style={
             {
-              "--sidebar-width": `${sidebarWidth}px`,
-              "--chat-width": `${chatWidth}px`
+              "--sidebar-width": `${sidebarWidth}px`
             } as React.CSSProperties
           }
         >
@@ -1085,7 +953,6 @@ function App() {
 
               void join(folderPath, folderRelativePath).then(openFolderNoteSafely);
             }}
-            isAiLoading={isAiLoading}
             isSaving={isSaving}
             isDirty={isDirty}
             isSelectedFileMissing={isSelectedFileMissing}
@@ -1098,12 +965,6 @@ function App() {
             onCanonicalMarkdown={adoptCanonicalFileContent}
             onRequestSidebarFocus={() => setSidebarFocusRequestId((id) => id + 1)}
             onRequestFileOpen={(targetFilePath) => void selectFilePathSafely(targetFilePath)}
-            onAiLoadingChange={setIsAiLoading}
-            onAiPendingChange={setIsAiActionPending}
-            onAiSettingsRequest={() => {
-              setSettingsInitialTab("ai");
-              setIsAiSettingsOpen(true);
-            }}
             onZenModeRequest={enterZenMode}
             onVersionDiffRequest={handleVersionDiffRequest}
             onVersionRestoreRequest={(version) => void handleVersionRestore(version)}
@@ -1111,31 +972,6 @@ function App() {
             onSaveRequest={() => void saveSelectedFile()}
           />
 
-          {isChatOpen && layout === "desktop" ? (
-            <div
-              className={cn(
-                "workspace-resizer",
-                isResizingChat && "workspace-resizer--active"
-              )}
-              role="separator"
-              aria-orientation="vertical"
-              aria-label={t("app.chatResizeLabel")}
-              aria-valuenow={chatWidth}
-              aria-valuemin={CHAT_MIN_WIDTH}
-              aria-valuemax={CHAT_MAX_WIDTH}
-              tabIndex={0}
-              onPointerDown={handleChatResizeStart}
-              onKeyDown={handleChatResizeKeyDown}
-            >
-              <span className="workspace-resizer__grip" aria-hidden="true" />
-            </div>
-          ) : null}
-
-          {isChatOpen && layout === "desktop" ? (
-            <aside className="chat-column" aria-label={t("chat.panelLabel")}>
-              {chatContent}
-            </aside>
-          ) : null}
         </section>
       </div>
 
@@ -1147,20 +983,6 @@ function App() {
           className="mobile-sheet__panel--sidebar"
         >
           {sidebar}
-        </MobileSheet>
-      ) : null}
-
-      {isChatOpen && layout !== "desktop" ? (
-        <MobileSheet
-          side={layout === "phone" ? "full" : "right"}
-          backdrop={layout === "phone"}
-          label={t("chat.panelLabel")}
-          onClose={() => useChatStore.getState().closePanel()}
-          className="mobile-sheet__panel--chat"
-        >
-          <aside className="chat-column" aria-label={t("chat.panelLabel")}>
-            {chatContent}
-          </aside>
         </MobileSheet>
       ) : null}
 
@@ -1196,23 +1018,9 @@ function App() {
           }
         }}
         onDismissConflict={dismissSaveConflict}
-        isAiSettingsOpen={isAiSettingsOpen}
+        isSettingsOpen={isSettingsOpen}
         settingsInitialTab={settingsInitialTab}
-        aiSettings={aiSettings}
-        onSaveSettings={updateAiSettings}
-        onCloseSettings={() => setIsAiSettingsOpen(false)}
-        onAssistantEditRequest={(assistant) => {
-          // Editing happens in its own modal; the settings dialog closes and
-          // reopens on the assistants tab once editing is done.
-          setIsAiSettingsOpen(false);
-          setAssistantEditTarget({ assistant });
-        }}
-        assistantEditTarget={assistantEditTarget}
-        onCloseAssistantEdit={() => {
-          setAssistantEditTarget(null);
-          setSettingsInitialTab("assistants");
-          setIsAiSettingsOpen(true);
-        }}
+        onCloseSettings={() => setIsSettingsOpen(false)}
         moveRequest={moveRequest}
         fileRelativePaths={fileRelativePaths}
         emptyFolderRelativePaths={emptyFolderRelativePaths}
