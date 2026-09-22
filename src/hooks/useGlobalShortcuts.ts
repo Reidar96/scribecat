@@ -7,7 +7,6 @@ import { couldBeShortcut } from "@/lib/shortcuts/binding";
 import { isRetiredDefault, matchShortcut } from "@/lib/shortcuts/resolve";
 import { getVaultCapabilities, platform } from "@/platform";
 import { useAppStore } from "@/store/useAppStore";
-import { useChatStore } from "@/store/useChatStore";
 import { ZOOM_STEP, useEditorSettingsStore } from "@/store/useEditorSettingsStore";
 import { useSearchStore } from "@/store/useSearchStore";
 import { useShortcutsStore } from "@/store/useShortcutsStore";
@@ -107,20 +106,6 @@ export function useGlobalShortcuts({
         case "navigateForward":
           navigateForward();
           return;
-        case "toggleChat":
-          useChatStore.getState().togglePanel();
-          return;
-        case "newChat": {
-          const chatStore = useChatStore.getState();
-
-          if (chatStore.isOpen) {
-            chatStore.newSession();
-          } else {
-            chatStore.openPanel();
-          }
-
-          return;
-        }
         case "toggleDetailsPanel": {
           // The panel shows details of the current file, so it only makes
           // sense with a document open.
