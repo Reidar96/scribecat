@@ -89,7 +89,7 @@ const {
 } = await import("./drafts");
 
 const VAULT = "D:/Vault";
-const DRAFTS_DIR = `${VAULT}/.scribedog/drafts`;
+const DRAFTS_DIR = `${VAULT}/.scribecat/drafts`;
 const INDEX = `${DRAFTS_DIR}/index.json`;
 
 function blobFiles(): string[] {
@@ -300,10 +300,10 @@ describe("shared vaults", () => {
   it("prunes orphaned blobs in localStorage too", async () => {
     const root = "/@remote/notes.example.org";
     await writeDraft(root, "Idea.md", "text", null);
-    localStorage.setItem("scribedog-drafts:@remote/notes.example.org:blob:draft-orphan", "x");
+    localStorage.setItem("scribecat-drafts:@remote/notes.example.org:blob:draft-orphan", "x");
 
     await loadDrafts(root);
 
-    expect(localStorage.getItem("scribedog-drafts:@remote/notes.example.org:blob:draft-orphan")).toBeNull();
+    expect(localStorage.getItem("scribecat-drafts:@remote/notes.example.org:blob:draft-orphan")).toBeNull();
   });
 });

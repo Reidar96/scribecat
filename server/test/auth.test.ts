@@ -121,7 +121,7 @@ describe("auth store", () => {
 
   it("refuses to start without a password and without an init password", async () => {
     const vaultPath = await tempVault();
-    await expect(openAuthStore({ vaultPath, initPassword: null, log })).rejects.toThrow(/SCRIBEDOG_INIT_PASSWORD/);
+    await expect(openAuthStore({ vaultPath, initPassword: null, log })).rejects.toThrow(/SCRIBECAT_INIT_PASSWORD/);
   });
 
   it("refuses an init password that breaks the policy", async () => {
@@ -129,7 +129,7 @@ describe("auth store", () => {
     await expect(openAuthStore({ vaultPath, initPassword: "short", log })).rejects.toThrow(/at least/);
   });
 
-  it("stores the hash and the secret under .scribedog/server", async () => {
+  it("stores the hash and the secret under .scribecat/server", async () => {
     const vaultPath = await tempVault();
     await openAuthStore({ vaultPath, initPassword: "first password", log });
 
@@ -179,7 +179,7 @@ describe("auth routes", () => {
   });
 
   it("marks the cookie Secure by default", async () => {
-    const secureContext = await createTestContext({ SCRIBEDOG_COOKIE_SECURE: "" });
+    const secureContext = await createTestContext({ SCRIBECAT_COOKIE_SECURE: "" });
 
     try {
       const response = await secureContext.app.inject({ method: "POST", url: "/api/auth/login", payload: { password: TEST_PASSWORD } });

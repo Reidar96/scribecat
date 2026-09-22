@@ -23,8 +23,8 @@ const MODEL_DOWNLOAD_URL: &str =
 // The published ggml-small.bin is ~465 MB; anything much smaller than this is
 // a truncated download or an HTML error page and must not be loaded as model.
 const MODEL_MIN_PLAUSIBLE_BYTES: u64 = 400 * 1024 * 1024;
-const DOWNLOAD_PROGRESS_EVENT: &str = "scribedog-voice-model-download-progress";
-const VOICE_LEVEL_EVENT: &str = "scribedog-voice-level";
+const DOWNLOAD_PROGRESS_EVENT: &str = "scribecat-voice-model-download-progress";
+const VOICE_LEVEL_EVENT: &str = "scribecat-voice-level";
 const WHISPER_SAMPLE_RATE: u32 = 16_000;
 
 struct ActiveRecording {

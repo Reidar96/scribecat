@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "ScribeDog",
+  "productName": "ScribeCat",
   "version": "0.15.1",
-  "identifier": "com.dontp.scribedog",
+  "identifier": "com.dontp.scribecat",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "ScribeDog",
+        "title": "ScribeCat",
         "width": 1500,
         "height": 900,
         "minWidth": 940,

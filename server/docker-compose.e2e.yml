@@ -3,14 +3,14 @@
 #   docker compose -f docker-compose.yml -f docker-compose.e2e.yml up -d --build
 #
 # A scripted model (e2e/mock-llm) joins the stack as https://llm.e2e.internal,
-# served by the same Caddy under a second site name, so the ScribeDog server
+# served by the same Caddy under a second site name, so the ScribeCat server
 # forwards the app's AI requests to it exactly as it would to a real
 # provider. Nothing here belongs in a real deployment.
 
 services:
-  scribedog:
+  scribecat:
     environment:
-      SCRIBEDOG_LLM_ALLOWED_HOSTS: llm.e2e.internal
+      SCRIBECAT_LLM_ALLOWED_HOSTS: llm.e2e.internal
       # The mock's certificate comes from Caddy's local CA, which the server
       # container does not trust. Test stack only.
       NODE_TLS_REJECT_UNAUTHORIZED: "0"
@@ -33,4 +33,4 @@ services:
       - "8080"
     ports:
       # The tests read the mock's request log through this port.
-      - "${SCRIBEDOG_MOCK_LLM_PORT:-9081}:8080"
+      - "${SCRIBECAT_MOCK_LLM_PORT:-9081}:8080"

@@ -1,9 +1,9 @@
 /**
  * The seam between the shared React frontend and whatever runs underneath it.
  *
- * ScribeDog has one frontend and two shells: the Tauri desktop app, where the
+ * ScribeCat has one frontend and two shells: the Tauri desktop app, where the
  * Rust process owns the filesystem, dialogs, microphone and credential store,
- * and the server edition, where a browser talks to the ScribeDog server over
+ * and the server edition, where a browser talks to the ScribeCat server over
  * HTTP. Everything the frontend needs from its shell goes through this
  * interface. The two implementations live in `./desktop` and `./web`; the Vite
  * config decides which one the `@platform-impl` alias resolves to, so the web
@@ -91,7 +91,7 @@ export const ALL_VAULT_CAPABILITIES: VaultCapabilities = {
 };
 
 /**
- * Access to the open vault: notes, the images folder and the `.scribedog/`
+ * Access to the open vault: notes, the images folder and the `.scribecat/`
  * metadata that lives next to them. Paths are absolute in the platform's own
  * notation; the web platform uses a virtual root (see `remote/remoteStorage.ts`).
  *
@@ -104,7 +104,7 @@ export type VaultStorage = FileSystemApi & {
   listMarkdownFiles(rootPath: string): Promise<MarkdownFileRecord[]>;
   /**
    * Packs a folder of the vault (notes, images, everything but the
-   * `.scribedog/` metadata) into a ZIP archive of the raw files. Null for a
+   * `.scribecat/` metadata) into a ZIP archive of the raw files. Null for a
    * local folder, whose files are right there in the file manager. A server
    * vault answers it in one request (`GET /api/export/zip`), which is what
    * makes "get my notes out" possible from a browser at all.
@@ -341,7 +341,7 @@ export type RemoteRequestInit = {
 };
 
 /**
- * What the shell provides for opening a vault on a ScribeDog server: the
+ * What the shell provides for opening a vault on a ScribeCat server: the
  * request path (the webview itself may not talk to an arbitrary host, see
  * src-tauri/src/remote_vault.rs), the credential store for the access
  * tokens, and the live-update connection. Desktop only; in the browser the
@@ -371,7 +371,7 @@ export type RemoteVaultsApi = {
 };
 
 /**
- * Login/logout against the ScribeDog server. Web only: the desktop app is
+ * Login/logout against the ScribeCat server. Web only: the desktop app is
  * its own trusted client and has no session.
  */
 export type SessionApi = {
@@ -429,7 +429,7 @@ export type PlatformFeatures = {
   spellcheckDictionary: boolean;
   /** Password login/logout. */
   session: boolean;
-  /** Vaults on a ScribeDog server next to local folders (see RemoteVaultsApi). */
+  /** Vaults on a ScribeCat server next to local folders (see RemoteVaultsApi). */
   remoteVaults: boolean;
   /**
    * Local model servers are reached by the browser itself (see

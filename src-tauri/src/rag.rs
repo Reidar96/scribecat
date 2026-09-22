@@ -86,7 +86,7 @@ struct CachedFile {
 pub struct RagState {
     files: Mutex<HashMap<PathBuf, CachedFile>>,
     /// The vectors of the vault currently open, mirrored from
-    /// .scribedog/rag-index.bin (see VectorIndex).
+    /// .scribecat/rag-index.bin (see VectorIndex).
     index: Mutex<VectorIndex>,
 }
 
@@ -582,7 +582,7 @@ pub fn rag_clear_cache(state: tauri::State<'_, RagState>) {
 
 /// Metadata folder of a vault, mirroring VAULT_META_DIR_NAME in
 /// src/lib/fileSystem.ts.
-const VAULT_META_DIR: &str = ".scribedog";
+const VAULT_META_DIR: &str = ".scribecat";
 
 /// The stored vectors of one vault. Flat file rather than a vector database:
 /// a large vault is a few thousand passages, and brute-force cosine over that

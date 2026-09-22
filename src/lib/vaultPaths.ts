@@ -4,7 +4,7 @@
  * Re-exported from lib/fileSystem.ts, where callers have always found them.
  */
 
-export const VAULT_META_DIR_NAME = ".scribedog";
+export const VAULT_META_DIR_NAME = ".scribecat";
 
 export function isMarkdownFileName(name: string): boolean {
   return name.toLowerCase().endsWith(".md");

@@ -20,14 +20,14 @@ import { clearedSessionCookieOptions, sessionCookieOptions, type CookieOptions }
  * on it, but the cookie is in the browser.
  */
 
-export const KEY_COOKIE_NAME = "scribedog_keys";
+export const KEY_COOKIE_NAME = "scribecat_keys";
 
 const IV_LENGTH = 12;
 const TAG_LENGTH = 16;
 const DEK_LENGTH = 32;
 
 function cookieKey(sessionSecret: Buffer): Buffer {
-  return Buffer.from(hkdfSync("sha256", sessionSecret, Buffer.alloc(0), "scribedog-key-cookie", 32));
+  return Buffer.from(hkdfSync("sha256", sessionSecret, Buffer.alloc(0), "scribecat-key-cookie", 32));
 }
 
 export function createKeyCookie(config: SessionConfig, dataKey: Buffer, epoch: number): string {

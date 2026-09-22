@@ -69,7 +69,7 @@ describe("login route with throttling", () => {
   let context: TestContext;
 
   beforeEach(async () => {
-    context = await createTestContext({ SCRIBEDOG_LOGIN_MAX_ATTEMPTS: "2", SCRIBEDOG_LOGIN_LOCK_SECONDS: "60" });
+    context = await createTestContext({ SCRIBECAT_LOGIN_MAX_ATTEMPTS: "2", SCRIBECAT_LOGIN_LOCK_SECONDS: "60" });
   });
 
   afterEach(async () => {
@@ -138,7 +138,7 @@ describe("origin check", () => {
   let context: TestContext;
 
   beforeEach(async () => {
-    context = await createTestContext({ SCRIBEDOG_ALLOWED_ORIGINS: "https://notes.example.com" });
+    context = await createTestContext({ SCRIBECAT_ALLOWED_ORIGINS: "https://notes.example.com" });
   });
 
   afterEach(async () => {
@@ -208,7 +208,7 @@ describe("origin check", () => {
     ).toBe(204);
   });
 
-  it("accepts an origin from SCRIBEDOG_ALLOWED_ORIGINS", async () => {
+  it("accepts an origin from SCRIBECAT_ALLOWED_ORIGINS", async () => {
     const cookie = await context.login();
     const response = await context.app.inject({
       method: "POST",

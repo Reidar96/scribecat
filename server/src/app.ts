@@ -40,7 +40,7 @@ const BODY_LIMIT = 64 * 1024 * 1024;
 
 /**
  * Wires the whole app together. Every route group is mounted under the base
- * path, so with SCRIBEDOG_BASE_PATH=/anna nothing at all answers under "/":
+ * path, so with SCRIBECAT_BASE_PATH=/anna nothing at all answers under "/":
  * a bare request to the host is a 404 by design, because with several
  * instances behind one port there is no right answer for it.
  */

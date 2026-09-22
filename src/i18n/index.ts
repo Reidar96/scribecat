@@ -12,7 +12,7 @@ import ru from "@/i18n/locales/ru.json";
 import it from "@/i18n/locales/it.json";
 import uk from "@/i18n/locales/uk.json";
 
-export const LANGUAGE_STORAGE_KEY = "scribedog-language";
+export const LANGUAGE_STORAGE_KEY = "scribecat-language";
 export const SUPPORTED_LANGUAGES = ["de", "en", "fr", "es", "zh", "ja", "pt", "ru", "it", "uk"] as const;
 export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
 const DEFAULT_LANGUAGE: SupportedLanguage = "de";

@@ -2,19 +2,19 @@
 
 ## Reporting a vulnerability
 
-If you discover a security vulnerability in ScribeDog, please report it privately —
-**do not open a public issue**. Use [GitHub's private vulnerability reporting](https://github.com/snooky234/scribedog/security/advisories/new)
+If you discover a security vulnerability in ScribeCat, please report it privately —
+**do not open a public issue**. Use [GitHub's private vulnerability reporting](https://github.com/snooky234/scribecat/security/advisories/new)
 ("Report a vulnerability" on the Security tab of this repository) and include a
 description of the issue and, if possible, steps to reproduce.
 
 ## Supported versions
 
-Only the **latest release** receives security fixes. ScribeDog is a desktop app
+Only the **latest release** receives security fixes. ScribeCat is a desktop app
 with an auto-update notice on Windows, so please keep it up to date.
 
-## Scope — what ScribeDog protects against (and what it doesn't)
+## Scope — what ScribeCat protects against (and what it doesn't)
 
-ScribeDog is designed to be private by architecture:
+ScribeCat is designed to be private by architecture:
 
 - **Offline by default** — no telemetry, no analytics, no account. The only
   automatic network call is an optional, disableable update check (Windows).
@@ -26,7 +26,7 @@ ScribeDog is designed to be private by architecture:
 - **API keys in the OS credential store** — Windows Credential Manager, macOS
   Keychain, or Linux Secret Service; not in plain text on disk.
 
-Out of scope (things ScribeDog cannot protect against):
+Out of scope (things ScribeCat cannot protect against):
 
 - Malware or other software already running with your user's privileges on the
   same machine.

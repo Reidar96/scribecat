@@ -9,7 +9,7 @@ import { normalizeStagedChange, type StagedChange } from "./vaultStaging";
  * Persistence for the staging layer, in the vault's own metadata folder next to
  * the chat sessions and the version history:
  *
- *   .scribedog/staged-changes.json  ->  [StagedChange, ...]
+ *   .scribecat/staged-changes.json  ->  [StagedChange, ...]
  *
  * Proposals outlive a restart on purpose: an agent turn that touched twelve
  * files and a user who closes the app before reviewing them is the normal case,
@@ -54,7 +54,7 @@ export async function writeStagedChanges(folderPath: string, changes: StagedChan
 
   if (persistable.length === 0) {
     // Nothing pending: drop the file rather than leaving an empty array behind,
-    // so `.scribedog/` only carries what actually exists.
+    // so `.scribecat/` only carries what actually exists.
     await remove(filePath).catch(() => undefined);
     return;
   }

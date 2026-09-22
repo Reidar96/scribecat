@@ -359,7 +359,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     persist(get());
 
     // The undo checkpoints belong to the conversation that produced them —
-    // otherwise their full-text blobs pile up in `.scribedog/` for a chat that
+    // otherwise their full-text blobs pile up in `.scribecat/` for a chat that
     // no longer exists, with nothing left to hang an undo button on.
     const folderPath = get().loadedFolderPath;
 

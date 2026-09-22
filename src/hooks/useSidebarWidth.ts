@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from "react";
 
-const SIDEBAR_WIDTH_STORAGE_KEY = "scribedog-sidebar-width";
+const SIDEBAR_WIDTH_STORAGE_KEY = "scribecat-sidebar-width";
 const MIN_SIDEBAR_WIDTH = 220;
 const MAX_SIDEBAR_WIDTH = 560;
 const DEFAULT_SIDEBAR_WIDTH = 320;

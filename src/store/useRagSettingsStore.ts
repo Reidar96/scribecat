@@ -14,7 +14,7 @@ import {
  *
  * Unlike the other settings stores this one is *not* app-wide: which folders
  * may be read is a property of the vault the user opened, so it lives in that
- * vault's .scribedog/rag.json and is reloaded whenever a folder is opened.
+ * vault's .scribecat/rag.json and is reloaded whenever a folder is opened.
  * Loading a second vault must never carry the first one's consent over.
  *
  * The connection to the embedding service is deliberately *not* here: which

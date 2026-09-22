@@ -19,7 +19,7 @@ export type VaultWatcher = {
  * list. Coarse on purpose: which file changed does not matter to the
  * consumer, and a recursive rescan is what the desktop does too.
  *
- * Changes under `.scribedog/` are not reported. The frontend writes there
+ * Changes under `.scribecat/` are not reported. The frontend writes there
  * itself on every save (version snapshots, manual order), and the server
  * keeps its own state there; neither is a reason to rescan the notes.
  */

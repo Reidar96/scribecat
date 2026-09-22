@@ -11,7 +11,7 @@ Settings → AI as you would on the desktop; from there on it differs from the
 desktop in two ways worth knowing.
 
 **The key stays on the server.** It is encrypted with a key derived from your
-login password and kept in `.scribedog/server/secrets.json`. The browser never
+login password and kept in `.scribecat/server/secrets.json`. The browser never
 receives it back: the settings field shows "stored" instead of a value, and
 requests to the provider are sent by the server, which fills the key in on
 the way out. So someone who copies the data folder gets your notes (they are
@@ -23,7 +23,7 @@ calls to another site's API, and sending the key to the tab to try would give
 up what the paragraph above buys. The server only forwards to the three
 provider hosts over https; anything else is refused, so this cannot become a
 way to reach something else on your network. If you use your own gateway in
-front of a provider, add its host to `SCRIBEDOG_LLM_ALLOWED_HOSTS`.
+front of a provider, add its host to `SCRIBECAT_LLM_ALLOWED_HOSTS`.
 
 The AI settings themselves live in the browser, so each device keeps its own
 provider and model choice. The API key is stored once on the server and works
@@ -35,9 +35,9 @@ Everything the desktop agent does, the web app does too: it reads and
 searches your notes, proposes new notes and edits, and every proposal waits
 for your review before it touches a file. The pieces it keeps between
 sessions live in the vault, next to the notes: open proposals in
-`.scribedog/staged-changes.json`, the checkpoints behind the undo button in
-`.scribedog/checkpoints/`, and the chat history in
-`.scribedog/chat-sessions.json`. So they follow the vault, not the browser:
+`.scribecat/staged-changes.json`, the checkpoints behind the undo button in
+`.scribecat/checkpoints/`, and the chat history in
+`.scribecat/chat-sessions.json`. So they follow the vault, not the browser:
 open the same server from another device, or from the desktop app, and the
 pending proposals and the undo history are there.
 
@@ -59,7 +59,7 @@ request fails.
 page call another server if that server says so (CORS), and the local model
 servers only say so for pages served from localhost unless told otherwise.
 The settings dialog shows the exact origin to allow (`https://<host>` as you
-open ScribeDog, with the port if it is not 443):
+open ScribeCat, with the port if it is not 443):
 
 | Server | What to do |
 | --- | --- |

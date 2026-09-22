@@ -2,7 +2,7 @@ import { platform } from "@/platform";
 import { isSecretRef } from "@/platform/secretRef";
 import { create } from "zustand";
 
-const AI_SETTINGS_STORAGE_KEY = "scribedog-ai-settings";
+const AI_SETTINGS_STORAGE_KEY = "scribecat-ai-settings";
 
 export type AiProvider = "ollama" | "jan" | "lmstudio" | "openai" | "anthropic" | "mistral";
 export type AiThinkingMode = "off" | "default";

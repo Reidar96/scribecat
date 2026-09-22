@@ -210,8 +210,8 @@ export function Sidebar({
   // the list has entries; both fold states and the list's height ceiling
   // are app-wide, and a folded section never unfolds on its own.
   const hasWorkingSet = folderPath !== null && workingSet.entries.length > 0;
-  const [isWorkingSetCollapsed, toggleWorkingSetCollapsed] = useStoredCollapsed("scribedog-working-set-collapsed");
-  const [isTreeCollapsed, toggleTreeCollapsed] = useStoredCollapsed("scribedog-file-tree-collapsed");
+  const [isWorkingSetCollapsed, toggleWorkingSetCollapsed] = useStoredCollapsed("scribecat-working-set-collapsed");
+  const [isTreeCollapsed, toggleTreeCollapsed] = useStoredCollapsed("scribecat-file-tree-collapsed");
   const sectionsRef = useRef<HTMLDivElement>(null);
   const workingSetListRef = useRef<HTMLUListElement>(null);
   const {

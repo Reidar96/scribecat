@@ -1,5 +1,5 @@
 // Which folders of the opened vault the knowledge base ("Wissensbasis") is
-// allowed to read, persisted per vault in .scribedog/rag.json alongside the
+// allowed to read, persisted per vault in .scribecat/rag.json alongside the
 // other vault-scoped UI state (see src/lib/vaultMeta.ts).
 //
 // The selection is stored as explicit overrides plus inheritance rather than as

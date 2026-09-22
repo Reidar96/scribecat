@@ -3,28 +3,28 @@ import { expect, test, type Page } from "@playwright/test";
 /**
  * The vault agent in the browser, against the scripted model of the e2e
  * stack (docker-compose.e2e.yml, e2e/mock-llm). Every request the agent
- * makes travels the real way: browser → ScribeDog server → LLM proxy →
+ * makes travels the real way: browser → ScribeCat server → LLM proxy →
  * https://llm.e2e.internal, and the tool calls it gets back run against the
  * server's vault. What the tests check is the chain around the model: the
  * streamed answer, the tool loop, the staging layer, the review in the
  * editor, checkpoints and revert, and that chat sessions land in the vault.
  *
- * The mock's request log is read through SCRIBEDOG_E2E_MOCK_URL (the port the
+ * The mock's request log is read through SCRIBECAT_E2E_MOCK_URL (the port the
  * compose file publishes, 9081 by default).
  */
 
-const PASSWORD = process.env.SCRIBEDOG_E2E_PASSWORD ?? "e2e-test-password";
-const MOCK_URL = (process.env.SCRIBEDOG_E2E_MOCK_URL ?? "http://localhost:9081").replace(/\/$/, "");
-const NOTE = process.env.SCRIBEDOG_E2E_NOTE ?? "Projects/Roadmap.md";
+const PASSWORD = process.env.SCRIBECAT_E2E_PASSWORD ?? "e2e-test-password";
+const MOCK_URL = (process.env.SCRIBECAT_E2E_MOCK_URL ?? "http://localhost:9081").replace(/\/$/, "");
+const NOTE = process.env.SCRIBECAT_E2E_NOTE ?? "Projects/Roadmap.md";
 
 test.beforeEach(async ({ context }) => {
   await context.addInitScript(() => {
-    window.localStorage.setItem("scribedog-language", "en");
+    window.localStorage.setItem("scribecat-language", "en");
     // The provider the tests use: the mock behind the LLM proxy, with the
     // agent's file access switched on. The key itself is stored on the
     // server (see signInWithAgent); this is only the non-secret part.
     window.localStorage.setItem(
-      "scribedog-ai-settings",
+      "scribecat-ai-settings",
       JSON.stringify({
         provider: "openai",
         apiUrl: "https://llm.e2e.internal",
@@ -119,11 +119,11 @@ test.beforeEach(async ({ page }) => {
 });
 
 /**
- * Proposals live in the vault (.scribedog/staged-changes.json), so a run that
+ * Proposals live in the vault (.scribecat/staged-changes.json), so a run that
  * failed halfway leaves them for the next one. Each test starts without any.
  */
 async function clearStagedChanges(page: Page): Promise<void> {
-  await page.request.post(`${basePath(page)}/api/fs/remove`, { data: { path: ".scribedog/staged-changes.json" } });
+  await page.request.post(`${basePath(page)}/api/fs/remove`, { data: { path: ".scribecat/staged-changes.json" } });
 }
 
 test("proposes a new note through the proxy, applies it, and takes it back", async ({ page }) => {
@@ -168,9 +168,9 @@ test("proposes a new note through the proxy, applies it, and takes it back", asy
   await expect(page.getByTestId("status")).toHaveAttribute("data-dirty", "false");
 
   // The checkpoint and the chat session are in the vault, not in the tab.
-  await expect.poll(() => existsOnServer(page, ".scribedog/checkpoints/index.json")).toBe(true);
-  expect(await readOnServer(page, ".scribedog/checkpoints/index.json")).toContain(path);
-  await expect.poll(() => readOnServer(page, ".scribedog/chat-sessions.json")).toContain(`e2e:create ${title}`);
+  await expect.poll(() => existsOnServer(page, ".scribecat/checkpoints/index.json")).toBe(true);
+  expect(await readOnServer(page, ".scribecat/checkpoints/index.json")).toContain(path);
+  await expect.poll(() => readOnServer(page, ".scribecat/chat-sessions.json")).toContain(`e2e:create ${title}`);
 
   // Undo the revision: the note the agent created is gone again.
   await page.getByRole("button", { name: "Undo", exact: true }).click();
@@ -270,7 +270,7 @@ test("the knowledge base stays off in the browser even when the vault switched i
 
   // rag.json travels with the vault; a vault prepared on the desktop brings
   // the switch along. The browser has no index, so nothing may offer it.
-  await writeOnServer(page, ".scribedog/rag.json", JSON.stringify({ enabled: true, rootIncluded: true, overrides: {} }));
+  await writeOnServer(page, ".scribecat/rag.json", JSON.stringify({ enabled: true, rootIncluded: true, overrides: {} }));
   await page.reload();
   await expect(page.getByTestId("logout")).toBeVisible();
   await openNote(page, NOTE);
@@ -294,5 +294,5 @@ test("the knowledge base stays off in the browser even when the vault switched i
   expect(offered.has("search_vault")).toBe(false);
   expect(offered.has("read_note")).toBe(false);
 
-  await page.request.post(`${basePath(page)}/api/fs/remove`, { data: { path: ".scribedog/rag.json" } });
+  await page.request.post(`${basePath(page)}/api/fs/remove`, { data: { path: ".scribecat/rag.json" } });
 });

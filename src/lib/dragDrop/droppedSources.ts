@@ -79,7 +79,7 @@ async function walkEntry(
     return;
   }
 
-  // Dot folders are tool state (.git, .obsidian, ScribeDog's own .scribedog),
+  // Dot folders are tool state (.git, .obsidian, ScribeCat's own .scribecat),
   // never content someone meant to import.
   if (entry.name.startsWith(".")) {
     return;

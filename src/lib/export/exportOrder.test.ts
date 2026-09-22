@@ -30,7 +30,7 @@ describe("collectOrderedRecords with folder notes", () => {
     const ordered = collectOrderedRecords(
       [
         record("Rezepte/Suppen.md"),
-        record("Rezepte/.scribedog-foldernote.md"),
+        record("Rezepte/.scribecat-foldernote.md"),
         record("Rezepte/Kuchen/Marmor.md"),
         record("Start.md")
       ],
@@ -39,7 +39,7 @@ describe("collectOrderedRecords with folder notes", () => {
     );
 
     expect(ordered.map((entry) => entry.relativePath)).toEqual([
-      "Rezepte/.scribedog-foldernote.md",
+      "Rezepte/.scribecat-foldernote.md",
       "Rezepte/Kuchen/Marmor.md",
       "Rezepte/Suppen.md",
       "Start.md"
@@ -49,7 +49,7 @@ describe("collectOrderedRecords with folder notes", () => {
 
 describe("getDefaultExportBaseName", () => {
   it("names a folder note's export after its folder", () => {
-    expect(getDefaultExportBaseName("C:\\vault\\Rezepte\\.scribedog-foldernote.md")).toBe("Rezepte");
+    expect(getDefaultExportBaseName("C:\\vault\\Rezepte\\.scribecat-foldernote.md")).toBe("Rezepte");
     expect(getDefaultExportBaseName("/vault/Rezepte/Kuchen.md")).toBe("Kuchen");
     expect(getDefaultExportBaseName("/vault/Rezepte/")).toBe("Rezepte");
   });

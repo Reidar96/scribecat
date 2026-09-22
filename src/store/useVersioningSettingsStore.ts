@@ -7,8 +7,8 @@ import {
 } from "@/lib/fileVersions";
 import { getLastOpenedFolderPath } from "@/lib/fileSystem";
 
-export const VERSIONING_ENABLED_STORAGE_KEY = "scribedog-versioning-enabled";
-export const VERSIONING_MAX_VERSIONS_STORAGE_KEY = "scribedog-versioning-max-versions";
+export const VERSIONING_ENABLED_STORAGE_KEY = "scribecat-versioning-enabled";
+export const VERSIONING_MAX_VERSIONS_STORAGE_KEY = "scribecat-versioning-max-versions";
 
 function getStoredVersioningEnabled(): boolean {
   try {

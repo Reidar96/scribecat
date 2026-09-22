@@ -40,8 +40,8 @@ describe("assertVaultPath", () => {
     ["/etc/hosts.md", "absolute posix path"],
     ["C:\\Windows\\System32\\drivers\\etc\\hosts.md", "windows drive"],
     ["\\\\server\\share\\note.md", "UNC path"],
-    [".scribedog/chat-sessions.json", "vault metadata"],
-    [".scribedog/versions/abc.md", "version history"],
+    [".scribecat/chat-sessions.json", "vault metadata"],
+    [".scribecat/versions/abc.md", "version history"],
     ["images/photo.md", "image folder"],
     ["notes.txt", "not markdown"],
     ["", "empty"]
@@ -50,7 +50,7 @@ describe("assertVaultPath", () => {
   });
 
   it("is case-insensitive about the forbidden folders", () => {
-    expect(() => assertVaultPath(".SCRIBEDOG/index.md")).toThrow(VaultPathError);
+    expect(() => assertVaultPath(".SCRIBECAT/index.md")).toThrow(VaultPathError);
     expect(() => assertVaultPath("Images/a.md")).toThrow(VaultPathError);
   });
 

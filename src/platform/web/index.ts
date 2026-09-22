@@ -61,7 +61,7 @@ function llmTarget(url: string): string | null {
 }
 
 /**
- * The browser talking to a ScribeDog server. Everything vault-related goes
+ * The browser talking to a ScribeCat server. Everything vault-related goes
  * over the server API; everything the desktop shell provides natively is
  * either replaced by a browser equivalent (fullscreen, window.open, CSS
  * zoom) or declared unavailable so the UI hides it.
@@ -100,7 +100,7 @@ export const platform: Platform = {
   },
 
   app: {
-    getVersion: async () => __SCRIBEDOG_VERSION__
+    getVersion: async () => __SCRIBECAT_VERSION__
   },
   shell: {
     openUrl: async (url) => {

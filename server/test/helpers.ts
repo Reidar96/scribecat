@@ -37,13 +37,13 @@ export type TestContext = {
 };
 
 export async function createTempVault(): Promise<string> {
-  const root = await mkdtemp(path.join(os.tmpdir(), "scribedog-server-test-"));
+  const root = await mkdtemp(path.join(os.tmpdir(), "scribecat-server-test-"));
   await writeFile(path.join(root, "Welcome.md"), "# Welcome\n\nHello.\n");
   await mkdir(path.join(root, "Notes"), { recursive: true });
   await writeFile(path.join(root, "Notes", "Idea.md"), "# Idea\n");
   await writeFile(path.join(root, "Notes", "not-markdown.txt"), "plain\n");
-  await mkdir(path.join(root, ".scribedog"), { recursive: true });
-  await writeFile(path.join(root, ".scribedog", "secret.md"), "# not for the API\n");
+  await mkdir(path.join(root, ".scribecat"), { recursive: true });
+  await writeFile(path.join(root, ".scribecat", "secret.md"), "# not for the API\n");
   return root;
 }
 
@@ -53,9 +53,9 @@ export async function createTestContext(
 ): Promise<TestContext> {
   const vaultPath = await createTempVault();
   const config = loadConfig({
-    SCRIBEDOG_VAULT_PATH: vaultPath,
-    SCRIBEDOG_INIT_PASSWORD: TEST_PASSWORD,
-    SCRIBEDOG_COOKIE_SECURE: "false",
+    SCRIBECAT_VAULT_PATH: vaultPath,
+    SCRIBECAT_INIT_PASSWORD: TEST_PASSWORD,
+    SCRIBECAT_COOKIE_SECURE: "false",
     ...env
   });
   const vault = await openVault(config.vaultPath);

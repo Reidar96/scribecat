@@ -15,14 +15,14 @@ export class VaultPathError extends Error {}
  * client-supplied path and the filesystem.
  *
  * The file API serves the whole vault the way the desktop app's filesystem
- * layer sees it: notes, the images folder and the `.scribedog/` sidecars
+ * layer sees it: notes, the images folder and the `.scribecat/` sidecars
  * (versions, manual order, checkpoints, chat sessions), which the frontend
- * reads and writes itself. The one part of `.scribedog/` that belongs to the
- * server alone is `.scribedog/server/` (password hash, session secret); no
+ * reads and writes itself. The one part of `.scribecat/` that belongs to the
+ * server alone is `.scribecat/server/` (password hash, session secret); no
  * client-supplied path may point into it.
  */
 /** The metadata directory the desktop app and the server share. */
-export const VAULT_META_DIR_NAME = ".scribedog";
+export const VAULT_META_DIR_NAME = ".scribecat";
 const META_DIR_SEGMENT = VAULT_META_DIR_NAME;
 const SERVER_DIR_SEGMENT = "server";
 

@@ -22,7 +22,7 @@ export type RagEmbeddingSettings = {
   model: string;
 };
 
-const STORAGE_KEY = "scribedog-rag-embedding";
+const STORAGE_KEY = "scribecat-rag-embedding";
 
 /**
  * Prefix that keeps this key apart from the chat's key for the same provider.

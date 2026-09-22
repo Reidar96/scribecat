@@ -8,7 +8,7 @@
 
   var stored = null;
   try {
-    stored = window.localStorage.getItem("scribedog-theme");
+    stored = window.localStorage.getItem("scribecat-theme");
   } catch (error) {
     // localStorage may be unavailable in some environments.
   }

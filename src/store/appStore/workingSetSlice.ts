@@ -54,7 +54,7 @@ export function shouldAutoAdmitWorkingSet(): boolean {
 }
 
 /**
- * Writes the list to `.scribedog/open-files.json`. Fire-and-forget and
+ * Writes the list to `.scribecat/open-files.json`. Fire-and-forget and
  * undebounced: the list changes a few times an hour, not per keystroke.
  */
 export function persistWorkingSet(folderPath: string | null, entries: readonly WorkingSetEntry[]): void {

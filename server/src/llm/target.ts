@@ -42,7 +42,7 @@ export function assertAllowedTarget(rawUrl: unknown, allowedHosts: readonly stri
 
   if (!allowedHosts.includes(url.hostname.toLowerCase())) {
     throw new LlmTargetError(
-      `${url.hostname} is not an allowed AI endpoint. Add it to SCRIBEDOG_LLM_ALLOWED_HOSTS if you run your own gateway.`
+      `${url.hostname} is not an allowed AI endpoint. Add it to SCRIBECAT_LLM_ALLOWED_HOSTS if you run your own gateway.`
     );
   }
 

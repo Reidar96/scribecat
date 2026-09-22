@@ -54,11 +54,11 @@ export function vaultPathKey(path: string): string {
   return normalizeVaultPath(path).toLowerCase();
 }
 
-// Directories the agent may never touch: `.scribedog/` is the vault's own
+// Directories the agent may never touch: `.scribecat/` is the vault's own
 // metadata (versions, checkpoints, chat sessions — writing there corrupts the
 // app's state), `images/` holds binaries the markdown tools cannot handle
 // meaningfully and whose cleanup is driven by the documents referencing them.
-const FORBIDDEN_ROOT_SEGMENTS = [".scribedog", "images"];
+const FORBIDDEN_ROOT_SEGMENTS = [".scribecat", "images"];
 
 /**
  * The security boundary for every path argument. Path arguments come out of

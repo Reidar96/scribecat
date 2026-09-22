@@ -534,7 +534,7 @@ function App() {
   }, [folderPath]);
 
   // Heading numbering is a property of the vault, not of the app: it is read
-  // from the vault's .scribedog folder here and falls back to "off" while no
+  // from the vault's .scribecat folder here and falls back to "off" while no
   // vault is open.
   useEffect(() => {
     void useEditorSettingsStore.getState().loadHeadingNumbering(folderPath);
@@ -741,7 +741,7 @@ function App() {
     void loadShortcutOverrides();
   }, [loadShortcutOverrides]);
 
-  // Chat sessions are vault-scoped (persisted into .scribedog/); reload them
+  // Chat sessions are vault-scoped (persisted into .scribecat/); reload them
   // whenever the opened folder changes.
   useEffect(() => {
     void setChatFolder(folderPath);

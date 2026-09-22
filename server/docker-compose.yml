@@ -1,40 +1,40 @@
-# ScribeDog Server Edition: one ScribeDog instance behind Caddy (automatic HTTPS).
+# ScribeCat Server Edition: one ScribeCat instance behind Caddy (automatic HTTPS).
 #
 # Quick start:
-#   cp .env.example .env         # set SCRIBEDOG_INIT_PASSWORD at least
-#   mkdir -p scribedog-data      # your notes live here, as plain .md files
+#   cp .env.example .env         # set SCRIBECAT_INIT_PASSWORD at least
+#   mkdir -p scribecat-data      # your notes live here, as plain .md files
 #   docker compose up -d --build
 #   open https://localhost/      (or https://<host>/<base path>/)
 #
 # See docs/getting-started.md and docs/configuration.md for the base path, a real domain, and trusting Caddy's local CA.
 
 services:
-  scribedog:
+  scribecat:
     build:
       # The image needs the shared frontend from the repository root, see Dockerfile.
       context: ..
       dockerfile: server/Dockerfile
     # Built locally by default. To run a published image instead, put
-    # SCRIBEDOG_IMAGE=ghcr.io/snooky234/scribedog-server:<version> in .env and
+    # SCRIBECAT_IMAGE=ghcr.io/snooky234/scribecat-server:<version> in .env and
     # use `docker compose pull` (see README, "Updating").
-    image: ${SCRIBEDOG_IMAGE:-scribedog-server:0.15.1}
+    image: ${SCRIBECAT_IMAGE:-scribecat-server:0.15.1}
     restart: unless-stopped
     environment:
       # User and group the server runs as inside the container. The container
-      # starts as root, hands ./scribedog-data to these ids and then drops to
+      # starts as root, hands ./scribecat-data to these ids and then drops to
       # them, so a folder Compose created itself works without any chown.
       # Match them to your own user (`id -u` / `id -g`) so the notes stay
       # yours on the host; 1000 is the usual first user.
       PUID: ${PUID:-1000}
       PGID: ${PGID:-1000}
       # Only used until a password exists in the data folder; remove afterwards.
-      SCRIBEDOG_INIT_PASSWORD: ${SCRIBEDOG_INIT_PASSWORD:-}
+      SCRIBECAT_INIT_PASSWORD: ${SCRIBECAT_INIT_PASSWORD:-}
       # Empty = app at "/". Set e.g. "/anna" to run under a path prefix.
-      SCRIBEDOG_BASE_PATH: ${SCRIBEDOG_BASE_PATH:-}
+      SCRIBECAT_BASE_PATH: ${SCRIBECAT_BASE_PATH:-}
     volumes:
       # A bind mount on purpose: the notes are ordinary files in an ordinary
       # folder, readable and backed up with any tool you already use.
-      - ./scribedog-data:/data
+      - ./scribecat-data:/data
     expose:
       - "3000"
 
@@ -42,23 +42,23 @@ services:
     image: caddy:2-alpine
     restart: unless-stopped
     depends_on:
-      - scribedog
+      - scribecat
     ports:
-      - "${SCRIBEDOG_HTTP_PORT:-80}:80"
-      - "${SCRIBEDOG_HTTPS_PORT:-443}:443"
-      - "${SCRIBEDOG_HTTPS_PORT:-443}:443/udp"
+      - "${SCRIBECAT_HTTP_PORT:-80}:80"
+      - "${SCRIBECAT_HTTPS_PORT:-443}:443"
+      - "${SCRIBECAT_HTTPS_PORT:-443}:443/udp"
     environment:
       # Hostname or IP the site answers on. "localhost" for a first test on
       # the Docker host itself; the LAN name/IP of the box for the home network;
       # a real domain for Let's Encrypt.
-      SCRIBEDOG_SITE_ADDRESS: ${SCRIBEDOG_SITE_ADDRESS:-localhost}
+      SCRIBECAT_SITE_ADDRESS: ${SCRIBECAT_SITE_ADDRESS:-localhost}
       # Which site's certificate answers a client that names none, i.e. a
       # browser opening the app by IP address. The site address itself unless
       # that is a list; then set it to the address the phones use.
-      SCRIBEDOG_DEFAULT_SNI: ${SCRIBEDOG_DEFAULT_SNI:-${SCRIBEDOG_SITE_ADDRESS:-localhost}}
+      SCRIBECAT_DEFAULT_SNI: ${SCRIBECAT_DEFAULT_SNI:-${SCRIBECAT_SITE_ADDRESS:-localhost}}
       # "internal" = Caddy's own local CA (no domain needed). For a real domain
       # set this to your e-mail address and Caddy fetches a public certificate.
-      SCRIBEDOG_TLS: ${SCRIBEDOG_TLS:-internal}
+      SCRIBECAT_TLS: ${SCRIBECAT_TLS:-internal}
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data

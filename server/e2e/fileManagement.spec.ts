@@ -1,10 +1,10 @@
 import { expect, test, type Page } from "@playwright/test";
 
-const PASSWORD = process.env.SCRIBEDOG_E2E_PASSWORD ?? "e2e-test-password";
+const PASSWORD = process.env.SCRIBECAT_E2E_PASSWORD ?? "e2e-test-password";
 
 test.beforeEach(async ({ context }) => {
   await context.addInitScript(() => {
-    window.localStorage.setItem("scribedog-language", "en");
+    window.localStorage.setItem("scribecat-language", "en");
   });
 });
 
@@ -142,7 +142,7 @@ test("keeps a manual sort order on the server", async ({ page }) => {
 
   await expect
     .poll(async () => {
-      const response = await page.request.get(fsUrl(page, "text", ".scribedog/order.json"));
+      const response = await page.request.get(fsUrl(page, "text", ".scribecat/order.json"));
 
       return response.ok() ? ((await response.json()) as { content: string }).content : "";
     })

@@ -1,7 +1,7 @@
 // Turns the image paths recorded on a chat message into actual vision data.
 //
 // Two-stage by design: the conversation history (persisted to
-// .scribedog/chat-sessions.json) only ever stores an image's *path*, and the
+// .scribecat/chat-sessions.json) only ever stores an image's *path*, and the
 // base64 payload is resolved here right before a request goes out and thrown
 // away afterwards. Persisting base64 would bloat the session file by megabytes
 // per image, and the file on disk is the source of truth anyway — an edited

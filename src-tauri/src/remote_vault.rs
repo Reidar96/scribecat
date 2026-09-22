@@ -1,4 +1,4 @@
-//! The desktop app as a client of a ScribeDog server.
+//! The desktop app as a client of a ScribeCat server.
 //!
 //! The webview cannot talk to a server the user typed in: its content
 //! security policy confines `fetch` to the app itself, and the http plugin's
@@ -30,7 +30,7 @@ use crate::{FolderWatchState, FOLDER_FILES_CHANGED_EVENT, KEYRING_SERVICE};
 
 /// Emitted with the vault root when the server refuses the token on the live
 /// connection: the one moment an idle app learns that its key was revoked.
-const REMOTE_VAULT_UNAUTHORIZED_EVENT: &str = "scribedog-remote-vault-unauthorized";
+const REMOTE_VAULT_UNAUTHORIZED_EVENT: &str = "scribecat-remote-vault-unauthorized";
 
 const RECONNECT_MIN: Duration = Duration::from_secs(1);
 const RECONNECT_MAX: Duration = Duration::from_secs(30);

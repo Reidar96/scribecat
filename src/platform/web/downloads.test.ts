@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { browserDownloads } from "./downloads";
 
 describe("browserDownloads", () => {
-  const createObjectURL = vi.fn((_blob: Blob) => "blob:scribedog/test");
+  const createObjectURL = vi.fn((_blob: Blob) => "blob:scribecat/test");
   const revokeObjectURL = vi.fn();
   let clicked: HTMLAnchorElement[] = [];
 
@@ -35,13 +35,13 @@ describe("browserDownloads", () => {
 
     expect(clicked).toHaveLength(1);
     expect(clicked[0].download).toBe("Note.md");
-    expect(clicked[0].href).toBe("blob:scribedog/test");
+    expect(clicked[0].href).toBe("blob:scribecat/test");
     // The anchor is gone from the document once clicked.
     expect(document.body.querySelector("a")).toBeNull();
 
     expect(revokeObjectURL).not.toHaveBeenCalled();
     vi.runAllTimers();
-    expect(revokeObjectURL).toHaveBeenCalledWith("blob:scribedog/test");
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:scribecat/test");
   });
 
   it("copies binary data out of a shared buffer", async () => {

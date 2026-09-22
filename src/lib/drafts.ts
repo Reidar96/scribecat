@@ -16,8 +16,8 @@ import { VAULT_META_DIR_NAME } from "@/lib/vaultPaths";
  * document is saved or becomes clean again.
  *
  * Layout mirrors fileVersions.ts and chat/checkpoints.ts (index plus blobs):
- *   .scribedog/drafts/index.json   -> { version: 1, entries: { "<vault-relative path>": entry } }
- *   .scribedog/drafts/<blobId>.md  -> the draft content
+ *   .scribecat/drafts/index.json   -> { version: 1, entries: { "<vault-relative path>": entry } }
+ *   .scribecat/drafts/<blobId>.md  -> the draft content
  *
  * Keyed by the vault-relative path so a vault that moves to another machine
  * keeps its drafts. One blob per file, rewritten in place: a draft is written
@@ -57,7 +57,7 @@ export type LoadedDraft = {
 
 const DRAFTS_DIR_NAME = "drafts";
 const INDEX_FILE_NAME = "index.json";
-const LOCAL_STORAGE_PREFIX = "scribedog-drafts:";
+const LOCAL_STORAGE_PREFIX = "scribecat-drafts:";
 
 /** Where the index and the blobs live; one implementation per kind of vault. */
 type DraftBackend = {

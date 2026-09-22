@@ -26,14 +26,14 @@ import { platform, SessionError } from "@/platform";
  * shows once a HEAD request has found a certificate there: behind another
  * reverse proxy or with a Let's Encrypt certificate there is none (404), and
  * under `vite dev` the SPA fallback answers with index.html, which a download
- * link would happily save as `scribedog-ca.crt`.
+ * link would happily save as `scribecat-ca.crt`.
  */
 
 /** Where Caddy serves the local CA, host-wide, whatever the base path. */
-const CA_CERTIFICATE_PATH = "/scribedog-ca.crt";
+const CA_CERTIFICATE_PATH = "/scribecat-ca.crt";
 
 const CA_CERTIFICATE_GUIDE_URL =
-  "https://github.com/snooky234/scribedog/blob/main/server/docs/getting-started.md#the-certificate-warning";
+  "https://github.com/snooky234/scribecat/blob/main/server/docs/getting-started.md#the-certificate-warning";
 
 async function isCaCertificateServed(signal: AbortSignal): Promise<boolean> {
   try {
@@ -189,7 +189,7 @@ export function AccountSettings() {
             <a
               className={buttonVariants({ variant: "outline" })}
               href={CA_CERTIFICATE_PATH}
-              download="scribedog-ca.crt"
+              download="scribecat-ca.crt"
               data-testid="download-ca-certificate"
             >
               {t("account.certificateDownload")}

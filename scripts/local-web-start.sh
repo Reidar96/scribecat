@@ -6,17 +6,17 @@
 # Both run in the background; logs and PID files land in scripts/.run/.
 # Stop them with scripts/local-web-stop.sh.
 #
-# Override SCRIBEDOG_VAULT_PATH or SCRIBEDOG_INIT_PASSWORD to use a
+# Override SCRIBECAT_VAULT_PATH or SCRIBECAT_INIT_PASSWORD to use a
 # different vault or password:
-#   SCRIBEDOG_VAULT_PATH=~/notes scripts/local-web-start.sh
+#   SCRIBECAT_VAULT_PATH=~/notes scripts/local-web-start.sh
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RUN_DIR="$ROOT_DIR/scripts/.run"
 mkdir -p "$RUN_DIR"
 
-VAULT_PATH="${SCRIBEDOG_VAULT_PATH:-$HOME/scribedog-test-vault}"
-INIT_PASSWORD="${SCRIBEDOG_INIT_PASSWORD:-devpassword}"
+VAULT_PATH="${SCRIBECAT_VAULT_PATH:-$HOME/scribecat-test-vault}"
+INIT_PASSWORD="${SCRIBECAT_INIT_PASSWORD:-devpassword}"
 
 SERVER_PID_FILE="$RUN_DIR/server.pid.local"
 VITE_PID_FILE="$RUN_DIR/vite.pid.local"
@@ -39,9 +39,9 @@ mkdir -p "$VAULT_PATH"
 echo "Starting server (vault: $VAULT_PATH) ..."
 (
   cd "$ROOT_DIR/server"
-  SCRIBEDOG_VAULT_PATH="$VAULT_PATH" \
-  SCRIBEDOG_INIT_PASSWORD="$INIT_PASSWORD" \
-  SCRIBEDOG_COOKIE_SECURE=false \
+  SCRIBECAT_VAULT_PATH="$VAULT_PATH" \
+  SCRIBECAT_INIT_PASSWORD="$INIT_PASSWORD" \
+  SCRIBECAT_COOKIE_SECURE=false \
   npm run dev > "$SERVER_LOG" 2>&1 &
   echo $! > "$SERVER_PID_FILE"
 )

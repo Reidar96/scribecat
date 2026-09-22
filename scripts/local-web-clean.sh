@@ -6,14 +6,14 @@
 #   scripts/local-web-clean.sh --with-vault       # also delete the test vault
 #   scripts/local-web-clean.sh --with-vault --yes # no confirmation prompt
 #
-# --with-vault removes the whole folder SCRIBEDOG_VAULT_PATH points to
-# (default ~/scribedog-test-vault), notes included. Only point it at a
+# --with-vault removes the whole folder SCRIBECAT_VAULT_PATH points to
+# (default ~/scribecat-test-vault), notes included. Only point it at a
 # folder you can afford to lose.
 set -uo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RUN_DIR="$ROOT_DIR/scripts/.run"
-VAULT_PATH="${SCRIBEDOG_VAULT_PATH:-$HOME/scribedog-test-vault}"
+VAULT_PATH="${SCRIBECAT_VAULT_PATH:-$HOME/scribecat-test-vault}"
 
 WITH_VAULT=false
 SKIP_CONFIRM=false
@@ -44,7 +44,7 @@ if [[ ! -d "$VAULT_PATH" ]]; then
 fi
 
 # Deleting the vault throws away its notes, the stored password and the
-# server metadata in .scribedog/, so make sure it is really the test vault.
+# server metadata in .scribecat/, so make sure it is really the test vault.
 if [[ "$SKIP_CONFIRM" != true ]]; then
   read -r -p "Delete the vault and all notes in it? $VAULT_PATH [y/N] " reply
   if [[ ! "$reply" =~ ^[yY]$ ]]; then

@@ -35,7 +35,7 @@ export type RemoteVaultEntry = {
   addedAt: string;
 };
 
-const STORAGE_KEY = "scribedog:remoteVaults";
+const STORAGE_KEY = "scribecat:remoteVaults";
 
 /**
  * The same rule the AI endpoints follow (assertValidEndpoint in aiClient):

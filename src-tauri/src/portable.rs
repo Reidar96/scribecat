@@ -2,7 +2,7 @@
 //! executable instead of in the per-user OS directories, so a copy on a USB
 //! stick carries its settings along and an ordinary folder needs no installer.
 //!
-//! The marker is the *file* `.scribedog/portable`, not the `.scribedog`
+//! The marker is the *file* `.scribecat/portable`, not the `.scribecat`
 //! directory: that directory name is also the vault metadata directory (see
 //! `VAULT_META_DIR_NAME`), so an installed build whose executable happens to
 //! sit in a folder the user later opens as a vault would otherwise switch

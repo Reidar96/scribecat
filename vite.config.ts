@@ -17,24 +17,24 @@ const packageVersion = (JSON.parse(readFileSync(new URL("./package.json", import
 /**
  * The server edition builds the web client once and ships it in one Docker
  * image, but every installation may run under its own path prefix
- * (SCRIBEDOG_BASE_PATH). Vite bakes `base` into asset URLs at build time,
+ * (SCRIBECAT_BASE_PATH). Vite bakes `base` into asset URLs at build time,
  * so the web build uses a relative base and the page itself learns its
  * prefix from this meta tag, which the server fills in when it serves
  * index.html (server/src/web/staticSite.ts). The placeholder must look like a
  * path so nothing else in the build ever matches it; it also has to stay in
  * step with BASE_PATH_PLACEHOLDER on the server side.
  */
-const BASE_PATH_PLACEHOLDER = "/__SCRIBEDOG_BASE_PATH__";
+const BASE_PATH_PLACEHOLDER = "/__SCRIBECAT_BASE_PATH__";
 
 function webIndexHtml(): PluginOption {
   return {
-    name: "scribedog-web-index-html",
+    name: "scribecat-web-index-html",
     transformIndexHtml: {
       order: "pre",
       handler: (html) =>
         html.replace(
           "<title>",
-          `<meta name="scribedog-base-path" content="${BASE_PATH_PLACEHOLDER}" />\n    <title>`
+          `<meta name="scribecat-base-path" content="${BASE_PATH_PLACEHOLDER}" />\n    <title>`
         )
     }
   };
@@ -60,7 +60,7 @@ export default defineConfig(async ({ mode }) => {
       },
     },
     define: {
-      __SCRIBEDOG_VERSION__: JSON.stringify(packageVersion)
+      __SCRIBECAT_VERSION__: JSON.stringify(packageVersion)
     },
     build: {
       outDir: isWeb ? "dist-web" : "dist",

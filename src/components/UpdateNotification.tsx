@@ -8,7 +8,7 @@ import type { AppUpdate } from "@/platform/types";
 import { Button } from "@/components/ui/button";
 import { getPortableStatus } from "@/lib/portable";
 
-const RELEASES_URL = "https://github.com/snooky234/scribedog/releases/latest";
+const RELEASES_URL = "https://github.com/snooky234/scribecat/releases/latest";
 
 type UpdateNotificationProps = {
   update: AppUpdate;

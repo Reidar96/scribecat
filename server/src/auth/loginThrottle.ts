@@ -1,7 +1,7 @@
 /**
  * Brute-force protection for the login.
  *
- * A ScribeDog instance has one password and no user name, so an attacker only
+ * A ScribeCat instance has one password and no user name, so an attacker only
  * has to guess a single secret; a fixed "5 tries per minute" would still allow
  * a steady grind. The lock therefore escalates per address: the first series
  * of failures costs `lockSeconds`, the next one five times as long, up to

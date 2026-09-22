@@ -1,5 +1,5 @@
 // Preparing the vault for meaning search: passages go to the embedding service,
-// the vectors that come back are stored per vault in .scribedog/rag-index.bin.
+// the vectors that come back are stored per vault in .scribecat/rag-index.bin.
 //
 // The division of labour is the one from DOCS/wissensbasis-plan.md: Rust owns
 // everything that touches files (splitting, storing, comparing), this module

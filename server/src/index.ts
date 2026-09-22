@@ -16,8 +16,8 @@ async function main(): Promise<void> {
   // Bootstrapping happens before the Fastify logger exists, so use a tiny
   // shim with the same shape; the real logger takes over in buildApp.
   const bootLog = {
-    info: (message: string) => console.log(`[scribedog] ${message}`),
-    warn: (message: string) => console.warn(`[scribedog] WARNING: ${message}`)
+    info: (message: string) => console.log(`[scribecat] ${message}`),
+    warn: (message: string) => console.warn(`[scribecat] WARNING: ${message}`)
   };
 
   const vault = await openVault(config.vaultPath);
@@ -46,7 +46,7 @@ async function main(): Promise<void> {
     vault,
     watcher,
     webDistDir: config.webDistDir,
-    logger: { level: process.env.SCRIBEDOG_LOG_LEVEL ?? "info" }
+    logger: { level: process.env.SCRIBECAT_LOG_LEVEL ?? "info" }
   });
 
   const shutdown = async (signal: string) => {
@@ -69,19 +69,19 @@ async function main(): Promise<void> {
       cookieSecure: config.cookieSecure,
       webDistDir: config.webDistDir
     },
-    "ScribeDog Server ready"
+    "ScribeCat Server ready"
   );
 
   if (!config.cookieSecure) {
-    app.log.warn("SCRIBEDOG_COOKIE_SECURE=false: the session cookie is sent over plain HTTP. Development only.");
+    app.log.warn("SCRIBECAT_COOKIE_SECURE=false: the session cookie is sent over plain HTTP. Development only.");
   }
 }
 
 main().catch((error: unknown) => {
   if (error instanceof ConfigError || error instanceof AuthSetupError || error instanceof TokenStoreError || error instanceof DataVersionError) {
-    console.error(`[scribedog] ${error.message}`);
+    console.error(`[scribecat] ${error.message}`);
   } else {
-    console.error("[scribedog] failed to start", error);
+    console.error("[scribecat] failed to start", error);
   }
 
   process.exit(1);

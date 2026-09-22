@@ -2,7 +2,7 @@ import { create } from "zustand";
 
 import { buildAccentPalette, isValidHexColor } from "@/lib/color";
 
-export const ACCENT_COLOR_STORAGE_KEY = "scribedog-accent-color";
+export const ACCENT_COLOR_STORAGE_KEY = "scribecat-accent-color";
 export const DEFAULT_ACCENT_COLOR = "#a855f7";
 
 /** Maps a palette shade to the CSS custom property it drives — every

@@ -204,7 +204,7 @@ describe("the file tools' guards", () => {
   });
 
   it("refuses the vault's own metadata folder", async () => {
-    const result = await executeFileTool("read_file", { path: ".scribedog/chat-sessions.json" });
+    const result = await executeFileTool("read_file", { path: ".scribecat/chat-sessions.json" });
 
     expect(result?.content).toContain("Error:");
   });
@@ -367,23 +367,23 @@ describe("list_files and read_file", () => {
   // The reserved name is the same in every folder; the label is what keeps a
   // model from confusing the folder notes of "Rezepte" and "Reisen".
   it("labels folder notes with the folder they belong to", async () => {
-    addFile("Rezepte/.scribedog-foldernote.md", "Übersicht");
+    addFile("Rezepte/.scribecat-foldernote.md", "Übersicht");
     addFile("Rezepte/Kuchen.md", "k");
 
     const result = await executeFileTool("list_files", {});
 
-    expect(result?.content).toContain('Rezepte/.scribedog-foldernote.md  [folder note of "Rezepte"]');
+    expect(result?.content).toContain('Rezepte/.scribecat-foldernote.md  [folder note of "Rezepte"]');
     expect(result?.content).toMatch(/^Rezepte\/Kuchen\.md$/m);
   });
 
   it("reads and edits a folder note like any other note", async () => {
-    addFile("Rezepte/.scribedog-foldernote.md", "Übersicht der Rezepte");
+    addFile("Rezepte/.scribecat-foldernote.md", "Übersicht der Rezepte");
 
-    const read = await executeFileTool("read_file", { path: "Rezepte/.scribedog-foldernote.md" });
+    const read = await executeFileTool("read_file", { path: "Rezepte/.scribecat-foldernote.md" });
     expect(read?.content).toContain("Übersicht der Rezepte");
 
     const edit = await executeFileTool("edit_file", {
-      path: "Rezepte/.scribedog-foldernote.md",
+      path: "Rezepte/.scribecat-foldernote.md",
       old_text: "Übersicht",
       new_text: "Sammlung"
     });

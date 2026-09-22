@@ -568,7 +568,7 @@ export function DocumentPanel({
               >
                 <PanelLeft />
               </Button>
-              <span className="detail-panel__app-name">ScribeDog</span>
+              <span className="detail-panel__app-name">ScribeCat</span>
             </div>
           ) : null}
           <p className="detail-panel__eyebrow">{t("app.emptyEyebrow")}</p>

@@ -5,7 +5,7 @@ import fastifyStatic from "@fastify/static";
 import type { FastifyInstance } from "fastify";
 
 /** Must match BASE_PATH_PLACEHOLDER in the root vite.config.ts. */
-export const BASE_PATH_PLACEHOLDER = "/__SCRIBEDOG_BASE_PATH__";
+export const BASE_PATH_PLACEHOLDER = "/__SCRIBECAT_BASE_PATH__";
 
 export type StaticSiteOptions = {
   /** Directory of the built web client (`npm run build:web` in the repo root, i.e. dist-web). */

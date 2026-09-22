@@ -35,28 +35,28 @@ describe("normalizeBasePath", () => {
   });
 
   it("feeds into loadConfig", () => {
-    expect(loadConfig({ SCRIBEDOG_BASE_PATH: "bob/" }).basePath).toBe("/bob");
+    expect(loadConfig({ SCRIBECAT_BASE_PATH: "bob/" }).basePath).toBe("/bob");
     expect(loadConfig({}).basePath).toBe("");
   });
 
   it("resolves the web build directory from the environment or next to the package", () => {
-    expect(loadConfig({ SCRIBEDOG_WEB_DIST_DIR: "/srv/scribedog/web" }).webDistDir).toBe(path.resolve("/srv/scribedog/web"));
+    expect(loadConfig({ SCRIBECAT_WEB_DIST_DIR: "/srv/scribecat/web" }).webDistDir).toBe(path.resolve("/srv/scribecat/web"));
     expect(loadConfig({}).webDistDir).toBe(path.resolve(process.cwd(), "..", "dist-web"));
   });
 });
 
 describe("renderIndexHtml", () => {
-  const template = `<meta name="scribedog-base-path" content="${BASE_PATH_PLACEHOLDER}"><script type="module" src="./assets/index-abc.js"></script>`;
+  const template = `<meta name="scribecat-base-path" content="${BASE_PATH_PLACEHOLDER}"><script type="module" src="./assets/index-abc.js"></script>`;
 
   it("substitutes the placeholder with the prefix and leaves relative asset URLs alone", () => {
     expect(renderIndexHtml(template, "/anna")).toBe(
-      '<meta name="scribedog-base-path" content="/anna"><script type="module" src="./assets/index-abc.js"></script>'
+      '<meta name="scribecat-base-path" content="/anna"><script type="module" src="./assets/index-abc.js"></script>'
     );
   });
 
   it("removes the placeholder for the root", () => {
     expect(renderIndexHtml(template, "")).toBe(
-      '<meta name="scribedog-base-path" content=""><script type="module" src="./assets/index-abc.js"></script>'
+      '<meta name="scribecat-base-path" content=""><script type="module" src="./assets/index-abc.js"></script>'
     );
   });
 
@@ -70,11 +70,11 @@ describe("renderIndexHtml", () => {
  * assets/, unhashed files next to the page).
  */
 async function createWebDist(): Promise<string> {
-  const webDistDir = await mkdtemp(path.join(os.tmpdir(), "scribedog-web-dist-"));
+  const webDistDir = await mkdtemp(path.join(os.tmpdir(), "scribecat-web-dist-"));
   await mkdir(path.join(webDistDir, "assets"), { recursive: true });
   await writeFile(
     path.join(webDistDir, "index.html"),
-    `<!doctype html><html><head><meta name="scribedog-base-path" content="${BASE_PATH_PLACEHOLDER}"><script type="module" src="./assets/app.js"></script></head><body></body></html>`
+    `<!doctype html><html><head><meta name="scribecat-base-path" content="${BASE_PATH_PLACEHOLDER}"><script type="module" src="./assets/app.js"></script></head><body></body></html>`
   );
   await writeFile(path.join(webDistDir, "assets", "app.js"), "console.log('app');\n");
   await writeFile(path.join(webDistDir, "theme-boot.js"), "document.documentElement.classList.add('dark');\n");
@@ -87,7 +87,7 @@ describe("app under a base path", () => {
 
   beforeEach(async () => {
     webDistDir = await createWebDist();
-    context = await createTestContext({ SCRIBEDOG_BASE_PATH: "/anna/" }, { webDistDir });
+    context = await createTestContext({ SCRIBECAT_BASE_PATH: "/anna/" }, { webDistDir });
   });
 
   afterEach(async () => {

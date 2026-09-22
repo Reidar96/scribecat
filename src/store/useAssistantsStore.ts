@@ -2,7 +2,7 @@ import { create } from "zustand";
 
 import { DEFAULT_CHAT_ASSISTANT_INSTRUCTION, DEFAULT_REWRITE_INSTRUCTION } from "@/lib/aiClient";
 
-const ASSISTANTS_STORAGE_KEY = "scribedog-assistants";
+const ASSISTANTS_STORAGE_KEY = "scribecat-assistants";
 
 export const DEFAULT_ASSISTANT_ID = "default";
 

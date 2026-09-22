@@ -18,7 +18,7 @@
     "close": "Cerrar"
   },
   "app": {
-    "shellLabel": "Interfaz de la aplicación ScribeDog",
+    "shellLabel": "Interfaz de la aplicación ScribeCat",
     "workspaceLabel": "Área de trabajo del editor",
     "documentAreaLabel": "Área del documento",
     "navigateBack": "Atrás",
@@ -60,8 +60,8 @@
   "saveConflictDialog": {
     "eyebrow": "Archivo modificado fuera de la aplicación",
     "title": "¿Sobrescribir los cambios en el disco?",
-    "descriptionWithName": "El archivo {{fileLabel}} se ha modificado fuera de ScribeDog mientras tanto.",
-    "descriptionGeneric": "El archivo se ha modificado fuera de ScribeDog mientras tanto.",
+    "descriptionWithName": "El archivo {{fileLabel}} se ha modificado fuera de ScribeCat mientras tanto.",
+    "descriptionGeneric": "El archivo se ha modificado fuera de ScribeCat mientras tanto.",
     "versioningOn": "Al sobrescribir, la versión del disco se guarda antes en el historial, así podrás comparar ambas después.",
     "versioningOff": "El control de versiones está desactivado, así que la otra versión se perderá al sobrescribir.",
     "overwrite": "Sobrescribir"
@@ -200,7 +200,7 @@
     "outlineDepthShort": "Qué niveles de encabezado muestra el esquema del panel de detalles.",
     "folderNotes": "Notas de carpeta",
     "folderNotesShort": "Un clic en el nombre de una carpeta abre su propia nota; la flecha despliega la carpeta.",
-    "folderNotesHint": "La nota se guarda dentro de la propia carpeta como .scribedog-foldernote.md y se crea al guardar por primera vez, así que se mueve con la carpeta, incluso si la mueves o la renombras en el Explorador o el Finder. El interruptor solo controla lo que muestra el árbol; las notas de carpeta existentes se conservan al desactivarlo.",
+    "folderNotesHint": "La nota se guarda dentro de la propia carpeta como .scribecat-foldernote.md y se crea al guardar por primera vez, así que se mueve con la carpeta, incluso si la mueves o la renombras en el Explorador o el Finder. El interruptor solo controla lo que muestra el árbol; las notas de carpeta existentes se conservan al desactivarlo.",
     "folderNotesHidden_one": "{{count}} nota de carpeta está oculta porque esta función está desactivada.",
     "folderNotesHidden_other": "{{count}} notas de carpeta están ocultas porque esta función está desactivada.",
     "folderNotesEnableNow": "Activar ahora",
@@ -225,7 +225,7 @@
     "headingNumberingMarkerAlways": "Siempre",
     "vaultScopeTitle": "Carpeta abierta: {{name}}",
     "vaultScopeNoFolder": "Ninguna carpeta abierta",
-    "vaultScopeHint": "Estos ajustes se guardan en {{name}}/.scribedog y solo valen ahí. Las demás carpetas tienen los suyos.",
+    "vaultScopeHint": "Estos ajustes se guardan en {{name}}/.scribecat y solo valen ahí. Las demás carpetas tienen los suyos.",
     "vaultScopeNoFolderHint": "Abre una carpeta para usar estos ajustes: se guardan con la carpeta, no con la aplicación.",
     "reopenLastNote": "Volver a abrir la última nota al iniciar",
     "reopenLastNoteShort": "Recuerda, para cada carpeta y cada dispositivo, qué nota estaba abierta.",
@@ -293,7 +293,7 @@
     "agentMaxIterationsHint": "Cuántas llamadas a herramientas puede hacer un paso antes de detenerse. Más alto para peticiones grandes, más bajo si un modelo da vueltas.",
     "agentMaxPlanStepsLabel": "Pasos por lista de tareas",
     "agentMaxPlanStepsHint": "Límite superior de longitud de una lista de tareas.",
-    "localProviderBrowserHint": "{{provider}} se ejecuta en este dispositivo y el navegador se comunica con él directamente, por lo que debe aceptar solicitudes de {{origin}}: {{instruction}}. Si abres ScribeDog desde una dirección pública, el navegador también pedirá una vez acceso a la red local.",
+    "localProviderBrowserHint": "{{provider}} se ejecuta en este dispositivo y el navegador se comunica con él directamente, por lo que debe aceptar solicitudes de {{origin}}: {{instruction}}. Si abres ScribeCat desde una dirección pública, el navegador también pedirá una vez acceso a la red local.",
     "tabServer": "Servidores",
     "restoreWorkingSet": "Restaurar las notas en curso en el próximo inicio",
     "restoreWorkingSetShort": "La lista «En curso» se recuerda por carpeta.",
@@ -303,7 +303,7 @@
     "autoAdmitWorkingSetHint": "Los cambios sin guardar se conservan en cualquier caso y se ven como el punto amarillo en el árbol; un anillo en una carpeta plegada indica que dentro hay algo sin guardar."
   },
   "assistants": {
-    "defaultName": "ScribeDog (Predeterminado)",
+    "defaultName": "ScribeCat (Predeterminado)",
     "defaultDescription": "Tu fiel compañero de escritura.",
     "addAssistant": "Añadir asistente",
     "editAssistant": "Editar asistente",
@@ -364,14 +364,14 @@
       "whatTitle": "¿Para qué me sirve?",
       "whatBody": "Puedes preguntar a la IA por cosas anotadas en algún lugar de tus notas, aunque ese archivo no esté abierto. Por ejemplo: «¿Qué acordé con el cliente A sobre la fecha de entrega?» La IA busca en tus notas, responde con lo que está escrito allí y muestra debajo los archivos de los que lo ha sacado. Al hacer clic vas directamente a ese punto.",
       "howTitle": "¿Cómo funciona?",
-      "howBody": "ScribeDog busca en tus documentos las palabras de tu pregunta y entrega a la IA los fragmentos más pertinentes para que los lea. La búsqueda se ejecuta por completo en tu dispositivo: no se prepara, sube ni almacena nada de forma permanente. Tus notas no se modifican; solo se leen.",
+      "howBody": "ScribeCat busca en tus documentos las palabras de tu pregunta y entrega a la IA los fragmentos más pertinentes para que los lea. La búsqueda se ejecuta por completo en tu dispositivo: no se prepara, sube ni almacena nada de forma permanente. Tus notas no se modifican; solo se leen.",
       "dataTitle": "¿Qué ocurre con mis textos?",
-      "dataBody": "A la IA solo llegan los fragmentos encontrados para tu pregunta, no toda tu carpeta. Adónde van depende de lo que hayas configurado en «Ajustes de IA»: con un servicio en tu propio dispositivo (como Ollama) nada sale del ordenador. Con un proveedor en internet, los fragmentos encontrados se transmiten allí. Nada de esto ocurre si no activas la base de conocimiento, y nunca se envía nada a ScribeDog.",
+      "dataBody": "A la IA solo llegan los fragmentos encontrados para tu pregunta, no toda tu carpeta. Adónde van depende de lo que hayas configurado en «Ajustes de IA»: con un servicio en tu propio dispositivo (como Ollama) nada sale del ordenador. Con un proveedor en internet, los fragmentos encontrados se transmiten allí. Nada de esto ocurre si no activas la base de conocimiento, y nunca se envía nada a ScribeCat.",
       "undoTitle": "¿Cómo lo desactivo?",
       "undoBody": "Simplemente desactiva el interruptor de arriba. La IA volverá a ver únicamente el documento que tienes abierto. También puedes excluir carpetas concretas de forma permanente desmarcándolas: así las carpetas privadas quedan fuera mientras el resto sigue siendo consultable. Tus notas nunca se modifican ni se borran por ello.",
-      "howBodySemantic": "ScribeDog divide tus notas en pasajes y hace calcular para cada uno una especie de resumen con el que se puede buscar por significado y no solo por palabras exactas (el término técnico es «embeddings»). Esos resúmenes están en un archivo dentro de la carpeta .scribedog de tu propia carpeta. Además se siguen buscando las palabras de tu pregunta, y ambos resultados se combinan.",
-      "dataBodySemantic": "Para prepararlas, todos los archivos de las carpetas marcadas se envían por completo al servicio que hayas configurado para la base de conocimiento; después, solo los archivos modificados. Al responder, los pasajes encontrados se envían además a la IA. Con un servicio en tu propio dispositivo (como Ollama) nada sale del ordenador; con un proveedor en internet, sí. Nada de esto ocurre mientras no actives la base de conocimiento, y a ScribeDog nunca se le envía nada, tampoco para entrenar.",
-      "undoBodySemantic": "Desactiva el interruptor de arriba y la IA volverá a ver únicamente el documento abierto. Con «Borrar lo guardado» desaparece también el archivo preparado; está en la carpeta .scribedog dentro de tu propia carpeta, y quien borre esa carpeta se deshace de todo. Tus notas en sí nunca se modifican ni se borran."
+      "howBodySemantic": "ScribeCat divide tus notas en pasajes y hace calcular para cada uno una especie de resumen con el que se puede buscar por significado y no solo por palabras exactas (el término técnico es «embeddings»). Esos resúmenes están en un archivo dentro de la carpeta .scribecat de tu propia carpeta. Además se siguen buscando las palabras de tu pregunta, y ambos resultados se combinan.",
+      "dataBodySemantic": "Para prepararlas, todos los archivos de las carpetas marcadas se envían por completo al servicio que hayas configurado para la base de conocimiento; después, solo los archivos modificados. Al responder, los pasajes encontrados se envían además a la IA. Con un servicio en tu propio dispositivo (como Ollama) nada sale del ordenador; con un proveedor en internet, sí. Nada de esto ocurre mientras no actives la base de conocimiento, y a ScribeCat nunca se le envía nada, tampoco para entrenar.",
+      "undoBodySemantic": "Desactiva el interruptor de arriba y la IA volverá a ver únicamente el documento abierto. Con «Borrar lo guardado» desaparece también el archivo preparado; está en la carpeta .scribecat dentro de tu propia carpeta, y quien borre esa carpeta se deshace de todo. Tus notas en sí nunca se modifican ni se borran."
     },
     "warningCloudEmbedding": "Atención: {{provider}} no se ejecuta en este dispositivo. Al preparar tus notas, estas salen de tu ordenador.",
     "warningSemantic": "Para la búsqueda por significado tus notas se leen una vez por completo y se envían al servicio configurado más abajo, no solo los pasajes que coinciden con una pregunta. Esto se repite cada vez que cambias un archivo.",
@@ -410,7 +410,7 @@
     },
     "rebuild": {
       "title": "Tu base de conocimiento debe reconstruirse",
-      "body": "Has cambiado el modelo que hace que tus notas se puedan consultar. Lo que ScribeDog ha guardado hasta ahora no puede usarlo el nuevo modelo: se borrará y se creará de nuevo.",
+      "body": "Has cambiado el modelo que hace que tus notas se puedan consultar. Lo que ScribeCat ha guardado hasta ahora no puede usarlo el nuevo modelo: se borrará y se creará de nuevo.",
       "transfer": "Para ello, todos los archivos de las carpetas marcadas se leerán otra vez por completo y se enviarán a {{service}}.",
       "notesUnchanged": "Tus notas en sí no cambian.",
       "count": "Archivos afectados: {{files}}",
@@ -419,7 +419,7 @@
     "remoteVault": "La base de conocimiento no está disponible para una bóveda en un servidor: el índice lee las notas del disco de este equipo. Abre la bóveda como carpeta local en el servidor o úsala sin base de conocimiento."
   },
   "versioningSettings": {
-    "scope": "El interruptor vale para toda la aplicación. Las versiones en sí se guardan en la carpeta abierta, dentro de .scribedog.",
+    "scope": "El interruptor vale para toda la aplicación. Las versiones en sí se guardan en la carpeta abierta, dentro de .scribecat.",
     "enable": "Activar el control de versiones",
     "enableShort": "Cada vez que guardas, se conserva el contenido anterior del archivo.",
     "enableHint": "Guardar sin cambios no crea una versión duplicada. Desactivar el control de versiones solo impide crear versiones nuevas; el historial existente se conserva.",
@@ -849,7 +849,7 @@
   },
   "updateNotification": {
     "title": "Actualización {{version}} disponible",
-    "body": "Una nueva versión de ScribeDog está lista.",
+    "body": "Una nueva versión de ScribeCat está lista.",
     "install": "Instalar",
     "installing": "Instalando …",
     "installError": "No se pudo instalar la actualización.",
@@ -1024,8 +1024,8 @@
     "pageBreakBetweenChapters": "Empezar cada capítulo en una página nueva"
   },
   "login": {
-    "title": "ScribeDog",
-    "lead": "Inicia sesión con la contraseña de este servidor ScribeDog.",
+    "title": "ScribeCat",
+    "lead": "Inicia sesión con la contraseña de este servidor ScribeCat.",
     "sessionExpired": "Tu sesión ha caducado. Vuelve a iniciar sesión para continuar; los cambios sin guardar se conservan.",
     "password": "Contraseña",
     "submit": "Iniciar sesión",
@@ -1056,7 +1056,7 @@
     "certificateDownload": "Descargar certificado"
   },
   "platform": {
-    "notAvailable": "Esta función no está disponible en esta edición de ScribeDog.",
+    "notAvailable": "Esta función no está disponible en esta edición de ScribeCat.",
     "serverNotYetAvailable": "Esta acción aún no está disponible en la edición de servidor.",
     "pathOutsideVault": "«{{path}}» está fuera de la bóveda."
   },
@@ -1096,8 +1096,8 @@
     "urlMustBeHttps": "La dirección del servidor debe usar HTTPS; solo localhost puede usar HTTP simple.",
     "unknownServer": "Este servidor no está en la lista.",
     "notSignedIn": "No hay ninguna clave de acceso guardada para este servidor.",
-    "defaultDeviceName": "ScribeDog de escritorio",
-    "defaultDeviceNameOn": "ScribeDog en {{os}}",
+    "defaultDeviceName": "ScribeCat de escritorio",
+    "defaultDeviceNameOn": "ScribeCat en {{os}}",
     "settingsTitle": "Bóvedas de servidor",
     "settingsHint": "Servidores en los que esta app puede abrir una bóveda. Añade uno desde el menú de bóvedas de la barra lateral. Cada servidor muestra los dispositivos con clave de acceso; revoca allí un dispositivo perdido.",
     "none": "Aún no se ha añadido ningún servidor.",

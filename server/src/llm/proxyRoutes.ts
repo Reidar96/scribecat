@@ -19,7 +19,7 @@ export type LlmRoutesOptions = {
 };
 
 /** The client names its target here rather than in the path, so the body stays untouched. */
-export const TARGET_HEADER = "x-scribedog-llm-url";
+export const TARGET_HEADER = "x-scribecat-llm-url";
 
 /**
  * Ceiling for one provider call. The frontend gives up after three minutes

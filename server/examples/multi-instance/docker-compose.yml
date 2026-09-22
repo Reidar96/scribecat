@@ -1,11 +1,11 @@
-# Two ScribeDog instances on one host, one Caddy in front of both:
+# Two ScribeCat instances on one host, one Caddy in front of both:
 #
 #   https://<host>/anna/   ->  person 1  (data in ./anna-data)
 #   https://<host>/bob/    ->  person 2  (data in ./bob-data)
 #
 # Every instance is a separate container with its own data folder, password
 # and session cookie (the cookie is scoped to the base path, so the two never
-# see each other's). The service names below (scribedog-1, scribedog-2) are
+# see each other's). The service names below (scribecat-1, scribecat-2) are
 # internal plumbing, never seen outside this compose file: renaming a person,
 # or moving them to a different path, is a single line in .env
 # (PERSON1_BASE_PATH / PERSON2_BASE_PATH) — nothing here or in the Caddyfile
@@ -17,23 +17,23 @@
 #   docker compose up -d --build
 #
 # The image is built from the repository like the single-instance file; to
-# run a published image instead set SCRIBEDOG_IMAGE in .env.
+# run a published image instead set SCRIBECAT_IMAGE in .env.
 
-x-scribedog: &scribedog
+x-scribecat: &scribecat
   build:
     context: ../../..
     dockerfile: server/Dockerfile
-  image: ${SCRIBEDOG_IMAGE:-scribedog-server:0.15.1}
+  image: ${SCRIBECAT_IMAGE:-scribecat-server:0.15.1}
   restart: unless-stopped
   expose:
     - "3000"
 
 services:
-  scribedog-1:
-    <<: *scribedog
+  scribecat-1:
+    <<: *scribecat
     environment:
-      SCRIBEDOG_BASE_PATH: ${PERSON1_BASE_PATH:-/PERSON1_UNSET}
-      SCRIBEDOG_INIT_PASSWORD: ${PERSON1_INIT_PASSWORD:-}
+      SCRIBECAT_BASE_PATH: ${PERSON1_BASE_PATH:-/PERSON1_UNSET}
+      SCRIBECAT_INIT_PASSWORD: ${PERSON1_INIT_PASSWORD:-}
       # Ideally a Linux user of its own per instance (see docs/multiuser.md):
       # the container hands its data folder to these ids and runs as them.
       PUID: ${PERSON1_PUID:-1000}
@@ -41,11 +41,11 @@ services:
     volumes:
       - ./${PERSON1_DATA_DIR:-person1-data}:/data
 
-  scribedog-2:
-    <<: *scribedog
+  scribecat-2:
+    <<: *scribecat
     environment:
-      SCRIBEDOG_BASE_PATH: ${PERSON2_BASE_PATH:-/PERSON2_UNSET}
-      SCRIBEDOG_INIT_PASSWORD: ${PERSON2_INIT_PASSWORD:-}
+      SCRIBECAT_BASE_PATH: ${PERSON2_BASE_PATH:-/PERSON2_UNSET}
+      SCRIBECAT_INIT_PASSWORD: ${PERSON2_INIT_PASSWORD:-}
       PUID: ${PERSON2_PUID:-1001}
       PGID: ${PERSON2_PGID:-1001}
     volumes:
@@ -55,16 +55,16 @@ services:
     image: caddy:2-alpine
     restart: unless-stopped
     depends_on:
-      - scribedog-1
-      - scribedog-2
+      - scribecat-1
+      - scribecat-2
     ports:
-      - "${SCRIBEDOG_HTTP_PORT:-80}:80"
-      - "${SCRIBEDOG_HTTPS_PORT:-443}:443"
-      - "${SCRIBEDOG_HTTPS_PORT:-443}:443/udp"
+      - "${SCRIBECAT_HTTP_PORT:-80}:80"
+      - "${SCRIBECAT_HTTPS_PORT:-443}:443"
+      - "${SCRIBECAT_HTTPS_PORT:-443}:443/udp"
     environment:
-      SCRIBEDOG_SITE_ADDRESS: ${SCRIBEDOG_SITE_ADDRESS:-localhost}
-      SCRIBEDOG_DEFAULT_SNI: ${SCRIBEDOG_DEFAULT_SNI:-${SCRIBEDOG_SITE_ADDRESS:-localhost}}
-      SCRIBEDOG_TLS: ${SCRIBEDOG_TLS:-internal}
+      SCRIBECAT_SITE_ADDRESS: ${SCRIBECAT_SITE_ADDRESS:-localhost}
+      SCRIBECAT_DEFAULT_SNI: ${SCRIBECAT_DEFAULT_SNI:-${SCRIBECAT_SITE_ADDRESS:-localhost}}
+      SCRIBECAT_TLS: ${SCRIBECAT_TLS:-internal}
       # Passed through so the Caddyfile's {$PERSON1_BASE_PATH} etc. can read
       # them; this is what keeps the path in one place (.env) instead of
       # also being hardcoded in the Caddyfile.

@@ -40,10 +40,10 @@ describe("proxy target", () => {
         authorization: "Bearer sk-1",
         "x-api-key": "sk-2",
         "anthropic-version": "2023-06-01",
-        cookie: "scribedog_session=secret",
+        cookie: "scribecat_session=secret",
         host: "notes.example.com",
         origin: "https://notes.example.com",
-        "x-scribedog-llm-url": "https://api.openai.com/v1",
+        "x-scribecat-llm-url": "https://api.openai.com/v1",
         "accept-encoding": "gzip"
       })
     ).toEqual({
@@ -86,7 +86,7 @@ describe("llm proxy route", () => {
         await context.app.inject({
           method: "POST",
           url: "/api/llm/request",
-          headers: { "x-scribedog-llm-url": "https://api.openai.com/v1/chat/completions" },
+          headers: { "x-scribecat-llm-url": "https://api.openai.com/v1/chat/completions" },
           payload: "{}"
         })
       ).statusCode
@@ -95,7 +95,7 @@ describe("llm proxy route", () => {
   });
 
   it("refuses a target outside the allowlist without calling anything", async () => {
-    const response = await call({ "x-scribedog-llm-url": "https://evil.example/v1" });
+    const response = await call({ "x-scribecat-llm-url": "https://evil.example/v1" });
 
     expect(response.statusCode).toBe(400);
     expect(response.json()).toMatchObject({ error: "invalid_endpoint" });
@@ -110,7 +110,7 @@ describe("llm proxy route", () => {
     );
 
     const response = await call({
-      "x-scribedog-llm-url": "https://api.openai.com/v1/chat/completions",
+      "x-scribecat-llm-url": "https://api.openai.com/v1/chat/completions",
       authorization: `Bearer ${secretRef("openai")}`
     });
 
@@ -138,7 +138,7 @@ describe("llm proxy route", () => {
 
     fetchMock.mockResolvedValue(new Response(stream, { status: 200, headers: { "content-type": "text/event-stream" } }));
 
-    const response = await call({ "x-scribedog-llm-url": "https://api.openai.com/v1/chat/completions" });
+    const response = await call({ "x-scribecat-llm-url": "https://api.openai.com/v1/chat/completions" });
 
     expect(response.headers["content-type"]).toBe("text/event-stream");
     expect(response.body).toBe("data: one\n\ndata: two\n\n");
@@ -149,7 +149,7 @@ describe("llm proxy route", () => {
       new Response('{"error":{"message":"invalid api key"}}', { status: 401, headers: { "content-type": "application/json" } })
     );
 
-    const response = await call({ "x-scribedog-llm-url": "https://api.openai.com/v1/chat/completions" });
+    const response = await call({ "x-scribecat-llm-url": "https://api.openai.com/v1/chat/completions" });
 
     expect(response.statusCode).toBe(401);
     expect(response.json()).toMatchObject({ error: { message: "invalid api key" } });
@@ -158,7 +158,7 @@ describe("llm proxy route", () => {
   it("answers 502 when the provider cannot be reached", async () => {
     fetchMock.mockRejectedValue(new Error("getaddrinfo ENOTFOUND"));
 
-    const response = await call({ "x-scribedog-llm-url": "https://api.openai.com/v1/chat/completions" });
+    const response = await call({ "x-scribecat-llm-url": "https://api.openai.com/v1/chat/completions" });
 
     expect(response.statusCode).toBe(502);
     expect(response.json()).toMatchObject({ error: "upstream_unreachable" });
@@ -173,7 +173,7 @@ describe("llm proxy route", () => {
       headers: {
         cookie: sessionOnly,
         "content-type": "application/json",
-        "x-scribedog-llm-url": "https://api.openai.com/v1/chat/completions",
+        "x-scribecat-llm-url": "https://api.openai.com/v1/chat/completions",
         authorization: `Bearer ${secretRef("openai")}`
       },
       payload: "{}"
@@ -188,7 +188,7 @@ describe("llm proxy route", () => {
     fetchMock.mockResolvedValue(new Response("{}", { status: 200, headers: { "content-type": "application/json" } }));
 
     await call({
-      "x-scribedog-llm-url": "https://api.openai.com/v1/chat/completions",
+      "x-scribecat-llm-url": "https://api.openai.com/v1/chat/completions",
       authorization: `Bearer ${secretRef("mistral")}`
     });
 
@@ -209,7 +209,7 @@ describe("llm proxy route", () => {
     const response = await postOverSocket(`${address}/api/llm/request`, {
       cookie,
       "content-type": "application/json",
-      "x-scribedog-llm-url": "https://api.openai.com/v1/chat/completions"
+      "x-scribecat-llm-url": "https://api.openai.com/v1/chat/completions"
     });
 
     expect(response.status).toBe(200);
@@ -230,7 +230,7 @@ describe("llm proxy route", () => {
     const { hangUp, firstChunk } = openStreamOverSocket(`${address}/api/llm/request`, {
       cookie,
       "content-type": "application/json",
-      "x-scribedog-llm-url": "https://api.openai.com/v1/chat/completions"
+      "x-scribecat-llm-url": "https://api.openai.com/v1/chat/completions"
     });
 
     expect(await firstChunk).toBe("data: one\n\n");
@@ -248,7 +248,7 @@ describe("llm proxy route", () => {
     const response = await context.app.inject({
       method: "GET",
       url: "/api/llm/request",
-      headers: { cookie, "x-scribedog-llm-url": "https://api.openai.com/v1/models" }
+      headers: { cookie, "x-scribecat-llm-url": "https://api.openai.com/v1/models" }
     });
 
     expect(response.statusCode).toBe(200);

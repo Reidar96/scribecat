@@ -1,6 +1,6 @@
 # The desktop app as a client
 
-The ScribeDog desktop app can open a vault that lives on a ScribeDog server,
+The ScribeCat desktop app can open a vault that lives on a ScribeCat server,
 the same way it opens a folder on your disk. Your notes stay on the server;
 everything else, including AI with a local model, dictation, import and
 export, keeps running on your computer. The browser is not involved.
@@ -21,7 +21,7 @@ the same server.
    for this computer, and is not stored.
 4. Optionally give the vault a name for the sidebar, and check the device
    name (how this computer appears in the server's list of signed-in
-   devices; "ScribeDog on Windows" by default).
+   devices; "ScribeCat on Windows" by default).
 5. **Add.** The vault opens, and from now on it is in the vault menu next to
    your local folders, marked with a server icon. The app reopens it at
    startup like any other last-used vault.
@@ -37,7 +37,7 @@ See [Security](security.md) for what a key can and cannot do.
 The desktop app checks the server's certificate against the operating
 system's certificate store, the same store the browsers use (Firefox
 excepted). With a Let's Encrypt certificate nothing needs doing. With Caddy's
-local CA, import `scribedog-ca.crt` into the system store once, as described
+local CA, import `scribecat-ca.crt` into the system store once, as described
 in [Getting started](getting-started.md); accepting the warning in a browser
 is not enough for the app. There is no option to skip the check.
 
@@ -65,7 +65,7 @@ that a local folder does not need: **Download as Markdown** on a note (also
 in the editor's ⋮ menu) saves it as the `.md` file it is, through a save
 dialog, and **Download as ZIP (Markdown files)** on a folder, or on the
 vault name for the whole vault, saves the folder as it is on the server:
-notes, images and subfolders, without the `.scribedog` metadata. That ZIP
+notes, images and subfolders, without the `.scribecat` metadata. That ZIP
 is packed by the server (`GET /api/export/zip`), so it is quick even over a
 slow connection. The rendered export (PDF, DOCX, ODT, HTML, EPUB) works as
 for a local folder and writes into a folder you pick.

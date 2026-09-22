@@ -1,7 +1,7 @@
 // A scripted OpenAI-compatible endpoint for the browser tests.
 //
 // The e2e stack (docker-compose.e2e.yml) puts this behind Caddy as
-// https://llm.e2e.internal, and the ScribeDog server forwards the app's AI
+// https://llm.e2e.internal, and the ScribeCat server forwards the app's AI
 // requests to it exactly as it would to api.openai.com. So what the tests
 // exercise is the real chain: the agent loop in the browser, the LLM proxy,
 // the streamed answer, the tool calls and the file tools against the vault.

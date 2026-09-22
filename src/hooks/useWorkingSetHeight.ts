@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent, RefObject } from "react";
 
-const STORAGE_KEY = "scribedog-working-set-height";
+const STORAGE_KEY = "scribecat-working-set-height";
 /** Fallback when the list has not rendered yet; the CSS variable is the truth. */
 const FALLBACK_ROW_HEIGHT_PX = 44;
 const DEFAULT_ROWS = 6;

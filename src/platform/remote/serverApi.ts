@@ -1,7 +1,7 @@
 import { SessionError } from "@/platform/errors";
 
 /**
- * The HTTP client for the ScribeDog server, mirroring the routes in
+ * The HTTP client for the ScribeCat server, mirroring the routes in
  * server/src (auth, tokens and file API). Two shells use it: the browser,
  * where the session cookie rides along with every request, and the desktop
  * app opening a server vault, where the Rust side sends the request with an

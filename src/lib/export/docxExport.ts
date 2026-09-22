@@ -34,7 +34,7 @@ import type {
 } from "./markdownModel";
 import { computeExportImageSize, type ExportImageMap } from "./imageAssets";
 
-const ORDERED_LIST_REFERENCE = "scribedog-ordered";
+const ORDERED_LIST_REFERENCE = "scribecat-ordered";
 // DOCX references a font by name rather than embedding it, so the reader
 // substitutes when the family is missing. The system default resolves to Arial
 // — the safest sans-serif across Windows, macOS and most Linux setups; Word

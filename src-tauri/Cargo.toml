@@ -1,5 +1,5 @@
 [package]
-name = "scribedog"
+name = "scribecat"
 version = "0.15.1"
 description = "A local Markdown editor"
 authors = ["snooky234"]
@@ -43,7 +43,7 @@ serde_json = "1"
 # transcription speed here is whisper-toolchain.cmake — see the comment there.
 whisper-rs = "0.16"
 cpal = "0.15"
-# The desktop app as a client of a ScribeDog server (remote_vault.rs). Same
+# The desktop app as a client of a ScribeCat server (remote_vault.rs). Same
 # reqwest generation the http plugin uses; the extra feature makes it trust the
 # operating system's certificate store, which the plugin's bundled root list
 # does not, and which a home server behind Caddy's own CA needs.

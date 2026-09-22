@@ -3,25 +3,25 @@
 ## Setting up
 
 **Do I need a domain?**
-No. On a home network, `SCRIBEDOG_SITE_ADDRESS` can be the box's name or IP
+No. On a home network, `SCRIBECAT_SITE_ADDRESS` can be the box's name or IP
 and Caddy signs the certificate with its own CA; import that CA once per
 device (see [Getting started](getting-started.md)). A domain only matters if
 you want Let's Encrypt or reach the server from the internet.
 
 **The browser says the connection is not private.**
 That is Caddy's local CA, which the browser does not know yet. Accept the
-warning, or import `scribedog-ca.crt` so it stops; the file is behind
+warning, or import `scribecat-ca.crt` so it stops; the file is behind
 "Download certificate" in Settings, Account. Details in
 [Getting started](getting-started.md).
 
 **I can reach the app on the server but not from my laptop.**
-Caddy answers only for the addresses in `SCRIBEDOG_SITE_ADDRESS`. Add the
+Caddy answers only for the addresses in `SCRIBECAT_SITE_ADDRESS`. Add the
 name or IP your laptop uses, run `docker compose up -d`, and check that
 ports 443 (and 80) are open on the box's firewall.
 
 **Can I use my existing nginx or Traefik?**
 Yes. Proxy to the container's port 3000, forward the WebSocket upgrade for
-`/api/events`, do not strip a path prefix, and set `SCRIBEDOG_TRUST_PROXY`
+`/api/events`, do not strip a path prefix, and set `SCRIBECAT_TRUST_PROXY`
 to the number of proxies. See [Configuration](configuration.md).
 
 **Can two people use one server?**
@@ -32,7 +32,7 @@ is a ready compose file. There are no shared vaults or accounts, on purpose.
 ## The password and signing in
 
 **I forgot the password.**
-Delete `.scribedog/server/auth.json`, set `SCRIBEDOG_INIT_PASSWORD` and
+Delete `.scribecat/server/auth.json`, set `SCRIBECAT_INIT_PASSWORD` and
 restart. Notes are untouched; stored AI API keys have to be entered again;
 desktop apps sign in again. See [Security](security.md).
 
@@ -59,7 +59,7 @@ context menu can save a note or a folder from the server as Markdown. See
 **The desktop app says the server cannot be reached, but the browser works.**
 Usually the certificate: the desktop app trusts the operating system's
 certificate store, and accepting a warning in the browser does not put the CA
-there. Import `scribedog-ca.crt` (Settings, Account, "Download certificate"
+there. Import `scribecat-ca.crt` (Settings, Account, "Download certificate"
 in the browser) into the system store. On Linux, the app does not use
 Firefox's store.
 
@@ -88,7 +88,7 @@ See [Your data and backups](data-and-backups.md).
 ## Notes and data
 
 **Where are my notes?**
-In `./scribedog-data` next to the compose file, as plain `.md` files.
+In `./scribecat-data` next to the compose file, as plain `.md` files.
 Everything the app knows is in that folder. See
 [Your data and backups](data-and-backups.md).
 
@@ -101,11 +101,11 @@ Back up the folder with restic, kopia or whatever you use, encrypted and with
 history, from a cron job on the host. Backing up while the app runs is fine.
 
 **Are the notes encrypted?**
-Not by ScribeDog: they are plain Markdown on purpose. Use full-disk
+Not by ScribeCat: they are plain Markdown on purpose. Use full-disk
 encryption or gocryptfs below the folder if the box's location calls for it.
 API keys and password are protected (encrypted, hashed).
 
-**What is the `.scribedog-foldernote.md` file in some of my folders?**
+**What is the `.scribecat-foldernote.md` file in some of my folders?**
 A folder note: the folder's own text, written once you turn folder notes on
 under Settings → Open folder. It is a normal Markdown file, so search,
 version history and backups treat it like any other note; only the file tree
@@ -116,10 +116,10 @@ they are.
 Yes. Right-click a row in the file tree and pick **Change icon** (the same
 entry removes one again); on the desktop you can also click an icon in the
 path above the note. The icons are stored in the vault, in
-`.scribedog/icons.json`, not in the notes themselves, so setting one is not
+`.scribecat/icons.json`, not in the notes themselves, so setting one is not
 an edit: no unsaved changes, no new version, and nothing shows up in an
 export or in Git. Copy the folder somewhere else and the icons come along;
-rename a file outside ScribeDog and its icon is gone, the same way its place
+rename a file outside ScribeCat and its icon is gone, the same way its place
 in a manual sort order is.
 
 **What is the "In progress" list above the file tree?**
@@ -128,7 +128,7 @@ the context menu in the tree); it stays hidden until you pin the first one.
 A setting adds every note you edit as well, if you want that. The cross
 closes an entry; a note with unsaved changes asks whether to save or discard
 first. The list is stored in the vault
-(`.scribedog/open-files.json`), so it is the same in every browser and
+(`.scribecat/open-files.json`), so it is the same in every browser and
 desktop app that opens this vault; only the unsaved drafts themselves stay
 in the browser they were typed in. In the browser, Ctrl+W closes the tab,
 as it always does, not the entry; use the cross or the context menu.
@@ -153,7 +153,7 @@ too, since a book is one file). **Download as Markdown** saves the note as
 the `.md` it is; it is also in the editor's ⋮ menu next to Print. For a
 folder, or the whole vault from the vault name at the top, **Download as
 ZIP (Markdown files)** gives you the folder as it is on the server: notes,
-images and subfolders, without the `.scribedog` metadata.
+images and subfolders, without the `.scribecat` metadata.
 The rendering happens in the browser, so a very large folder export takes a
 moment; the Markdown ZIP comes straight from the server.
 
@@ -187,7 +187,7 @@ editor. The desktop app's Whisper dictation works with a server vault.
 ## Updating
 
 **How do I update?**
-Set the new version in `SCRIBEDOG_IMAGE`, then `docker compose pull` and
+Set the new version in `SCRIBECAT_IMAGE`, then `docker compose pull` and
 `docker compose up -d`, or `git pull` and `docker compose up -d --build`.
 Nobody is signed out. See [Updating](updating.md).
 

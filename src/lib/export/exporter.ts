@@ -71,8 +71,8 @@ export type ExportOutcome = {
 // stale on-disk state (App.tsx consults the in-memory document map first).
 export type MarkdownReader = (filePath: string) => Promise<string>;
 
-const LAST_EXPORT_DIRECTORY_STORAGE_KEY = "scribedog:lastExportDirectory";
-const LAST_EXPORT_FORMAT_STORAGE_KEY = "scribedog:lastExportFormat";
+const LAST_EXPORT_DIRECTORY_STORAGE_KEY = "scribecat:lastExportDirectory";
+const LAST_EXPORT_FORMAT_STORAGE_KEY = "scribecat:lastExportFormat";
 
 export function getLastExportDirectory(): string | null {
   try {

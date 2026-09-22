@@ -10,8 +10,8 @@ import { normalizeVaultPath, vaultPathKey } from "./vaultStaging";
  * staged changes, holding every touched file's content from *before* the batch.
  *
  * Layout mirrors fileVersions.ts (full copies, no patch chain):
- *   .scribedog/checkpoints/index.json    -> { checkpoints: [...] }
- *   .scribedog/checkpoints/<blobId>.md   -> content BEFORE the change
+ *   .scribecat/checkpoints/index.json    -> { checkpoints: [...] }
+ *   .scribecat/checkpoints/<blobId>.md   -> content BEFORE the change
  *
  * The reason it holds content rather than a diff: a deletion's only route back
  * is the text that was in the file. Anything cheaper than a full copy would

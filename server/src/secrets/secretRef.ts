@@ -3,7 +3,7 @@
  *
  * In the server edition the key never reaches the tab: the settings dialog
  * stores it through `/api/secrets`, and from then on the frontend carries
- * `{{scribedog-secret:openai}}` wherever the desktop build would carry the key
+ * `{{scribecat-secret:openai}}` wherever the desktop build would carry the key
  * itself. The value travels through `aiClient.ts` untouched (that file knows
  * nothing about any of this) and is substituted by the LLM proxy, right before
  * the request leaves for the provider.
@@ -11,10 +11,10 @@
  * Keep in step with src/platform/web/secretRef.ts, which produces these.
  */
 
-const PATTERN = /\{\{scribedog-secret:([A-Za-z0-9._:-]{1,64})\}\}/g;
+const PATTERN = /\{\{scribecat-secret:([A-Za-z0-9._:-]{1,64})\}\}/g;
 
 export function secretRef(id: string): string {
-  return `{{scribedog-secret:${id}}}`;
+  return `{{scribecat-secret:${id}}}`;
 }
 
 /** Ids referenced in the given values, without duplicates. */

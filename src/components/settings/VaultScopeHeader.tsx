@@ -6,7 +6,7 @@ import { useAppStore } from "@/store/useAppStore";
 
 /**
  * The line above every group of settings that lives in the open folder's
- * `.scribedog` rather than with the app — the knowledge base and the
+ * `.scribecat` rather than with the app — the knowledge base and the
  * folder's own page. Same wording in both places: a switch that "resets"
  * when another folder is opened has to read as belonging to the folder,
  * not as a bug. Without an open folder it says what to do instead.

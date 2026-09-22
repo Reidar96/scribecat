@@ -1,13 +1,13 @@
 import { expect, test, type Page } from "@playwright/test";
 
-const PASSWORD = process.env.SCRIBEDOG_E2E_PASSWORD ?? "e2e-test-password";
-const NOTE = process.env.SCRIBEDOG_E2E_NOTE ?? "Projects/Roadmap.md";
+const PASSWORD = process.env.SCRIBECAT_E2E_PASSWORD ?? "e2e-test-password";
+const NOTE = process.env.SCRIBECAT_E2E_NOTE ?? "Projects/Roadmap.md";
 
 // The UI language defaults to German and follows the stored choice; the
 // assertions below check English text, so pin the language for every page.
 test.beforeEach(async ({ context }) => {
   await context.addInitScript(() => {
-    window.localStorage.setItem("scribedog-language", "en");
+    window.localStorage.setItem("scribecat-language", "en");
   });
 });
 
@@ -72,7 +72,7 @@ test("login, tree, open, edit in the editor, save, reload, logout", async ({ pag
   await expect(page.getByTestId("logout")).toBeVisible();
 
   // The session cookie is scoped to the base path, not the whole host.
-  const cookie = (await context.cookies()).find((entry) => entry.name === "scribedog_session");
+  const cookie = (await context.cookies()).find((entry) => entry.name === "scribecat_session");
   expect(cookie).toBeDefined();
   expect(cookie?.path).toBe(basePath(page) || "/");
   expect(cookie?.httpOnly).toBe(true);
@@ -124,7 +124,7 @@ test("login, tree, open, edit in the editor, save, reload, logout", async ({ pag
   // Logout drops the cookie and brings the login form back.
   await page.getByTestId("logout").click();
   await expect(page.getByTestId("password")).toBeVisible();
-  expect((await context.cookies()).find((entry) => entry.name === "scribedog_session")).toBeUndefined();
+  expect((await context.cookies()).find((entry) => entry.name === "scribecat_session")).toBeUndefined();
 
   const afterLogout = await page.request.get(`${basePath(page)}/api/files`);
   expect(afterLogout.status()).toBe(401);

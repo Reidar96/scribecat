@@ -7,7 +7,7 @@ import { mimeTypeFor } from "./zipArchive";
 /**
  * Getting the notes themselves out, as the `.md` files they already are.
  *
- * ScribeDog has no "export to Markdown", because on the desktop the file
+ * ScribeCat has no "export to Markdown", because on the desktop the file
  * manager is that export. The two cases where the notes are somewhere the
  * user cannot open in a file manager are the browser and a server vault
  * opened from the desktop app; only there do these actions earn a place in

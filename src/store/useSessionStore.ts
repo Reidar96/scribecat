@@ -47,7 +47,7 @@ function messageFor(error: unknown): string {
 }
 
 /**
- * Password session against the ScribeDog server. Only meaningful where the
+ * Password session against the ScribeCat server. Only meaningful where the
  * platform has a session API (the browser); on the desktop `check` resolves
  * to "signed-in" immediately and nothing else is ever called.
  */

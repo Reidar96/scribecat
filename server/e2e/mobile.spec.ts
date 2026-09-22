@@ -13,14 +13,14 @@ import { devices, expect, test, type Page } from "@playwright/test";
  * (docker-compose.e2e.yml), like agent.spec.ts.
  */
 
-const PASSWORD = process.env.SCRIBEDOG_E2E_PASSWORD ?? "e2e-test-password";
-const NOTE = process.env.SCRIBEDOG_E2E_NOTE ?? "Projects/Roadmap.md";
+const PASSWORD = process.env.SCRIBECAT_E2E_PASSWORD ?? "e2e-test-password";
+const NOTE = process.env.SCRIBECAT_E2E_NOTE ?? "Projects/Roadmap.md";
 
 test.beforeEach(async ({ context }) => {
   await context.addInitScript(() => {
-    window.localStorage.setItem("scribedog-language", "en");
+    window.localStorage.setItem("scribecat-language", "en");
     window.localStorage.setItem(
-      "scribedog-ai-settings",
+      "scribecat-ai-settings",
       JSON.stringify({ provider: "openai", apiUrl: "https://llm.e2e.internal", model: "mock-model" })
     );
   });

@@ -3,7 +3,7 @@
  *
  * In the server edition the key itself never reaches the tab: it is stored
  * encrypted in the data volume (`/api/secrets`), and everything that would
- * carry the key on the desktop carries `{{scribedog-secret:openai}}` here
+ * carry the key on the desktop carries `{{scribecat-secret:openai}}` here
  * instead. `aiClient.ts` passes it along like any other string, and the
  * server's LLM proxy swaps in the real key right before the request leaves
  * for the provider.
@@ -22,7 +22,7 @@
  * Keep in step with server/src/secrets/secretRef.ts, which resolves these.
  */
 
-const PREFIX = "{{scribedog-secret:";
+const PREFIX = "{{scribecat-secret:";
 const SUFFIX = "}}";
 
 export function secretRef(id: string): string {

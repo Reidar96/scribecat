@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
-export const SESSION_COOKIE_NAME = "scribedog_session";
+export const SESSION_COOKIE_NAME = "scribecat_session";
 
 /** A token older than this gets re-issued on the next request (sliding expiration). */
 const REFRESH_AFTER_MS = 24 * 60 * 60 * 1000;

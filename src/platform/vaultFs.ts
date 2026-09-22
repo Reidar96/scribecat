@@ -4,7 +4,7 @@ import type { DirectoryEntry, FileInfo } from "@/platform/types";
 /**
  * Filesystem primitives on the *open vault*, with the names and signatures
  * of `@tauri-apps/plugin-fs`. Every module that reads or writes inside the
- * vault (notes, images, `.scribedog/` sidecars) imports these instead of the
+ * vault (notes, images, `.scribecat/` sidecars) imports these instead of the
  * plugin, and thereby works on a local folder and on a server vault alike.
  *
  * Not for files outside the vault (export targets, import sources, the

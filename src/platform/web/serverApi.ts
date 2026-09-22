@@ -10,7 +10,7 @@ export type { RemoteSecretStatus } from "@/platform/remote/serverApi";
  * no matter which call noticed it first.
  */
 
-const BASE_PATH_META_NAME = "scribedog-base-path";
+const BASE_PATH_META_NAME = "scribecat-base-path";
 
 /**
  * The one place the client learns where it lives. The server substitutes the
@@ -45,7 +45,7 @@ export const onUnauthorized = client.onUnauthorized;
 
 /** Where `platform.http.fetch` sends a cloud AI request; see web/index.ts. */
 const LLM_PROXY_PATH = "/llm/request";
-export const LLM_TARGET_HEADER = "x-scribedog-llm-url";
+export const LLM_TARGET_HEADER = "x-scribecat-llm-url";
 
 /** Absolute URL of the proxy, for the one caller that builds its own request. */
 export function llmProxyUrl(): string {

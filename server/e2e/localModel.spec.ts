@@ -4,27 +4,27 @@ import { expect, test, type BrowserContext, type Page } from "@playwright/test";
  * A model server on the user's own device, reached by the browser itself.
  *
  * The scripted model of the e2e stack plays that server here: the tests
- * point the app at its published port (SCRIBEDOG_E2E_MOCK_URL) as an
+ * point the app at its published port (SCRIBECAT_E2E_MOCK_URL) as an
  * OpenAI-compatible endpoint, so the request goes straight from the tab,
- * not through the ScribeDog server. What is checked is that direct path,
+ * not through the ScribeCat server. What is checked is that direct path,
  * and the explanations the app gives when the server refuses the page's
  * origin or is not there at all. The browser's own local network permission
  * is not part of this: page and mock are both on localhost, where no
  * browser asks.
  */
 
-const PASSWORD = process.env.SCRIBEDOG_E2E_PASSWORD ?? "e2e-test-password";
-const MOCK_URL = (process.env.SCRIBEDOG_E2E_MOCK_URL ?? "http://localhost:9081").replace(/\/$/, "");
-const NOTE = process.env.SCRIBEDOG_E2E_NOTE ?? "Projects/Roadmap.md";
+const PASSWORD = process.env.SCRIBECAT_E2E_PASSWORD ?? "e2e-test-password";
+const MOCK_URL = (process.env.SCRIBECAT_E2E_MOCK_URL ?? "http://localhost:9081").replace(/\/$/, "");
+const NOTE = process.env.SCRIBECAT_E2E_NOTE ?? "Projects/Roadmap.md";
 
 function seedSettings(apiUrl: string) {
   return ({ context }: { context: BrowserContext }) =>
     context.addInitScript(
       ({ url }) => {
-        window.localStorage.setItem("scribedog-language", "en");
+        window.localStorage.setItem("scribecat-language", "en");
         // LM Studio's shape: OpenAI-compatible on a local port, no key.
         window.localStorage.setItem(
-          "scribedog-ai-settings",
+          "scribecat-ai-settings",
           JSON.stringify({ provider: "lmstudio", apiUrl: url, model: "mock-model", agentFileAccess: false, agentPlanning: "off" })
         );
       },

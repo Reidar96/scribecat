@@ -31,7 +31,7 @@ describe("live updates", () => {
   let baseUrl: string;
 
   beforeEach(async () => {
-    context = await createTestContext({ SCRIBEDOG_BASE_PATH: "/anna" }, { watch: true });
+    context = await createTestContext({ SCRIBECAT_BASE_PATH: "/anna" }, { watch: true });
     cookie = await context.login();
     const address = await context.app.listen({ host: "127.0.0.1", port: 0 });
     baseUrl = address.replace(/^http/, "ws");
@@ -57,8 +57,8 @@ describe("live updates", () => {
 
       // The frontend's own sidecar writes happen on every save and must not
       // bounce back as a rescan.
-      await mkdir(path.join(context.vaultPath, ".scribedog", "versions"), { recursive: true });
-      await writeFile(path.join(context.vaultPath, ".scribedog", "versions", "index.json"), "{}");
+      await mkdir(path.join(context.vaultPath, ".scribecat", "versions"), { recursive: true });
+      await writeFile(path.join(context.vaultPath, ".scribecat", "versions", "index.json"), "{}");
       await expect(nextMessage(socket, 600)).rejects.toThrow(/no message/);
     } finally {
       socket.close();

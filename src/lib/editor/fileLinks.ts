@@ -15,7 +15,7 @@ import { getNoteDisplayName } from "@/lib/folderNotes";
  * of the sidebar apart from a file dragged in from the OS (which arrives as
  * `dataTransfer.files`).
  */
-export const FILE_LINK_DRAG_MIME = "application/x-scribedog-file-paths";
+export const FILE_LINK_DRAG_MIME = "application/x-scribecat-file-paths";
 
 export type VaultFileOption = {
   filePath: string;

@@ -18,7 +18,7 @@ const FILE_VERSION = 1;
 // Used when there is no local filesystem to keep the file in: the browser
 // (server edition), and the Tauri shell missing under plain `npm run dev`,
 // so the dialog stays usable for UI work. The packaged app never touches this.
-const FALLBACK_STORAGE_KEY = "scribedog.shortcuts";
+const FALLBACK_STORAGE_KEY = "scribecat.shortcuts";
 
 function hasTauriShell(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;

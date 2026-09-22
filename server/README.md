@@ -1,7 +1,7 @@
-# ScribeDog Server Edition
+# ScribeCat Server Edition
 
-Run ScribeDog as a self-hosted web app: your notes live in a folder on your
-own server, you edit them in the browser or in the ScribeDog desktop app, and
+Run ScribeCat as a self-hosted web app: your notes live in a folder on your
+own server, you edit them in the browser or in the ScribeCat desktop app, and
 a single password protects the instance.
 
 > **Status: usable.** The web app is the desktop app's own frontend, so it
@@ -39,8 +39,8 @@ Requirements: Docker with the Compose plugin.
 
 ```bash
 cd server
-cp .env.example .env         # set SCRIBEDOG_INIT_PASSWORD (8+ characters), PUID/PGID
-docker compose up -d --build # creates ./scribedog-data if it is not there
+cp .env.example .env         # set SCRIBECAT_INIT_PASSWORD (8+ characters), PUID/PGID
+docker compose up -d --build # creates ./scribecat-data if it is not there
 ```
 
 Open <https://localhost/> and sign in with the password you set. Your browser
