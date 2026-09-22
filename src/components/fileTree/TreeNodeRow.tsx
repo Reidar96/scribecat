@@ -41,9 +41,6 @@ type TreeNodeRowProps = {
   folderMatchCounts: Record<string, number>;
   /** Dirty notes per folder subtree, the folder's own note included. */
   folderDirtyCounts: Record<string, number>;
-  stagedKeys: Set<string>;
-  stagedCreatedKeys: Set<string>;
-  stagedDeletedKeys: Set<string>;
   selectedFilePath: string | null;
   selectedKeys: Set<string>;
   dirtyFilePaths: string[];
