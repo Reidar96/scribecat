@@ -28,7 +28,6 @@ jobs:
               "LICENSE",
               "THIRD_PARTY_LICENSES.md",
               "CHANGELOG.md",
-              ".github/workflows/scribecat-rebrand.yml",
           }
           allowed = {
               ".ts", ".tsx", ".js", ".mjs", ".json", ".md", ".yml", ".yaml",
@@ -39,7 +38,7 @@ jobs:
           changed = 0
 
           for raw in files:
-              if raw in excluded:
+              if raw in excluded or raw.startswith(".github/workflows/"):
                   continue
               path = pathlib.Path(raw)
               if path.suffix.lower() not in allowed and path.name not in {".env.example", "Dockerfile"}:
