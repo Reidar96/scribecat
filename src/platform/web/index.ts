@@ -160,7 +160,6 @@ export const platform: Platform = {
         throw new SessionError("error", error instanceof Error ? error.message : String(error));
       }
 
-      secretStatus = null;
     },
     listDevices: () => serverApi.listTokens(),
     revokeDevice: (id) => serverApi.revokeToken(id),
