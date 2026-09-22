@@ -52,10 +52,8 @@ export const platform: Platform = {
     updater: true,
     voiceInput: true,
     portableMode: true,
-    knowledgeIndex: false,
     spellcheckDictionary: true,
     session: false,
-    browserLocalModels: false,
     remoteVaults: true
   },
 
@@ -131,13 +129,6 @@ export const platform: Platform = {
         }
       });
     }
-  },
-  credentials: {
-    storeApiKey: (id, apiKey) => invoke("store_api_key", { provider: id, apiKey }),
-    getApiKey: (id) => invoke<string>("get_api_key", { provider: id }),
-    // The OS credential store is unlocked whenever the user's desktop session
-    // is; there is no state to report.
-    getStatus: async () => ({ state: "ready", discardedAt: null })
   },
   portable: {
     // Resolved once per session: the Rust side detects the mode once at
@@ -240,8 +231,6 @@ export const platform: Platform = {
     },
     relaunch
   },
-  knowledgeIndex: null,
   session: null,
-  localModels: null,
   remoteVaults: desktopRemoteVaults
 };
