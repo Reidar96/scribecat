@@ -1,6 +1,5 @@
 import type { AppUpdate } from "@/platform/types";
 
-import { AssistantEditDialog } from "@/components/AssistantEditDialog";
 import { DeleteFileDialog } from "@/components/DeleteFileDialog";
 import { ExportDialog, type ExportDialogTarget } from "@/components/ExportDialog";
 import type { MarkdownFileRecord } from "@/lib/fileSystem";
@@ -14,35 +13,22 @@ import { VersionDiffDialog, type VersionDiffTarget } from "@/components/VersionD
 import type { DeleteTarget } from "@/hooks/useDeleteTarget";
 import type { FileVersion } from "@/lib/fileVersions";
 import type { ImportSource } from "@/lib/import/importer";
-import type { AiSettings } from "@/store/useAiSettingsStore";
-import type { Assistant } from "@/store/useAssistantsStore";
 
 type AppDialogsProps = {
-  // Closing a dirty entry of the "In progress" list (hooks/useWorkingSetActions.ts)
   closingFileLabel: string | null;
   onSaveAndClose: () => void;
   onDiscardAndClose: () => void;
   onCancelClose: () => void;
 
-  // A save that met an external change to the file (store: saveConflict)
   saveConflictFileLabel: string | null;
   isSaving: boolean;
   onOverwriteConflict: () => void;
   onDismissConflict: () => void;
 
-  // Settings
-  isAiSettingsOpen: boolean;
+  isSettingsOpen: boolean;
   settingsInitialTab: SettingsTab;
-  aiSettings: AiSettings;
-  onSaveSettings: (nextSettings: Partial<AiSettings>) => void;
   onCloseSettings: () => void;
-  onAssistantEditRequest: (assistant: Assistant | null) => void;
 
-  // Assistant edit
-  assistantEditTarget: { assistant: Assistant | null } | null;
-  onCloseAssistantEdit: () => void;
-
-  // Move to folder (tree context menu)
   moveRequest: MoveRequest | null;
   fileRelativePaths: string[];
   emptyFolderRelativePaths: string[];
@@ -50,20 +36,17 @@ type AppDialogsProps = {
   onConfirmMove: (targetRelativePath: string) => void;
   onCancelMove: () => void;
 
-  // Delete
   deleteTarget: DeleteTarget | null;
   deleteTargetLabel: string | null;
   isDeleting: boolean;
   onConfirmDelete: () => void;
   onCancelDelete: () => void;
 
-  // Export
   exportTarget: ExportDialogTarget | null;
   readMarkdownForExport: (filePath: string) => Promise<string>;
   resolveOrderedExportRecords: (target: ExportDialogTarget) => MarkdownFileRecord[];
   onCloseExport: () => void;
 
-  // Import
   importFileList: ImportSource[] | null;
   folderPath: string | null;
   importTargetFolder: string | null;
@@ -72,11 +55,9 @@ type AppDialogsProps = {
   onImported: (createdFilePaths: string[]) => void;
   onCloseImport: () => void;
 
-  // Update
   availableUpdate: AppUpdate | null;
   onDismissUpdate: () => void;
 
-  // Version diff
   versionDiffTarget: VersionDiffTarget | null;
   versionDiffCurrentContent: string;
   isRestoringVersion: boolean;
@@ -84,137 +65,79 @@ type AppDialogsProps = {
   onCloseVersionDiff: () => void;
 };
 
-export function AppDialogs({
-  closingFileLabel,
-  onSaveAndClose,
-  onDiscardAndClose,
-  onCancelClose,
-  saveConflictFileLabel,
-  isSaving,
-  onOverwriteConflict,
-  onDismissConflict,
-  isAiSettingsOpen,
-  settingsInitialTab,
-  aiSettings,
-  onSaveSettings,
-  onCloseSettings,
-  onAssistantEditRequest,
-  assistantEditTarget,
-  onCloseAssistantEdit,
-  moveRequest,
-  fileRelativePaths,
-  emptyFolderRelativePaths,
-  isMoving,
-  onConfirmMove,
-  onCancelMove,
-  deleteTarget,
-  deleteTargetLabel,
-  isDeleting,
-  onConfirmDelete,
-  onCancelDelete,
-  exportTarget,
-  readMarkdownForExport,
-  resolveOrderedExportRecords,
-  onCloseExport,
-  importFileList,
-  folderPath,
-  importTargetFolder,
-  importSkippedCount,
-  importLimitReached,
-  onImported,
-  onCloseImport,
-  availableUpdate,
-  onDismissUpdate,
-  versionDiffTarget,
-  versionDiffCurrentContent,
-  isRestoringVersion,
-  onRestoreVersion,
-  onCloseVersionDiff
-}: AppDialogsProps) {
+export function AppDialogs(props: AppDialogsProps) {
   return (
     <>
       <UnsavedChangesDialog
-        open={closingFileLabel !== null}
-        fileLabel={closingFileLabel}
-        isSaving={isSaving}
-        onSave={onSaveAndClose}
-        onDiscard={onDiscardAndClose}
-        onCancel={onCancelClose}
+        open={props.closingFileLabel !== null}
+        fileLabel={props.closingFileLabel}
+        isSaving={props.isSaving}
+        onSave={props.onSaveAndClose}
+        onDiscard={props.onDiscardAndClose}
+        onCancel={props.onCancelClose}
       />
 
       <SaveConflictDialog
-        open={saveConflictFileLabel !== null}
-        fileLabel={saveConflictFileLabel}
-        isSaving={isSaving}
-        onOverwrite={onOverwriteConflict}
-        onCancel={onDismissConflict}
+        open={props.saveConflictFileLabel !== null}
+        fileLabel={props.saveConflictFileLabel}
+        isSaving={props.isSaving}
+        onOverwrite={props.onOverwriteConflict}
+        onCancel={props.onDismissConflict}
       />
 
       <SettingsDialog
-        open={isAiSettingsOpen}
-        initialTab={settingsInitialTab}
-        settings={aiSettings}
-        onSave={(nextSettings) => {
-          onSaveSettings(nextSettings);
-          onCloseSettings();
-        }}
-        onClose={onCloseSettings}
-        onAssistantEditRequest={onAssistantEditRequest}
-      />
-
-      <AssistantEditDialog
-        open={assistantEditTarget !== null}
-        assistant={assistantEditTarget?.assistant ?? null}
-        onClose={onCloseAssistantEdit}
+        open={props.isSettingsOpen}
+        initialTab={props.settingsInitialTab}
+        onClose={props.onCloseSettings}
       />
 
       <MoveToDialog
-        request={moveRequest}
-        fileRelativePaths={fileRelativePaths}
-        emptyFolderRelativePaths={emptyFolderRelativePaths}
-        isMoving={isMoving}
-        onConfirm={onConfirmMove}
-        onCancel={onCancelMove}
+        request={props.moveRequest}
+        fileRelativePaths={props.fileRelativePaths}
+        emptyFolderRelativePaths={props.emptyFolderRelativePaths}
+        isMoving={props.isMoving}
+        onConfirm={props.onConfirmMove}
+        onCancel={props.onCancelMove}
       />
 
       <DeleteFileDialog
-        open={deleteTarget !== null}
-        kind={deleteTarget && deleteTarget.kind !== "multiple" ? deleteTarget.kind : "file"}
-        fileLabel={deleteTargetLabel}
-        count={deleteTarget?.kind === "multiple" ? deleteTarget.paths.length : undefined}
-        isDeleting={isDeleting}
-        onConfirm={onConfirmDelete}
-        onCancel={onCancelDelete}
+        open={props.deleteTarget !== null}
+        kind={props.deleteTarget && props.deleteTarget.kind !== "multiple" ? props.deleteTarget.kind : "file"}
+        fileLabel={props.deleteTargetLabel}
+        count={props.deleteTarget?.kind === "multiple" ? props.deleteTarget.paths.length : undefined}
+        isDeleting={props.isDeleting}
+        onConfirm={props.onConfirmDelete}
+        onCancel={props.onCancelDelete}
       />
 
       <ExportDialog
-        target={exportTarget}
-        readMarkdown={readMarkdownForExport}
-        resolveOrderedRecords={resolveOrderedExportRecords}
-        onClose={onCloseExport}
+        target={props.exportTarget}
+        readMarkdown={props.readMarkdownForExport}
+        resolveOrderedRecords={props.resolveOrderedExportRecords}
+        onClose={props.onCloseExport}
       />
 
       <ImportDialog
-        files={importFileList}
-        vaultRoot={folderPath}
-        targetFolder={importTargetFolder}
-        skippedCount={importSkippedCount}
-        limitReached={importLimitReached}
-        onImported={onImported}
-        onClose={onCloseImport}
+        files={props.importFileList}
+        vaultRoot={props.folderPath}
+        targetFolder={props.importTargetFolder}
+        skippedCount={props.importSkippedCount}
+        limitReached={props.importLimitReached}
+        onImported={props.onImported}
+        onClose={props.onCloseImport}
       />
 
       <VersionDiffDialog
-        target={versionDiffTarget}
-        folderPath={folderPath}
-        currentContent={versionDiffCurrentContent}
-        isRestoring={isRestoringVersion}
-        onRestore={onRestoreVersion}
-        onClose={onCloseVersionDiff}
+        target={props.versionDiffTarget}
+        folderPath={props.folderPath}
+        currentContent={props.versionDiffCurrentContent}
+        isRestoring={props.isRestoringVersion}
+        onRestore={props.onRestoreVersion}
+        onClose={props.onCloseVersionDiff}
       />
 
-      {availableUpdate ? (
-        <UpdateNotification update={availableUpdate} onDismiss={onDismissUpdate} />
+      {props.availableUpdate ? (
+        <UpdateNotification update={props.availableUpdate} onDismiss={props.onDismissUpdate} />
       ) : null}
     </>
   );
