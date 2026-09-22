@@ -105,7 +105,7 @@ async function resolveTargetDirectory(
   return directory;
 }
 
-function classifyError(extension: string): ImportErrorKey {
+function classifyError(): ImportErrorKey {
   return "errorConvert";
 }
 
@@ -200,7 +200,7 @@ export async function importFiles(
       } else {
         item.status = "error";
         item.errorKey =
-          error instanceof SourceTooLargeError ? "errorTooLarge" : classifyError(extension);
+          error instanceof SourceTooLargeError ? "errorTooLarge" : classifyError();
         item.errorDetail = error instanceof Error ? error.message : String(error);
       }
     } finally {
