@@ -15,7 +15,7 @@ import uk from "@/i18n/locales/uk.json";
 export const LANGUAGE_STORAGE_KEY = "scribecat-language";
 export const SUPPORTED_LANGUAGES = ["de", "en", "fr", "es", "zh", "ja", "pt", "ru", "it", "uk"] as const;
 export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
-const DEFAULT_LANGUAGE: SupportedLanguage = "de";
+const DEFAULT_LANGUAGE: SupportedLanguage = "en";
 
 // English endonyms of the UI languages, used to tell an AI model which
 // language to answer in (English names are the most reliably understood).
