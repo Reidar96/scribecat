@@ -10,7 +10,6 @@ import { authRoutes } from "./auth/routes.js";
 import type { SessionConfig } from "./auth/session.js";
 import type { TokenStore } from "./auth/tokenStore.js";
 import type { ServerConfig } from "./config.js";
-import { llmRoutes } from "./llm/proxyRoutes.js";
 import { secretRoutes } from "./secrets/routes.js";
 import type { SecretStore } from "./secrets/secretStore.js";
 import { eventRoutes } from "./vault/eventRoutes.js";
@@ -23,7 +22,7 @@ import { staticSite } from "./web/staticSite.js";
 export type AppDependencies = {
   config: ServerConfig;
   authStore: AuthStore;
-  /** Encrypted API-key storage; the AI routes and the login both use it. */
+  /** Encrypted compatibility store used by the existing authentication format. */
   secrets: SecretStore;
   /** Personal access tokens for clients without a browser (the desktop app). */
   tokens: TokenStore;
@@ -94,15 +93,6 @@ export async function buildApp(deps: AppDependencies): Promise<FastifyInstance> 
       await scoped.register(fileRoutes, { vault, requireSession, prefix: "/api" });
       await scoped.register(exportRoutes, { vault, requireSession, prefix: "/api" });
       await scoped.register(secretRoutes, { secrets, authStore, session, requireSession, prefix: "/api" });
-      await scoped.register(llmRoutes, {
-        allowedHosts: config.llmAllowedHosts,
-        secrets,
-        authStore,
-        session,
-        requireSession,
-        prefix: "/api"
-      });
-
       if (deps.watcher) {
         await scoped.register(eventRoutes, { watcher: deps.watcher, tokens, requireSession, prefix: "/api" });
       }
