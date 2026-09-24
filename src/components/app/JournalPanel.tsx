@@ -101,6 +101,41 @@ function buildGalleryItems(images: JournalImage[]): JournalGalleryItem[] {
   });
 }
 
+function useMasonrySpan<T extends HTMLElement>() {
+  const ref = useRef<T>(null);
+
+  useLayoutEffect(() => {
+    const element = ref.current;
+    const grid = element?.parentElement;
+    if (!element || !grid) return;
+
+    const update = () => {
+      const styles = window.getComputedStyle(grid);
+      const rowHeight = Number.parseFloat(styles.gridAutoRows) || 8;
+      const rowGap = Number.parseFloat(styles.rowGap) || 0;
+      const height = element.getBoundingClientRect().height;
+      const span = Math.max(
+        1,
+        Math.ceil((height + rowGap) / Math.max(1, rowHeight + rowGap))
+      );
+      element.style.gridRowEnd = `span ${span}`;
+    };
+
+    update();
+
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", update);
+      return () => window.removeEventListener("resize", update);
+    }
+
+    const observer = new ResizeObserver(update);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  return ref;
+}
+
 function dateParts(date: Date): JournalDate {
   return {
     year: date.getFullYear(),
@@ -283,9 +318,11 @@ function JournalImageCard({
   const { t } = useTranslation();
   const { objectUrl, loadError } = useJournalImageUrl(image, filePath);
   const [ratioClass, setRatioClass] = useState<ImageRatioClass>("landscape");
+  const masonryRef = useMasonrySpan<HTMLElement>();
 
   return (
     <article
+      ref={masonryRef}
       className={cn(
         "journal-entry__image-card",
         isDragging && "journal-entry__image-card--dragging"
@@ -309,6 +346,7 @@ function JournalImageCard({
     >
       {objectUrl ? (
         <button
+          ref={addCardRef}
           type="button"
           className={cn(
             "journal-entry__image-open",
@@ -451,6 +489,7 @@ function JournalEntryView({
   const [imageError, setImageError] = useState<string | null>(null);
   const [imageDropActive, setImageDropActive] = useState(false);
   const galleryRef = useRef<HTMLDivElement>(null);
+  const addCardRef = useMasonrySpan<HTMLButtonElement>();
   const draggingKeyRef = useRef<string | null>(null);
   const dragCommittedRef = useRef(false);
   const previousGalleryRectsRef = useRef<Map<string, DOMRect> | null>(null);
@@ -1323,37 +1362,13 @@ export function JournalPanel({
               ))}
             </select>
 
-            <select
-              value={
-                selectedDate &&
-                selectedDate.year === year &&
-                selectedDate.month === month
-                  ? selectedDate.day
-                  : ""
-              }
-              onChange={(event) => {
-                const day = Number.parseInt(event.target.value, 10);
-                if (day) void openJournalDate({ year, month, day });
-              }}
-              aria-label={t("journal.date")}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="journal-calendar__today-button"
+              onClick={goToday}
             >
-              <option value="">{t("journal.date")}</option>
-              {Array.from(
-                {
-                  length:
-                    year === today.year && month === today.month
-                      ? today.day
-                      : count
-                },
-                (_, index) => index + 1
-              ).map((day) => (
-                <option key={day} value={day}>
-                  {day}
-                </option>
-              ))}
-            </select>
-
-            <Button type="button" variant="outline" size="sm" onClick={goToday}>
               {t("journal.today")}
             </Button>
 
@@ -1418,17 +1433,15 @@ export function JournalPanel({
             })}
           </div>
 
-          {isPhone ? (
-            <Button
-              type="button"
-              variant="outline"
-              className="journal-calendar__overview-button"
-              onClick={showOverview}
-            >
-              <List />
-              {t("journal.overview")}
-            </Button>
-          ) : null}
+          <Button
+            type="button"
+            variant="outline"
+            className="journal-calendar__overview-button"
+            onClick={showOverview}
+          >
+            <List />
+            {t("journal.overview")}
+          </Button>
 
           <div className="journal-calendar__search">
             <div className="journal-calendar__search-row">
