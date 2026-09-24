@@ -167,8 +167,6 @@ export function AccountSettings({ onLogoutRequest }: { onLogoutRequest: () => vo
         </Button>
       </div>
 
-      <h3 className="ai-dialog__field--full">{t("account.session")}</h3>
-      <p className="ai-dialog__field--full ai-dialog__model-hint">{t("account.sessionHint")}</p>
       <div className="ai-dialog__field--full">
         <Button
           type="button"
@@ -177,7 +175,7 @@ export function AccountSettings({ onLogoutRequest }: { onLogoutRequest: () => vo
           data-testid="logout"
         >
           <LogOut />
-          {t("account.logout")}
+          {t("sidebar.logout")}
         </Button>
       </div>
 
