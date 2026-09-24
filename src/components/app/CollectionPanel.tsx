@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  CalendarDays,
   FileText,
   Folder,
   FolderOpen,
+  ListTodo,
+  Network,
   PanelLeft,
   PanelLeftOpen,
   Tag,
@@ -52,6 +55,9 @@ type CollectionPanelProps = {
   onClose: () => void;
   onOpenFile: (filePath: string) => void;
   onOpenFolder: (relativePath: string) => void;
+  onOpenJournal?: () => void;
+  onOpenGraph?: () => void;
+  onOpenTasks?: () => void;
 };
 
 type NoteCard = {
@@ -118,7 +124,10 @@ export function CollectionPanel({
   onOpenSidebar,
   onClose,
   onOpenFile,
-  onOpenFolder
+  onOpenFolder,
+  onOpenJournal,
+  onOpenGraph,
+  onOpenTasks
 }: CollectionPanelProps) {
   const { t, i18n } = useTranslation();
   const layout = useLayoutMode();
@@ -397,6 +406,38 @@ export function CollectionPanel({
         </header>
 
         <div className="collection-panel__body">
+          {isRootCollection && layout === "phone" ? (
+            <div className="collection-home-actions">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onOpenJournal}
+                disabled={!onOpenJournal}
+              >
+                <CalendarDays />
+                <span>{t("sidebar.calendar")}</span>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onOpenGraph}
+                disabled={!onOpenGraph}
+              >
+                <Network />
+                <span>{t("sidebar.graph")}</span>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onOpenTasks}
+                disabled={!onOpenTasks}
+              >
+                <ListTodo />
+                <span>{t("sidebar.tasks")}</span>
+              </Button>
+            </div>
+          ) : null}
+
           {cards.length === 0 ? (
             <div className="collection-panel__empty">
               <FileText aria-hidden="true" />
