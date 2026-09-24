@@ -25,14 +25,16 @@ export function useStartupFolder(
         return;
       }
 
-      const didOpenFolder = await openFolderAtPath(targetFolderPath);
+      try {
+        const didOpenFolder = await openFolderAtPath(targetFolderPath);
 
-      if (!didOpenFolder && !startupFolderPath) {
-        clearLastOpenedFolderPath();
-      }
-
-      if (isActive) {
-        setResolved(true);
+        if (!didOpenFolder && !startupFolderPath) {
+          clearLastOpenedFolderPath();
+        }
+      } finally {
+        if (isActive) {
+          setResolved(true);
+        }
       }
     };
 
