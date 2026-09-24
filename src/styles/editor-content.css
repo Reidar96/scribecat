@@ -682,6 +682,7 @@
   background: rgba(0, 0, 0, 0.84);
   padding: 2.75rem;
   overscroll-behavior: contain;
+  touch-action: pan-y pinch-zoom;
 }
 
 .media-preview__close {
