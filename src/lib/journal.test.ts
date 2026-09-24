@@ -44,7 +44,8 @@ describe("journal markdown", () => {
   it("keeps frontmatter and stores gallery images as ordinary markdown", () => {
     const original = "---\ntags: [Oslo]\n---\n# En dag\n\nTekst\n\n## Bilder\n\n![A](a.jpg)\n";
     const parsed = parseJournalMarkdown(original);
-    expect(parsed.textMarkdown).toContain("Tekst");
+    expect(parsed.title).toBe("En dag");
+    expect(parsed.textMarkdown).toBe("Tekst");
     expect(parsed.images).toEqual([{ alt: "A", src: "a.jpg" }]);
 
     const next = composeJournalMarkdown(original, parsed.textMarkdown, [
@@ -53,6 +54,7 @@ describe("journal markdown", () => {
     ]);
 
     expect(next).toContain("tags: [Oslo]");
+    expect(next).toContain("# En dag");
     expect(next).toContain("![B](_attachments/b.jpg)");
     expect(next.indexOf("![B]")).toBeLessThan(next.indexOf("![A]"));
   });
