@@ -18,8 +18,8 @@ export const SUPPORTED_LANGUAGES = ["de", "en", "fr", "es", "zh", "ja", "nb", "p
 export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
 const DEFAULT_LANGUAGE: SupportedLanguage = "en";
 
-// English endonyms of the UI languages, used to tell an AI model which
-// language to answer in (English names are the most reliably understood).
+// Stable English names of the UI languages, used where code needs a
+// language label independent of the translated interface.
 const LANGUAGE_ENGLISH_NAME: Record<SupportedLanguage, string> = {
   de: "German",
   en: "English",
