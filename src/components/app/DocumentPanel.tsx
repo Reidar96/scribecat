@@ -585,20 +585,21 @@ export function DocumentPanel({
       ) : (
         <div className="detail-panel__card detail-panel__card--empty">
           {standaloneFindPanel}
-          {layout === "phone" ? (
-            // No note, no header: the sheet button still has to be somewhere.
+          {layout === "phone" || !sidebarVisible ? (
+            // With no note open the document header does not exist, so the
+            // sidebar restore control needs a home of its own.
             <div className="detail-panel__header detail-panel__header--empty">
               <Button
                 type="button"
                 size="icon-sm"
                 variant="ghost"
                 className="detail-panel__sidebar-button"
-                aria-label={t("app.openSidebar")}
-                title={t("app.openSidebar")}
+                aria-label={t(layout === "phone" ? "app.openSidebar" : "sidebar.show")}
+                title={t(layout === "phone" ? "app.openSidebar" : "sidebar.show")}
                 data-testid="open-sidebar"
-                onClick={onOpenSidebar}
+                onClick={layout === "phone" ? onOpenSidebar : onSidebarVisibilityToggle}
               >
-                <PanelLeft />
+                {layout === "phone" ? <PanelLeft /> : <PanelLeftOpen />}
               </Button>
               <span className="detail-panel__app-name">ScribeCat</span>
             </div>
