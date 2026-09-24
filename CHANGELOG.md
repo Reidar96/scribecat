@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.20.6] - 2026-09-24
+
+### Improvements
+- Restore a true masonry-style diary gallery while preserving row-prioritized Markdown order and the live drag-and-drop behaviour from 0.20.5.
+- Size masonry rows from each rendered image card so portrait, landscape and square images pack tightly without reverting to column-first ordering.
+- Simplify calendar controls to month and year selectors only; keep Today and previous/next month navigation.
+- Show the Overview button on desktop as well as mobile.
+- Give the mobile year selector more width so the complete four-digit year remains visible, and shorten the Norwegian mobile button label from “Se kalender” to “Kalender”.
+
 ## [0.20.5] - 2026-09-24
 
 ### Improvements
