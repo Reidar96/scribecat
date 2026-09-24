@@ -10,8 +10,7 @@ import {
   Plus,
   SquareCheck,
   Tag,
-  Trash2,
-  X
+  Trash2
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
