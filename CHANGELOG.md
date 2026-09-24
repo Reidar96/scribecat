@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.20.5] - 2026-09-24
+
+### Improvements
+- Make the diary gallery strictly row-first: images 1, 2 and 3 occupy the first row before 4, 5 and 6 continue below, instead of CSS columns filling top-to-bottom.
+- Rework diary image drag-and-drop so cards reorder live while dragging and nearby images visibly move into their new positions.
+- Keep stable image-card identities while reordering so already loaded images are reused instead of being remounted/reloaded after every move.
+- Use the actual image card as the drag preview and keep the dragged card visible in the gallery until the Markdown order is committed on drop.
+
 ## [0.20.4] - 2026-09-24
 
 ### Improvements
