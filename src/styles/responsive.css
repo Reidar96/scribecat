@@ -74,6 +74,10 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
+  .workspace-grid.workspace-grid--sidebar-hidden {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .workspace-resizer {
     display: none;
   }
