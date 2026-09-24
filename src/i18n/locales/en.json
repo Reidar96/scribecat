@@ -584,6 +584,7 @@
     "removeTag": "Remove tag {{tag}}",
     "images": "Images",
     "addImages": "Add images",
+    "addImagesDrop": "Choose or drop images",
     "openImage": "Open image {{name}}",
     "imageMissing": "Image could not be loaded",
     "moveImageLeft": "Move image earlier",
