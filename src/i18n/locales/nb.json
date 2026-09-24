@@ -451,7 +451,7 @@
     "notes": "Notater",
     "tags": "Tags",
     "folders": "Mapper",
-    "hint": "Dra noder · dra bakgrunnen for å flytte · scroll for å zoome",
+    "hint": "Klikk for å fokusere · klikk igjen for å åpne · dra noder · scroll for å zoome",
     "loading": "Bygger graf…",
     "empty": "Det finnes ingen notater å vise i grafen ennå.",
     "allHidden": "Alle nodetyper er skjult.",
