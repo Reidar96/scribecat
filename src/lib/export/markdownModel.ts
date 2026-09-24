@@ -4,6 +4,7 @@ import insPlugin from "markdown-it-ins";
 import markPlugin from "markdown-it-mark";
 
 import { calloutMarkdownItPlugin } from "@/lib/editor/extensions/callout";
+import { splitFrontmatter } from "@/lib/documentFrontmatter";
 import { tableLineBreakMarkdownItPlugin } from "@/lib/editor/extensions/table";
 
 // Shared intermediate representation for the PDF/DOCX/ODT exporters: markdown
@@ -309,7 +310,11 @@ function parseBlocks(state: ParserState, closeTokenType: string | null): ExportB
 
 export function parseMarkdownToBlocks(markdown: string): ExportBlock[] {
   const markdownIt = createExportMarkdownIt();
-  const tokens = markdownIt.parse(normalizeTaskListMarkdown(markdown), {});
+  // YAML frontmatter is note metadata (tags, and potentially other portable
+  // fields later), not visible document content. Raw .md downloads preserve
+  // it; rendered outputs such as print/PDF/DOCX/HTML/ODT do not.
+  const { body } = splitFrontmatter(markdown);
+  const tokens = markdownIt.parse(normalizeTaskListMarkdown(body), {});
 
   return parseBlocks({ tokens, index: 0 }, null);
 }
