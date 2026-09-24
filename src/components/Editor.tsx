@@ -66,6 +66,7 @@ import {
 import { updateSearchHighlight } from "@/lib/searchHighlight";
 import { canDownloadMarkdown, downloadNoteAsMarkdown } from "@/lib/export/markdownDownload";
 import { printMarkdown } from "@/lib/print";
+import { replaceBody } from "@/lib/documentFrontmatter";
 import { couldBeShortcut } from "@/lib/shortcuts/binding";
 import { matchFixedEditorShortcut } from "@/lib/shortcuts/fixed";
 import { isRetiredDefault, matchShortcut } from "@/lib/shortcuts/resolve";
@@ -621,7 +622,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
             return;
           }
 
-          downloadNoteAsMarkdown(filePath, getEditorMarkdown(currentEditor, markdown)).catch((error: unknown) => {
+          downloadNoteAsMarkdown(filePath, replaceBody(documentMarkdown, getEditorMarkdown(currentEditor, markdown))).catch((error: unknown) => {
             console.error("Markdown download failed:", error);
           });
         }
