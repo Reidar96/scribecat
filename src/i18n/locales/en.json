@@ -893,7 +893,8 @@
     "preview": "Image preview",
     "openPreview": "Open larger image",
     "previous": "Previous image",
-    "next": "Next image"
+    "next": "Next image",
+    "delete": "Delete image"
   },
   "codeBlock": {
     "copy": "Copy code",

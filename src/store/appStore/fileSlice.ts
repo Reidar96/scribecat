@@ -350,7 +350,13 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
           folderPath,
           selectedFilePath,
           previousBaseContent,
-          selectedFileContent
+          selectedFileContent,
+          Object.fromEntries(
+            Object.entries(fileDocuments).map(([path, document]) => [
+              path,
+              document.content
+            ])
+          )
         ).catch(() => undefined);
       }
 
@@ -866,7 +872,18 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
       discardDraft(folderPath, filePath);
 
       if (folderPath) {
-        void cleanupOrphanedImages(folderPath, filePath, contentBeforeDelete, "").catch(() => undefined);
+        void cleanupOrphanedImages(
+          folderPath,
+          filePath,
+          contentBeforeDelete,
+          "",
+          Object.fromEntries(
+            Object.entries(fileDocuments).map(([path, document]) => [
+              path,
+              document.content
+            ])
+          )
+        ).catch(() => undefined);
       }
 
       const nextDocuments = { ...fileDocuments };

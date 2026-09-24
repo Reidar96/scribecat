@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.22.3] - 2026-09-24
+
+### Improvements
+- Add a right-click **Delete image** action to images in ordinary notes.
+- Add the same right-click image deletion to diary/calendar image cards.
+- Removing an image deletes its Markdown reference immediately; when the note is saved, the attachment file is removed from disk only if no other Markdown file in the vault still references it.
+- Shared images and external image URLs are therefore never removed from local storage by mistake.
+
 ## [0.22.2] - 2026-09-24
 
 ### Improvements

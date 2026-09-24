@@ -490,7 +490,8 @@ export async function cleanupOrphanedImages(
   folderPath: string,
   filePath: string,
   previousMarkdown: string,
-  nextMarkdown: string
+  nextMarkdown: string,
+  markdownOverrides: Readonly<Record<string, string>> = {}
 ): Promise<void> {
   const fileDirPath = await dirname(filePath);
   const previousRefs = await resolveImageRootRelativePaths(previousMarkdown, fileDirPath, folderPath);
@@ -515,13 +516,22 @@ export async function cleanupOrphanedImages(
   const stillReferenced = new Set(nextRefs.paths);
   const markdownFiles = await listMarkdownFiles(folderPath);
   const normalizedCurrentFilePath = normalizeDisplayPath(filePath);
+  const overrideByPath = new Map(
+    Object.entries(markdownOverrides).map(([path, markdown]) => [
+      normalizeDisplayPath(path),
+      markdown
+    ])
+  );
 
   await Promise.all(
     markdownFiles
       .filter((record) => normalizeDisplayPath(record.filePath) !== normalizedCurrentFilePath)
       .map(async (record) => {
         try {
-          const otherMarkdown = await readMarkdownFile(record.filePath);
+          const normalizedOtherPath = normalizeDisplayPath(record.filePath);
+          const otherMarkdown =
+            overrideByPath.get(normalizedOtherPath) ??
+            (await readMarkdownFile(record.filePath));
           const otherDirPath = await dirname(record.filePath);
           const otherRefs = await resolveImageRootRelativePaths(otherMarkdown, otherDirPath, folderPath);
           otherRefs.paths.forEach((ref) => stillReferenced.add(ref));

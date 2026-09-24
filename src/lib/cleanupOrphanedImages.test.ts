@@ -90,6 +90,23 @@ describe("cleanupOrphanedImages", () => {
     expect(removed).toEqual([]);
   });
 
+  it("keeps an image referenced by another open note with unsaved changes", async () => {
+    files["/vault/note.md"] = "# Title\n";
+    files["/vault/other.md"] = "# Still old on disk\n";
+
+    await cleanupOrphanedImages(
+      VAULT,
+      "/vault/note.md",
+      "![x](images/a.png)",
+      "# Title\n",
+      {
+        "/vault/other.md": "![x](images/a.png)"
+      }
+    );
+
+    expect(removed).toEqual([]);
+  });
+
   it("keeps an image that a note in a subfolder still references", async () => {
     files["/vault/note.md"] = "# Title\n";
     files["/vault/sub/other.md"] = "![x](../images/a.png)";
