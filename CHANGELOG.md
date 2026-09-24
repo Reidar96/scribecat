@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.19.0] - 2026-09-24
+
+### Highlights
+- Add a global Graph View, opened from the sidebar, that builds a live network directly from ordinary Markdown links, YAML tags and note folder placement.
+- Graph nodes keep ScribeCat navigation intact: notes open the editor, tags open the tag grid and folders open the folder grid.
+- The graph is interactive: drag nodes, pan and zoom the canvas, fit the whole network to the window, hover to focus immediate connections, and toggle notes, tags or folders independently.
+- No graph database or proprietary link syntax is introduced; the vault's Markdown files remain the source of truth.
+
 ## [0.18.5] - 2026-09-24
 
 ### Improvements
