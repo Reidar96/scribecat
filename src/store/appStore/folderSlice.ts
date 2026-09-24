@@ -20,6 +20,8 @@ import {
   watchMarkdownFolder
 } from "@/lib/fileSystem";
 
+import { readDocumentLocks } from "@/lib/vaultMeta";
+
 import {
   isDocumentDirty,
   pruneDocumentsToCurrentFolder,
@@ -140,6 +142,19 @@ export const createFolderSlice: AppSlice<FolderSlice> = (set, get) => ({
       return false;
     }
   },
+  refreshDocumentLocks: async () => {
+    const { folderPath } = get();
+
+    if (!folderPath) {
+      return;
+    }
+
+    const locks = await readDocumentLocks(folderPath);
+
+    if (get().folderPath === folderPath) {
+      set({ documentLocks: locks });
+    }
+  },
   closeFolder: () => {
     // Pending drafts carry their own vault path, so they can still go out
     // after the store has forgotten the folder.
@@ -158,7 +173,10 @@ export const createFolderSlice: AppSlice<FolderSlice> = (set, get) => ({
     set({ isRefreshing: true, folderError: null });
 
     try {
-      const markdownFiles = await listMarkdownFiles(folderPath);
+      const [markdownFiles, documentLocks] = await Promise.all([
+        listMarkdownFiles(folderPath),
+        readDocumentLocks(folderPath)
+      ]);
       const nextFilePaths = markdownFiles.map((record) => record.filePath);
       const refreshedDocuments = await refreshCleanDocumentsFromDisk(fileDocuments, markdownFiles);
 
@@ -210,6 +228,7 @@ export const createFolderSlice: AppSlice<FolderSlice> = (set, get) => ({
         fileDocuments: nextDocuments,
         fileMtimeMs: buildFileMtimeMap(markdownFiles),
         manualOrder: nextManualOrder,
+        documentLocks,
         workingSet: nextWorkingSet,
         selectedFilePath: selectedDocument ? currentSelectedFilePath : null,
         selectedFileContent: selectedDocument ? selectedDocument.content : null,
