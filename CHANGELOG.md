@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.22.10] - 2026-09-24
+
+### Fixes
+- Make Start a stable navigation destination by clearing only the active editor selection while preserving the previous note and unsaved draft in memory.
+- Make Home buttons in collection views navigate explicitly to Start instead of merely closing the collection and revealing an older selected note.
+- Never show a Home button on the Start/root collection itself.
+- Prevent Diary and Tasks folders from flashing on Start or in the sidebar while per-vault visibility settings are still loading.
+- Tie the startup visibility gate to the exact active vault path so stale settings from another or previous vault cannot render for a frame.
+
 ## [0.22.9] - 2026-09-24
 
 ### Fixes and improvements

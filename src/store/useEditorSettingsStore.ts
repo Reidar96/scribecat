@@ -440,6 +440,13 @@ type EditorSettingsState = {
   headingNumbering: HeadingNumberingSettings;
   /** Vault the current heading numbering, folder notes, diary and task settings were read from; writes go there. */
   headingNumberingVaultPath: string | null;
+  /**
+   * True only after the per-vault settings for heading numbering, folder
+   * notes, Diary and Tasks have finished loading for the current vault.
+   * Navigation surfaces use this to avoid briefly rendering entries that will
+   * immediately be hidden by vault-specific rules.
+   */
+  vaultSettingsReady: boolean;
   /** Loads every per-vault setting of this store. */
   loadHeadingNumbering: (folderPath: string | null) => Promise<void>;
   setHeadingNumbering: (patch: Partial<HeadingNumberingSettings>) => void;
@@ -586,12 +593,14 @@ export const useEditorSettingsStore = create<EditorSettingsState>((set, get) => 
   },
   headingNumbering: DEFAULT_HEADING_NUMBERING,
   headingNumberingVaultPath: null,
+  vaultSettingsReady: true,
   loadHeadingNumbering: async (folderPath: string | null) => {
     // The path is recorded before the read so a change made while it is in
     // flight lands in the right vault, and a read that comes back after the
     // vault has changed again is dropped.
     set({
       headingNumberingVaultPath: folderPath,
+      vaultSettingsReady: folderPath === null,
       headingNumbering: DEFAULT_HEADING_NUMBERING,
       folderNotesEnabled: false,
       journalSettings: DEFAULT_JOURNAL_SETTINGS,
@@ -610,7 +619,13 @@ export const useEditorSettingsStore = create<EditorSettingsState>((set, get) => 
     ]);
 
     if (get().headingNumberingVaultPath === folderPath) {
-      set({ headingNumbering: settings, folderNotesEnabled, journalSettings, taskSettings });
+      set({
+        headingNumbering: settings,
+        folderNotesEnabled,
+        journalSettings,
+        taskSettings,
+        vaultSettingsReady: true
+      });
     }
   },
   setHeadingNumbering: (patch: Partial<HeadingNumberingSettings>) => {

@@ -47,6 +47,22 @@ import {
 } from "./versioning";
 
 export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
+  clearSelectedFile: () => {
+    // Keep the document map and draft intact: Start is navigation, not a close
+    // or discard operation. Only the active editor mirror is cleared.
+    void flushDrafts();
+    set({
+      selectedFilePath: null,
+      selectedFileContent: null,
+      selectedFileBaseContent: null,
+      isFileLoading: false,
+      isSaving: false,
+      isDirty: false,
+      fileError: null,
+      saveError: null,
+      saveConflict: null
+    });
+  },
   selectFilePath: async (filePath: string) => {
     // Leaving a note is one of the points where a pending draft goes out at once.
     void flushDrafts();

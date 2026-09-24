@@ -148,6 +148,7 @@ function App() {
   const discardFileChanges = useAppStore((state) => state.discardFileChanges);
   const workingSetActions = useWorkingSetActions();
   const selectFilePath = useAppStore((state) => state.selectFilePath);
+  const clearSelectedFile = useAppStore((state) => state.clearSelectedFile);
   const openFolderNote = useAppStore((state) => state.openFolderNote);
   const updateSelectedFileContent = useAppStore(
     (state) => state.updateSelectedFileContent
@@ -504,6 +505,16 @@ function App() {
   const openCollectionSafely = async (request: CollectionViewRequest) => {
     if (!(await leaveCurrentNote())) {
       return;
+    }
+
+    const isStart =
+      request.kind === "folder" && request.relativePath === "";
+
+    if (isStart) {
+      // Start is a destination of its own, not an overlay over the previously
+      // selected note. Keep that note in fileDocuments/drafts, but remove the
+      // active selection so no later "close" can reveal it again.
+      clearSelectedFile();
     }
 
     setCollectionView(request);
@@ -1148,7 +1159,9 @@ function App() {
               sidebarVisible={sidebarVisible}
               onSidebarVisibilityToggle={toggleSidebarVisible}
               onOpenSidebar={() => setIsSidebarSheetOpen(true)}
-              onClose={() => setCollectionView(null)}
+              onClose={() =>
+                void openCollectionSafely({ kind: "folder", relativePath: "" })
+              }
               onOpenFile={(filePath) => void selectFilePathSafely(filePath)}
               onOpenFolder={(relativePath) => {
                 void openCollectionSafely({ kind: "folder", relativePath });

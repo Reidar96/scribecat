@@ -90,6 +90,12 @@ export type SaveOptions = { trigger?: "manual" | "auto"; force?: boolean };
 export type FileSlice = {
   selectFilePath: (filePath: string) => Promise<boolean>;
   /**
+   * Leaves the current editor selection without discarding its in-memory
+   * document or draft. Start/home uses this so a previous note cannot leak
+   * back in when collection views are closed.
+   */
+  clearSelectedFile: () => void;
+  /**
    * Opens a folder's own note (lib/folderNotes.ts). Reads the file when it
    * exists; otherwise starts an empty in-memory document at the note's path,
    * which saveSelectedFile writes to disk on the first save — so enabling the
