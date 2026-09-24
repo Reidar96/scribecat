@@ -1,25 +1,22 @@
-name: ScribeCat server image
+name: Restore ScribeCat 0.15.1
 
 on:
   push:
     branches:
-      - main
-      - scribecat-rework
-  pull_request:
-    branches:
-      - main
-  workflow_dispatch:
+      - restore-0.15.1
 
 permissions:
-  contents: read
+  contents: write
   packages: write
 
 jobs:
-  test-and-build:
+  restore:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout exact 0.15.1 source
         uses: actions/checkout@v4
+        with:
+          ref: fdb70b9e4e0af91abb0001c47d57bad7efc4311d
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -43,17 +40,6 @@ jobs:
           npm test
           npm run build
 
-      - name: Build Docker image
-        run: docker build -f server/Dockerfile -t scribecat-server:test .
-
-  publish:
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
-    needs: test-and-build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
       - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
@@ -61,11 +47,22 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push ScribeCat server image
+      - name: Restore immutable 0.15.1 image
         run: |
           docker build -f server/Dockerfile \
-            -t ghcr.io/reidar96/scribecat-server:latest \
             -t ghcr.io/reidar96/scribecat-server:0.15.1 \
             .
-          docker push ghcr.io/reidar96/scribecat-server:latest
           docker push ghcr.io/reidar96/scribecat-server:0.15.1
+
+      - name: Create historical GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view v0.15.1 >/dev/null 2>&1; then
+            echo "Release v0.15.1 already exists"
+          else
+            gh release create v0.15.1 \
+              --target fdb70b9e4e0af91abb0001c47d57bad7efc4311d \
+              --title "ScribeCat 0.15.1" \
+              --notes "Stable ScribeCat baseline before the 0.16.0 usability update. This release preserves the version before Norwegian Bokmål, default auto-save, document editing lock, and shortcut disabling were added."
+          fi
