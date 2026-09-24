@@ -401,7 +401,11 @@
     "searchResults": "Søkeresultater",
     "collapseAllFolders": "Trekk sammen alle mapper",
     "graphView": "Åpne grafvisning",
-    "journalView": "Åpne dagbokkalender"
+    "journalView": "Åpne dagbokkalender",
+    "calendar": "Kalender",
+    "graph": "Graf",
+    "tasks": "Gjøremål",
+    "tasksView": "Åpne gjøremål"
   },
   "journal": {
     "label": "Dagbokkalender",
@@ -445,6 +449,22 @@
     "noResults": "Ingen dagbokdager samsvarer.",
     "overview": "Oversikt",
     "closeResults": "Lukk resultatlisten"
+  },
+  "tasks": {
+    "label": "Gjøremål",
+    "title": "Gjøremål",
+    "close": "Lukk gjøremål",
+    "all": "Alle",
+    "newTask": "Nytt gjøremål…",
+    "categoryOptional": "Kategori (valgfritt)",
+    "deadline": "Deadline",
+    "add": "Legg til",
+    "count": "{{count}} gjøremål",
+    "empty": "Ingen gjøremål her ennå.",
+    "toggle": "Endre status for {{task}}",
+    "taskText": "Gjøremålstekst",
+    "delete": "Slett gjøremål",
+    "uncategorized": "Uten kategori"
   },
   "graph": {
     "label": "Grafvisning",
