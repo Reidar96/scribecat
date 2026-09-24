@@ -1,4 +1,4 @@
-import { useContext, useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Trash2 } from "lucide-react";
 
@@ -161,7 +161,7 @@ export function ImageView({ node, editor, getPos, updateAttributes, selected }: 
         className="editor-image-wrapper"
         data-drag-handle
         onPointerDown={selectOnTouch}
-        onContextMenu={(event) => {
+        onContextMenu={(event: ReactMouseEvent<HTMLElement>) => {
           if (!editor.isEditable) return;
 
           event.preventDefault();
