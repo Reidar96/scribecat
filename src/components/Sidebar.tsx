@@ -7,6 +7,7 @@ import {
   Check,
   ChevronDown,
   ChevronRight,
+  ChevronsUp,
   Clock,
   Download,
   FileText,
@@ -199,6 +200,7 @@ export function Sidebar({
   const { t } = useTranslation();
   const [selectionMode, setSelectionMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [collapseFoldersRequestId, setCollapseFoldersRequestId] = useState(0);
   const tagSummaries = useTagIndex(filePaths, selectedFilePath, selectedFileContent);
   const vaultSearch = useVaultSearch(
     searchQuery,
@@ -463,6 +465,18 @@ export function Sidebar({
               </MenuPositioner>
             </MenuPortal>
           </Menu>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setCollapseFoldersRequestId((id) => id + 1)}
+            disabled={isLoading || folderPath === null}
+            aria-label={t("sidebar.collapseAllFolders")}
+            title={t("sidebar.collapseAllFolders")}
+          >
+            <ChevronsUp />
+          </Button>
 
           <Button
             type="button"
@@ -836,6 +850,7 @@ export function Sidebar({
             onMoveRequest={onMoveRequest}
             onRequestEditorFocus={onRequestEditorFocus}
             focusRequestId={sidebarFocusRequestId + treeRevealRequestId}
+            collapseAllRequestId={collapseFoldersRequestId}
             onSelectionChange={onFileTreeSelectionChange}
             selectionMode={selectionMode}
           />
