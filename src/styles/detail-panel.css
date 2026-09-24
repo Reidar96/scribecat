@@ -93,11 +93,9 @@
 }
 
 /* The title is a breadcrumb: the folders leading to the note, then the note
-   itself. With folder notes on, every folder crumb opens that folder's own
-   note, which is the same action the folder row in the sidebar performs; with
-   the feature off the crumbs are plain text, since there would be nothing to
-   open. The rendered text stays exactly the path string the title showed
-   before, so nothing that reads the title sees a different value. */
+   itself. Folder crumbs open the corresponding collection grid; the note
+   remains the leaf. For a folder note the last crumb is the folder itself, so
+   that crumb also links back to the folder collection. */
 .detail-panel__breadcrumb {
   /* The path scrolls instead of being truncated: on a narrow viewport an
      ellipsis can only ever show one end of it, and the folders it hides are
