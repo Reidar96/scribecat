@@ -15,7 +15,6 @@ import {
   FolderPlus,
   GripVertical,
   Import,
-  LogOut,
   ListChecks,
   Move,
   Plus,
@@ -127,8 +126,6 @@ type SidebarProps = {
   // Files dragged in from outside the app, with the vault-relative folder they
   // were dropped on ("" is the vault root).
   onFilesDropped: (payload: DropPayload, targetDirectory: string) => void;
-  /** Server edition only: ends the password session. */
-  onLogoutRequest: () => void;
   /** Set while the panel is a sheet (phone layout); renders the close button. */
   onClose?: () => void;
 };
@@ -184,7 +181,6 @@ export function Sidebar({
   fileTreeSelection,
   fileTreeSelectionCount,
   onFilesDropped,
-  onLogoutRequest,
   onClose
 }: SidebarProps) {
   const { t } = useTranslation();
@@ -490,19 +486,6 @@ export function Sidebar({
             <Settings2 />
           </Button>
 
-          {platform.features.session ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={onLogoutRequest}
-              aria-label={t("sidebar.logout")}
-              title={t("sidebar.logout")}
-              data-testid="logout"
-            >
-              <LogOut />
-            </Button>
-          ) : null}
         </div>
         <div className="sidebar-panel__folder-wrap">
           {onClose ? (
