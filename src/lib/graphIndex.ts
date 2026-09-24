@@ -1,4 +1,4 @@
-import { extractTags } from "@/lib/documentFrontmatter";
+import { extractTags, splitFrontmatter } from "@/lib/documentFrontmatter";
 import { collectOutgoingFileLinks } from "@/lib/editor/documentLinks";
 import { getRelativeDisplayPath } from "@/lib/fileSystem";
 import { getNoteDisplayName } from "@/lib/folderNotes";
@@ -156,6 +156,7 @@ export function buildVaultGraph({
   for (const filePath of filePaths) {
     const source = noteId(filePath);
     const markdown = markdownByPath[filePath] ?? "";
+    const { body } = splitFrontmatter(markdown);
     const relativePath = getRelativeDisplayPath(folderPath, filePath).replace(/\\/g, "/");
     const parentFolder = parentFolderOf(relativePath);
 
@@ -165,7 +166,7 @@ export function buildVaultGraph({
       addEdge("tag", source, tagId(tag));
     }
 
-    for (const link of collectOutgoingFileLinks(markdown, filePath, filePaths)) {
+    for (const link of collectOutgoingFileLinks(body, filePath, filePaths)) {
       if (!link.targetFilePath) continue;
       addEdge("link", source, noteId(link.targetFilePath), true);
     }
