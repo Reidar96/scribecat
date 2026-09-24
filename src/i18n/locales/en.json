@@ -300,7 +300,11 @@
     "restoreWorkingSetHint": "Off means the list starts empty and fills again only by pinning or editing. Unsaved changes come back regardless.",
     "autoAdmitWorkingSet": "Add edited notes to \"In progress\" automatically",
     "autoAdmitWorkingSetShort": "By default only pinned notes are listed there (double-click or Enter in the tree). With this option every note joins as soon as it is edited.",
-    "autoAdmitWorkingSetHint": "Unsaved changes are kept either way and show as the yellow dot in the tree; a ring on a collapsed folder means something inside it is unsaved."
+    "autoAdmitWorkingSetHint": "Unsaved changes are kept either way and show as the yellow dot in the tree; a ring on a collapsed folder means something inside it is unsaved.",
+    "languageNorwegianBokmal": "Norwegian Bokmål",
+    "autoSave": "Auto-save by default",
+    "autoSaveShort": "Automatically saves the open note after you pause typing.",
+    "autoSaveHint": "Applies to all notes on this device. Turn it off here if you prefer manual saves; the document menu changes the same setting."
   },
   "assistants": {
     "defaultName": "ScribeCat (Default)",
@@ -503,7 +507,10 @@
       "ai": "AI",
       "format": "Formatting",
       "fixed": "Fixed shortcuts"
-    }
+    },
+    "disabled": "Disabled",
+    "disableOne": "Disable {{action}}",
+    "enableOne": "Enable {{action}}"
   },
   "sidebar": {
     "filesLabel": "Markdown files",
@@ -647,7 +654,11 @@
     "spellcheckToggle": "Spell check (red underline)",
     "printButton": "Print",
     "downloadMarkdown": "Download as Markdown",
-    "spellcheckDictionaryMissing": "No spell-check dictionary found for \"{{code}}\". Install a Hunspell dictionary (e.g. hunspell-{{code}}) via your package manager."
+    "spellcheckDictionaryMissing": "No spell-check dictionary found for \"{{code}}\". Install a Hunspell dictionary (e.g. hunspell-{{code}}) via your package manager.",
+    "lockDocument": "Lock editing",
+    "lockDocumentTitle": "Lock this document against accidental edits",
+    "unlockDocument": "Unlock editing",
+    "unlockDocumentTitle": "Unlock this document to edit it"
   },
   "findReplace": {
     "panelLabel": "Find & replace",
