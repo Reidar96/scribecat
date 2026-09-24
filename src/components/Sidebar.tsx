@@ -463,7 +463,13 @@ export function Sidebar({
             type="button"
             variant={selectionMode ? "default" : "outline"}
             size="sm"
-            onClick={() => setSelectionMode((current) => !current)}
+            onClick={() => {
+              setSelectionMode((current) => {
+                const next = !current;
+                if (next) setActiveTag(null);
+                return next;
+              });
+            }}
             disabled={folderPath === null}
             aria-pressed={selectionMode}
             aria-label={t(selectionMode ? "sidebar.selectionDone" : "sidebar.selectionMode")}
@@ -801,7 +807,14 @@ export function Sidebar({
           />
         ) : null}
         {folderPath !== null ? (
-          <TagsOverview summaries={tagSummaries} activeTag={activeTag} onSelect={setActiveTag} />
+          <TagsOverview
+            summaries={tagSummaries}
+            activeTag={activeTag}
+            onSelect={(tag) => {
+              setSelectionMode(false);
+              setActiveTag(tag);
+            }}
+          />
         ) : null}
       </ScrollArea>
         </section>
