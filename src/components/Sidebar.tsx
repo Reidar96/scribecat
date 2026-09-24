@@ -18,6 +18,7 @@ import {
   Import,
   ListChecks,
   Move,
+  Network,
   Plus,
   Search,
   Server,
@@ -110,6 +111,8 @@ type SidebarProps = {
   activeCollectionTag: string | null;
   onOpenTagCollection: (tag: string, filePaths: string[]) => void;
   onCloseCollection: () => void;
+  graphViewOpen: boolean;
+  onGraphViewToggle: () => void;
   onDeleteFileRequest: (filePath: string) => void;
   onDuplicateFileRequest: (filePath: string) => void;
   onDeleteFolderRequest: (folderPath: string) => void;
@@ -172,6 +175,8 @@ export function Sidebar({
   activeCollectionTag,
   onOpenTagCollection,
   onCloseCollection,
+  graphViewOpen,
+  onGraphViewToggle,
   onDeleteFileRequest,
   onDuplicateFileRequest,
   onDeleteFolderRequest,
@@ -465,6 +470,19 @@ export function Sidebar({
               </MenuPositioner>
             </MenuPortal>
           </Menu>
+
+          <Button
+            type="button"
+            variant={graphViewOpen ? "default" : "outline"}
+            size="sm"
+            onClick={onGraphViewToggle}
+            disabled={isLoading || folderPath === null}
+            aria-pressed={graphViewOpen}
+            aria-label={t("sidebar.graphView")}
+            title={t("sidebar.graphView")}
+          >
+            <Network />
+          </Button>
 
           <Button
             type="button"
