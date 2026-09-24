@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.22.4] - 2026-09-24
+
+### Improvements
+- Make the desktop new-task trigger span the full task sidebar width and label it “Nytt gjøremål”.
+- Keep the mobile new-task trigger as a compact + button and place it before “Alle”.
+- Render task categories on phones as compact wrapping chips instead of a full-width horizontal bar.
+- Keep category count, rename and delete controls directly on each mobile category chip.
+
 ## [0.22.3] - 2026-09-24
 
 ### Improvements
