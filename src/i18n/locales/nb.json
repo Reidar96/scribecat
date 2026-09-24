@@ -429,6 +429,7 @@
     "removeTag": "Fjern taggen {{tag}}",
     "images": "Bilder",
     "addImages": "Legg til bilder",
+    "addImagesDrop": "Velg eller slipp bilder",
     "openImage": "Åpne bilde {{name}}",
     "imageMissing": "Bildet kunne ikke lastes",
     "moveImageLeft": "Flytt bildet tidligere",
