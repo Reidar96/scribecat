@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.22.1] - 2026-09-24
+
+### Improvements
+- Show Calendar, Graph and Tasks shortcuts in the mobile sidebar as well as on the Start screen.
+- Make the diary note field start compact and grow automatically with its text instead of reserving a large empty area.
+- Add horizontal swipe navigation between images in the full-screen image viewer.
+- Split the Open folder settings into Document, Diary, File list and Folders sections.
+- Move the “Hide Tasks folder” option into Open folder settings and store it with the vault.
+- Add a “Next month” deadline view to Tasks.
+
 ## [0.22.0] - 2026-09-24
 
 ### Highlights
