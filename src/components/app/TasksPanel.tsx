@@ -2,8 +2,6 @@ import { useEffect, useMemo, useState, type DragEvent } from "react";
 import {
   CalendarClock,
   CheckCircle2,
-  Eye,
-  EyeOff,
   GripVertical,
   PanelLeft,
   PanelLeftOpen,
@@ -23,13 +21,11 @@ import {
   UNCATEGORIZED_TASK_CATEGORY,
   appendTaskToMarkdown,
   createTaskDocument,
-  getTasksHideFromSidebar,
   normalizeTaskTags,
   parseTaskMarkdown,
   removeTaskFromMarkdown,
   renameTaskDocumentHeading,
   sanitizeTaskCategory,
-  setTasksHideFromSidebar,
   taskCategoryFromRelativePath,
   taskRelativePath,
   updateTaskInMarkdown,
@@ -67,6 +63,7 @@ const ALL_TASKS = "__all__";
 const TODAY_TASKS = "__today__";
 const WEEK_TASKS = "__week__";
 const MONTH_TASKS = "__month__";
+const NEXT_MONTH_TASKS = "__next-month__";
 const CATEGORY_PREFIX = "category:";
 const TAG_PREFIX = "tag:";
 const TASK_DRAG_MIME = "application/x-scribecat-task";
@@ -337,7 +334,6 @@ export function TasksPanel({
   const [priorityDraft, setPriorityDraft] = useState<TaskPriority>(null);
   const [saving, setSaving] = useState(false);
   const [dragOverCategory, setDragOverCategory] = useState<string | null>(null);
-  const [hideMarkdown, setHideMarkdown] = useState(getTasksHideFromSidebar);
 
   useEffect(() => {
     let active = true;
@@ -418,9 +414,12 @@ export function TasksPanel({
       });
   }, [documents, i18n.language, i18n.resolvedLanguage]);
 
-  const todayKey = dateKey(new Date());
-  const weekRange = currentWeekRange(new Date());
+  const now = new Date();
+  const todayKey = dateKey(now);
+  const weekRange = currentWeekRange(now);
   const monthKey = todayKey.slice(0, 7);
+  const nextMonthDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const nextMonthKey = dateKey(nextMonthDate).slice(0, 7);
 
   const visibleTasks = useMemo(() => {
     if (selectedView === TODAY_TASKS) {
@@ -440,6 +439,10 @@ export function TasksPanel({
       return allTasks.filter((task) => task.deadline?.startsWith(monthKey));
     }
 
+    if (selectedView === NEXT_MONTH_TASKS) {
+      return allTasks.filter((task) => task.deadline?.startsWith(nextMonthKey));
+    }
+
     if (selectedView.startsWith(CATEGORY_PREFIX)) {
       const category = selectedView.slice(CATEGORY_PREFIX.length);
       return allTasks.filter((task) => task.category === category);
@@ -453,7 +456,7 @@ export function TasksPanel({
     }
 
     return allTasks;
-  }, [allTasks, monthKey, selectedView, todayKey, weekRange.end, weekRange.start]);
+  }, [allTasks, monthKey, nextMonthKey, selectedView, todayKey, weekRange.end, weekRange.start]);
 
   const categoryCounts = useMemo(() => {
     const result = new Map<string, number>();
@@ -492,6 +495,7 @@ export function TasksPanel({
       task.deadline <= weekRange.end
   ).length;
   const monthCount = allTasks.filter((task) => task.deadline?.startsWith(monthKey)).length;
+  const nextMonthCount = allTasks.filter((task) => task.deadline?.startsWith(nextMonthKey)).length;
 
   const resolveFilePath = async (category: string): Promise<string> => {
     const existing = documents[category]?.filePath;
@@ -748,6 +752,7 @@ export function TasksPanel({
     if (selectedView === TODAY_TASKS) return t("tasks.today");
     if (selectedView === WEEK_TASKS) return t("tasks.week");
     if (selectedView === MONTH_TASKS) return t("tasks.month");
+    if (selectedView === NEXT_MONTH_TASKS) return t("tasks.nextMonth");
     if (selectedView.startsWith(CATEGORY_PREFIX)) {
       return selectedView.slice(CATEGORY_PREFIX.length);
     }
@@ -758,11 +763,6 @@ export function TasksPanel({
   }, [selectedView, t]);
 
   const categoryDatalistId = "tasks-category-options";
-
-  const setStorageVisibility = (hidden: boolean) => {
-    setHideMarkdown(hidden);
-    setTasksHideFromSidebar(hidden);
-  };
 
   return (
     <section className="tasks-view" aria-label={t("tasks.label")}>
@@ -835,7 +835,8 @@ export function TasksPanel({
             {[
               [TODAY_TASKS, t("tasks.today"), todayCount],
               [WEEK_TASKS, t("tasks.week"), weekCount],
-              [MONTH_TASKS, t("tasks.month"), monthCount]
+              [MONTH_TASKS, t("tasks.month"), monthCount],
+              [NEXT_MONTH_TASKS, t("tasks.nextMonth"), nextMonthCount]
             ].map(([view, label, count]) => (
               <button
                 key={String(view)}
@@ -964,15 +965,6 @@ export function TasksPanel({
             </div>
           ) : null}
 
-          <label className="tasks-storage-toggle">
-            <input
-              type="checkbox"
-              checked={hideMarkdown}
-              onChange={(event) => setStorageVisibility(event.target.checked)}
-            />
-            {hideMarkdown ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
-            <span>{t("tasks.hideMarkdown")}</span>
-          </label>
         </aside>
 
         <main className="tasks-main">
