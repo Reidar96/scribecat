@@ -55,6 +55,7 @@ type TreeNodeRowProps = {
    */
   folderNotesEnabled: boolean;
   activeFolderNotePath: string | null;
+  activeCollectionFolderPath: string | null;
   dirtyFolderNotePaths: Set<string>;
   activeKey: string | null;
   renamingTarget: RenamingTarget | null;
@@ -68,8 +69,10 @@ type TreeNodeRowProps = {
   onRowClick: (node: FileTreeNode, event: React.MouseEvent) => void;
   /** Double-click on a note (or a folder's note row): pins it to "In progress". */
   onRowDoubleClick: (node: FileTreeNode) => void;
-  /** The chevron's own click, once the row itself opens the note. */
+  /** The chevron is the only expand/collapse target for folders. */
   onToggleFolder: (node: FileTreeFolderNode) => void;
+  /** Separate note button: opens or creates the folder note. */
+  onOpenFolderNote: (node: FileTreeFolderNode) => void;
   onRowContextMenu: (node: FileTreeNode, x: number, y: number) => void;
   onRenameDraftChange: (value: string) => void;
   onCommitRename: () => void;
@@ -134,6 +137,31 @@ function RowMoreButton({ onOpen }: { onOpen: (x: number, y: number) => void }) {
   );
 }
 
+function FolderNoteButton({
+  active,
+  onOpen
+}: {
+  active: boolean;
+  onOpen: () => void;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <button
+      type="button"
+      className={cn("file-tree__folder-note-button", active && "file-tree__folder-note-button--active")}
+      aria-label={t("fileTree.openFolderNoteButton")}
+      title={t("fileTree.openFolderNoteButton")}
+      onClick={(event) => {
+        event.stopPropagation();
+        onOpen();
+      }}
+    >
+      <FileText aria-hidden="true" />
+    </button>
+  );
+}
+
 export function TreeNodeRow({
   node,
   depth,
@@ -146,6 +174,7 @@ export function TreeNodeRow({
   dirtyFilePaths,
   folderNotesEnabled,
   activeFolderNotePath,
+  activeCollectionFolderPath,
   dirtyFolderNotePaths,
   activeKey,
   renamingTarget,
@@ -158,6 +187,7 @@ export function TreeNodeRow({
   onRowClick,
   onRowDoubleClick,
   onToggleFolder,
+  onOpenFolderNote,
   onRowContextMenu,
   onRenameDraftChange,
   onCommitRename,
@@ -288,6 +318,7 @@ export function TreeNodeRow({
     const isExpanded = expandedFolderPaths.has(node.relativePath);
     const isRenaming = renamingTarget?.kind === "folder" && renamingTarget.relativePath === node.relativePath;
     const isNoteActive = folderNotesEnabled && activeFolderNotePath === node.relativePath;
+    const isCollectionActive = activeCollectionFolderPath === node.relativePath;
     const isNoteDirty = folderNotesEnabled && dirtyFolderNotePaths.has(node.relativePath);
     // The ring says "something *inside*"; the folder's own note has the
     // filled dot for itself, so it is taken out of the count.
@@ -337,11 +368,11 @@ export function TreeNodeRow({
             type="button"
             role="treeitem"
             aria-expanded={isExpanded}
-            aria-selected={isNoteActive || isMultiSelected}
+            aria-selected={isCollectionActive || isMultiSelected}
             className={cn(
               "file-tree__row file-tree__row--folder",
-              folderNotesEnabled && "file-tree__row--folder-note",
-              isNoteActive && "file-tree__row--active",
+              "file-tree__row--folder-collection",
+              isCollectionActive && "file-tree__row--collection-active",
               isMultiSelected && "file-tree__row--selected",
               isDragSource && "file-tree__row--drag-source",
               activeDropPosition === "above" && "file-tree__row--drop-above",
@@ -350,16 +381,11 @@ export function TreeNodeRow({
               isImportDropTarget && "file-tree__row--drop-import"
             )}
             style={{ paddingLeft }}
-            title={
-              folderNotesEnabled
-                ? t("fileTree.openFolderNote", { path: node.relativePath })
-                : node.relativePath
-            }
+            title={t("fileTree.openFolderCollection", { path: node.relativePath })}
             {...{ [DROP_DIRECTORY_ATTRIBUTE]: dropDirectory }}
             tabIndex={tabIndex}
             ref={(element) => registerItemRef(key, element)}
             onClick={(event) => onRowClick(node, event)}
-            onDoubleClick={() => onRowDoubleClick(node)}
             onContextMenu={(event) => {
               event.preventDefault();
               onRowContextMenu(node, event.clientX, event.clientY);
@@ -375,24 +401,13 @@ export function TreeNodeRow({
                 its click is stopped before it reaches the row, which with
                 folder notes on would open the note instead of toggling. */}
             <span
-              className={cn(
-                "file-tree__chevron",
-                folderNotesEnabled && "file-tree__chevron--toggle"
-              )}
+              className="file-tree__chevron file-tree__chevron--toggle"
               aria-hidden="true"
-              title={
-                folderNotesEnabled
-                  ? t(isExpanded ? "fileTree.collapseFolder" : "fileTree.expandFolder")
-                  : undefined
-              }
-              onClick={
-                folderNotesEnabled
-                  ? (event) => {
-                      event.stopPropagation();
-                      onToggleFolder(node);
-                    }
-                  : undefined
-              }
+              title={t(isExpanded ? "fileTree.collapseFolder" : "fileTree.expandFolder")}
+              onClick={(event) => {
+                event.stopPropagation();
+                onToggleFolder(node);
+              }}
             >
               {isExpanded ? <ChevronDown /> : <ChevronRight />}
             </span>
@@ -427,6 +442,9 @@ export function TreeNodeRow({
             ) : null}
           </button>
         )}
+        {!isRenaming && folderNotesEnabled ? (
+          <FolderNoteButton active={isNoteActive} onOpen={() => onOpenFolderNote(node)} />
+        ) : null}
         {!isRenaming ? (
           <RowMoreButton onOpen={(x, y) => onRowContextMenu(node, x, y)} />
         ) : null}
@@ -447,6 +465,7 @@ export function TreeNodeRow({
                 dirtyFilePaths={dirtyFilePaths}
                 folderNotesEnabled={folderNotesEnabled}
                 activeFolderNotePath={activeFolderNotePath}
+                activeCollectionFolderPath={activeCollectionFolderPath}
                 dirtyFolderNotePaths={dirtyFolderNotePaths}
                 activeKey={activeKey}
                 renamingTarget={renamingTarget}
@@ -459,6 +478,7 @@ export function TreeNodeRow({
                 onRowClick={onRowClick}
                 onRowDoubleClick={onRowDoubleClick}
                 onToggleFolder={onToggleFolder}
+                onOpenFolderNote={onOpenFolderNote}
                 onRowContextMenu={onRowContextMenu}
                 onRenameDraftChange={onRenameDraftChange}
                 onCommitRename={onCommitRename}
