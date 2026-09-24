@@ -20,7 +20,8 @@ import {
   watchMarkdownFolder
 } from "@/lib/fileSystem";
 
-import { readDocumentLocks } from "@/lib/vaultMeta";
+import { readDocumentLocks, writeDocumentLocks } from "@/lib/vaultMeta";
+import { removeDocumentLockPath, renameDocumentLockPath } from "@/lib/documentLocks";
 
 import {
   isDocumentDirty,
@@ -410,6 +411,7 @@ export const createFolderSlice: AppSlice<FolderSlice> = (set, get) => ({
 
       let nextManualOrder = currentState.manualOrder;
       let nextVaultIcons = currentState.vaultIcons;
+      let nextDocumentLocks = currentState.documentLocks;
 
       if (currentState.folderPath) {
         const vaultRootPath = currentState.folderPath;
@@ -432,6 +434,14 @@ export const createFolderSlice: AppSlice<FolderSlice> = (set, get) => ({
           folderPath,
           newFolderPath
         );
+        nextDocumentLocks = renameDocumentLockPath(
+          currentState.documentLocks,
+          oldRelativePath,
+          newRelativePath
+        );
+        if (nextDocumentLocks !== currentState.documentLocks) {
+          void writeDocumentLocks(vaultRootPath, nextDocumentLocks).catch(() => undefined);
+        }
       }
 
       set({
@@ -441,6 +451,7 @@ export const createFolderSlice: AppSlice<FolderSlice> = (set, get) => ({
         selectedFilePath: nextSelectedFilePath,
         manualOrder: nextManualOrder,
         vaultIcons: nextVaultIcons,
+        documentLocks: nextDocumentLocks,
         workingSet: nextWorkingSet,
         fileError: null
       });
@@ -478,6 +489,7 @@ export const createFolderSlice: AppSlice<FolderSlice> = (set, get) => ({
 
       let nextManualOrder = currentState.manualOrder;
       let nextVaultIcons = currentState.vaultIcons;
+      let nextDocumentLocks = currentState.documentLocks;
 
       if (currentState.folderPath) {
         const vaultRootPath = currentState.folderPath;
@@ -490,6 +502,10 @@ export const createFolderSlice: AppSlice<FolderSlice> = (set, get) => ({
 
         persistManualOrderIfChanged(vaultRootPath, currentState.manualOrder, nextManualOrder);
         nextVaultIcons = dropVaultIcons(vaultRootPath, currentState.vaultIcons, folderPath);
+        nextDocumentLocks = removeDocumentLockPath(currentState.documentLocks, ownRelativePath);
+        if (nextDocumentLocks !== currentState.documentLocks) {
+          void writeDocumentLocks(vaultRootPath, nextDocumentLocks).catch(() => undefined);
+        }
       }
 
       const nextWorkingSet = pruneWorkingSet(
@@ -511,6 +527,7 @@ export const createFolderSlice: AppSlice<FolderSlice> = (set, get) => ({
         isDirty: isSelectedInside ? false : currentState.isDirty,
         manualOrder: nextManualOrder,
         vaultIcons: nextVaultIcons,
+        documentLocks: nextDocumentLocks,
         workingSet: nextWorkingSet,
         fileError: null
       });
