@@ -91,12 +91,29 @@ export const platform: Platform = {
         const input = document.createElement("input");
         input.type = "file";
         input.multiple = true;
-        // The extensions keep a desktop browser to what the editor renders;
-        // "image/*" is what makes a phone offer the camera and the library.
-        input.accept = [...extensions.map((extension) => `.${extension}`), "image/*"].join(",");
-        input.addEventListener("change", () => {
+        // "image/*" is what makes phones offer the camera/photo library. Keep
+        // explicit extensions as a desktop fallback for files with weak MIME metadata.
+        input.accept = ["image/*", ...extensions.map((extension) => `.${extension}`)].join(",");
+        input.tabIndex = -1;
+        input.setAttribute("aria-hidden", "true");
+        input.style.position = "fixed";
+        input.style.width = "1px";
+        input.style.height = "1px";
+        input.style.opacity = "0";
+        input.style.pointerEvents = "none";
+        input.style.inset = "0";
+
+        // iOS/WebKit is more reliable when the file input is actually attached
+        // to the document at the moment the user gesture opens the picker.
+        document.body.appendChild(input);
+
+        let settled = false;
+        const finish = (files: File[]) => {
+          if (settled) return;
+          settled = true;
+          input.remove();
           resolve(
-            Array.from(input.files ?? []).map((file) => ({
+            files.map((file) => ({
               fileName: file.name,
               read: async () => ({
                 mimeType: file.type || guessImageMimeType(file.name),
@@ -104,11 +121,10 @@ export const platform: Platform = {
               })
             }))
           );
-        });
-        // Dismissing the picker: browsers have fired this since 2023; where
-        // one does not, the promise simply never settles, and nothing waits
-        // on it but the click handler.
-        input.addEventListener("cancel", () => resolve([]));
+        };
+
+        input.addEventListener("change", () => finish(Array.from(input.files ?? [])), { once: true });
+        input.addEventListener("cancel", () => finish([]), { once: true });
         input.click();
       })
   },
