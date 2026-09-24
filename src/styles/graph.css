@@ -63,7 +63,7 @@
 .graph-view__title-row h2 {
   margin: 0;
   overflow: hidden;
-  font-size: 1rem;
+  font-size: var(--font-ui-lg);
   font-weight: 650;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -72,7 +72,7 @@
 .graph-view__heading p {
   margin: 0.1rem 0 0;
   color: rgba(var(--muted-rgb),0.85);
-  font-size: 0.76rem;
+  font-size: var(--font-ui-sm);
 }
 
 .graph-view__filters {
@@ -93,7 +93,7 @@
   color: rgba(var(--muted-rgb),0.92);
   padding: 0.3rem 0.55rem;
   font: inherit;
-  font-size: 0.75rem;
+  font-size: var(--font-ui-sm);
   cursor: pointer;
 }
 
@@ -135,7 +135,7 @@
 .graph-view__hint {
   margin-left: auto;
   color: rgba(var(--muted-rgb),0.76);
-  font-size: 0.7rem;
+  font-size: var(--font-ui-xs);
 }
 
 .graph-view__body {
