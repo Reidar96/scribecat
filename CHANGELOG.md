@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.19.1] - 2026-09-24
+
+### Improvements
+- Make the graph layout form clearer connection-based clusters: directly connected nodes stay close, unrelated nodes repel over a longer distance, and disconnected groups get separate areas of the canvas.
+- Reduce the old central pull so the graph reads as distinct islands and strings instead of one dense central cloud.
+
 ## [0.19.0] - 2026-09-24
 
 ### Highlights
