@@ -1,7 +1,7 @@
 {
   "name": "scribecat-server",
   "private": true,
-  "version": "0.18.5",
+  "version": "0.19.0",
   "description": "ScribeCat Server Edition: the ScribeCat note editor as a self-hosted web app",
   "license": "MIT",
   "type": "module",
