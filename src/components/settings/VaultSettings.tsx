@@ -11,10 +11,8 @@ import { useAppStore } from "@/store/useAppStore";
 import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
 
 /**
- * Settings stored in the open folder's `.scribecat` rather than with the
- * app: heading numbering and folder notes. Both apply the moment they change
- * (no Save button); without an open folder the controls stay visible but
- * disabled, and the line above them says why.
+ * Settings that belong to the open folder. The page is grouped by what they
+ * affect so diary/storage controls do not sit mixed in with document layout.
  */
 export function VaultSettings() {
   const { t } = useTranslation();
@@ -25,15 +23,13 @@ export function VaultSettings() {
   const setFolderNotesEnabled = useEditorSettingsStore((state) => state.setFolderNotesEnabled);
   const journalSettings = useEditorSettingsStore((state) => state.journalSettings);
   const setJournalSettings = useEditorSettingsStore((state) => state.setJournalSettings);
+  const taskSettings = useEditorSettingsStore((state) => state.taskSettings);
+  const setTaskSettings = useEditorSettingsStore((state) => state.setTaskSettings);
   const folderPath = useAppStore((state) => state.folderPath);
   const filePaths = useAppStore((state) => state.filePaths);
   const emptyFolderPaths = useAppStore((state) => state.emptyFolderPaths);
-  // Folder notes written while the feature was on stay on disk after it is
-  // switched off; the counter is what tells the user they are still there.
   const hiddenFolderNoteCount = useAppStore((state) => countFolderNotes(state.filePaths));
 
-  // The store loads the folder's values after the folder opens; until then
-  // (and without a folder) a change would have nowhere to go.
   const disabled = headingNumberingVaultPath === null;
 
   const journalFolderOptions = useMemo(() => {
@@ -67,168 +63,283 @@ export function VaultSettings() {
     <>
       <VaultScopeHeader variant="intro" />
 
-      <div className="ai-dialog__grid">
-        <SettingRow
-          layout="switch"
-          label={t("settingsDialog.headingNumbering")}
-          hint={t("settingsDialog.headingNumberingShort")}
-          info={t("settingsDialog.headingNumberingHint")}
-        >
-          <input
-            type="checkbox"
-            checked={headingNumbering.enabled}
-            disabled={disabled}
-            onChange={(event) => setHeadingNumbering({ enabled: event.target.checked })}
-          />
-        </SettingRow>
+      <div className="settings-vault-sections">
+        <section className="settings-vault-section">
+          <h5 className="settings-section__title">{t("settingsDialog.vaultSectionDocument")}</h5>
+          <p className="settings-vault-section__hint">
+            {t("settingsDialog.vaultSectionDocumentHint")}
+          </p>
 
-        {headingNumbering.enabled ? (
-          <>
+          <div className="ai-dialog__grid">
             <SettingRow
-              label={t("settingsDialog.headingNumberingStart")}
-              hint={t("settingsDialog.headingNumberingStartShort")}
+              layout="switch"
+              label={t("settingsDialog.headingNumbering")}
+              hint={t("settingsDialog.headingNumberingShort")}
+              info={t("settingsDialog.headingNumberingHint")}
             >
-              <select
-                value={headingNumbering.startLevel}
+              <input
+                type="checkbox"
+                checked={headingNumbering.enabled}
                 disabled={disabled}
-                onChange={(event) => setHeadingNumbering({ startLevel: event.target.value === "1" ? 1 : 2 })}
-              >
-                <option value={1}>{t("settingsDialog.headingNumberingStartLevel", { level: 1 })}</option>
-                <option value={2}>{t("settingsDialog.headingNumberingStartLevel", { level: 2 })}</option>
-              </select>
+                onChange={(event) => setHeadingNumbering({ enabled: event.target.checked })}
+              />
             </SettingRow>
 
-            <SettingRow label={t("settingsDialog.headingNumberingDepth")}>
-              <select
-                value={headingNumbering.maxDepth}
-                disabled={disabled}
-                onChange={(event) => setHeadingNumbering({ maxDepth: Number.parseInt(event.target.value, 10) })}
-              >
-                {Array.from(
-                  { length: HEADING_NUMBERING_DEPTH_MAX - headingNumbering.startLevel + 1 },
-                  (_, offset) => headingNumbering.startLevel + offset
-                ).map((level) => (
-                  <option key={level} value={level}>
-                    {level === HEADING_NUMBERING_DEPTH_MAX
-                      ? t("settingsDialog.outlineDepthAll")
-                      : t("settingsDialog.outlineDepthUpTo", { level })}
-                  </option>
-                ))}
-              </select>
-            </SettingRow>
+            {headingNumbering.enabled ? (
+              <>
+                <SettingRow
+                  label={t("settingsDialog.headingNumberingStart")}
+                  hint={t("settingsDialog.headingNumberingStartShort")}
+                >
+                  <select
+                    value={headingNumbering.startLevel}
+                    disabled={disabled}
+                    onChange={(event) =>
+                      setHeadingNumbering({ startLevel: event.target.value === "1" ? 1 : 2 })
+                    }
+                  >
+                    <option value={1}>
+                      {t("settingsDialog.headingNumberingStartLevel", { level: 1 })}
+                    </option>
+                    <option value={2}>
+                      {t("settingsDialog.headingNumberingStartLevel", { level: 2 })}
+                    </option>
+                  </select>
+                </SettingRow>
 
-            <SettingRow
-              label={t("settingsDialog.headingNumberingScope")}
-              hint={t("settingsDialog.headingNumberingScopeShort")}
-            >
-              <select
-                value={headingNumbering.scope}
-                disabled={disabled}
-                onChange={(event) =>
-                  setHeadingNumbering({ scope: event.target.value === "outline" ? "outline" : "everywhere" })
-                }
-              >
-                <option value="everywhere">{t("settingsDialog.headingNumberingScopeEverywhere")}</option>
-                <option value="outline">{t("settingsDialog.headingNumberingScopeOutline")}</option>
-              </select>
-            </SettingRow>
+                <SettingRow label={t("settingsDialog.headingNumberingDepth")}>
+                  <select
+                    value={headingNumbering.maxDepth}
+                    disabled={disabled}
+                    onChange={(event) =>
+                      setHeadingNumbering({
+                        maxDepth: Number.parseInt(event.target.value, 10)
+                      })
+                    }
+                  >
+                    {Array.from(
+                      {
+                        length:
+                          HEADING_NUMBERING_DEPTH_MAX -
+                          headingNumbering.startLevel +
+                          1
+                      },
+                      (_, offset) => headingNumbering.startLevel + offset
+                    ).map((level) => (
+                      <option key={level} value={level}>
+                        {level === HEADING_NUMBERING_DEPTH_MAX
+                          ? t("settingsDialog.outlineDepthAll")
+                          : t("settingsDialog.outlineDepthUpTo", { level })}
+                      </option>
+                    ))}
+                  </select>
+                </SettingRow>
 
-            <SettingRow
-              label={t("settingsDialog.headingNumberingMarker")}
-              hint={t("settingsDialog.headingNumberingMarkerShort")}
-              info={t("settingsDialog.headingNumberingMarkerHint")}
-            >
-              <select
-                value={headingNumbering.marker}
-                disabled={disabled}
-                onChange={(event) =>
-                  setHeadingNumbering({ marker: event.target.value === "always" ? "always" : "activeLine" })
-                }
-              >
-                <option value="activeLine">{t("settingsDialog.headingNumberingMarkerActiveLine")}</option>
-                <option value="always">{t("settingsDialog.headingNumberingMarkerAlways")}</option>
-              </select>
-            </SettingRow>
-          </>
-        ) : null}
+                <SettingRow
+                  label={t("settingsDialog.headingNumberingScope")}
+                  hint={t("settingsDialog.headingNumberingScopeShort")}
+                >
+                  <select
+                    value={headingNumbering.scope}
+                    disabled={disabled}
+                    onChange={(event) =>
+                      setHeadingNumbering({
+                        scope:
+                          event.target.value === "outline"
+                            ? "outline"
+                            : "everywhere"
+                      })
+                    }
+                  >
+                    <option value="everywhere">
+                      {t("settingsDialog.headingNumberingScopeEverywhere")}
+                    </option>
+                    <option value="outline">
+                      {t("settingsDialog.headingNumberingScopeOutline")}
+                    </option>
+                  </select>
+                </SettingRow>
 
-        <SettingRow label={t("settingsDialog.journalFolder")}>
-          <>
-            <input
-              type="text"
-              list="journal-folder-options"
-              value={journalSettings.folder}
-              disabled={disabled}
-              onChange={(event) => setJournalSettings({ folder: event.target.value })}
-            />
-            <datalist id="journal-folder-options">
-              {journalFolderOptions.map((option) => (
-                <option key={option} value={option} />
-              ))}
-            </datalist>
-          </>
-        </SettingRow>
-
-        <SettingRow label={t("settingsDialog.journalStructure")}>
-          <select
-            value={journalSettings.structure}
-            disabled={disabled}
-            onChange={(event) =>
-              setJournalSettings({
-                structure:
-                  event.target.value === "iso" || event.target.value === "year"
-                    ? event.target.value
-                    : "norwegian"
-              })
-            }
-          >
-            <option value="norwegian">
-              {t("settingsDialog.journalStructureNorwegian")}
-            </option>
-            <option value="iso">{t("settingsDialog.journalStructureIso")}</option>
-            <option value="year">{t("settingsDialog.journalStructureYear")}</option>
-          </select>
-        </SettingRow>
-
-        <SettingRow
-          layout="switch"
-          label={t("settingsDialog.journalHide")}
-        >
-          <input
-            type="checkbox"
-            checked={journalSettings.hideFromSidebar}
-            disabled={disabled}
-            onChange={(event) =>
-              setJournalSettings({ hideFromSidebar: event.target.checked })
-            }
-          />
-        </SettingRow>
-
-        <SettingRow
-          layout="switch"
-          label={t("settingsDialog.folderNotes")}
-          hint={t("settingsDialog.folderNotesShort")}
-          info={t("settingsDialog.folderNotesHint")}
-        >
-          <input
-            type="checkbox"
-            checked={folderNotesEnabled}
-            disabled={disabled}
-            onChange={(event) => setFolderNotesEnabled(event.target.checked)}
-          />
-        </SettingRow>
-
-        {!folderNotesEnabled && hiddenFolderNoteCount > 0 ? (
-          <div className="ai-dialog__field--full ai-dialog__notice ai-dialog__notice--info" role="note">
-            <Info className="ai-dialog__notice-icon" aria-hidden="true" />
-            <p>
-              {t("settingsDialog.folderNotesHidden", { count: hiddenFolderNoteCount })}{" "}
-              <button type="button" className="ai-dialog__link" onClick={() => setFolderNotesEnabled(true)}>
-                {t("settingsDialog.folderNotesEnableNow")}
-              </button>
-            </p>
+                <SettingRow
+                  label={t("settingsDialog.headingNumberingMarker")}
+                  hint={t("settingsDialog.headingNumberingMarkerShort")}
+                  info={t("settingsDialog.headingNumberingMarkerHint")}
+                >
+                  <select
+                    value={headingNumbering.marker}
+                    disabled={disabled}
+                    onChange={(event) =>
+                      setHeadingNumbering({
+                        marker:
+                          event.target.value === "always"
+                            ? "always"
+                            : "activeLine"
+                      })
+                    }
+                  >
+                    <option value="activeLine">
+                      {t("settingsDialog.headingNumberingMarkerActiveLine")}
+                    </option>
+                    <option value="always">
+                      {t("settingsDialog.headingNumberingMarkerAlways")}
+                    </option>
+                  </select>
+                </SettingRow>
+              </>
+            ) : null}
           </div>
-        ) : null}
+        </section>
+
+        <section className="settings-vault-section">
+          <h5 className="settings-section__title">{t("settingsDialog.vaultSectionJournal")}</h5>
+          <p className="settings-vault-section__hint">
+            {t("settingsDialog.vaultSectionJournalHint")}
+          </p>
+
+          <div className="ai-dialog__grid">
+            <SettingRow
+              label={t("settingsDialog.journalFolder")}
+              hint={t("settingsDialog.journalFolderShort")}
+              info={t("settingsDialog.journalFolderHint")}
+            >
+              <>
+                <input
+                  type="text"
+                  list="journal-folder-options"
+                  value={journalSettings.folder}
+                  disabled={disabled}
+                  onChange={(event) =>
+                    setJournalSettings({ folder: event.target.value })
+                  }
+                />
+                <datalist id="journal-folder-options">
+                  {journalFolderOptions.map((option) => (
+                    <option key={option} value={option} />
+                  ))}
+                </datalist>
+              </>
+            </SettingRow>
+
+            <SettingRow
+              label={t("settingsDialog.journalStructure")}
+              hint={t("settingsDialog.journalStructureShort")}
+            >
+              <select
+                value={journalSettings.structure}
+                disabled={disabled}
+                onChange={(event) =>
+                  setJournalSettings({
+                    structure:
+                      event.target.value === "iso" ||
+                      event.target.value === "year"
+                        ? event.target.value
+                        : "norwegian"
+                  })
+                }
+              >
+                <option value="norwegian">
+                  {t("settingsDialog.journalStructureNorwegian")}
+                </option>
+                <option value="iso">
+                  {t("settingsDialog.journalStructureIso")}
+                </option>
+                <option value="year">
+                  {t("settingsDialog.journalStructureYear")}
+                </option>
+              </select>
+            </SettingRow>
+          </div>
+        </section>
+
+        <section className="settings-vault-section">
+          <h5 className="settings-section__title">{t("settingsDialog.vaultSectionFileList")}</h5>
+          <p className="settings-vault-section__hint">
+            {t("settingsDialog.vaultSectionFileListHint")}
+          </p>
+
+          <div className="ai-dialog__grid">
+            <SettingRow
+              layout="switch"
+              label={t("settingsDialog.journalHide")}
+              hint={t("settingsDialog.journalHideShort")}
+              info={t("settingsDialog.journalHideHint")}
+            >
+              <input
+                type="checkbox"
+                checked={journalSettings.hideFromSidebar}
+                disabled={disabled}
+                onChange={(event) =>
+                  setJournalSettings({ hideFromSidebar: event.target.checked })
+                }
+              />
+            </SettingRow>
+
+            <SettingRow
+              layout="switch"
+              label={t("settingsDialog.tasksHide")}
+              hint={t("settingsDialog.tasksHideShort")}
+              info={t("settingsDialog.tasksHideHint")}
+            >
+              <input
+                type="checkbox"
+                checked={taskSettings.hideFromSidebar}
+                disabled={disabled}
+                onChange={(event) =>
+                  setTaskSettings({ hideFromSidebar: event.target.checked })
+                }
+              />
+            </SettingRow>
+          </div>
+        </section>
+
+        <section className="settings-vault-section">
+          <h5 className="settings-section__title">{t("settingsDialog.vaultSectionFolders")}</h5>
+          <p className="settings-vault-section__hint">
+            {t("settingsDialog.vaultSectionFoldersHint")}
+          </p>
+
+          <div className="ai-dialog__grid">
+            <SettingRow
+              layout="switch"
+              label={t("settingsDialog.folderNotes")}
+              hint={t("settingsDialog.folderNotesShort")}
+              info={t("settingsDialog.folderNotesHint")}
+            >
+              <input
+                type="checkbox"
+                checked={folderNotesEnabled}
+                disabled={disabled}
+                onChange={(event) =>
+                  setFolderNotesEnabled(event.target.checked)
+                }
+              />
+            </SettingRow>
+
+            {!folderNotesEnabled && hiddenFolderNoteCount > 0 ? (
+              <div
+                className="ai-dialog__field--full ai-dialog__notice ai-dialog__notice--info"
+                role="note"
+              >
+                <Info
+                  className="ai-dialog__notice-icon"
+                  aria-hidden="true"
+                />
+                <p>
+                  {t("settingsDialog.folderNotesHidden", {
+                    count: hiddenFolderNoteCount
+                  })}{" "}
+                  <button
+                    type="button"
+                    className="ai-dialog__link"
+                    onClick={() => setFolderNotesEnabled(true)}
+                  >
+                    {t("settingsDialog.folderNotesEnableNow")}
+                  </button>
+                </p>
+              </div>
+            ) : null}
+          </div>
+        </section>
       </div>
     </>
   );
