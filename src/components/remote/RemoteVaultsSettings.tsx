@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { Server } from "lucide-react";
+import { Plus, Server } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { DeviceList } from "@/components/remote/DeviceList";
@@ -17,11 +17,9 @@ import { useAppStore } from "@/store/useAppStore";
 /**
  * The "Server" settings tab of the desktop app: every server vault the app
  * was given, each with the server's list of signed-in devices (this app
- * among them) and a way to forget the server. Adding one happens in the
- * sidebar, next to opening a folder, because that is where vaults are
- * opened.
+ * among them) and a way to add or forget a server connection.
  */
-export function RemoteVaultsSettings() {
+export function RemoteVaultsSettings({ onAdd }: { onAdd?: () => void }) {
   const { t } = useTranslation();
   const [entries, setEntries] = useState<RemoteVaultEntry[]>(() => listRemoteVaults());
   const [expandedRoot, setExpandedRoot] = useState<string | null>(null);
@@ -58,6 +56,15 @@ export function RemoteVaultsSettings() {
     <div className="ai-dialog__grid">
       <h3 className="ai-dialog__field--full">{t("remoteVaults.settingsTitle")}</h3>
       <p className="ai-dialog__field--full ai-dialog__model-hint">{t("remoteVaults.settingsHint")}</p>
+
+      {onAdd ? (
+        <div className="ai-dialog__field--full">
+          <Button type="button" variant="outline" onClick={onAdd}>
+            <Plus />
+            {t("sidebar.addServerVault")}
+          </Button>
+        </div>
+      ) : null}
 
       {entries.length === 0 ? (
         <p className="ai-dialog__field--full ai-dialog__model-hint" data-testid="remote-vaults-empty">
