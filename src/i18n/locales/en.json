@@ -587,7 +587,16 @@
     "openImage": "Open image {{name}}",
     "imageMissing": "Image could not be loaded",
     "moveImageLeft": "Move image earlier",
-    "moveImageRight": "Move image later"
+    "moveImageRight": "Move image later",
+    "previousDay": "Previous day",
+    "nextDay": "Next day",
+    "showCalendar": "Calendar",
+    "search": "Search diary",
+    "searchPlaceholder": "Search diary…",
+    "searchResults": "Search: {{query}}",
+    "tagResults": "Tag: #{{tag}}",
+    "resultCount": "{{count}} days",
+    "noResults": "No matching diary days."
   },
   "graph": {
     "label": "Graph view",

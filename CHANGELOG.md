@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.20.2] - 2026-09-24
+
+### Improvements
+- Make the diary text box directly editable at all times; remove the extra Edit and Full Markdown actions from the diary view.
+- Move per-day tag editing directly below the locked date, while the calendar column now shows an aggregated clickable tag list. Tag filters open matching diary days as a result list in the main view.
+- Add diary full-text search below the calendar. Search results use the same dated result-list layout as tag filters and open the selected day directly.
+- Stop calendar navigation in the future while extending the year picker back to 1900 (or earlier when imported diary files require it).
+- Change the image gallery to a responsive masonry-style layout with image shapes clamped between 16:9 and 9:16.
+- On phones, hide the calendar after opening a day and add previous-day, calendar and next-day navigation above the entry.
+
 ## [0.20.1] - 2026-09-24
 
 ### Improvements
