@@ -231,13 +231,25 @@ export function TableEdgeControls({ editor, disabled = false }: TableEdgeControl
     };
 
     const clear = () => setHandle(null);
+    const onDocumentMouseMove = (event: MouseEvent) => {
+      const target = event.target instanceof Element ? event.target : null;
+      if (
+        target &&
+        !dom.contains(target) &&
+        !target.closest(".table-edge-add")
+      ) {
+        setHandle(null);
+      }
+    };
 
     dom.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mousemove", onDocumentMouseMove);
     window.addEventListener("scroll", clear, true);
     window.addEventListener("resize", clear);
 
     return () => {
       dom.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mousemove", onDocumentMouseMove);
       window.removeEventListener("scroll", clear, true);
       window.removeEventListener("resize", clear);
     };
