@@ -432,7 +432,16 @@
     "openImage": "Åpne bilde {{name}}",
     "imageMissing": "Bildet kunne ikke lastes",
     "moveImageLeft": "Flytt bildet tidligere",
-    "moveImageRight": "Flytt bildet senere"
+    "moveImageRight": "Flytt bildet senere",
+    "previousDay": "Forrige dag",
+    "nextDay": "Neste dag",
+    "showCalendar": "Se kalender",
+    "search": "Søk i dagboken",
+    "searchPlaceholder": "Søk i dagboken…",
+    "searchResults": "Søk: {{query}}",
+    "tagResults": "Tagg: #{{tag}}",
+    "resultCount": "{{count}} dager",
+    "noResults": "Ingen dagbokdager samsvarer."
   },
   "graph": {
     "label": "Grafvisning",
