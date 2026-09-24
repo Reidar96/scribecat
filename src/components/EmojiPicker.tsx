@@ -45,6 +45,9 @@ const EMOJI_DATA: Record<SupportedLanguage, unknown> = {
   es: emojiDataEs,
   zh: emojiDataZh,
   ja: emojiDataJa,
+  // emoji-mart does not ship a Norwegian keyword dataset, so Bokmål keeps
+  // the complete English emoji index rather than losing search results.
+  nb: emojiDataEn,
   pt: emojiDataPt,
   ru: emojiDataRu,
   it: emojiDataIt,
@@ -58,6 +61,9 @@ const EMOJI_I18N: Record<SupportedLanguage, unknown> = {
   es: emojiI18nEs,
   zh: emojiI18nZh,
   ja: emojiI18nJa,
+  // There is no bundled nb locale in emoji-mart. The surrounding ScribeCat
+  // labels are translated; the picker itself falls back to its English copy.
+  nb: emojiI18nEn,
   pt: emojiI18nPt,
   ru: emojiI18nRu,
   it: emojiI18nIt,
