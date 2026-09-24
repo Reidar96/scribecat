@@ -101,6 +101,11 @@ type SidebarProps = {
   onImportRequest: () => void;
   onSelectFilePath: (filePath: string) => Promise<void>;
   onOpenFolderNote: (folderPath: string) => Promise<void>;
+  onOpenFolderCollection: (relativePath: string) => void;
+  activeCollectionFolderPath: string | null;
+  activeCollectionTag: string | null;
+  onOpenTagCollection: (tag: string, filePaths: string[]) => void;
+  onCloseCollection: () => void;
   onDeleteFileRequest: (filePath: string) => void;
   onDuplicateFileRequest: (filePath: string) => void;
   onDeleteFolderRequest: (folderPath: string) => void;
@@ -158,6 +163,11 @@ export function Sidebar({
   onImportRequest,
   onSelectFilePath,
   onOpenFolderNote,
+  onOpenFolderCollection,
+  activeCollectionFolderPath,
+  activeCollectionTag,
+  onOpenTagCollection,
+  onCloseCollection,
   onDeleteFileRequest,
   onDuplicateFileRequest,
   onDeleteFolderRequest,
@@ -185,20 +195,7 @@ export function Sidebar({
 }: SidebarProps) {
   const { t } = useTranslation();
   const [selectionMode, setSelectionMode] = useState(false);
-  const [activeTag, setActiveTag] = useState<string | null>(null);
   const tagSummaries = useTagIndex(filePaths, selectedFilePath, selectedFileContent);
-  const activeTagSummary = activeTag
-    ? tagSummaries.find((summary) => summary.tag.toLocaleLowerCase() === activeTag.toLocaleLowerCase())
-    : null;
-  const visibleFilePaths = activeTag ? activeTagSummary?.filePaths ?? [] : filePaths;
-
-  useEffect(() => {
-    if (activeTag && tagSummaries.length > 0 && !activeTagSummary) {
-      setActiveTag(null);
-    }
-  }, [activeTag, activeTagSummary, tagSummaries]);
-
-
   // A server vault whose entry is gone (forgotten in the settings) has
   // nothing to open; the recent list is cleaned on forget, this is the net.
   const recentVaults = recentFolderPaths
@@ -462,7 +459,6 @@ export function Sidebar({
             onClick={() => {
               setSelectionMode((current) => {
                 const next = !current;
-                if (next) setActiveTag(null);
                 return next;
               });
             }}
@@ -679,7 +675,7 @@ export function Sidebar({
           <FolderOpen />
           <p>{t("sidebar.openFolderPrompt")}</p>
         </button>
-      ) : visibleFilePaths.length === 0 && emptyFolderPaths.length === 0 && activeTag === null ? (
+      ) : filePaths.length === 0 && emptyFolderPaths.length === 0 ? (
         <button
           type="button"
           className="sidebar-panel__empty sidebar-panel__empty--interactive"
@@ -749,8 +745,8 @@ export function Sidebar({
           <FileTree
             key={folderPath}
             folderPath={folderPath}
-            filePaths={visibleFilePaths}
-            emptyFolderPaths={activeTag ? [] : emptyFolderPaths}
+            filePaths={filePaths}
+            emptyFolderPaths={emptyFolderPaths}
             selectedFilePath={selectedFilePath}
             dirtyFilePaths={dirtyFilePaths}
             workingSetFilePaths={workingSet.entries.map((entry) => entry.filePath)}
@@ -767,6 +763,8 @@ export function Sidebar({
             emptyFolderMtimeMs={emptyFolderMtimeMs}
             onSelectFilePath={onSelectFilePath}
             onOpenFolderNote={onOpenFolderNote}
+            onOpenFolderCollection={onOpenFolderCollection}
+            activeCollectionFolderPath={activeCollectionFolderPath}
             onCreateFileRequest={onCreateFileRequest}
             onCreateFolderRequest={onCreateFolderRequest}
             onDeleteFileRequest={onDeleteFileRequest}
@@ -792,10 +790,20 @@ export function Sidebar({
         {folderPath !== null ? (
           <TagsOverview
             summaries={tagSummaries}
-            activeTag={activeTag}
+            activeTag={activeCollectionTag}
             onSelect={(tag) => {
               setSelectionMode(false);
-              setActiveTag(tag);
+              if (tag === null) {
+                onCloseCollection();
+                return;
+              }
+
+              const summary = tagSummaries.find(
+                (candidate) => candidate.tag.toLocaleLowerCase() === tag.toLocaleLowerCase()
+              );
+              if (summary) {
+                onOpenTagCollection(summary.tag, summary.filePaths);
+              }
             }}
           />
         ) : null}
