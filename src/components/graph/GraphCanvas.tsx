@@ -127,7 +127,7 @@ function buildComponentAnchors(
   return anchors;
 }
 
-function edgeLengthfunction edgeLength(kind: VaultGraphEdge["kind"]): number {
+function edgeLength(kind: VaultGraphEdge["kind"]): number {
   if (kind === "tag") return 66;
   if (kind === "folder") return 74;
   return 82;
