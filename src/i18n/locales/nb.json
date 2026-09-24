@@ -388,7 +388,28 @@
     "searchLoading": "Søker i notater…",
     "searchNoResults": "Ingen passende notater.",
     "searchResults": "Søkeresultater",
-    "collapseAllFolders": "Trekk sammen alle mapper"
+    "collapseAllFolders": "Trekk sammen alle mapper",
+    "graphView": "Åpne grafvisning"
+  },
+  "graph": {
+    "label": "Grafvisning",
+    "title": "Graf",
+    "summary": "{{notes}} notater · {{links}} lenker · {{tags}} tags · {{folders}} mapper",
+    "filters": "Innhold i grafen",
+    "notes": "Notater",
+    "tags": "Tags",
+    "folders": "Mapper",
+    "hint": "Dra noder · dra bakgrunnen for å flytte · scroll for å zoome",
+    "loading": "Bygger graf…",
+    "empty": "Det finnes ingen notater å vise i grafen ennå.",
+    "allHidden": "Alle nodetyper er skjult.",
+    "refresh": "Oppdater grafen",
+    "close": "Lukk grafvisning",
+    "fit": "Tilpass grafen til visningen",
+    "canvasLabel": "Interaktiv graf over mappen",
+    "openNote": "Åpne notatet {{name}}",
+    "openTag": "Åpne taggen {{name}}",
+    "openFolder": "Åpne mappen {{name}}"
   },
   "fileTree": {
     "treeLabel": "Filtre",
