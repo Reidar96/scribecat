@@ -5,8 +5,8 @@
  * note is labelled by its folder, so its last crumb is the folder's name and
  * the crumbs before it are that folder's parents.
  *
- * The folder crumbs carry the vault-relative path of the folder, which is what
- * `openFolderNote` needs once the vault root is joined in front of it.
+ * The folder crumbs carry the vault-relative path of the folder, which the
+ * document header uses to open that folder as a collection grid.
  */
 
 export type PathCrumb = {
