@@ -556,7 +556,11 @@
     "searchResults": "Search results",
     "collapseAllFolders": "Collapse all folders",
     "graphView": "Open graph view",
-    "journalView": "Open diary calendar"
+    "journalView": "Open diary calendar",
+    "calendar": "Calendar",
+    "graph": "Graph",
+    "tasks": "Tasks",
+    "tasksView": "Open tasks"
   },
   "journal": {
     "label": "Diary calendar",
@@ -600,6 +604,22 @@
     "noResults": "No matching diary days.",
     "overview": "Overview",
     "closeResults": "Close results"
+  },
+  "tasks": {
+    "label": "Tasks",
+    "title": "Tasks",
+    "close": "Close tasks",
+    "all": "All",
+    "newTask": "New task…",
+    "categoryOptional": "Category (optional)",
+    "deadline": "Deadline",
+    "add": "Add",
+    "count": "{{count}} tasks",
+    "empty": "No tasks here yet.",
+    "toggle": "Toggle {{task}}",
+    "taskText": "Task text",
+    "delete": "Delete task",
+    "uncategorized": "Uncategorized"
   },
   "graph": {
     "label": "Graph view",
