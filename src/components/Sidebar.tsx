@@ -61,11 +61,7 @@ import {
 import { canDownloadFolderArchive } from "@/lib/export/markdownDownload";
 import { formatFolderLabel, getFolderBasename, getRelativeDisplayPath } from "@/lib/fileSystem";
 import { isJournalRelativePath } from "@/lib/journal";
-import {
-  getTasksHideFromSidebar,
-  isTasksContainerRelativePath,
-  TASKS_SETTINGS_EVENT
-} from "@/lib/tasks";
+import { isTasksContainerRelativePath } from "@/lib/tasks";
 import { isRemoteVaultPath, remoteVaultFor } from "@/lib/remoteVaults";
 import { getVaultCapabilities, platform, vaultCapabilityHint } from "@/platform";
 import type { ManualOrderMap, SortMode } from "@/lib/vaultMeta";
@@ -224,24 +220,9 @@ export function Sidebar({
   const [searchQuery, setSearchQuery] = useState("");
   const [collapseFoldersRequestId, setCollapseFoldersRequestId] = useState(0);
   const journalSettings = useEditorSettingsStore((state) => state.journalSettings);
-  const [hideTasksFromSidebar, setHideTasksFromSidebar] = useState(
-    getTasksHideFromSidebar
+  const hideTasksFromSidebar = useEditorSettingsStore(
+    (state) => state.taskSettings.hideFromSidebar
   );
-
-  useEffect(() => {
-    const handleTasksSettings = (event: Event) => {
-      const detail = (event as CustomEvent<{ hidden?: boolean }>).detail;
-      setHideTasksFromSidebar(
-        typeof detail?.hidden === "boolean"
-          ? detail.hidden
-          : getTasksHideFromSidebar()
-      );
-    };
-
-    window.addEventListener(TASKS_SETTINGS_EVENT, handleTasksSettings);
-    return () =>
-      window.removeEventListener(TASKS_SETTINGS_EVENT, handleTasksSettings);
-  }, []);
 
   const visibleSidebarFilePaths = useMemo(
     () =>
@@ -458,8 +439,7 @@ export function Sidebar({
       ) : null}
 
       <div className="sidebar-panel__header">
-        {layout !== "phone" ? (
-          <div className="sidebar-panel__primary-actions">
+        <div className="sidebar-panel__primary-actions">
             <Button
               type="button"
               variant={journalViewOpen ? "default" : "outline"}
@@ -495,8 +475,7 @@ export function Sidebar({
             >
               <SquareCheck />
             </Button>
-          </div>
-        ) : null}
+        </div>
 
         <div className="sidebar-panel__actions">
           <Button
