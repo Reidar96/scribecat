@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.18.5] - 2026-09-24
+
+### Improvements
+- Center the table row/column add button on the active cell edge instead of the whole table.
+- Show Start/Home as a clickable root crumb while editing a note, and remove spacing after separators in tag result paths.
+- Add a delete action for the open note to the editor's overflow menu, using the existing confirmation flow.
+- Add a sidebar button that collapses every expanded folder at once.
+
 All notable changes to ScribeDog are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
