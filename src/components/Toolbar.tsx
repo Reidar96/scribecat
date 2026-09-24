@@ -38,6 +38,7 @@ import {
   Quote,
   Search,
   Strikethrough,
+  Trash2,
   TriangleAlert,
   Underline,
   Undo2,
@@ -74,6 +75,8 @@ type ToolbarProps = {
   onLinkRequest: () => void;
   onImageInsertRequest: () => void;
   onPrintRequest: () => void;
+  onDeleteRequest: () => void;
+  deleteEnabled: boolean;
   /** "Download as Markdown"; null where the note is on this machine anyway. */
   onDownloadMarkdownRequest: (() => void) | null;
   onSearchRequest: () => void;
@@ -152,10 +155,14 @@ function DocumentWidthToggle() {
 
 function EditorOptionsMenu({
   onPrintRequest,
-  onDownloadMarkdownRequest
+  onDownloadMarkdownRequest,
+  onDeleteRequest,
+  deleteEnabled
 }: {
   onPrintRequest: () => void;
   onDownloadMarkdownRequest: (() => void) | null;
+  onDeleteRequest: () => void;
+  deleteEnabled: boolean;
 }) {
   const { t } = useTranslation();
   const autoSaveEnabled = useEditorSettingsStore((state) => state.autoSaveEnabled);
@@ -201,6 +208,11 @@ function EditorOptionsMenu({
                 {t("toolbar.downloadMarkdown")}
               </MenuItem>
             ) : null}
+            <div className="editor-toolbar__menu-separator" role="separator" />
+            <MenuItem disabled={!deleteEnabled} onClick={onDeleteRequest}>
+              <Trash2 className="size-4" />
+              {t("common.delete")}
+            </MenuItem>
           </MenuPopup>
         </MenuPositioner>
       </MenuPortal>
@@ -360,6 +372,8 @@ export function Toolbar({
   onLinkRequest,
   onImageInsertRequest,
   onPrintRequest,
+  onDeleteRequest,
+  deleteEnabled,
   onDownloadMarkdownRequest,
   onSearchRequest,
   onZenModeRequest,
@@ -713,6 +727,8 @@ export function Toolbar({
         <EditorOptionsMenu
           onPrintRequest={onPrintRequest}
           onDownloadMarkdownRequest={onDownloadMarkdownRequest}
+          onDeleteRequest={onDeleteRequest}
+          deleteEnabled={deleteEnabled}
         />
       </div>
     </div>
