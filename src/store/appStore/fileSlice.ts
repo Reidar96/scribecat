@@ -14,7 +14,7 @@ import {
 import { readVersionContent } from "@/lib/fileVersions";
 import { getFolderNotePath, isFolderNotePath } from "@/lib/folderNotes";
 import { removeDocumentLockPath, renameDocumentLockPath, setDocumentLock as updateDocumentLockMap } from "@/lib/documentLocks";
-import { writeDocumentLocks } from "@/lib/vaultMeta";
+import { readDocumentLocks, writeDocumentLocks } from "@/lib/vaultMeta";
 
 import { isDocumentDirty, isExternallyModified } from "./documents";
 import { discardDraft, flushDrafts, moveDraftFor, scheduleDraft } from "./drafts";
@@ -1012,18 +1012,25 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
     }
 
     const relativePath = getRelativeDisplayPath(folderPath, filePath);
-    const nextLocks = updateDocumentLockMap(documentLocks, relativePath, locked);
+    const optimisticLocks = updateDocumentLockMap(documentLocks, relativePath, locked);
 
-    if (nextLocks === documentLocks) {
-      return;
+    if (optimisticLocks !== documentLocks) {
+      set({ documentLocks: optimisticLocks });
     }
 
-    set({ documentLocks: nextLocks });
-
     try {
-      await writeDocumentLocks(folderPath, nextLocks);
+      // Merge this one change onto the latest shared sidecar rather than
+      // blindly writing the device's cached map. This prevents a stale device
+      // from dropping locks created on another device between refreshes.
+      const latestLocks = await readDocumentLocks(folderPath);
+      const mergedLocks = updateDocumentLockMap(latestLocks, relativePath, locked);
+      await writeDocumentLocks(folderPath, mergedLocks);
+
+      if (get().folderPath === folderPath) {
+        set({ documentLocks: mergedLocks });
+      }
     } catch (error) {
-      if (get().folderPath === folderPath && get().documentLocks === nextLocks) {
+      if (get().folderPath === folderPath && get().documentLocks === optimisticLocks) {
         set({ documentLocks });
       }
       throw error;
