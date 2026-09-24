@@ -31,6 +31,7 @@ type AppDialogsProps = {
   isSettingsOpen: boolean;
   settingsInitialTab: SettingsTab;
   onCloseSettings: () => void;
+  onLogoutRequest: () => void;
 
   // Move to folder (tree context menu)
   moveRequest: MoveRequest | null;
@@ -86,6 +87,7 @@ export function AppDialogs({
   isSettingsOpen,
   settingsInitialTab,
   onCloseSettings,
+  onLogoutRequest,
   moveRequest,
   fileRelativePaths,
   emptyFolderRelativePaths,
@@ -139,6 +141,7 @@ export function AppDialogs({
         open={isSettingsOpen}
         initialTab={settingsInitialTab}
         onClose={onCloseSettings}
+        onLogoutRequest={onLogoutRequest}
       />
 
       <MoveToDialog
