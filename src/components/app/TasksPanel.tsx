@@ -892,6 +892,7 @@ export function TasksPanel({
                   key={category}
                   className={cn(
                     "tasks-category-row",
+                    active && "tasks-category-row--active",
                     dropActive && "tasks-category-row--drop"
                   )}
                   onDragOver={(event) => {
