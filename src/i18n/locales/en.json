@@ -1049,7 +1049,7 @@
   },
   "account": {
     "changePassword": "Change password",
-    "changePasswordHint": "Every other signed-in device is signed out. Stored API keys are kept and re-encrypted with the new password.",
+    "changePasswordHint": "Every other signed-in device is signed out.",
     "currentPassword": "Current password",
     "newPassword": "New password",
     "repeatPassword": "Repeat new password",
@@ -1086,7 +1086,7 @@
   "remoteVaults": {
     "eyebrow": "Server vault",
     "addTitle": "Add a server vault",
-    "addDescription": "Your notes stay on the server; AI and dictation keep running on this computer. The password is exchanged for an access key once and not stored.",
+    "addDescription": "Your notes stay on the server; local dictation keeps running on this computer. The password is exchanged for an access key once and not stored.",
     "signInTitle": "Sign in to {{name}} again",
     "signInDescription": "The server no longer accepts this device's access key (it was revoked, or the password changed). Enter the password to get a new one.",
     "serverUrl": "Server address",
