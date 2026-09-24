@@ -199,8 +199,8 @@
     "outlineDepth": "Outline depth in the details panel",
     "outlineDepthShort": "Which heading levels the outline in the details panel lists.",
     "folderNotes": "Folder notes",
-    "folderNotesShort": "Clicking a folder's name opens its own note, the arrow expands the folder.",
-    "folderNotesHint": "The note lives inside the folder as .scribecat-foldernote.md and is created on the first save, so it moves with the folder, even when you move or rename the folder in Explorer or Finder. The switch only controls what the tree shows; existing folder notes stay when it is turned off.",
+    "folderNotesShort": "A separate note button opens the folder note; clicking the folder name opens its grid.",
+    "folderNotesHint": "The note lives inside the folder as .scribecat-foldernote.md and is created on the first save, so it moves with the folder even when you move or rename the folder in Explorer or Finder. Existing folder notes remain when the feature is turned off.",
     "folderNotesHidden_one": "{{count}} folder note is hidden because this feature is turned off.",
     "folderNotesHidden_other": "{{count}} folder notes are hidden because this feature is turned off.",
     "folderNotesEnableNow": "Turn on now",
@@ -537,7 +537,12 @@
     "hide": "Hide file sidebar",
     "show": "Show file sidebar",
     "selectionMode": "Select multiple notes and folders",
-    "selectionDone": "Finish selection"
+    "selectionDone": "Finish selection",
+    "searchPlaceholder": "Search all notes…",
+    "searchClear": "Clear search",
+    "searchLoading": "Searching notes…",
+    "searchNoResults": "No matching notes.",
+    "searchResults": "Search results"
   },
   "fileTree": {
     "treeLabel": "File tree",
@@ -1155,7 +1160,7 @@
   },
   "collection": {
     "label": "Note collection",
-    "root": "Folders",
+    "root": "Home",
     "close": "Close collection view",
     "noteCount_one": "{{count}} note",
     "noteCount_other": "{{count}} notes",
@@ -1166,8 +1171,16 @@
     "note": "Note",
     "folderCount_one": "{{count}} folder",
     "folderCount_other": "{{count}} folders",
-    "emptyRoot": "There are no folders in this vault yet.",
-    "breadcrumb": "Folder path",
-    "openRoot": "Open folder overview"
+    "emptyRoot": "There are no notes or folders here yet.",
+    "breadcrumb": "Location",
+    "openRoot": "Open Home",
+    "openNote": "Open {{title}}",
+    "noteLocation": "Note location"
+  },
+  "tableEdge": {
+    "addColumnBefore": "Add column here",
+    "addColumnAfter": "Add column here",
+    "addRowBefore": "Add row here",
+    "addRowAfter": "Add row here"
   }
 }
