@@ -34,6 +34,8 @@ import {
   getNoteDisplayName,
   isFolderNotePath
 } from "@/lib/folderNotes";
+import { isJournalRelativePath } from "@/lib/journal";
+import { isTasksContainerRelativePath } from "@/lib/tasks";
 import type { ManualOrderMap, SortMode } from "@/lib/vaultMeta";
 import { formatModifiedLabel } from "@/components/fileTree/treeNavigation";
 import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
@@ -132,16 +134,50 @@ export function CollectionPanel({
   const { t, i18n } = useTranslation();
   const layout = useLayoutMode();
   const folderNotesEnabled = useEditorSettingsStore((state) => state.folderNotesEnabled);
+  const journalSettings = useEditorSettingsStore((state) => state.journalSettings);
+  const taskSettings = useEditorSettingsStore((state) => state.taskSettings);
   const [tagsByPath, setTagsByPath] = useState<Record<string, string[]>>({});
 
+  const visibleCollectionFilePaths = useMemo(
+    () =>
+      filePaths.filter((filePath) => {
+        const relativePath = getRelativeDisplayPath(folderPath, filePath);
+        return (
+          !(journalSettings.hideFromSidebar && isJournalRelativePath(relativePath, journalSettings)) &&
+          !(taskSettings.hideFromSidebar && isTasksContainerRelativePath(relativePath))
+        );
+      }),
+    [filePaths, folderPath, journalSettings, taskSettings.hideFromSidebar]
+  );
+
+  const visibleCollectionFilePathSet = useMemo(
+    () => new Set(visibleCollectionFilePaths),
+    [visibleCollectionFilePaths]
+  );
+
+  const visibleCollectionEmptyFolderPaths = useMemo(
+    () =>
+      emptyFolderPaths.filter((entryPath) => {
+        const relativePath = getRelativeDisplayPath(folderPath, entryPath);
+        return (
+          !(journalSettings.hideFromSidebar && isJournalRelativePath(relativePath, journalSettings)) &&
+          !(taskSettings.hideFromSidebar && isTasksContainerRelativePath(relativePath))
+        );
+      }),
+    [emptyFolderPaths, folderPath, journalSettings, taskSettings.hideFromSidebar]
+  );
+
   const treeNodes = useMemo(() => {
-    const records: MarkdownFileRecord[] = filePaths.map((filePath) => ({
+    const records: MarkdownFileRecord[] = visibleCollectionFilePaths.map((filePath) => ({
       filePath,
       relativePath: getRelativeDisplayPath(folderPath, filePath),
       mtimeMs: fileMtimeMs[filePath] ?? 0
     }));
 
-    return buildFileTree(records, emptyFolderPaths.map((path) => getRelativeDisplayPath(folderPath, path)), {
+    return buildFileTree(
+      records,
+      visibleCollectionEmptyFolderPaths.map((path) => getRelativeDisplayPath(folderPath, path)),
+      {
       sortMode,
       manualOrder,
       emptyFolderOwnMtimeMs: Object.fromEntries(
@@ -153,17 +189,18 @@ export function CollectionPanel({
     });
   }, [
     emptyFolderMtimeMs,
-    emptyFolderPaths,
     fileMtimeMs,
-    filePaths,
     folderPath,
     manualOrder,
-    sortMode
+    sortMode,
+    visibleCollectionEmptyFolderPaths,
+    visibleCollectionFilePaths
   ]);
 
   const cards = useMemo<CollectionCard[]>(() => {
     if (request.kind === "tag") {
       return request.filePaths
+        .filter((filePath) => visibleCollectionFilePathSet.has(filePath))
         .map((filePath): NoteCard => {
           const relativePath = getRelativeDisplayPath(folderPath, filePath);
           return {
@@ -237,7 +274,14 @@ export function CollectionPanel({
     }
 
     return result;
-  }, [fileMtimeMs, folderNotesEnabled, folderPath, request, treeNodes]);
+  }, [
+    fileMtimeMs,
+    folderNotesEnabled,
+    folderPath,
+    request,
+    treeNodes,
+    visibleCollectionFilePathSet
+  ]);
 
   const notePaths = useMemo(
     () => cards.flatMap((card) => (card.kind === "note" ? [card.filePath] : [])),
