@@ -10,6 +10,7 @@ import { AppDialogs } from "@/components/app/AppDialogs";
 import { RemoteVaultDialog } from "@/components/remote/RemoteVaultDialog";
 import { DocumentPanel } from "@/components/app/DocumentPanel";
 import { CollectionPanel } from "@/components/app/CollectionPanel";
+import { GraphPanel } from "@/components/app/GraphPanel";
 import type { CollectionViewRequest } from "@/components/app/collectionTypes";
 import { MobileSheet } from "@/components/app/MobileSheet";
 import { ZenMode } from "@/components/app/ZenMode";
@@ -110,6 +111,7 @@ function App() {
   const [isSidebarSheetOpen, setIsSidebarSheetOpen] = useState(false);
   const [sidebarVisible, setSidebarVisible] = useState(getStoredSidebarVisible);
   const [collectionView, setCollectionView] = useState<CollectionViewRequest | null>(null);
+  const [graphViewOpen, setGraphViewOpen] = useState(false);
   const appVersion = useAppVersion();
   const editorHandleRef = useRef<EditorHandle | null>(null);
   const entryRenameRequestIdRef = useRef(0);
@@ -223,6 +225,7 @@ function App() {
 
   useEffect(() => {
     setCollectionView(null);
+    setGraphViewOpen(false);
   }, [folderPath]);
 
 
@@ -454,6 +457,7 @@ function App() {
   const selectFilePathSafely = async (filePath: string) => {
     if (filePath === selectedFilePath) {
       setCollectionView(null);
+      setGraphViewOpen(false);
       return;
     }
 
@@ -466,6 +470,7 @@ function App() {
     // of a read error.
     await selectFilePath(filePath);
     setCollectionView(null);
+    setGraphViewOpen(false);
   };
 
   // Same for a folder's note (the tree hands over the folder, the store
@@ -481,6 +486,7 @@ function App() {
 
     await openFolderNote(targetFolderPath);
     setCollectionView(null);
+    setGraphViewOpen(false);
   };
 
   const openCollectionSafely = async (request: CollectionViewRequest) => {
@@ -489,6 +495,7 @@ function App() {
     }
 
     setCollectionView(request);
+    setGraphViewOpen(false);
     setIsSidebarSheetOpen(false);
   };
 
@@ -894,6 +901,11 @@ function App() {
         void openCollectionSafely({ kind: "tag", tag, filePaths: matchingFilePaths });
       }}
       onCloseCollection={() => setCollectionView(null)}
+      graphViewOpen={graphViewOpen}
+      onGraphViewToggle={() => {
+        setGraphViewOpen((open) => !open);
+        setIsSidebarSheetOpen(false);
+      }}
       onDeleteFileRequest={requestDeleteFile}
       onDuplicateFileRequest={(filePath) => void duplicateFile(filePath)}
       onDeleteFolderRequest={requestDeleteFolder}
@@ -977,6 +989,24 @@ function App() {
 
           {!startupFolderResolved && folderPath === null ? (
             <div className="workspace-startup-placeholder" aria-busy="true" />
+          ) : graphViewOpen && folderPath ? (
+            <GraphPanel
+              folderPath={folderPath}
+              filePaths={filePaths}
+              selectedFilePath={selectedFilePath}
+              selectedFileContent={selectedFileContent}
+              sidebarVisible={sidebarVisible}
+              onSidebarVisibilityToggle={toggleSidebarVisible}
+              onOpenSidebar={() => setIsSidebarSheetOpen(true)}
+              onClose={() => setGraphViewOpen(false)}
+              onOpenFile={(filePath) => void selectFilePathSafely(filePath)}
+              onOpenFolder={(relativePath) => {
+                void openCollectionSafely({ kind: "folder", relativePath });
+              }}
+              onOpenTag={(tag, matchingFilePaths) => {
+                void openCollectionSafely({ kind: "tag", tag, filePaths: matchingFilePaths });
+              }}
+            />
           ) : (collectionView || (folderPath && selectedFilePath === null)) && folderPath ? (
             <CollectionPanel
               request={collectionView ?? { kind: "folder", relativePath: "" }}
