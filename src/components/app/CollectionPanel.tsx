@@ -4,7 +4,7 @@ import {
   FileText,
   Folder,
   FolderOpen,
-  ListTodo,
+  SquareCheck,
   Network,
   PanelLeft,
   PanelLeftOpen,
@@ -413,27 +413,30 @@ export function CollectionPanel({
                 variant="outline"
                 onClick={onOpenJournal}
                 disabled={!onOpenJournal}
+                aria-label={t("sidebar.calendar")}
+                title={t("sidebar.calendar")}
               >
                 <CalendarDays />
-                <span>{t("sidebar.calendar")}</span>
               </Button>
               <Button
                 type="button"
                 variant="outline"
                 onClick={onOpenGraph}
                 disabled={!onOpenGraph}
+                aria-label={t("sidebar.graph")}
+                title={t("sidebar.graph")}
               >
                 <Network />
-                <span>{t("sidebar.graph")}</span>
               </Button>
               <Button
                 type="button"
                 variant="outline"
                 onClick={onOpenTasks}
                 disabled={!onOpenTasks}
+                aria-label={t("sidebar.tasks")}
+                title={t("sidebar.tasks")}
               >
-                <ListTodo />
-                <span>{t("sidebar.tasks")}</span>
+                <SquareCheck />
               </Button>
             </div>
           ) : null}

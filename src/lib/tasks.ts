@@ -1,26 +1,51 @@
 export const TASKS_FOLDER_NAME = "Gjøremål";
 export const UNCATEGORIZED_TASK_CATEGORY = "Uten kategori";
+export const TASKS_HIDE_FROM_SIDEBAR_STORAGE_KEY = "scribecat-tasks-hide-from-sidebar";
+export const TASKS_SETTINGS_EVENT = "scribecat-tasks-settings";
 
 export type TaskDeadline = string | null;
+export type TaskPriority = "high" | "medium" | "low" | null;
 
 export type MarkdownTask = {
   lineIndex: number;
+  endLineIndex: number;
   checked: boolean;
   text: string;
   deadline: TaskDeadline;
+  note: string;
+  tags: string[];
+  priority: TaskPriority;
 };
 
 export type NewMarkdownTask = {
   checked?: boolean;
   text: string;
   deadline?: TaskDeadline;
+  note?: string;
+  tags?: string[];
+  priority?: TaskPriority;
 };
 
 const TASK_LINE_PATTERN = /^(\s*)[-*+]\s+\[([ xX])\]\s+(.*)$/;
+const TASK_NOTE_PATTERN = /^\s{2,}>\s?(.*)$/;
+const TAGS_SUFFIX_PATTERN = /^(.*?)(?:\s+🏷️\s+(.+))\s*$/;
 const DEADLINE_SUFFIX_PATTERN = /^(.*?)(?:\s+📅\s+(\d{4}-\d{2}-\d{2}))\s*$/;
+const PRIORITY_SUFFIX_PATTERN = /^(.*?)(?:\s+(🔴|🟡|🟢))\s*$/;
+
+const PRIORITY_TO_MARKER: Record<Exclude<TaskPriority, null>, string> = {
+  high: "🔴",
+  medium: "🟡",
+  low: "🟢"
+};
+
+const MARKER_TO_PRIORITY: Record<string, Exclude<TaskPriority, null>> = {
+  "🔴": "high",
+  "🟡": "medium",
+  "🟢": "low"
+};
 
 function normalizeRelativePath(value: string): string {
-  return value.replace(/\\/g, "/").replace(/^\.\//, "");
+  return value.replace(/\\/g, "/").replace(/^\.\//, "").replace(/\/+$/g, "");
 }
 
 export function sanitizeTaskCategory(value: string): string {
@@ -33,6 +58,28 @@ export function sanitizeTaskCategory(value: string): string {
     .trim();
 
   return cleaned || UNCATEGORIZED_TASK_CATEGORY;
+}
+
+export function normalizeTaskTags(tags: string[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+
+  for (const raw of tags) {
+    const cleaned = raw
+      .trim()
+      .replace(/^#+/, "")
+      .replace(/\s+/g, "-")
+      .replace(/[^\p{L}\p{N}_\-/]/gu, "")
+      .replace(/^-+|-+$/g, "");
+
+    if (!cleaned) continue;
+    const key = cleaned.toLocaleLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(cleaned);
+  }
+
+  return result;
 }
 
 export function taskRelativePath(category: string): string {
@@ -59,38 +106,144 @@ export function isTaskRelativePath(relativePath: string): boolean {
   return taskCategoryFromRelativePath(relativePath) !== null;
 }
 
+export function isTasksContainerRelativePath(relativePath: string): boolean {
+  const normalized = normalizeRelativePath(relativePath);
+  return normalized === TASKS_FOLDER_NAME || normalized.startsWith(`${TASKS_FOLDER_NAME}/`);
+}
+
+export function getTasksHideFromSidebar(): boolean {
+  try {
+    return window.localStorage.getItem(TASKS_HIDE_FROM_SIDEBAR_STORAGE_KEY) !== "false";
+  } catch {
+    return true;
+  }
+}
+
+export function setTasksHideFromSidebar(hidden: boolean): void {
+  try {
+    window.localStorage.setItem(TASKS_HIDE_FROM_SIDEBAR_STORAGE_KEY, hidden ? "true" : "false");
+  } catch {
+    // localStorage may be unavailable in some embedded environments.
+  }
+
+  try {
+    window.dispatchEvent(new CustomEvent(TASKS_SETTINGS_EVENT, { detail: { hidden } }));
+  } catch {
+    // No window event target in non-browser test environments.
+  }
+}
+
+function parseTaskContent(rawContent: string): {
+  text: string;
+  deadline: TaskDeadline;
+  tags: string[];
+  priority: TaskPriority;
+} {
+  let remainder = rawContent.trim();
+  let tags: string[] = [];
+  let deadline: TaskDeadline = null;
+  let priority: TaskPriority = null;
+
+  const tagsMatch = TAGS_SUFFIX_PATTERN.exec(remainder);
+  if (tagsMatch) {
+    remainder = tagsMatch[1].trim();
+    tags = normalizeTaskTags(tagsMatch[2].split(/[\s,]+/g));
+  }
+
+  const deadlineMatch = DEADLINE_SUFFIX_PATTERN.exec(remainder);
+  if (deadlineMatch) {
+    remainder = deadlineMatch[1].trim();
+    deadline = deadlineMatch[2];
+  }
+
+  const priorityMatch = PRIORITY_SUFFIX_PATTERN.exec(remainder);
+  if (priorityMatch) {
+    remainder = priorityMatch[1].trim();
+    priority = MARKER_TO_PRIORITY[priorityMatch[2]] ?? null;
+  }
+
+  return {
+    text: remainder,
+    deadline,
+    tags,
+    priority
+  };
+}
+
+function taskNoteEndIndex(lines: string[], lineIndex: number): number {
+  let end = lineIndex;
+
+  for (let index = lineIndex + 1; index < lines.length; index += 1) {
+    if (!TASK_NOTE_PATTERN.test(lines[index])) break;
+    end = index;
+  }
+
+  return end;
+}
+
+function parseTaskNote(lines: string[], lineIndex: number, endLineIndex: number): string {
+  if (endLineIndex <= lineIndex) return "";
+
+  return lines
+    .slice(lineIndex + 1, endLineIndex + 1)
+    .map((line) => TASK_NOTE_PATTERN.exec(line)?.[1] ?? "")
+    .join("\n")
+    .trimEnd();
+}
+
 export function parseTaskMarkdown(markdown: string): MarkdownTask[] {
-  return markdown.split(/\r?\n/).flatMap((line, lineIndex) => {
-    const match = TASK_LINE_PATTERN.exec(line);
-    if (!match) {
-      return [];
-    }
+  const lines = markdown.split(/\r?\n/);
+  const tasks: MarkdownTask[] = [];
 
-    const rawContent = match[3].trim();
-    const deadlineMatch = DEADLINE_SUFFIX_PATTERN.exec(rawContent);
-    const text = (deadlineMatch?.[1] ?? rawContent).trim();
-    const deadline = deadlineMatch?.[2] ?? null;
+  for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
+    const match = TASK_LINE_PATTERN.exec(lines[lineIndex]);
+    if (!match) continue;
 
-    if (!text) {
-      return [];
-    }
+    const parsed = parseTaskContent(match[3]);
+    if (!parsed.text) continue;
 
-    return [
-      {
-        lineIndex,
-        checked: match[2].toLowerCase() === "x",
-        text,
-        deadline
-      }
-    ];
-  });
+    const endLineIndex = taskNoteEndIndex(lines, lineIndex);
+    tasks.push({
+      lineIndex,
+      endLineIndex,
+      checked: match[2].toLowerCase() === "x",
+      text: parsed.text,
+      deadline: parsed.deadline,
+      note: parseTaskNote(lines, lineIndex, endLineIndex),
+      tags: parsed.tags,
+      priority: parsed.priority
+    });
+
+    lineIndex = endLineIndex;
+  }
+
+  return tasks;
 }
 
 export function formatTaskLine(task: NewMarkdownTask): string {
   const text = task.text.trim();
   const deadline = task.deadline?.trim();
+  const tags = normalizeTaskTags(task.tags ?? []);
+  const priority = task.priority ? PRIORITY_TO_MARKER[task.priority] : "";
 
-  return `- [${task.checked ? "x" : " "}] ${text}${deadline ? ` 📅 ${deadline}` : ""}`;
+  return [
+    `- [${task.checked ? "x" : " "}] ${text}`,
+    priority,
+    deadline ? `📅 ${deadline}` : "",
+    tags.length > 0 ? `🏷️ ${tags.map((tag) => `#${tag}`).join(" ")}` : ""
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function formatTaskBlock(task: NewMarkdownTask): string {
+  const note = (task.note ?? "").replace(/\r\n/g, "\n").trim();
+  if (!note) return formatTaskLine(task);
+
+  return [
+    formatTaskLine(task),
+    ...note.split("\n").map((line) => `  > ${line}`)
+  ].join("\n");
 }
 
 export function createTaskDocument(
@@ -99,7 +252,7 @@ export function createTaskDocument(
 ): string {
   const heading = `# ${sanitizeTaskCategory(category)}`;
   return task
-    ? `${heading}\n\n${formatTaskLine(task)}\n`
+    ? `${heading}\n\n${formatTaskBlock(task)}\n`
     : `${heading}\n`;
 }
 
@@ -109,7 +262,7 @@ export function appendTaskToMarkdown(
 ): string {
   const trimmedEnd = markdown.replace(/\s+$/g, "");
   const separator = trimmedEnd ? "\n\n" : "";
-  return `${trimmedEnd}${separator}${formatTaskLine(task)}\n`;
+  return `${trimmedEnd}${separator}${formatTaskBlock(task)}\n`;
 }
 
 export function updateTaskInMarkdown(
@@ -127,7 +280,11 @@ export function updateTaskInMarkdown(
     return markdown;
   }
 
-  lines[lineIndex] = `${existing[1]}${formatTaskLine(task)}`;
+  const endLineIndex = taskNoteEndIndex(lines, lineIndex);
+  const replacement = formatTaskBlock(task).split("\n");
+  replacement[0] = `${existing[1]}${replacement[0]}`;
+
+  lines.splice(lineIndex, endLineIndex - lineIndex + 1, ...replacement);
   return lines.join("\n");
 }
 
@@ -140,11 +297,22 @@ export function removeTaskFromMarkdown(
     return markdown;
   }
 
-  lines.splice(lineIndex, 1);
+  const endLineIndex = taskNoteEndIndex(lines, lineIndex);
+  lines.splice(lineIndex, endLineIndex - lineIndex + 1);
 
   while (lines.length > 1 && lines[lines.length - 1] === "" && lines[lines.length - 2] === "") {
     lines.pop();
   }
 
   return lines.join("\n").replace(/\n?$/, "\n");
+}
+
+export function renameTaskDocumentHeading(markdown: string, category: string): string {
+  const heading = `# ${sanitizeTaskCategory(category)}`;
+  if (/^#\s+.*$/m.test(markdown)) {
+    return markdown.replace(/^#\s+.*$/m, heading);
+  }
+
+  const trimmedStart = markdown.replace(/^\s+/, "");
+  return `${heading}\n\n${trimmedStart}`;
 }

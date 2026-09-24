@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.22.0] - 2026-09-24
+
+### Highlights
+- Simplify the Calendar, Graph and Tasks shortcuts to icon-only primary buttons, and make closing any of those views return to Start instead of reopening the currently selected Markdown note.
+- Remove the standalone delete button from the sidebar toolbar; deletion remains available through selection actions and the file-tree context menu.
+- Add Today, This week and This month task views based on deadlines, above the category list.
+- Extend portable task Markdown with optional notes, tags and three-level priority while keeping existing plain checkbox tasks compatible.
+- Add category rename/delete and drag-and-drop task moves between categories.
+- Add task-tag filtering and an option to hide the `Gjøremål/` storage folder from the normal file tree and tag overview, matching the diary's hidden-storage behaviour.
+- Sort open tasks by priority (red/high, yellow/medium, green/low) before deadline.
+
 ## [0.21.0] - 2026-09-24
 
 ### Highlights

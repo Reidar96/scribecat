@@ -4,8 +4,10 @@ import {
   UNCATEGORIZED_TASK_CATEGORY,
   appendTaskToMarkdown,
   createTaskDocument,
+  isTasksContainerRelativePath,
   parseTaskMarkdown,
   removeTaskFromMarkdown,
+  renameTaskDocumentHeading,
   sanitizeTaskCategory,
   taskCategoryFromRelativePath,
   taskRelativePath,
@@ -13,11 +15,13 @@ import {
 } from "@/lib/tasks";
 
 describe("tasks markdown", () => {
-  it("parses portable checkbox tasks and optional deadlines", () => {
+  it("parses portable checkbox tasks with deadline, priority, tags and notes", () => {
     const markdown = [
       "# Jobb",
       "",
-      "- [ ] Send rapport 📅 2026-10-01",
+      "- [ ] Send rapport 🔴 📅 2026-10-01 🏷️ #jobb #kunde",
+      "  > Husk vedlegget",
+      "  > Ring Kari først",
       "- [x] Bestill møterom",
       "",
       "Vanlig tekst beholdes."
@@ -26,32 +30,63 @@ describe("tasks markdown", () => {
     expect(parseTaskMarkdown(markdown)).toEqual([
       {
         lineIndex: 2,
+        endLineIndex: 4,
         checked: false,
         text: "Send rapport",
-        deadline: "2026-10-01"
+        deadline: "2026-10-01",
+        note: "Husk vedlegget\nRing Kari først",
+        tags: ["jobb", "kunde"],
+        priority: "high"
       },
       {
-        lineIndex: 3,
+        lineIndex: 5,
+        endLineIndex: 5,
         checked: true,
         text: "Bestill møterom",
-        deadline: null
+        deadline: null,
+        note: "",
+        tags: [],
+        priority: null
       }
     ]);
   });
 
-  it("updates and removes task lines without replacing unrelated markdown", () => {
-    const markdown = "# Jobb\n\nIntro\n\n- [ ] Første\n- [ ] Andre\n";
+  it("keeps old checkbox-only markdown compatible", () => {
+    expect(parseTaskMarkdown("- [ ] Første\n")).toEqual([
+      {
+        lineIndex: 0,
+        endLineIndex: 0,
+        checked: false,
+        text: "Første",
+        deadline: null,
+        note: "",
+        tags: [],
+        priority: null
+      }
+    ]);
+  });
+
+  it("updates and removes task blocks without replacing unrelated markdown", () => {
+    const markdown = "# Jobb\n\nIntro\n\n- [ ] Første\n  > Gammel note\n- [ ] Andre\n";
 
     const updated = updateTaskInMarkdown(markdown, 4, {
       checked: true,
       text: "Første oppdatert",
-      deadline: "2026-12-24"
+      deadline: "2026-12-24",
+      note: "Ny note",
+      tags: ["viktig"],
+      priority: "medium"
     });
 
     expect(updated).toContain("Intro");
-    expect(updated).toContain("- [x] Første oppdatert 📅 2026-12-24");
+    expect(updated).toContain("- [x] Første oppdatert 🟡 📅 2026-12-24 🏷️ #viktig");
+    expect(updated).toContain("  > Ny note");
+    expect(updated).not.toContain("Gammel note");
 
-    const removed = removeTaskFromMarkdown(updated, 5);
+    const second = parseTaskMarkdown(updated).find((task) => task.text === "Andre");
+    expect(second).toBeDefined();
+
+    const removed = removeTaskFromMarkdown(updated, second?.lineIndex ?? -1);
     expect(removed).not.toContain("Andre");
     expect(removed).toContain("Intro");
   });
@@ -60,9 +95,12 @@ describe("tasks markdown", () => {
     expect(
       appendTaskToMarkdown("# Fritid\n", {
         text: "Bestill billetter",
-        deadline: null
+        deadline: null,
+        note: "Sjekk pris",
+        tags: ["reise"],
+        priority: "low"
       })
-    ).toContain("- [ ] Bestill billetter");
+    ).toContain("- [ ] Bestill billetter 🟢 🏷️ #reise\n  > Sjekk pris");
 
     expect(
       createTaskDocument("Jobb", {
@@ -78,5 +116,14 @@ describe("tasks markdown", () => {
     expect(taskCategoryFromRelativePath("Notater/Fritid.md")).toBeNull();
     expect(sanitizeTaskCategory("  ")).toBe(UNCATEGORIZED_TASK_CATEGORY);
     expect(taskRelativePath("Kunde / salg")).toBe("Gjøremål/Kunde - salg.md");
+    expect(isTasksContainerRelativePath("Gjøremål")).toBe(true);
+    expect(isTasksContainerRelativePath("Gjøremål/Jobb.md")).toBe(true);
+    expect(isTasksContainerRelativePath("Notater/Gjøremål.md")).toBe(false);
+  });
+
+  it("renames the category heading without changing the task body", () => {
+    expect(renameTaskDocumentHeading("# Jobb\n\n- [ ] Lever\n", "Kunder")).toBe(
+      "# Kunder\n\n- [ ] Lever\n"
+    );
   });
 });

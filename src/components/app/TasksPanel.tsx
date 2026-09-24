@@ -1,11 +1,16 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type DragEvent } from "react";
 import {
   CalendarClock,
   CheckCircle2,
-  ListTodo,
+  Eye,
+  EyeOff,
+  GripVertical,
   PanelLeft,
   PanelLeftOpen,
+  Pencil,
   Plus,
+  SquareCheck,
+  Tag,
   Trash2,
   X
 } from "lucide-react";
@@ -18,13 +23,18 @@ import {
   UNCATEGORIZED_TASK_CATEGORY,
   appendTaskToMarkdown,
   createTaskDocument,
+  getTasksHideFromSidebar,
+  normalizeTaskTags,
   parseTaskMarkdown,
   removeTaskFromMarkdown,
+  renameTaskDocumentHeading,
   sanitizeTaskCategory,
+  setTasksHideFromSidebar,
   taskCategoryFromRelativePath,
   taskRelativePath,
   updateTaskInMarkdown,
-  type MarkdownTask
+  type MarkdownTask,
+  type TaskPriority
 } from "@/lib/tasks";
 import { cn } from "@/lib/utils";
 import { join } from "@/platform/paths";
@@ -49,12 +59,58 @@ type TasksPanelProps = {
   onOpenSidebar: () => void;
   onClose: () => void;
   onPersistTaskFile: (filePath: string, markdown: string) => Promise<boolean>;
+  onRenameTaskFile: (filePath: string, newBaseName: string) => Promise<boolean>;
+  onDeleteTaskFile: (filePath: string) => Promise<boolean>;
 };
 
-const ALL_CATEGORIES = "__all__";
+const ALL_TASKS = "__all__";
+const TODAY_TASKS = "__today__";
+const WEEK_TASKS = "__week__";
+const MONTH_TASKS = "__month__";
+const CATEGORY_PREFIX = "category:";
+const TAG_PREFIX = "tag:";
+const TASK_DRAG_MIME = "application/x-scribecat-task";
+
+function categoryView(category: string): string {
+  return `${CATEGORY_PREFIX}${category}`;
+}
+
+function tagView(tag: string): string {
+  return `${TAG_PREFIX}${tag}`;
+}
 
 function deadlineSortValue(deadline: string | null): string {
   return deadline ?? "9999-99-99";
+}
+
+function prioritySortValue(priority: TaskPriority): number {
+  if (priority === "high") return 0;
+  if (priority === "medium") return 1;
+  if (priority === "low") return 2;
+  return 3;
+}
+
+function dateKey(date: Date): string {
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0")
+  ].join("-");
+}
+
+function currentWeekRange(now: Date): { start: string; end: string } {
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const weekday = (start.getDay() + 6) % 7;
+  start.setDate(start.getDate() - weekday);
+
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+
+  return { start: dateKey(start), end: dateKey(end) };
+}
+
+function tagsFromInput(value: string): string[] {
+  return normalizeTaskTags(value.split(/[\s,]+/g));
 }
 
 function TaskRow({
@@ -62,27 +118,40 @@ function TaskRow({
   onToggle,
   onTextChange,
   onDeadlineChange,
+  onNoteChange,
+  onTagsChange,
+  onPriorityChange,
   onDelete
 }: {
   task: TaskItem;
   onToggle: () => void;
   onTextChange: (text: string) => void;
   onDeadlineChange: (deadline: string | null) => void;
+  onNoteChange: (note: string) => void;
+  onTagsChange: (tags: string[]) => void;
+  onPriorityChange: (priority: TaskPriority) => void;
   onDelete: () => void;
 }) {
   const { t } = useTranslation();
   const [textDraft, setTextDraft] = useState(task.text);
+  const [noteDraft, setNoteDraft] = useState(task.note);
+  const [tagsDraft, setTagsDraft] = useState(
+    task.tags.map((tag) => `#${tag}`).join(" ")
+  );
 
   useEffect(() => {
     setTextDraft(task.text);
   }, [task.text]);
 
-  const today = new Date();
-  const todayKey = [
-    today.getFullYear(),
-    String(today.getMonth() + 1).padStart(2, "0"),
-    String(today.getDate()).padStart(2, "0")
-  ].join("-");
+  useEffect(() => {
+    setNoteDraft(task.note);
+  }, [task.note]);
+
+  useEffect(() => {
+    setTagsDraft(task.tags.map((tag) => `#${tag}`).join(" "));
+  }, [task.tags]);
+
+  const todayKey = dateKey(new Date());
   const overdue = Boolean(!task.checked && task.deadline && task.deadline < todayKey);
 
   const commitText = () => {
@@ -96,14 +165,51 @@ function TaskRow({
     }
   };
 
+  const commitNote = () => {
+    const next = noteDraft.trim();
+    if (next !== task.note) {
+      onNoteChange(next);
+    }
+  };
+
+  const commitTags = () => {
+    const next = tagsFromInput(tagsDraft);
+    const current = task.tags.join("\u0000");
+    if (next.join("\u0000") !== current) {
+      onTagsChange(next);
+    }
+    setTagsDraft(next.map((tag) => `#${tag}`).join(" "));
+  };
+
+  const startDrag = (event: DragEvent<HTMLButtonElement>) => {
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData(
+      TASK_DRAG_MIME,
+      JSON.stringify({ filePath: task.filePath, lineIndex: task.lineIndex })
+    );
+    event.dataTransfer.setData("text/plain", task.text);
+  };
+
   return (
     <article
       className={cn(
         "tasks-item",
         task.checked && "tasks-item--checked",
-        overdue && "tasks-item--overdue"
+        overdue && "tasks-item--overdue",
+        task.priority && `tasks-item--priority-${task.priority}`
       )}
     >
+      <button
+        type="button"
+        className="tasks-item__drag"
+        draggable
+        onDragStart={startDrag}
+        aria-label={t("tasks.dragTask")}
+        title={t("tasks.dragTask")}
+      >
+        <GripVertical aria-hidden="true" />
+      </button>
+
       <label className="tasks-item__check">
         <input
           type="checkbox"
@@ -131,19 +237,65 @@ function TaskRow({
           aria-label={t("tasks.taskText")}
         />
 
+        <textarea
+          className="tasks-item__note"
+          value={noteDraft}
+          rows={noteDraft ? 2 : 1}
+          onChange={(event) => setNoteDraft(event.target.value)}
+          onBlur={commitNote}
+          placeholder={t("tasks.notePlaceholder")}
+          aria-label={t("tasks.note")}
+        />
+
         <div className="tasks-item__meta">
           <span className="tasks-item__category">{task.category}</span>
+
           <label className="tasks-item__deadline">
             <CalendarClock aria-hidden="true" />
             <input
               type="date"
               value={task.deadline ?? ""}
-              onChange={(event) =>
-                onDeadlineChange(event.target.value || null)
-              }
+              onChange={(event) => onDeadlineChange(event.target.value || null)}
               aria-label={t("tasks.deadline")}
             />
           </label>
+
+          <label className="tasks-item__tags">
+            <Tag aria-hidden="true" />
+            <input
+              value={tagsDraft}
+              onChange={(event) => setTagsDraft(event.target.value)}
+              onBlur={commitTags}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  event.currentTarget.blur();
+                }
+              }}
+              placeholder={t("tasks.tagsPlaceholder")}
+              aria-label={t("tasks.tags")}
+            />
+          </label>
+
+          <div className="tasks-priority" aria-label={t("tasks.priority")}>
+            {(["high", "medium", "low"] as const).map((priority) => (
+              <button
+                key={priority}
+                type="button"
+                className={cn(
+                  "tasks-priority__dot",
+                  `tasks-priority__dot--${priority}`,
+                  task.priority === priority && "tasks-priority__dot--active"
+                )}
+                aria-pressed={task.priority === priority}
+                aria-label={t(`tasks.priority${priority[0].toUpperCase()}${priority.slice(1)}`)}
+                title={t(`tasks.priority${priority[0].toUpperCase()}${priority.slice(1)}`)}
+                onClick={() =>
+                  onPriorityChange(task.priority === priority ? null : priority)
+                }
+              />
+            ))}
+          </div>
         </div>
       </div>
 
@@ -169,16 +321,23 @@ export function TasksPanel({
   onSidebarVisibilityToggle,
   onOpenSidebar,
   onClose,
-  onPersistTaskFile
+  onPersistTaskFile,
+  onRenameTaskFile,
+  onDeleteTaskFile
 }: TasksPanelProps) {
   const { t, i18n } = useTranslation();
   const layout = useLayoutMode();
   const [documents, setDocuments] = useState<Record<string, TaskDocument>>({});
-  const [selectedCategory, setSelectedCategory] = useState(ALL_CATEGORIES);
+  const [selectedView, setSelectedView] = useState(ALL_TASKS);
   const [textDraft, setTextDraft] = useState("");
   const [categoryDraft, setCategoryDraft] = useState("");
   const [deadlineDraft, setDeadlineDraft] = useState("");
+  const [noteDraft, setNoteDraft] = useState("");
+  const [tagsDraft, setTagsDraft] = useState("");
+  const [priorityDraft, setPriorityDraft] = useState<TaskPriority>(null);
   const [saving, setSaving] = useState(false);
+  const [dragOverCategory, setDragOverCategory] = useState<string | null>(null);
+  const [hideMarkdown, setHideMarkdown] = useState(getTasksHideFromSidebar);
 
   useEffect(() => {
     let active = true;
@@ -241,10 +400,16 @@ export function TasksPanel({
       )
       .sort((left, right) => {
         if (left.checked !== right.checked) return left.checked ? 1 : -1;
+
+        const priorityCompare =
+          prioritySortValue(left.priority) - prioritySortValue(right.priority);
+        if (priorityCompare !== 0) return priorityCompare;
+
         const deadlineCompare = deadlineSortValue(left.deadline).localeCompare(
           deadlineSortValue(right.deadline)
         );
         if (deadlineCompare !== 0) return deadlineCompare;
+
         return left.text.localeCompare(
           right.text,
           i18n.resolvedLanguage ?? i18n.language,
@@ -253,10 +418,42 @@ export function TasksPanel({
       });
   }, [documents, i18n.language, i18n.resolvedLanguage]);
 
-  const visibleTasks =
-    selectedCategory === ALL_CATEGORIES
-      ? allTasks
-      : allTasks.filter((task) => task.category === selectedCategory);
+  const todayKey = dateKey(new Date());
+  const weekRange = currentWeekRange(new Date());
+  const monthKey = todayKey.slice(0, 7);
+
+  const visibleTasks = useMemo(() => {
+    if (selectedView === TODAY_TASKS) {
+      return allTasks.filter((task) => task.deadline === todayKey);
+    }
+
+    if (selectedView === WEEK_TASKS) {
+      return allTasks.filter(
+        (task) =>
+          task.deadline !== null &&
+          task.deadline >= weekRange.start &&
+          task.deadline <= weekRange.end
+      );
+    }
+
+    if (selectedView === MONTH_TASKS) {
+      return allTasks.filter((task) => task.deadline?.startsWith(monthKey));
+    }
+
+    if (selectedView.startsWith(CATEGORY_PREFIX)) {
+      const category = selectedView.slice(CATEGORY_PREFIX.length);
+      return allTasks.filter((task) => task.category === category);
+    }
+
+    if (selectedView.startsWith(TAG_PREFIX)) {
+      const tag = selectedView.slice(TAG_PREFIX.length).toLocaleLowerCase();
+      return allTasks.filter((task) =>
+        task.tags.some((candidate) => candidate.toLocaleLowerCase() === tag)
+      );
+    }
+
+    return allTasks;
+  }, [allTasks, monthKey, selectedView, todayKey, weekRange.end, weekRange.start]);
 
   const categoryCounts = useMemo(() => {
     const result = new Map<string, number>();
@@ -265,6 +462,36 @@ export function TasksPanel({
     }
     return result;
   }, [allTasks]);
+
+  const tagCounts = useMemo(() => {
+    const map = new Map<string, { label: string; count: number }>();
+
+    for (const task of allTasks) {
+      for (const tag of task.tags) {
+        const key = tag.toLocaleLowerCase();
+        const current = map.get(key);
+        if (current) current.count += 1;
+        else map.set(key, { label: tag, count: 1 });
+      }
+    }
+
+    return [...map.values()].sort((left, right) =>
+      left.label.localeCompare(
+        right.label,
+        i18n.resolvedLanguage ?? i18n.language,
+        { sensitivity: "base" }
+      )
+    );
+  }, [allTasks, i18n.language, i18n.resolvedLanguage]);
+
+  const todayCount = allTasks.filter((task) => task.deadline === todayKey).length;
+  const weekCount = allTasks.filter(
+    (task) =>
+      task.deadline !== null &&
+      task.deadline >= weekRange.start &&
+      task.deadline <= weekRange.end
+  ).length;
+  const monthCount = allTasks.filter((task) => task.deadline?.startsWith(monthKey)).length;
 
   const resolveFilePath = async (category: string): Promise<string> => {
     const existing = documents[category]?.filePath;
@@ -302,28 +529,35 @@ export function TasksPanel({
     const text = textDraft.trim();
     if (!text || saving) return;
 
-    const category = sanitizeTaskCategory(
-      categoryDraft ||
-        (selectedCategory !== ALL_CATEGORIES ? selectedCategory : "")
-    );
+    const selectedCategory =
+      selectedView.startsWith(CATEGORY_PREFIX)
+        ? selectedView.slice(CATEGORY_PREFIX.length)
+        : "";
+
+    const category = sanitizeTaskCategory(categoryDraft || selectedCategory);
+    const task = {
+      text,
+      deadline: deadlineDraft || null,
+      note: noteDraft.trim(),
+      tags: tagsFromInput(tagsDraft),
+      priority: priorityDraft
+    };
     const existing = documents[category]?.markdown;
     const markdown = existing
-      ? appendTaskToMarkdown(existing, {
-          text,
-          deadline: deadlineDraft || null
-        })
-      : createTaskDocument(category, {
-          text,
-          deadline: deadlineDraft || null
-        });
+      ? appendTaskToMarkdown(existing, task)
+      : createTaskDocument(category, task);
 
     setSaving(true);
     try {
       if (await persistCategory(category, markdown)) {
         setTextDraft("");
         setDeadlineDraft("");
-        if (selectedCategory !== ALL_CATEGORIES) {
-          setSelectedCategory(category);
+        setNoteDraft("");
+        setTagsDraft("");
+        setPriorityDraft(null);
+
+        if (selectedView.startsWith(CATEGORY_PREFIX)) {
+          setSelectedView(categoryView(category));
         }
       }
     } finally {
@@ -333,8 +567,8 @@ export function TasksPanel({
 
   const mutateTask = async (
     task: TaskItem,
-    mutation: "toggle" | "delete" | "text" | "deadline",
-    value?: string | null
+    mutation: "toggle" | "delete" | "text" | "deadline" | "note" | "tags" | "priority",
+    value?: string | string[] | TaskPriority
   ) => {
     const document = documents[task.category];
     if (!document) return;
@@ -344,17 +578,191 @@ export function TasksPanel({
         ? removeTaskFromMarkdown(document.markdown, task.lineIndex)
         : updateTaskInMarkdown(document.markdown, task.lineIndex, {
             checked: mutation === "toggle" ? !task.checked : task.checked,
-            text: mutation === "text" ? value ?? task.text : task.text,
+            text: mutation === "text" ? String(value ?? task.text) : task.text,
             deadline:
               mutation === "deadline"
-                ? value || null
-                : task.deadline
+                ? typeof value === "string" && value
+                  ? value
+                  : null
+                : task.deadline,
+            note: mutation === "note" ? String(value ?? "") : task.note,
+            tags:
+              mutation === "tags" && Array.isArray(value)
+                ? value
+                : task.tags,
+            priority:
+              mutation === "priority"
+                ? (value as TaskPriority)
+                : task.priority
           });
 
     await persistCategory(task.category, markdown);
   };
 
+  const moveTask = async (task: TaskItem, targetCategory: string) => {
+    if (task.category === targetCategory || saving) return;
+
+    const sourceDocument = documents[task.category];
+    if (!sourceDocument) return;
+
+    const targetDocument = documents[targetCategory];
+    const taskData = {
+      checked: task.checked,
+      text: task.text,
+      deadline: task.deadline,
+      note: task.note,
+      tags: task.tags,
+      priority: task.priority
+    };
+    const targetMarkdown = targetDocument
+      ? appendTaskToMarkdown(targetDocument.markdown, taskData)
+      : createTaskDocument(targetCategory, taskData);
+    const sourceMarkdown = removeTaskFromMarkdown(
+      sourceDocument.markdown,
+      task.lineIndex
+    );
+
+    setSaving(true);
+    try {
+      if (!(await persistCategory(targetCategory, targetMarkdown))) return;
+      await persistCategory(task.category, sourceMarkdown);
+    } finally {
+      setSaving(false);
+      setDragOverCategory(null);
+    }
+  };
+
+  const taskFromDrop = (event: DragEvent): TaskItem | null => {
+    const raw = event.dataTransfer.getData(TASK_DRAG_MIME);
+    if (!raw) return null;
+
+    try {
+      const parsed = JSON.parse(raw) as { filePath?: unknown; lineIndex?: unknown };
+      if (typeof parsed.filePath !== "string" || typeof parsed.lineIndex !== "number") {
+        return null;
+      }
+
+      return (
+        allTasks.find(
+          (task) =>
+            task.filePath === parsed.filePath &&
+            task.lineIndex === parsed.lineIndex
+        ) ?? null
+      );
+    } catch {
+      return null;
+    }
+  };
+
+  const renameCategory = async (category: string) => {
+    const document = documents[category];
+    if (!document || saving) return;
+
+    const entered = window.prompt(t("tasks.renameCategoryPrompt"), category);
+    if (entered === null) return;
+
+    const nextCategory = sanitizeTaskCategory(entered);
+    if (nextCategory === category) return;
+
+    if (documents[nextCategory]) {
+      window.alert(t("tasks.categoryExists", { category: nextCategory }));
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const renamed = await onRenameTaskFile(
+        document.filePath,
+        `${nextCategory}.md`
+      );
+      if (!renamed) return;
+
+      const nextFilePath = await join(
+        folderPath,
+        ...taskRelativePath(nextCategory).split("/").filter(Boolean)
+      );
+      const nextMarkdown = renameTaskDocumentHeading(
+        document.markdown,
+        nextCategory
+      );
+
+      await onPersistTaskFile(nextFilePath, nextMarkdown);
+
+      setDocuments((current) => {
+        const next = { ...current };
+        delete next[category];
+        next[nextCategory] = {
+          category: nextCategory,
+          filePath: nextFilePath,
+          markdown: nextMarkdown,
+          tasks: parseTaskMarkdown(nextMarkdown)
+        };
+        return next;
+      });
+
+      if (selectedView === categoryView(category)) {
+        setSelectedView(categoryView(nextCategory));
+      }
+      if (categoryDraft === category) {
+        setCategoryDraft(nextCategory);
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const deleteCategory = async (category: string) => {
+    const document = documents[category];
+    if (!document || saving) return;
+
+    const confirmed = window.confirm(
+      t("tasks.deleteCategoryConfirm", {
+        category,
+        count: document.tasks.length
+      })
+    );
+    if (!confirmed) return;
+
+    setSaving(true);
+    try {
+      if (!(await onDeleteTaskFile(document.filePath))) return;
+
+      setDocuments((current) => {
+        const next = { ...current };
+        delete next[category];
+        return next;
+      });
+
+      if (selectedView === categoryView(category)) {
+        setSelectedView(ALL_TASKS);
+      }
+      if (categoryDraft === category) {
+        setCategoryDraft("");
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const heading = useMemo(() => {
+    if (selectedView === TODAY_TASKS) return t("tasks.today");
+    if (selectedView === WEEK_TASKS) return t("tasks.week");
+    if (selectedView === MONTH_TASKS) return t("tasks.month");
+    if (selectedView.startsWith(CATEGORY_PREFIX)) {
+      return selectedView.slice(CATEGORY_PREFIX.length);
+    }
+    if (selectedView.startsWith(TAG_PREFIX)) {
+      return `#${selectedView.slice(TAG_PREFIX.length)}`;
+    }
+    return t("tasks.all");
+  }, [selectedView, t]);
+
   const categoryDatalistId = "tasks-category-options";
+
+  const setStorageVisibility = (hidden: boolean) => {
+    setHideMarkdown(hidden);
+    setTasksHideFromSidebar(hidden);
+  };
 
   return (
     <section className="tasks-view" aria-label={t("tasks.label")}>
@@ -389,7 +797,7 @@ export function TasksPanel({
             )}
           </Button>
           <div className="tasks-view__title">
-            <ListTodo aria-hidden="true" />
+            <SquareCheck aria-hidden="true" />
             <h2>{t("tasks.title")}</h2>
           </div>
         </div>
@@ -408,40 +816,163 @@ export function TasksPanel({
 
       <div className="tasks-view__layout">
         <aside className="tasks-categories">
-          <button
-            type="button"
-            className={cn(
-              "tasks-category",
-              selectedCategory === ALL_CATEGORIES && "tasks-category--active"
-            )}
-            onClick={() => {
-              setSelectedCategory(ALL_CATEGORIES);
-              setCategoryDraft("");
-            }}
-          >
-            <span>{t("tasks.all")}</span>
-            <small>{allTasks.length}</small>
-          </button>
-
-          {categories.map((category) => (
+          <div className="tasks-filter-section">
             <button
-              key={category}
               type="button"
               className={cn(
                 "tasks-category",
-                selectedCategory === category && "tasks-category--active"
+                selectedView === ALL_TASKS && "tasks-category--active"
               )}
               onClick={() => {
-                setSelectedCategory(category);
-                setCategoryDraft(
-                  category === UNCATEGORIZED_TASK_CATEGORY ? "" : category
-                );
+                setSelectedView(ALL_TASKS);
+                setCategoryDraft("");
               }}
             >
-              <span>{category}</span>
-              <small>{categoryCounts.get(category) ?? 0}</small>
+              <span>{t("tasks.all")}</span>
+              <small>{allTasks.length}</small>
             </button>
-          ))}
+
+            {[
+              [TODAY_TASKS, t("tasks.today"), todayCount],
+              [WEEK_TASKS, t("tasks.week"), weekCount],
+              [MONTH_TASKS, t("tasks.month"), monthCount]
+            ].map(([view, label, count]) => (
+              <button
+                key={String(view)}
+                type="button"
+                className={cn(
+                  "tasks-category",
+                  selectedView === view && "tasks-category--active"
+                )}
+                onClick={() => {
+                  setSelectedView(String(view));
+                  setCategoryDraft("");
+                }}
+              >
+                <span className="tasks-category__label">
+                  <CalendarClock aria-hidden="true" />
+                  {String(label)}
+                </span>
+                <small>{Number(count)}</small>
+              </button>
+            ))}
+          </div>
+
+          <div className="tasks-filter-section">
+            <div className="tasks-filter-section__heading">
+              <span>{t("tasks.categories")}</span>
+            </div>
+
+            {categories.map((category) => {
+              const active = selectedView === categoryView(category);
+              const dropActive = dragOverCategory === category;
+
+              return (
+                <div
+                  key={category}
+                  className={cn(
+                    "tasks-category-row",
+                    dropActive && "tasks-category-row--drop"
+                  )}
+                  onDragOver={(event) => {
+                    if (!event.dataTransfer.types.includes(TASK_DRAG_MIME)) return;
+                    event.preventDefault();
+                    event.dataTransfer.dropEffect = "move";
+                    setDragOverCategory(category);
+                  }}
+                  onDragLeave={(event) => {
+                    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                      setDragOverCategory(null);
+                    }
+                  }}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    const task = taskFromDrop(event);
+                    setDragOverCategory(null);
+                    if (task) void moveTask(task, category);
+                  }}
+                >
+                  <button
+                    type="button"
+                    className={cn(
+                      "tasks-category tasks-category--managed",
+                      active && "tasks-category--active"
+                    )}
+                    onClick={() => {
+                      setSelectedView(categoryView(category));
+                      setCategoryDraft(
+                        category === UNCATEGORIZED_TASK_CATEGORY ? "" : category
+                      );
+                    }}
+                  >
+                    <span>{category}</span>
+                    <small>{categoryCounts.get(category) ?? 0}</small>
+                  </button>
+
+                  <div className="tasks-category-row__actions">
+                    <Button
+                      type="button"
+                      size="icon-xs"
+                      variant="ghost"
+                      onClick={() => void renameCategory(category)}
+                      aria-label={t("tasks.renameCategory", { category })}
+                      title={t("tasks.renameCategory", { category })}
+                    >
+                      <Pencil />
+                    </Button>
+                    <Button
+                      type="button"
+                      size="icon-xs"
+                      variant="ghost"
+                      onClick={() => void deleteCategory(category)}
+                      aria-label={t("tasks.deleteCategory", { category })}
+                      title={t("tasks.deleteCategory", { category })}
+                    >
+                      <Trash2 />
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {tagCounts.length > 0 ? (
+            <div className="tasks-filter-section">
+              <div className="tasks-filter-section__heading">
+                <Tag aria-hidden="true" />
+                <span>{t("tasks.tags")}</span>
+              </div>
+
+              {tagCounts.map(({ label, count }) => (
+                <button
+                  key={label.toLocaleLowerCase()}
+                  type="button"
+                  className={cn(
+                    "tasks-category",
+                    selectedView === tagView(label.toLocaleLowerCase()) &&
+                      "tasks-category--active"
+                  )}
+                  onClick={() => {
+                    setSelectedView(tagView(label.toLocaleLowerCase()));
+                    setCategoryDraft("");
+                  }}
+                >
+                  <span>#{label}</span>
+                  <small>{count}</small>
+                </button>
+              ))}
+            </div>
+          ) : null}
+
+          <label className="tasks-storage-toggle">
+            <input
+              type="checkbox"
+              checked={hideMarkdown}
+              onChange={(event) => setStorageVisibility(event.target.checked)}
+            />
+            {hideMarkdown ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
+            <span>{t("tasks.hideMarkdown")}</span>
+          </label>
         </aside>
 
         <main className="tasks-main">
@@ -481,6 +1012,42 @@ export function TasksPanel({
               onChange={(event) => setDeadlineDraft(event.target.value)}
               aria-label={t("tasks.deadline")}
             />
+            <input
+              className="tasks-create__tags"
+              value={tagsDraft}
+              onChange={(event) => setTagsDraft(event.target.value)}
+              placeholder={t("tasks.tagsPlaceholder")}
+              aria-label={t("tasks.tags")}
+            />
+            <textarea
+              className="tasks-create__note"
+              value={noteDraft}
+              rows={1}
+              onChange={(event) => setNoteDraft(event.target.value)}
+              placeholder={t("tasks.notePlaceholder")}
+              aria-label={t("tasks.note")}
+            />
+            <div className="tasks-create__priority" aria-label={t("tasks.priority")}>
+              {(["high", "medium", "low"] as const).map((priority) => (
+                <button
+                  key={priority}
+                  type="button"
+                  className={cn(
+                    "tasks-priority__dot",
+                    `tasks-priority__dot--${priority}`,
+                    priorityDraft === priority && "tasks-priority__dot--active"
+                  )}
+                  aria-pressed={priorityDraft === priority}
+                  aria-label={t(`tasks.priority${priority[0].toUpperCase()}${priority.slice(1)}`)}
+                  title={t(`tasks.priority${priority[0].toUpperCase()}${priority.slice(1)}`)}
+                  onClick={() =>
+                    setPriorityDraft((current) =>
+                      current === priority ? null : priority
+                    )
+                  }
+                />
+              ))}
+            </div>
             <Button
               type="submit"
               disabled={!textDraft.trim() || saving}
@@ -493,11 +1060,7 @@ export function TasksPanel({
 
           <div className="tasks-main__heading">
             <div>
-              <h3>
-                {selectedCategory === ALL_CATEGORIES
-                  ? t("tasks.all")
-                  : selectedCategory}
-              </h3>
+              <h3>{heading}</h3>
               <p>{t("tasks.count", { count: visibleTasks.length })}</p>
             </div>
             <CheckCircle2 aria-hidden="true" />
@@ -505,7 +1068,7 @@ export function TasksPanel({
 
           {visibleTasks.length === 0 ? (
             <div className="tasks-empty">
-              <ListTodo aria-hidden="true" />
+              <SquareCheck aria-hidden="true" />
               <p>{t("tasks.empty")}</p>
             </div>
           ) : (
@@ -515,11 +1078,14 @@ export function TasksPanel({
                   key={`${task.filePath}:${task.lineIndex}`}
                   task={task}
                   onToggle={() => void mutateTask(task, "toggle")}
-                  onTextChange={(text) =>
-                    void mutateTask(task, "text", text)
-                  }
+                  onTextChange={(text) => void mutateTask(task, "text", text)}
                   onDeadlineChange={(deadline) =>
-                    void mutateTask(task, "deadline", deadline)
+                    void mutateTask(task, "deadline", deadline ?? "")
+                  }
+                  onNoteChange={(note) => void mutateTask(task, "note", note)}
+                  onTagsChange={(tags) => void mutateTask(task, "tags", tags)}
+                  onPriorityChange={(priority) =>
+                    void mutateTask(task, "priority", priority)
                   }
                   onDelete={() => void mutateTask(task, "delete")}
                 />
