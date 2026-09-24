@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { LogOut } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { DeviceList } from "@/components/remote/DeviceList";
@@ -46,7 +47,7 @@ async function isCaCertificateServed(signal: AbortSignal): Promise<boolean> {
   }
 }
 
-export function AccountSettings() {
+export function AccountSettings({ onLogoutRequest }: { onLogoutRequest: () => void }) {
   const { t } = useTranslation();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -163,6 +164,20 @@ export function AccountSettings() {
       <div className="ai-dialog__field--full">
         <Button type="submit" disabled={!canSubmit} data-testid="change-password">
           {isSaving ? t("account.changing") : t("account.changePassword")}
+        </Button>
+      </div>
+
+      <h3 className="ai-dialog__field--full">{t("account.session")}</h3>
+      <p className="ai-dialog__field--full ai-dialog__model-hint">{t("account.sessionHint")}</p>
+      <div className="ai-dialog__field--full">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onLogoutRequest}
+          data-testid="logout"
+        >
+          <LogOut />
+          {t("account.logout")}
         </Button>
       </div>
 
