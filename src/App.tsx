@@ -1067,7 +1067,6 @@ function App() {
               onOpenDate={async (_date, relativePath, initialMarkdown) =>
                 openJournalDateSafely(relativePath, initialMarkdown)
               }
-              onOpenMarkdown={() => setJournalViewOpen(false)}
               onMarkdownChange={updateSelectedFileContent}
             />
           ) : graphViewOpen && folderPath ? (
