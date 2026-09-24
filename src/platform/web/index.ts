@@ -29,7 +29,6 @@ export const platform: Platform = {
     updater: false,
     voiceInput: false,
     portableMode: false,
-    spellcheckDictionary: false,
     session: true,
     remoteVaults: false
   },
@@ -85,11 +84,6 @@ export const platform: Platform = {
   portable: {
     getStatus: async () => ({ mode: "off", configDir: "" })
   },
-  spellcheck: {
-    // The browser brings its own dictionaries; there is nothing to install.
-    checkDictionary: async () => ({ available: true, installCommand: null })
-  },
-
   dialogs: null,
   imagePicker: {
     pickImages: ({ extensions }) =>
