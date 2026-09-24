@@ -9,6 +9,8 @@ import { Sidebar } from "@/components/Sidebar";
 import { AppDialogs } from "@/components/app/AppDialogs";
 import { RemoteVaultDialog } from "@/components/remote/RemoteVaultDialog";
 import { DocumentPanel } from "@/components/app/DocumentPanel";
+import { CollectionPanel } from "@/components/app/CollectionPanel";
+import type { CollectionViewRequest } from "@/components/app/collectionTypes";
 import { MobileSheet } from "@/components/app/MobileSheet";
 import { ZenMode } from "@/components/app/ZenMode";
 import type { BatchEntry, PendingEntryRename } from "@/components/FileTree";
@@ -107,6 +109,7 @@ function App() {
   // Phone layout only: the file list is a sheet over the document.
   const [isSidebarSheetOpen, setIsSidebarSheetOpen] = useState(false);
   const [sidebarVisible, setSidebarVisible] = useState(getStoredSidebarVisible);
+  const [collectionView, setCollectionView] = useState<CollectionViewRequest | null>(null);
   const appVersion = useAppVersion();
   const editorHandleRef = useRef<EditorHandle | null>(null);
   const entryRenameRequestIdRef = useRef(0);
@@ -217,6 +220,11 @@ function App() {
 
   const documentLocked =
     selectedRelativePath !== null && getDocumentLocked(documentLocks, selectedRelativePath);
+
+  useEffect(() => {
+    setCollectionView(null);
+  }, [folderPath]);
+
 
   const toggleSidebarVisible = () => {
     setSidebarVisible((visible) => {
@@ -453,6 +461,7 @@ function App() {
 
   const selectFilePathSafely = async (filePath: string) => {
     if (filePath === selectedFilePath) {
+      setCollectionView(null);
       return;
     }
 
@@ -464,6 +473,7 @@ function App() {
     // gives it an in-memory document so opening it shows the proposal instead
     // of a read error.
     await selectFilePath(filePath);
+    setCollectionView(null);
   };
 
   // Same for a folder's note (the tree hands over the folder, the store
@@ -478,6 +488,16 @@ function App() {
     }
 
     await openFolderNote(targetFolderPath);
+    setCollectionView(null);
+  };
+
+  const openCollectionSafely = async (request: CollectionViewRequest) => {
+    if (!(await leaveCurrentNote())) {
+      return;
+    }
+
+    setCollectionView(request);
+    setIsSidebarSheetOpen(false);
   };
 
   /**
@@ -873,6 +893,15 @@ function App() {
         await openFolderNoteSafely(targetFolderPath);
         setIsSidebarSheetOpen(false);
       }}
+      onOpenFolderCollection={(relativePath) => {
+        void openCollectionSafely({ kind: "folder", relativePath });
+      }}
+      activeCollectionFolderPath={collectionView?.kind === "folder" ? collectionView.relativePath : null}
+      activeCollectionTag={collectionView?.kind === "tag" ? collectionView.tag : null}
+      onOpenTagCollection={(tag, matchingFilePaths) => {
+        void openCollectionSafely({ kind: "tag", tag, filePaths: matchingFilePaths });
+      }}
+      onCloseCollection={() => setCollectionView(null)}
       onDeleteFileRequest={requestDeleteFile}
       onDuplicateFileRequest={(filePath) => void duplicateFile(filePath)}
       onDeleteFolderRequest={requestDeleteFolder}
@@ -954,67 +983,90 @@ function App() {
             <span className="workspace-resizer__grip" aria-hidden="true" />
           </div> : null}
 
-          <DocumentPanel
-            selectedFilePath={selectedFilePath}
-            selectedFileLabel={selectedFileLabel}
-            vaultIcons={vaultIcons}
-            onSetVaultIcon={setVaultIconFor}
-            selectedFileDirectoryLabel={selectedFileDirectoryLabel}
-            isSelectedFolderNote={isSelectedFolderNote}
-            folderPath={folderPath}
-            selectedFileContent={selectedFileContent}
-            appVersion={appVersion}
-            backTargetLabel={historyEntryLabel(backStepIndex)}
-            forwardTargetLabel={historyEntryLabel(forwardStepIndex)}
-            onNavigateBack={() => navigateHistory(backStepIndex)}
-            onNavigateForward={() => navigateHistory(forwardStepIndex)}
-            isRenamingTitle={isRenamingTitle}
-            titleDraft={titleDraft}
-            titleInputRef={titleInputRef}
-            onTitleDraftChange={setTitleDraft}
-            onCommitTitleRename={() => void commitTitleRename()}
-            onCancelTitleRename={cancelTitleRename}
-            onStartTitleRename={() => startTitleRename(selectedFileBaseName, selectedFilePath)}
-            onOpenFolderNote={(folderRelativePath) => {
-              if (!folderPath) {
-                return;
-              }
-
-              void join(folderPath, folderRelativePath).then(openFolderNoteSafely);
-            }}
-            isSaving={isSaving}
-            isDirty={isDirty}
-            isSelectedFileMissing={isSelectedFileMissing}
-            isFileLoading={isFileLoading}
-            fileError={fileError}
-            saveError={saveError}
-            editorHandleRef={editorHandleRef}
-            editorFocusRequestId={editorFocusRequestId}
-            onMarkdownChange={updateSelectedFileContent}
-            onCanonicalMarkdown={adoptCanonicalFileContent}
-            onRequestSidebarFocus={() => {
-              if (!sidebarVisible) {
-                setSidebarVisible(true);
-              }
-              window.setTimeout(() => setSidebarFocusRequestId((id) => id + 1), 0);
-            }}
-            onRequestFileOpen={(targetFilePath) => void selectFilePathSafely(targetFilePath)}
-            onZenModeRequest={enterZenMode}
-            documentLocked={documentLocked}
-            onDocumentLockToggle={() => {
-              if (selectedFilePath) {
-                void setDocumentLocked(selectedFilePath, !documentLocked).catch((error: unknown) => {
-                  console.error("Failed to update document lock:", error);
-                });
-              }
-            }}
-            sidebarVisible={sidebarVisible}
-            onSidebarVisibilityToggle={toggleSidebarVisible}
-            onVersionDiffRequest={handleVersionDiffRequest}
-            onVersionRestoreRequest={(version) => void handleVersionRestore(version)}
-            onOpenSidebar={() => setIsSidebarSheetOpen(true)}
-            onSaveRequest={() => void saveSelectedFile()}
-          />
+          {collectionView && folderPath ? (
+            <CollectionPanel
+              request={collectionView}
+              folderPath={folderPath}
+              filePaths={filePaths}
+              emptyFolderPaths={emptyFolderPaths}
+              fileMtimeMs={fileMtimeMs}
+              emptyFolderMtimeMs={emptyFolderMtimeMs}
+              sortMode={sortMode}
+              manualOrder={manualOrder}
+              selectedFilePath={selectedFilePath}
+              selectedFileContent={selectedFileContent}
+              sidebarVisible={sidebarVisible}
+              onSidebarVisibilityToggle={toggleSidebarVisible}
+              onOpenSidebar={() => setIsSidebarSheetOpen(true)}
+              onClose={() => setCollectionView(null)}
+              onOpenFile={(filePath) => void selectFilePathSafely(filePath)}
+              onOpenFolder={(relativePath) => {
+                void openCollectionSafely({ kind: "folder", relativePath });
+              }}
+            />
+          ) : (
+            <DocumentPanel
+              selectedFilePath={selectedFilePath}
+              selectedFileLabel={selectedFileLabel}
+              vaultIcons={vaultIcons}
+              onSetVaultIcon={setVaultIconFor}
+              selectedFileDirectoryLabel={selectedFileDirectoryLabel}
+              isSelectedFolderNote={isSelectedFolderNote}
+              folderPath={folderPath}
+              selectedFileContent={selectedFileContent}
+              appVersion={appVersion}
+              backTargetLabel={historyEntryLabel(backStepIndex)}
+              forwardTargetLabel={historyEntryLabel(forwardStepIndex)}
+              onNavigateBack={() => navigateHistory(backStepIndex)}
+              onNavigateForward={() => navigateHistory(forwardStepIndex)}
+              isRenamingTitle={isRenamingTitle}
+              titleDraft={titleDraft}
+              titleInputRef={titleInputRef}
+              onTitleDraftChange={setTitleDraft}
+              onCommitTitleRename={() => void commitTitleRename()}
+              onCancelTitleRename={cancelTitleRename}
+              onStartTitleRename={() => startTitleRename(selectedFileBaseName, selectedFilePath)}
+              onOpenFolderNote={(folderRelativePath) => {
+                if (!folderPath) {
+                  return;
+                }
+  
+                void join(folderPath, folderRelativePath).then(openFolderNoteSafely);
+              }}
+              isSaving={isSaving}
+              isDirty={isDirty}
+              isSelectedFileMissing={isSelectedFileMissing}
+              isFileLoading={isFileLoading}
+              fileError={fileError}
+              saveError={saveError}
+              editorHandleRef={editorHandleRef}
+              editorFocusRequestId={editorFocusRequestId}
+              onMarkdownChange={updateSelectedFileContent}
+              onCanonicalMarkdown={adoptCanonicalFileContent}
+              onRequestSidebarFocus={() => {
+                if (!sidebarVisible) {
+                  setSidebarVisible(true);
+                }
+                window.setTimeout(() => setSidebarFocusRequestId((id) => id + 1), 0);
+              }}
+              onRequestFileOpen={(targetFilePath) => void selectFilePathSafely(targetFilePath)}
+              onZenModeRequest={enterZenMode}
+              documentLocked={documentLocked}
+              onDocumentLockToggle={() => {
+                if (selectedFilePath) {
+                  void setDocumentLocked(selectedFilePath, !documentLocked).catch((error: unknown) => {
+                    console.error("Failed to update document lock:", error);
+                  });
+                }
+              }}
+              sidebarVisible={sidebarVisible}
+              onSidebarVisibilityToggle={toggleSidebarVisible}
+              onVersionDiffRequest={handleVersionDiffRequest}
+              onVersionRestoreRequest={(version) => void handleVersionRestore(version)}
+              onOpenSidebar={() => setIsSidebarSheetOpen(true)}
+              onSaveRequest={() => void saveSelectedFile()}
+            />
+          )}
 
         </section>
       </div>
