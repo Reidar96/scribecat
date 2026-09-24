@@ -627,89 +627,88 @@ export function Sidebar({
           </label>
         ) : null}
 
-        <div className="sidebar-panel__folder-wrap">
-          {onClose ? (
-            // In the sheet the vault name row has the room the action row
-            // has not; the close button sits at its end.
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              className="sidebar-panel__close"
-              onClick={onClose}
-              aria-label={t("sidebar.close")}
-              title={t("sidebar.close")}
-              data-testid="sidebar-close"
-            >
-              <X />
-            </Button>
-          ) : null}
-          {platform.features.localFolders ? (
-            <Menu>
-              <MenuTrigger
-                render={
-                  <button
-                    type="button"
-                    className="sidebar-panel__folder"
-                    disabled={isLoading}
-                    title={folderPath ?? t("sidebar.openFolder")}
-                    aria-label={t("sidebar.openRecentFolder")}
-                    // The vault root is the natural target for "export the whole
-                    // book", but it is not a row in the tree — so it carries its
-                    // own (unrelated) right-click menu alongside this one.
-                    onContextMenu={openRootContextMenu}
-                  />
-                }
+        {onClose || !isServerVault ? (
+          <div className="sidebar-panel__folder-wrap">
+            {onClose ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                className="sidebar-panel__close"
+                onClick={onClose}
+                aria-label={t("sidebar.close")}
+                title={t("sidebar.close")}
+                data-testid="sidebar-close"
               >
-                {folderLabelContent}
-              </MenuTrigger>
-              <MenuPortal>
-                <MenuPositioner align="start">
-                  <MenuPopup>
-                    {recentVaults.length > 0 ? (
-                      <>
-                        {recentVaults.map(({ path, remote }) => (
-                          <MenuItem
-                            key={path}
-                            className="sidebar-panel__recent-folder-item"
-                            title={remote ? remote.url : path}
-                            onClick={() => onOpenRecentFolder(path)}
-                            data-testid={remote ? "recent-remote-vault" : undefined}
-                          >
-                            {path === folderPath ? (
-                              <Check className="size-4" aria-hidden="true" />
-                            ) : (
-                              <span className="size-4" aria-hidden="true" />
-                            )}
-                            {remote ? <Server className="size-4 sidebar-panel__recent-folder-kind" aria-hidden="true" /> : null}
-                            <span className="sidebar-panel__recent-folder-name">
-                              {remote ? remote.name : getFolderBasename(path)}
-                            </span>
-                          </MenuItem>
-                        ))}
-                        <div className="editor-toolbar__menu-separator" role="separator" />
-                      </>
-                    ) : null}
-                    <MenuItem onClick={onOpenFolder}>
-                      <FolderOpen className="size-4" aria-hidden="true" />
-                      {t("sidebar.browseForFolder")}
-                    </MenuItem>
-                  </MenuPopup>
-                </MenuPositioner>
-              </MenuPortal>
-            </Menu>
-          ) : (
-            // One vault, nothing to switch to: the name is a label, not a menu.
-            <div
-              className="sidebar-panel__folder sidebar-panel__folder--static"
-              title={folderLabel}
-              onContextMenu={openRootContextMenu}
-              data-testid="vault-name"
-            >
-              {folderLabelContent}
-            </div>
-          )}
-        </div>
+                <X />
+              </Button>
+            ) : null}
+
+            {!isServerVault ? (
+              platform.features.localFolders ? (
+                <Menu>
+                  <MenuTrigger
+                    render={
+                      <button
+                        type="button"
+                        className="sidebar-panel__folder"
+                        disabled={isLoading}
+                        title={folderPath ?? t("sidebar.openFolder")}
+                        aria-label={t("sidebar.openRecentFolder")}
+                        onContextMenu={openRootContextMenu}
+                      />
+                    }
+                  >
+                    {folderLabelContent}
+                  </MenuTrigger>
+                  <MenuPortal>
+                    <MenuPositioner align="start">
+                      <MenuPopup>
+                        {recentVaults.length > 0 ? (
+                          <>
+                            {recentVaults.map(({ path, remote }) => (
+                              <MenuItem
+                                key={path}
+                                className="sidebar-panel__recent-folder-item"
+                                title={remote ? remote.url : path}
+                                onClick={() => onOpenRecentFolder(path)}
+                                data-testid={remote ? "recent-remote-vault" : undefined}
+                              >
+                                {path === folderPath ? (
+                                  <Check className="size-4" aria-hidden="true" />
+                                ) : (
+                                  <span className="size-4" aria-hidden="true" />
+                                )}
+                                {remote ? <Server className="size-4 sidebar-panel__recent-folder-kind" aria-hidden="true" /> : null}
+                                <span className="sidebar-panel__recent-folder-name">
+                                  {remote ? remote.name : getFolderBasename(path)}
+                                </span>
+                              </MenuItem>
+                            ))}
+                            <div className="editor-toolbar__menu-separator" role="separator" />
+                          </>
+                        ) : null}
+                        <MenuItem onClick={onOpenFolder}>
+                          <FolderOpen className="size-4" aria-hidden="true" />
+                          {t("sidebar.browseForFolder")}
+                        </MenuItem>
+                      </MenuPopup>
+                    </MenuPositioner>
+                  </MenuPortal>
+                </Menu>
+              ) : (
+                <div
+                  className="sidebar-panel__folder sidebar-panel__folder--static"
+                  title={folderLabel}
+                  onContextMenu={openRootContextMenu}
+                  data-testid="vault-name"
+                >
+                  {folderLabelContent}
+                </div>
+              )
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       {selectionMode ? (
