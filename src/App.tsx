@@ -960,40 +960,40 @@ function App() {
       onCloseCollection={() => setCollectionView(null)}
       graphViewOpen={graphViewOpen}
       onGraphViewToggle={() => {
-        setGraphViewOpen((open) => {
-          const next = !open;
-          if (next) {
-            setJournalViewOpen(false);
-            setTasksViewOpen(false);
-          }
-          return next;
-        });
+        if (graphViewOpen) {
+          void openCollectionSafely({ kind: "folder", relativePath: "" });
+          return;
+        }
+
+        setGraphViewOpen(true);
+        setJournalViewOpen(false);
+        setTasksViewOpen(false);
         setCollectionView(null);
         setIsSidebarSheetOpen(false);
       }}
       journalViewOpen={journalViewOpen}
       onJournalViewToggle={() => {
-        setJournalViewOpen((open) => {
-          const next = !open;
-          if (next) {
-            setGraphViewOpen(false);
-            setTasksViewOpen(false);
-          }
-          return next;
-        });
+        if (journalViewOpen) {
+          void openCollectionSafely({ kind: "folder", relativePath: "" });
+          return;
+        }
+
+        setJournalViewOpen(true);
+        setGraphViewOpen(false);
+        setTasksViewOpen(false);
         setCollectionView(null);
         setIsSidebarSheetOpen(false);
       }}
       tasksViewOpen={tasksViewOpen}
       onTasksViewToggle={() => {
-        setTasksViewOpen((open) => {
-          const next = !open;
-          if (next) {
-            setGraphViewOpen(false);
-            setJournalViewOpen(false);
-          }
-          return next;
-        });
+        if (tasksViewOpen) {
+          void openCollectionSafely({ kind: "folder", relativePath: "" });
+          return;
+        }
+
+        setTasksViewOpen(true);
+        setGraphViewOpen(false);
+        setJournalViewOpen(false);
         setCollectionView(null);
         setIsSidebarSheetOpen(false);
       }}
