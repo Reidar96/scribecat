@@ -365,3 +365,49 @@
 .file-tree__row--selected .file-tree__select-box {
   color: rgb(var(--accent-rgb));
 }
+
+
+/* Folder names open collection grids; the chevron handles expansion and the
+   small note button keeps folder-note editing as a separate action. */
+.file-tree > li,
+.file-tree__group > li {
+  position: relative;
+}
+
+.file-tree__row--folder-collection {
+  padding-right: 2.5rem;
+}
+
+.file-tree__row--collection-active {
+  background: rgba(var(--selection-rgb),0.14);
+}
+
+.file-tree__folder-note-button {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.35rem;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 0;
+  border-radius: 0.4rem;
+  background: transparent;
+  color: rgba(var(--muted-rgb),0.82);
+}
+
+.file-tree__folder-note-button:hover {
+  background: rgba(var(--overlay-rgb),0.1);
+  color: rgba(var(--text-rgb),0.95);
+}
+
+.file-tree__folder-note-button--active {
+  color: rgb(var(--accent-rgb));
+}
+
+.file-tree__folder-note-button svg {
+  width: 0.9rem;
+  height: 0.9rem;
+}
