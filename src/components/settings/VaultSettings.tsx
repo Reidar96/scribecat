@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Info } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -5,6 +6,7 @@ import { SettingRow } from "@/components/settings/SettingRow";
 import { VaultScopeHeader } from "@/components/settings/VaultScopeHeader";
 import { countFolderNotes } from "@/lib/folderNotes";
 import { HEADING_NUMBERING_DEPTH_MAX } from "@/lib/editor/headingNumbers";
+import { getRelativeDisplayPath } from "@/lib/fileSystem";
 import { useAppStore } from "@/store/useAppStore";
 import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
 
@@ -21,6 +23,11 @@ export function VaultSettings() {
   const headingNumberingVaultPath = useEditorSettingsStore((state) => state.headingNumberingVaultPath);
   const folderNotesEnabled = useEditorSettingsStore((state) => state.folderNotesEnabled);
   const setFolderNotesEnabled = useEditorSettingsStore((state) => state.setFolderNotesEnabled);
+  const journalSettings = useEditorSettingsStore((state) => state.journalSettings);
+  const setJournalSettings = useEditorSettingsStore((state) => state.setJournalSettings);
+  const folderPath = useAppStore((state) => state.folderPath);
+  const filePaths = useAppStore((state) => state.filePaths);
+  const emptyFolderPaths = useAppStore((state) => state.emptyFolderPaths);
   // Folder notes written while the feature was on stay on disk after it is
   // switched off; the counter is what tells the user they are still there.
   const hiddenFolderNoteCount = useAppStore((state) => countFolderNotes(state.filePaths));
@@ -28,6 +35,33 @@ export function VaultSettings() {
   // The store loads the folder's values after the folder opens; until then
   // (and without a folder) a change would have nowhere to go.
   const disabled = headingNumberingVaultPath === null;
+
+  const journalFolderOptions = useMemo(() => {
+    const options = new Set<string>(["Dagbok", journalSettings.folder]);
+
+    if (!folderPath) {
+      return [...options].filter(Boolean);
+    }
+
+    const addPrefixes = (relativePath: string, includesLeaf: boolean) => {
+      const segments = relativePath.replace(/\\/g, "/").split("/").filter(Boolean);
+      const limit = includesLeaf ? segments.length : Math.max(0, segments.length - 1);
+      for (let length = 1; length <= limit; length += 1) {
+        options.add(segments.slice(0, length).join("/"));
+      }
+    };
+
+    filePaths.forEach((filePath) =>
+      addPrefixes(getRelativeDisplayPath(folderPath, filePath), false)
+    );
+    emptyFolderPaths.forEach((entryPath) =>
+      addPrefixes(getRelativeDisplayPath(folderPath, entryPath), true)
+    );
+
+    return [...options]
+      .filter(Boolean)
+      .sort((left, right) => left.localeCompare(right, undefined, { sensitivity: "base" }));
+  }, [emptyFolderPaths, filePaths, folderPath, journalSettings.folder]);
 
   return (
     <>
@@ -117,6 +151,67 @@ export function VaultSettings() {
             </SettingRow>
           </>
         ) : null}
+
+        <SettingRow
+          label={t("settingsDialog.journalFolder")}
+          hint={t("settingsDialog.journalFolderShort")}
+          info={t("settingsDialog.journalFolderHint")}
+        >
+          <>
+            <input
+              type="text"
+              list="journal-folder-options"
+              value={journalSettings.folder}
+              disabled={disabled}
+              onChange={(event) => setJournalSettings({ folder: event.target.value })}
+            />
+            <datalist id="journal-folder-options">
+              {journalFolderOptions.map((option) => (
+                <option key={option} value={option} />
+              ))}
+            </datalist>
+          </>
+        </SettingRow>
+
+        <SettingRow
+          label={t("settingsDialog.journalStructure")}
+          hint={t("settingsDialog.journalStructureShort")}
+        >
+          <select
+            value={journalSettings.structure}
+            disabled={disabled}
+            onChange={(event) =>
+              setJournalSettings({
+                structure:
+                  event.target.value === "iso" || event.target.value === "year"
+                    ? event.target.value
+                    : "norwegian"
+              })
+            }
+          >
+            <option value="norwegian">
+              {t("settingsDialog.journalStructureNorwegian")}
+            </option>
+            <option value="iso">{t("settingsDialog.journalStructureIso")}</option>
+            <option value="year">{t("settingsDialog.journalStructureYear")}</option>
+          </select>
+        </SettingRow>
+
+        <SettingRow
+          layout="switch"
+          label={t("settingsDialog.journalHide")}
+          hint={t("settingsDialog.journalHideShort")}
+          info={t("settingsDialog.journalHideHint")}
+        >
+          <input
+            type="checkbox"
+            checked={journalSettings.hideFromSidebar}
+            disabled={disabled}
+            onChange={(event) =>
+              setJournalSettings({ hideFromSidebar: event.target.checked })
+            }
+          />
+        </SettingRow>
 
         <SettingRow
           layout="switch"

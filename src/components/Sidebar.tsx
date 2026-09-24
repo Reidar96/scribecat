@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   ArrowDownAZ,
   ArrowUpDown,
   BookOpen,
+  CalendarDays,
   Check,
   ChevronDown,
   ChevronRight,
@@ -56,13 +57,15 @@ import {
   type DropPayload
 } from "@/lib/dragDrop/droppedSources";
 import { canDownloadFolderArchive } from "@/lib/export/markdownDownload";
-import { formatFolderLabel, getFolderBasename } from "@/lib/fileSystem";
+import { formatFolderLabel, getFolderBasename, getRelativeDisplayPath } from "@/lib/fileSystem";
+import { isJournalRelativePath } from "@/lib/journal";
 import { isRemoteVaultPath, remoteVaultFor } from "@/lib/remoteVaults";
 import { getVaultCapabilities, platform, vaultCapabilityHint } from "@/platform";
 import type { ManualOrderMap, SortMode } from "@/lib/vaultMeta";
 import { cn } from "@/lib/utils";
 import type { MoveTreeEntryInput, WorkingSetEntry } from "@/store/useAppStore";
 import { DROP_DIRECTORY_ATTRIBUTE, useImportDropStore } from "@/store/useImportDropStore";
+import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
 
 /** What the "In progress" section needs from the app (see WorkingSetPanel). */
 export type WorkingSetHandlers = {
@@ -113,6 +116,8 @@ type SidebarProps = {
   onCloseCollection: () => void;
   graphViewOpen: boolean;
   onGraphViewToggle: () => void;
+  journalViewOpen: boolean;
+  onJournalViewToggle: () => void;
   onDeleteFileRequest: (filePath: string) => void;
   onDuplicateFileRequest: (filePath: string) => void;
   onDeleteFolderRequest: (folderPath: string) => void;
@@ -177,6 +182,8 @@ export function Sidebar({
   onCloseCollection,
   graphViewOpen,
   onGraphViewToggle,
+  journalViewOpen,
+  onJournalViewToggle,
   onDeleteFileRequest,
   onDuplicateFileRequest,
   onDeleteFolderRequest,
@@ -206,7 +213,40 @@ export function Sidebar({
   const [selectionMode, setSelectionMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [collapseFoldersRequestId, setCollapseFoldersRequestId] = useState(0);
-  const tagSummaries = useTagIndex(filePaths, selectedFilePath, selectedFileContent);
+  const journalSettings = useEditorSettingsStore((state) => state.journalSettings);
+  const visibleSidebarFilePaths = useMemo(
+    () =>
+      journalSettings.hideFromSidebar && folderPath
+        ? filePaths.filter(
+            (filePath) =>
+              !isJournalRelativePath(
+                getRelativeDisplayPath(folderPath, filePath),
+                journalSettings
+              )
+          )
+        : filePaths,
+    [filePaths, folderPath, journalSettings]
+  );
+  const visibleSidebarEmptyFolderPaths = useMemo(
+    () =>
+      journalSettings.hideFromSidebar && folderPath
+        ? emptyFolderPaths.filter(
+            (entryPath) =>
+              !isJournalRelativePath(
+                getRelativeDisplayPath(folderPath, entryPath),
+                journalSettings
+              )
+          )
+        : emptyFolderPaths,
+    [emptyFolderPaths, folderPath, journalSettings]
+  );
+  // Hiding the diary from the sidebar also removes diary-only tag occurrences
+  // from the ordinary tag overview. The files remain searchable and portable.
+  const tagSummaries = useTagIndex(
+    visibleSidebarFilePaths,
+    selectedFilePath,
+    selectedFileContent
+  );
   const vaultSearch = useVaultSearch(
     searchQuery,
     folderPath,
@@ -473,19 +513,6 @@ export function Sidebar({
 
           <Button
             type="button"
-            variant={graphViewOpen ? "default" : "outline"}
-            size="sm"
-            onClick={onGraphViewToggle}
-            disabled={isLoading || folderPath === null}
-            aria-pressed={graphViewOpen}
-            aria-label={t("sidebar.graphView")}
-            title={t("sidebar.graphView")}
-          >
-            <Network />
-          </Button>
-
-          <Button
-            type="button"
             variant="outline"
             size="sm"
             onClick={() => setCollapseFoldersRequestId((id) => id + 1)}
@@ -512,6 +539,32 @@ export function Sidebar({
             title={t(selectionMode ? "sidebar.selectionDone" : "sidebar.selectionMode")}
           >
             <ListChecks />
+          </Button>
+
+          <Button
+            type="button"
+            variant={graphViewOpen ? "default" : "outline"}
+            size="sm"
+            onClick={onGraphViewToggle}
+            disabled={isLoading || folderPath === null}
+            aria-pressed={graphViewOpen}
+            aria-label={t("sidebar.graphView")}
+            title={t("sidebar.graphView")}
+          >
+            <Network />
+          </Button>
+
+          <Button
+            type="button"
+            variant={journalViewOpen ? "default" : "outline"}
+            size="sm"
+            onClick={onJournalViewToggle}
+            disabled={isLoading || folderPath === null}
+            aria-pressed={journalViewOpen}
+            aria-label={t("sidebar.journalView")}
+            title={t("sidebar.journalView")}
+          >
+            <CalendarDays />
           </Button>
 
           <Button
@@ -826,12 +879,12 @@ export function Sidebar({
             </div>
           ) : null}
       <ScrollArea className="sidebar-panel__scroll" hidden={hasWorkingSet && isTreeCollapsed}>
-        {folderPath !== null && (filePaths.length > 0 || emptyFolderPaths.length > 0) ? (
+        {folderPath !== null && (visibleSidebarFilePaths.length > 0 || visibleSidebarEmptyFolderPaths.length > 0) ? (
           <FileTree
             key={folderPath}
             folderPath={folderPath}
-            filePaths={filePaths}
-            emptyFolderPaths={emptyFolderPaths}
+            filePaths={visibleSidebarFilePaths}
+            emptyFolderPaths={visibleSidebarEmptyFolderPaths}
             selectedFilePath={selectedFilePath}
             dirtyFilePaths={dirtyFilePaths}
             workingSetFilePaths={workingSet.entries.map((entry) => entry.filePath)}

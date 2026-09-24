@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.20.0] - 2026-09-24
+
+### Highlights
+- Add a Daily Notes calendar beside Graph View and Settings in the sidebar. It opens the current month, supports month/year/date navigation, marks dates that already have notes, and creates missing notes on click.
+- Keep the diary fully portable: dates are discovered from ordinary Markdown paths, with selectable Norwegian, ISO and compact year structures. No journal database or proprietary file format is introduced.
+- Add a dedicated diary reading/editing view with Markdown text, YAML tags and a two-column image gallery. Images are stored as normal Markdown references below a `## Bilder` section, can be added from the gallery, previewed, dragged/reordered, or moved with accessible arrow controls.
+- Add per-vault diary settings for the diary folder, filename structure and optional sidebar hiding. Hiding the diary also removes diary-only tag occurrences from the normal sidebar tag overview without deleting or changing the files.
+- Existing Markdown dropped into the configured date structure is detected automatically, and legacy image-table entries are recognized by the diary gallery.
+
 ## [0.19.1] - 2026-09-24
 
 ### Improvements

@@ -9,6 +9,11 @@ import {
 import { VAULT_META_DIR_NAME } from "@/lib/fileSystem";
 import { normalizeVaultIcons, type VaultIconMap } from "@/lib/vaultIcons";
 import { normalizeDocumentLocks, type DocumentLockMap } from "@/lib/documentLocks";
+import {
+  DEFAULT_JOURNAL_SETTINGS,
+  normalizeJournalSettings,
+  type JournalSettings
+} from "@/lib/journal";
 import { normalizeStoredWorkingSet, type StoredWorkingSet } from "@/store/appStore/workingSet";
 
 export type SortMode = "name" | "modified" | "manual";
@@ -21,6 +26,7 @@ const ORDER_FILE_NAME = "order.json";
 const MANUSCRIPT_FILE_NAME = "manuscript.json";
 const HEADING_NUMBERING_FILE_NAME = "heading-numbering.json";
 const FOLDER_NOTES_FILE_NAME = "folder-notes.json";
+const JOURNAL_FILE_NAME = "journal.json";
 const ICONS_FILE_NAME = "icons.json";
 const WORKING_SET_FILE_NAME = "open-files.json";
 const DOCUMENT_LOCKS_FILE_NAME = "document-locks.json";
@@ -233,6 +239,33 @@ export async function writeFolderNotesEnabled(folderPath: string, enabled: boole
   await writeTextFile(
     await join(dirPath, FOLDER_NOTES_FILE_NAME),
     JSON.stringify({ enabled }, null, 2)
+  );
+}
+
+/** Daily-note path/layout preferences that travel with the vault. */
+export async function readJournalSettings(folderPath: string): Promise<JournalSettings> {
+  try {
+    const filePath = await join(await vaultMetaDirPath(folderPath), JOURNAL_FILE_NAME);
+
+    if (!(await exists(filePath))) {
+      return DEFAULT_JOURNAL_SETTINGS;
+    }
+
+    return normalizeJournalSettings(JSON.parse(await readTextFile(filePath)));
+  } catch {
+    return DEFAULT_JOURNAL_SETTINGS;
+  }
+}
+
+export async function writeJournalSettings(
+  folderPath: string,
+  settings: JournalSettings
+): Promise<void> {
+  const dirPath = await vaultMetaDirPath(folderPath);
+  await mkdir(dirPath, { recursive: true });
+  await writeTextFile(
+    await join(dirPath, JOURNAL_FILE_NAME),
+    JSON.stringify(normalizeJournalSettings(settings), null, 2)
   );
 }
 
