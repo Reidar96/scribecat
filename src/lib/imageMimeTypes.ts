@@ -10,7 +10,10 @@ const MIME_TYPE_BY_EXTENSION: Record<string, string> = {
   gif: "image/gif",
   webp: "image/webp",
   svg: "image/svg+xml",
-  bmp: "image/bmp"
+  bmp: "image/bmp",
+  avif: "image/avif",
+  heic: "image/heic",
+  heif: "image/heif"
 };
 
 export function guessImageMimeType(filePath: string): string {
