@@ -307,22 +307,14 @@ function App() {
     onClose: () => setIsSidebarSheetOpen(false)
   });
 
-  // A phone has no room for the file list next to the document, and no note
-  // means there is nothing but the file list to look at: the sheet opens by
-  // itself then. It closes when the user picks or creates a note (the
-  // handlers below), not on every change of the selected path: a move or
-  // rename in the tree changes that path too, and closing the sheet then
-  // hides the result the user is looking at.
+  // The main area now has a useful folder home even before any note is
+  // opened, so phones no longer cover it with the file sheet automatically.
+  // The sheet opens only when the user asks for the sidebar.
   useEffect(() => {
     if (layout !== "phone") {
       setIsSidebarSheetOpen(false);
-      return;
     }
-
-    if (selectedFilePath === null && folderPath !== null) {
-      setIsSidebarSheetOpen(true);
-    }
-  }, [layout, selectedFilePath, folderPath]);
+  }, [layout]);
 
   const { availableUpdate, dismissUpdate } = useUpdateCheck();
 
@@ -983,9 +975,9 @@ function App() {
             <span className="workspace-resizer__grip" aria-hidden="true" />
           </div> : null}
 
-          {collectionView && folderPath ? (
+          {(collectionView || (folderPath && selectedFilePath === null)) && folderPath ? (
             <CollectionPanel
-              request={collectionView}
+              request={collectionView ?? { kind: "folder", relativePath: "" }}
               folderPath={folderPath}
               filePaths={filePaths}
               emptyFolderPaths={emptyFolderPaths}
