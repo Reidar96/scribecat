@@ -9,8 +9,7 @@ import {
   Network,
   PanelLeft,
   PanelLeftOpen,
-  Tag,
-  X
+  Tag
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
