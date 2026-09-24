@@ -80,6 +80,7 @@
 }
 
 .collection-card {
+  position: relative;
   display: flex;
   min-width: 0;
   min-height: 132px;
@@ -104,9 +105,21 @@
   background: rgba(var(--surface-hover-rgb),0.92);
 }
 
-.collection-card:focus-visible {
+.collection-card:focus-visible,
+.collection-card:has(.collection-card__click-target:focus-visible) {
   outline: 2px solid rgba(var(--accent-rgb),0.5);
   outline-offset: 2px;
+}
+
+.collection-card__click-target {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
 }
 
 .collection-card__top {
@@ -138,12 +151,42 @@
 }
 
 .collection-card__path {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  min-width: 0;
   margin: -0.25rem 0 0;
-  overflow: hidden;
+  overflow-x: auto;
   color: rgba(var(--muted-rgb),0.82);
   font-size: 0.72rem;
-  text-overflow: ellipsis;
   white-space: nowrap;
+  scrollbar-width: none;
+}
+
+.collection-card__path::-webkit-scrollbar {
+  display: none;
+}
+
+.collection-card__path > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.collection-card__path button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.collection-card__path button:hover,
+.collection-card__path button:focus-visible {
+  color: rgba(var(--text-rgb),0.96);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
 }
 
 .collection-card__tags {
