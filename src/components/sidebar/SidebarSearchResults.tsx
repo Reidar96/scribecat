@@ -25,13 +25,12 @@ export function SidebarSearchResults({
   }
 
   return (
-    <div className="sidebar-search-results" role="list" aria-label={t("sidebar.searchResults")}>
+    <div className="sidebar-search-results" aria-label={t("sidebar.searchResults")}>
       {results.map((result) => (
         <button
           key={result.filePath}
           type="button"
           className="sidebar-search-result"
-          role="listitem"
           onClick={() => onOpen(result.filePath)}
         >
           <FileText aria-hidden="true" />
