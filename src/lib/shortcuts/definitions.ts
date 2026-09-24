@@ -17,7 +17,6 @@ export type ShortcutActionId =
   | "printFile"
   | "findReplace"
   | "zenMode"
-  | "toggleSpellcheck"
   | "zoomIn"
   | "zoomOut"
   | "zoomReset"
@@ -129,13 +128,6 @@ export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
     category: "app",
     descriptionKey: "shortcutsDialog.items.zenMode",
     defaultBinding: letter(CTRL_SHIFT, "Y")
-  },
-  {
-    id: "toggleSpellcheck",
-    scope: "global",
-    category: "app",
-    descriptionKey: "shortcutsDialog.items.toggleSpellcheck",
-    defaultBinding: letter({ ctrl: true, alt: true, shift: true }, "X")
   },
   {
     id: "zoomIn",
