@@ -87,6 +87,8 @@ type DocumentPanelProps = {
 
   /** Phone layout: the sidebar is a sheet and this opens it. */
   onOpenSidebar: () => void;
+  /** Deletes the note currently open in the editor after confirmation. */
+  onDeleteRequest: () => void;
   /** Phone and tablet: the status pill doubles as the save button. */
   onSaveRequest: () => void;
 };
@@ -185,6 +187,7 @@ export function DocumentPanel({
   onVersionDiffRequest,
   onVersionRestoreRequest,
   onOpenSidebar,
+  onDeleteRequest,
   onSaveRequest
 }: DocumentPanelProps) {
   const { t } = useTranslation();
@@ -220,7 +223,10 @@ export function DocumentPanel({
   // Split on the full label: the crumbs carry the paths icons are keyed by,
   // and those keep the extension. Only the rendered name drops it, since
   // every note is a .md file and the suffix says nothing.
-  const titleCrumbs = getPathCrumbs(selectedFileLabel ?? "");
+  const titleCrumbs = [
+    { name: t("collection.root"), folderRelativePath: "", relativePath: "" },
+    ...getPathCrumbs(selectedFileLabel ?? "")
+  ];
   const breadcrumbScroll = useBreadcrumbScroll<HTMLHeadingElement>(selectedFileLabel ?? null);
   const [crumbIconPicker, setCrumbIconPicker] = useState<{
     relativePath: string;
@@ -405,7 +411,7 @@ export function DocumentPanel({
                           <CrumbIcon
                             icon={getVaultIcon(vaultIcons, crumb.relativePath)}
                             onPick={
-                              canPickCrumbIcon
+                              canPickCrumbIcon && crumb.relativePath
                                 ? (anchor) =>
                                     setCrumbIconPicker({ relativePath: crumb.relativePath, anchor })
                                 : undefined
@@ -427,9 +433,11 @@ export function DocumentPanel({
                                     "detail-panel__crumb--leaf"
                                 )}
                                 onClick={() => onOpenFolderCollection(folderCollectionPath)}
-                                title={t("fileTree.openFolderCollection", {
-                                  path: folderCollectionPath
-                                })}
+                                title={
+                                  folderCollectionPath
+                                    ? t("fileTree.openFolderCollection", { path: folderCollectionPath })
+                                    : t("collection.openRoot")
+                                }
                               >
                                 {crumbDisplayName(crumb.name)}
                               </button>
@@ -550,6 +558,8 @@ export function DocumentPanel({
                   onVersionsRequest={() => setVersionsRequestId((id) => id + 1)}
                   versioningEnabled={versioningEnabled}
                   onZenModeRequest={onZenModeRequest}
+                  onDeleteRequest={onDeleteRequest}
+                  deleteEnabled={capabilities.delete}
                   documentLocked={documentLocked}
                   onDocumentLockToggle={toggleDocumentLocked}
                 />
@@ -581,6 +591,8 @@ export function DocumentPanel({
                 onRequestSidebarFocus={onRequestSidebarFocus}
                 onRequestFileOpen={onRequestFileOpen}
                 onZenModeRequest={onZenModeRequest}
+                onDeleteRequest={onDeleteRequest}
+                deleteEnabled={capabilities.delete}
                 documentLocked={documentLocked}
                 onDocumentLockToggle={toggleDocumentLocked}
                 toolbarContainer={layout === "desktop" ? toolbarSlot : null}
