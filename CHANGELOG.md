@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.21.0] - 2026-09-24
+
+### Highlights
+- Add a dedicated Markdown-first Tasks view alongside Calendar and Graph.
+- Store each task category as its own ordinary Markdown document under `Gjøremål/` (for example `Gjøremål/Jobb.md` and `Gjøremål/Fritid.md`). Tasks without a category use `Gjøremål/Uten kategori.md`.
+- Use portable Markdown checkboxes such as `- [ ] Send rapport 📅 2026-10-01`; the deadline is optional, and manually edited checkbox lines in category documents are detected automatically.
+- Add category filtering, inline task completion/editing, optional deadline editing and deletion in the Tasks view.
+- Promote Calendar, Graph and Tasks to three primary buttons at the top of the desktop sidebar, with the existing file-management actions kept as smaller controls underneath.
+- Add Calendar, Graph and Tasks as three prominent shortcuts at the top of the Start view on phones.
+
 ## [0.20.8] - 2026-09-24
 
 ### Improvement
