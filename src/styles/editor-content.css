@@ -665,3 +665,220 @@
   height: 0.82rem;
   stroke-width: 2.4;
 }
+
+
+/* Read-only media previews live above the editor and remain available while a
+   document lock is active. They never mutate the note. */
+.editor-image-wrapper .editor-image-wrapper__img {
+  cursor: zoom-in;
+}
+
+.media-preview {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.84);
+  padding: 2.75rem;
+  overscroll-behavior: contain;
+}
+
+.media-preview__close {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  border: 1px solid rgb(255 255 255 / 0.18);
+  border-radius: 999px;
+  background: rgb(20 20 24 / 0.88);
+  color: #fff;
+  cursor: pointer;
+}
+
+.media-preview__close:hover,
+.media-preview__close:focus-visible {
+  background: rgb(38 38 44 / 0.96);
+  outline: 2px solid rgb(255 255 255 / 0.35);
+  outline-offset: 2px;
+}
+
+.media-preview__image-wrap {
+  display: grid;
+  max-width: 100%;
+  max-height: 100%;
+  place-items: center;
+}
+
+.media-preview__image {
+  display: block;
+  max-width: min(94vw, 1800px);
+  max-height: 90vh;
+  width: auto;
+  height: auto;
+  border-radius: 0.45rem;
+  box-shadow: 0 14px 48px rgb(0 0 0 / 0.42);
+  object-fit: contain;
+}
+
+.media-preview--pdf {
+  grid-template-rows: auto minmax(0, 1fr);
+  place-items: stretch;
+  gap: 0.7rem;
+  padding: 0.75rem;
+}
+
+.pdf-preview__toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 2.75rem;
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: 0.7rem;
+  background: rgb(22 22 26 / 0.95);
+  color: #fff;
+  padding: 0.45rem 0.55rem 0.45rem 0.8rem;
+}
+
+.pdf-preview__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.pdf-preview__pager {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.pdf-preview__pager button,
+.pdf-preview__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid rgb(255 255 255 / 0.15);
+  border-radius: 0.5rem;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  cursor: pointer;
+}
+
+.pdf-preview__pager button:hover:not(:disabled),
+.pdf-preview__close:hover,
+.pdf-preview__pager button:focus-visible,
+.pdf-preview__close:focus-visible {
+  background: rgb(255 255 255 / 0.1);
+  outline: none;
+}
+
+.pdf-preview__pager button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.pdf-preview__pager svg,
+.pdf-preview__close svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.pdf-preview__close {
+  justify-self: end;
+}
+
+.pdf-preview__stage {
+  position: relative;
+  min-height: 0;
+  overflow: auto;
+  display: grid;
+  place-items: center;
+  border-radius: 0.75rem;
+  background: rgb(12 12 14 / 0.86);
+  padding: 1rem;
+}
+
+.pdf-preview__canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  background: #fff;
+  box-shadow: 0 12px 36px rgb(0 0 0 / 0.4);
+}
+
+.pdf-preview__message {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: rgb(255 255 255 / 0.84);
+  font-size: 0.9rem;
+}
+
+.pdf-preview__rendering {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  background: rgb(20 20 24 / 0.76);
+  color: #fff;
+}
+
+.pdf-preview__spinner {
+  width: 1rem;
+  height: 1rem;
+  animation: pdf-preview-spin 0.85s linear infinite;
+}
+
+@keyframes pdf-preview-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 720px) {
+  .media-preview {
+    padding: 3.2rem 0.75rem 0.75rem;
+  }
+
+  .media-preview--pdf {
+    padding: 0.45rem;
+  }
+
+  .pdf-preview__toolbar {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .pdf-preview__pager {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .pdf-preview__close {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .pdf-preview__stage {
+    padding: 0.5rem;
+  }
+}
