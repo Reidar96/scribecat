@@ -8,6 +8,7 @@ import {
 } from "@/lib/editor/headingNumbers";
 import { VAULT_META_DIR_NAME } from "@/lib/fileSystem";
 import { normalizeVaultIcons, type VaultIconMap } from "@/lib/vaultIcons";
+import { normalizeDocumentLocks, type DocumentLockMap } from "@/lib/documentLocks";
 import { normalizeStoredWorkingSet, type StoredWorkingSet } from "@/store/appStore/workingSet";
 
 export type SortMode = "name" | "modified" | "manual";
@@ -22,6 +23,7 @@ const HEADING_NUMBERING_FILE_NAME = "heading-numbering.json";
 const FOLDER_NOTES_FILE_NAME = "folder-notes.json";
 const ICONS_FILE_NAME = "icons.json";
 const WORKING_SET_FILE_NAME = "open-files.json";
+const DOCUMENT_LOCKS_FILE_NAME = "document-locks.json";
 const SORT_MODES: SortMode[] = ["name", "modified", "manual"];
 
 /**
@@ -259,4 +261,35 @@ export async function writeVaultIcons(folderPath: string, icons: VaultIconMap): 
   const dirPath = await vaultMetaDirPath(folderPath);
   await mkdir(dirPath, { recursive: true });
   await writeTextFile(await join(dirPath, ICONS_FILE_NAME), JSON.stringify(icons, null, 2));
+}
+
+
+/**
+ * Editing locks travel with the vault so a note locked on one device opens
+ * read-only on another device too. Keys are vault-relative paths.
+ */
+export async function readDocumentLocks(folderPath: string): Promise<DocumentLockMap> {
+  try {
+    const filePath = await join(await vaultMetaDirPath(folderPath), DOCUMENT_LOCKS_FILE_NAME);
+
+    if (!(await exists(filePath))) {
+      return {};
+    }
+
+    return normalizeDocumentLocks(JSON.parse(await readTextFile(filePath)));
+  } catch {
+    return {};
+  }
+}
+
+export async function writeDocumentLocks(
+  folderPath: string,
+  locks: DocumentLockMap
+): Promise<void> {
+  const dirPath = await vaultMetaDirPath(folderPath);
+  await mkdir(dirPath, { recursive: true });
+  await writeTextFile(
+    await join(dirPath, DOCUMENT_LOCKS_FILE_NAME),
+    JSON.stringify(locks, null, 2)
+  );
 }
