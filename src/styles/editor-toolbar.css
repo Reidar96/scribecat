@@ -46,6 +46,20 @@
   gap: 0.45rem;
 }
 
+.editor-toolbar__group[inert] {
+  opacity: 0.42;
+}
+
+.editor-toolbar__lock-button[aria-pressed="true"] {
+  border-color: rgba(248, 113, 113, 0.58);
+  background: rgba(248, 113, 113, 0.12);
+  color: var(--error-fg);
+}
+
+.editor-toolbar__lock-button[aria-pressed="true"]:hover {
+  background: rgba(248, 113, 113, 0.2);
+}
+
 .editor-toolbar__separator {
   width: 1px;
   align-self: stretch;
