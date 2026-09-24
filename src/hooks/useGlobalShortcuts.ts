@@ -124,11 +124,6 @@ export function useGlobalShortcuts({
 
           return;
         }
-        case "toggleSpellcheck": {
-          const { spellcheckEnabled, setSpellcheckEnabled } = useEditorSettingsStore.getState();
-          setSpellcheckEnabled(!spellcheckEnabled);
-          return;
-        }
         case "zoomIn": {
           const { zoomLevel, setZoomLevel } = useEditorSettingsStore.getState();
           setZoomLevel(zoomLevel + ZOOM_STEP);
