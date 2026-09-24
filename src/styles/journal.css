@@ -530,7 +530,7 @@
   display: block;
   margin-top: 0.15rem;
   color: rgba(var(--muted-rgb),0.76);
-  font-size: var(--font-ui-xs);
+  font-size: var(--font-ui-sm);
 }
 
 .journal-results__list {
@@ -562,13 +562,13 @@
 }
 
 .journal-results__item strong {
-  font-size: var(--font-ui-md);
+  font-size: 0.95rem;
 }
 
 .journal-results__item p {
   margin: 0.35rem 0 0;
   color: rgba(var(--muted-rgb),0.9);
-  font-size: var(--font-ui-sm);
+  font-size: var(--font-ui-md);
   line-height: 1.45;
 }
 
@@ -582,9 +582,9 @@
 .journal-results__tags span {
   border-radius: 999px;
   background: rgba(var(--accent-rgb),0.08);
-  padding: 0.18rem 0.38rem;
-  color: rgba(var(--muted-rgb),0.88);
-  font-size: var(--font-ui-xs);
+  padding: 0.2rem 0.42rem;
+  color: rgba(var(--muted-rgb),0.9);
+  font-size: var(--font-ui-sm);
 }
 
 .journal-results__content {

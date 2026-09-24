@@ -52,7 +52,7 @@ import type { PickedImageFile } from "@/platform/types";
 import { readFile } from "@/platform/vaultFs";
 import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
 
-const IMAGE_EXTENSIONS = ["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp"];
+const IMAGE_EXTENSIONS = ["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "avif", "heic", "heif"];
 const EARLIEST_PICKER_YEAR = 1900;
 
 type JournalPanelProps = {
@@ -539,8 +539,37 @@ function JournalEntryView({
     const editor = textEditorRef.current;
     if (!editor) return;
 
-    editor.style.height = "auto";
-    editor.style.height = `${Math.max(72, editor.scrollHeight)}px`;
+    const resize = () => {
+      // A hidden mobile pane reports no useful scrollHeight. Wait until it is
+      // visible, then size immediately from the full existing text.
+      if (editor.getBoundingClientRect().width <= 0) return;
+      editor.style.height = "auto";
+      editor.style.height = `${Math.max(72, editor.scrollHeight)}px`;
+    };
+
+    resize();
+    const frame = window.requestAnimationFrame(resize);
+    const parent = editor.parentElement;
+    let observer: ResizeObserver | null = null;
+    let lastWidth = -1;
+
+    if (parent && typeof ResizeObserver !== "undefined") {
+      observer = new ResizeObserver((entries) => {
+        const width = entries[0]?.contentRect.width ?? parent.getBoundingClientRect().width;
+        if (width <= 0 || Math.abs(width - lastWidth) < 0.5) return;
+        lastWidth = width;
+        resize();
+      });
+      observer.observe(parent);
+    } else {
+      window.addEventListener("resize", resize);
+    }
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      observer?.disconnect();
+      window.removeEventListener("resize", resize);
+    };
   }, [draftText, filePath]);
 
   useEffect(() => {

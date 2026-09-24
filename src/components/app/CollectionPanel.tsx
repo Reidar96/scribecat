@@ -376,7 +376,7 @@ export function CollectionPanel({
                   </>
                 ) : (
                   <>
-                    {isRootCollection ? <Home aria-hidden="true" /> : <FolderOpen aria-hidden="true" />}
+                    {!isRootCollection ? <FolderOpen aria-hidden="true" /> : null}
                     <h2
                       ref={breadcrumbScroll.elementRef}
                       onScroll={breadcrumbScroll.onScroll}

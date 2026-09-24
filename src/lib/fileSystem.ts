@@ -25,7 +25,10 @@ const EXTENSION_BY_MIME_TYPE: Record<string, string> = {
   "image/gif": "gif",
   "image/webp": "webp",
   "image/svg+xml": "svg",
-  "image/bmp": "bmp"
+  "image/bmp": "bmp",
+  "image/avif": "avif",
+  "image/heic": "heic",
+  "image/heif": "heif"
 };
 
 const LAST_FOLDER_PATH_STORAGE_KEY = "scribecat:lastFolderPath";
@@ -271,6 +274,11 @@ function sanitizeImageFileName(fileName: string, mimeType: string): string {
   const sanitized = baseNameOnly.replace(/[^a-zA-Z0-9._-]/g, "_").replace(/^\.+/, "");
 
   if (sanitized) {
+    const fallbackExtension = EXTENSION_BY_MIME_TYPE[mimeType];
+    if (fallbackExtension && !/\.[a-zA-Z0-9]+$/.test(sanitized)) {
+      return `${sanitized}.${fallbackExtension}`;
+    }
+
     return sanitized;
   }
 
