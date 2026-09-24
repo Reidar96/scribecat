@@ -180,43 +180,36 @@ export function TableEdgeControls({ editor, disabled = false }: TableEdgeControl
       }
 
       const rowRect = row.getBoundingClientRect();
-      const tableRect = table.getBoundingClientRect();
-      const wrapper = table.closest(".tableWrapper");
-      const wrapperRect = wrapper?.getBoundingClientRect();
 
-      // The plus belongs to the line, not to the pointer. Centre it on the
-      // visible part of that table border so it stays perfectly still while
-      // the pointer moves along the same line, including in a scrolled table.
-      const visibleLeft = Math.max(tableRect.left, wrapperRect?.left ?? tableRect.left);
-      const visibleRight = Math.min(tableRect.right, wrapperRect?.right ?? tableRect.right);
-      const visibleTop = Math.max(tableRect.top, wrapperRect?.top ?? tableRect.top);
-      const visibleBottom = Math.min(tableRect.bottom, wrapperRect?.bottom ?? tableRect.bottom);
-      const lineCenterX = (visibleLeft + visibleRight) / 2;
-      const lineCenterY = (visibleTop + visibleBottom) / 2;
+      // Keep the plus fixed on the border, but centre it beside the cell the
+      // pointer is actually in. Using the whole table made a wide/tall table
+      // put the control far away from the place the user was working.
+      const cellCenterX = (rect.left + rect.right) / 2;
+      const cellCenterY = (rect.top + rect.bottom) / 2;
 
       const distances: Array<{ action: EdgeAction; distance: number; x: number; y: number }> = [
         {
           action: "column-before",
           distance: Math.abs(event.clientX - rect.left),
           x: rect.left,
-          y: lineCenterY
+          y: cellCenterY
         },
         {
           action: "column-after",
           distance: Math.abs(event.clientX - rect.right),
           x: rect.right,
-          y: lineCenterY
+          y: cellCenterY
         },
         {
           action: "row-before",
           distance: Math.abs(event.clientY - rowRect.top),
-          x: lineCenterX,
+          x: cellCenterX,
           y: rowRect.top
         },
         {
           action: "row-after",
           distance: Math.abs(event.clientY - rowRect.bottom),
-          x: lineCenterX,
+          x: cellCenterX,
           y: rowRect.bottom
         }
       ];

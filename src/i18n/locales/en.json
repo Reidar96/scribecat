@@ -542,7 +542,8 @@
     "searchClear": "Clear search",
     "searchLoading": "Searching notes…",
     "searchNoResults": "No matching notes.",
-    "searchResults": "Search results"
+    "searchResults": "Search results",
+    "collapseAllFolders": "Collapse all folders"
   },
   "fileTree": {
     "treeLabel": "File tree",

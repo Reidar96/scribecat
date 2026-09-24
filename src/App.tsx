@@ -1054,6 +1054,11 @@ function App() {
               onVersionDiffRequest={handleVersionDiffRequest}
               onVersionRestoreRequest={(version) => void handleVersionRestore(version)}
               onOpenSidebar={() => setIsSidebarSheetOpen(true)}
+              onDeleteRequest={() => {
+                if (selectedFilePath) {
+                  requestDeleteFile(selectedFilePath);
+                }
+              }}
               onSaveRequest={() => void saveSelectedFile()}
             />
           )}

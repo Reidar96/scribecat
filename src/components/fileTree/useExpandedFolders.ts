@@ -58,6 +58,19 @@ export function useExpandedFolders(folderPath: string) {
     [folderPath]
   );
 
+  /** Collapses every open folder in one step. */
+  const collapseAllFolders = useCallback(() => {
+    setExpandedFolderPaths((currentPaths) => {
+      if (currentPaths.size === 0) {
+        return currentPaths;
+      }
+
+      const nextPaths = new Set<string>();
+      setStoredExpandedFolderPaths(folderPath, nextPaths);
+      return nextPaths;
+    });
+  }, [folderPath]);
+
   /** Expands a whole set of folders in one step (see FileTree's search reveal). */
   const expandFolders = useCallback(
     (relativePaths: string[]) => {
@@ -80,5 +93,11 @@ export function useExpandedFolders(folderPath: string) {
     [folderPath]
   );
 
-  return { expandedFolderPaths, toggleFolder, expandAncestorsOf, expandFolders };
+  return {
+    expandedFolderPaths,
+    toggleFolder,
+    expandAncestorsOf,
+    expandFolders,
+    collapseAllFolders
+  };
 }

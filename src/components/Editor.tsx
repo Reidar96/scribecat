@@ -100,6 +100,8 @@ type EditorProps = {
   onRequestSidebarFocus?: () => void;
   onRequestFileOpen?: (filePath: string) => void;
   onZenModeRequest: () => void;
+  onDeleteRequest: () => void;
+  deleteEnabled: boolean;
   documentLocked: boolean;
   onDocumentLockToggle: () => void;
   /** Where the toolbar renders instead of inside the editor (the document
@@ -183,6 +185,8 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     onRequestSidebarFocus,
     onRequestFileOpen,
     onZenModeRequest,
+    onDeleteRequest,
+    deleteEnabled,
     documentLocked,
     onDocumentLockToggle,
     toolbarContainer = null
@@ -1240,6 +1244,8 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       onLinkRequest={handleLinkRequest}
       onImageInsertRequest={handleImageInsertRequest}
       onPrintRequest={printDocument}
+      onDeleteRequest={onDeleteRequest}
+      deleteEnabled={deleteEnabled}
       onDownloadMarkdownRequest={downloadDocument}
       onSearchRequest={openFindPanel}
       onZenModeRequest={onZenModeRequest}

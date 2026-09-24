@@ -387,7 +387,8 @@
     "searchClear": "Tøm søk",
     "searchLoading": "Søker i notater…",
     "searchNoResults": "Ingen passende notater.",
-    "searchResults": "Søkeresultater"
+    "searchResults": "Søkeresultater",
+    "collapseAllFolders": "Trekk sammen alle mapper"
   },
   "fileTree": {
     "treeLabel": "Filtre",
