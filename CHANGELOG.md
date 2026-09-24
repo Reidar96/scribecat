@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.22.9] - 2026-09-24
+
+### Fixes and improvements
+- Make the browser image picker more reliable on iPhone/iPad by keeping the file input attached to the document while the native picker is open.
+- Accept and serve modern phone photo formats including AVIF, HEIC and HEIF, and add a suitable extension when a picked image has no filename extension.
+- Increase the text size for Diary overview, search results and tag-filtered day results.
+- Recalculate the self-sizing Diary note field when a hidden mobile day pane becomes visible, so existing text expands the field immediately without requiring a keystroke.
+- Make clicking an already-open Calendar, Graph or Tasks sidebar button return directly to Start instead of revealing the selected Markdown file.
+- Align the Start header padding with Calendar, Graph and Tasks on mobile, while removing the redundant house icon from the Start title.
+
 ## [0.22.8] - 2026-09-24
 
 ### Improvements
