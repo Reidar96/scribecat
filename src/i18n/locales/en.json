@@ -606,7 +606,7 @@
     "notes": "Notes",
     "tags": "Tags",
     "folders": "Folders",
-    "hint": "Drag nodes · drag the background to pan · scroll to zoom",
+    "hint": "Click to focus · click again to open · drag nodes · scroll to zoom",
     "loading": "Building graph…",
     "empty": "There are no notes to graph yet.",
     "allHidden": "All node types are hidden.",
