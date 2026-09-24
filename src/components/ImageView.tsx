@@ -156,7 +156,6 @@ export function ImageView({ node, editor, getPos, updateAttributes, selected }: 
   };
 
   return (
-    <>
       <NodeViewWrapper
         as="div"
         className="editor-image-wrapper"
@@ -207,9 +206,7 @@ export function ImageView({ node, editor, getPos, updateAttributes, selected }: 
           {loadError ? t("imageView.notFound", { src }) : t("imageView.loading")}
         </span>
       )}
-      </NodeViewWrapper>
-
-      {contextMenu ? (
+        {contextMenu ? (
         <ContextMenuSurface
           x={contextMenu.x}
           y={contextMenu.y}
@@ -225,8 +222,8 @@ export function ImageView({ node, editor, getPos, updateAttributes, selected }: 
             <Trash2 aria-hidden="true" />
             {t("imageView.delete")}
           </button>
-        </ContextMenuSurface>
-      ) : null}
-    </>
+          </ContextMenuSurface>
+        ) : null}
+      </NodeViewWrapper>
   );
 }
