@@ -11,6 +11,7 @@ import { RemoteVaultDialog } from "@/components/remote/RemoteVaultDialog";
 import { DocumentPanel } from "@/components/app/DocumentPanel";
 import { CollectionPanel } from "@/components/app/CollectionPanel";
 import { GraphPanel } from "@/components/app/GraphPanel";
+import { JournalPanel } from "@/components/app/JournalPanel";
 import type { CollectionViewRequest } from "@/components/app/collectionTypes";
 import { MobileSheet } from "@/components/app/MobileSheet";
 import { ZenMode } from "@/components/app/ZenMode";
@@ -112,6 +113,7 @@ function App() {
   const [sidebarVisible, setSidebarVisible] = useState(getStoredSidebarVisible);
   const [collectionView, setCollectionView] = useState<CollectionViewRequest | null>(null);
   const [graphViewOpen, setGraphViewOpen] = useState(false);
+  const [journalViewOpen, setJournalViewOpen] = useState(false);
   const appVersion = useAppVersion();
   const editorHandleRef = useRef<EditorHandle | null>(null);
   const entryRenameRequestIdRef = useRef(0);
@@ -154,6 +156,7 @@ function App() {
   const saveSelectedFile = useAppStore((state) => state.saveSelectedFile);
   const restoreFileVersion = useAppStore((state) => state.restoreFileVersion);
   const createNewFile = useAppStore((state) => state.createNewFile);
+  const createFileAtPath = useAppStore((state) => state.createFileAtPath);
   const duplicateFile = useAppStore((state) => state.duplicateFile);
   const registerImportedFiles = useAppStore((state) => state.registerImportedFiles);
   const createNewFolder = useAppStore((state) => state.createNewFolder);
@@ -226,6 +229,7 @@ function App() {
   useEffect(() => {
     setCollectionView(null);
     setGraphViewOpen(false);
+    setJournalViewOpen(false);
   }, [folderPath]);
 
 
@@ -458,6 +462,7 @@ function App() {
     if (filePath === selectedFilePath) {
       setCollectionView(null);
       setGraphViewOpen(false);
+      setJournalViewOpen(false);
       return;
     }
 
@@ -471,6 +476,7 @@ function App() {
     await selectFilePath(filePath);
     setCollectionView(null);
     setGraphViewOpen(false);
+    setJournalViewOpen(false);
   };
 
   // Same for a folder's note (the tree hands over the folder, the store
@@ -487,6 +493,7 @@ function App() {
     await openFolderNote(targetFolderPath);
     setCollectionView(null);
     setGraphViewOpen(false);
+    setJournalViewOpen(false);
   };
 
   const openCollectionSafely = async (request: CollectionViewRequest) => {
@@ -496,7 +503,51 @@ function App() {
 
     setCollectionView(request);
     setGraphViewOpen(false);
+    setJournalViewOpen(false);
     setIsSidebarSheetOpen(false);
+  };
+
+  const openJournalDateSafely = async (
+    relativePath: string,
+    initialMarkdown: string
+  ): Promise<string | null> => {
+    if (!folderPath) {
+      return null;
+    }
+
+    const targetPath = await join(
+      folderPath,
+      ...relativePath.replace(/\\/g, "/").split("/").filter(Boolean)
+    );
+    const knownPath =
+      filePaths.find(
+        (candidate) => normalizePathKey(candidate) === normalizePathKey(targetPath)
+      ) ?? null;
+    const resolvedPath = knownPath ?? targetPath;
+
+    if (selectedFilePath !== resolvedPath && !(await leaveCurrentNote())) {
+      return null;
+    }
+
+    if (!knownPath) {
+      const created = await createFileAtPath(targetPath, initialMarkdown);
+      if (!created) {
+        return null;
+      }
+    }
+
+    if (selectedFilePath !== resolvedPath) {
+      const opened = await selectFilePath(resolvedPath);
+      if (!opened) {
+        return null;
+      }
+    }
+
+    setCollectionView(null);
+    setGraphViewOpen(false);
+    setJournalViewOpen(true);
+    setIsSidebarSheetOpen(false);
+    return resolvedPath;
   };
 
   /**
@@ -903,7 +954,21 @@ function App() {
       onCloseCollection={() => setCollectionView(null)}
       graphViewOpen={graphViewOpen}
       onGraphViewToggle={() => {
-        setGraphViewOpen((open) => !open);
+        setGraphViewOpen((open) => {
+          const next = !open;
+          if (next) setJournalViewOpen(false);
+          return next;
+        });
+        setIsSidebarSheetOpen(false);
+      }}
+      journalViewOpen={journalViewOpen}
+      onJournalViewToggle={() => {
+        setJournalViewOpen((open) => {
+          const next = !open;
+          if (next) setGraphViewOpen(false);
+          return next;
+        });
+        setCollectionView(null);
         setIsSidebarSheetOpen(false);
       }}
       onDeleteFileRequest={requestDeleteFile}
@@ -989,6 +1054,22 @@ function App() {
 
           {!startupFolderResolved && folderPath === null ? (
             <div className="workspace-startup-placeholder" aria-busy="true" />
+          ) : journalViewOpen && folderPath ? (
+            <JournalPanel
+              folderPath={folderPath}
+              filePaths={filePaths}
+              selectedFilePath={selectedFilePath}
+              selectedFileContent={selectedFileContent}
+              sidebarVisible={sidebarVisible}
+              onSidebarVisibilityToggle={toggleSidebarVisible}
+              onOpenSidebar={() => setIsSidebarSheetOpen(true)}
+              onClose={() => setJournalViewOpen(false)}
+              onOpenDate={async (_date, relativePath, initialMarkdown) =>
+                openJournalDateSafely(relativePath, initialMarkdown)
+              }
+              onOpenMarkdown={() => setJournalViewOpen(false)}
+              onMarkdownChange={updateSelectedFileContent}
+            />
           ) : graphViewOpen && folderPath ? (
             <GraphPanel
               folderPath={folderPath}
