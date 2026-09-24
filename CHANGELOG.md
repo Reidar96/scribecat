@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.20.4] - 2026-09-24
+
+### Improvements
+- Remove the per-image order strip with arrows and image numbers from the diary gallery while keeping drag-and-drop reordering.
+- Add a diary overview that appears when no date is selected and uses the same card layout as search/tag results.
+- Show the first image from each diary entry as a square-cropped thumbnail on the right side of overview, search and tag result cards.
+- Add an Overview button on both the phone calendar screen and phone entry navigation so the full diary list is always one tap away.
+
 ## [0.20.3] - 2026-09-24
 
 ### Improvements
