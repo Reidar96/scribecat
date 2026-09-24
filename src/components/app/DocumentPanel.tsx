@@ -1,4 +1,4 @@
-import { Fragment, useState, type RefObject } from "react";
+import { Fragment, useEffect, useState, type RefObject } from "react";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -203,6 +203,12 @@ export function DocumentPanel({
     }
     onDocumentLockToggle();
   };
+
+  useEffect(() => {
+    if (documentLocked && isRenamingTitle) {
+      onCancelTitleRename();
+    }
+  }, [documentLocked, isRenamingTitle, onCancelTitleRename]);
   const capabilities = getVaultCapabilities();
   const capabilityHint = vaultCapabilityHint();
   const versioningEnabled = useVersioningSettingsStore((state) => state.versioningEnabled);
