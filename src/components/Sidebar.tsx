@@ -218,7 +218,12 @@ export function Sidebar({
   const hideTasksFromSidebar = useEditorSettingsStore(
     (state) => state.taskSettings.hideFromSidebar
   );
-  const vaultSettingsReady = useEditorSettingsStore((state) => state.vaultSettingsReady);
+  const vaultSettingsLoadedPath = useEditorSettingsStore(
+    (state) => state.headingNumberingVaultPath
+  );
+  const vaultSettingsReady =
+    useEditorSettingsStore((state) => state.vaultSettingsReady) &&
+    vaultSettingsLoadedPath === folderPath;
 
   const visibleSidebarFilePaths = useMemo(
     () =>
