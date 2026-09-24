@@ -12,6 +12,7 @@ import {
   Printer,
   Search,
   Type,
+  Trash2,
   ZoomIn,
   ZoomOut
 } from "lucide-react";
@@ -42,6 +43,8 @@ type DocumentMenuProps = {
   onVersionsRequest: () => void;
   versioningEnabled: boolean;
   onZenModeRequest: () => void;
+  onDeleteRequest: () => void;
+  deleteEnabled: boolean;
   documentLocked: boolean;
   onDocumentLockToggle: () => void;
 };
@@ -66,6 +69,8 @@ export function DocumentMenu({
   onVersionsRequest,
   versioningEnabled,
   onZenModeRequest,
+  onDeleteRequest,
+  deleteEnabled,
   documentLocked,
   onDocumentLockToggle
 }: DocumentMenuProps) {
@@ -212,6 +217,11 @@ export function DocumentMenu({
             <MenuItem onClick={() => editorHandleRef.current?.printDocument()}>
               <Printer className="size-4" />
               {t("toolbar.printButton")}
+            </MenuItem>
+            <div className="editor-toolbar__menu-separator" role="separator" />
+            <MenuItem disabled={!deleteEnabled} onClick={onDeleteRequest}>
+              <Trash2 className="size-4" />
+              {t("common.delete")}
             </MenuItem>
           </MenuPopup>
         </MenuPositioner>
