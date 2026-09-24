@@ -123,6 +123,34 @@
   margin-top: 1rem;
 }
 
+.settings-vault-sections {
+  display: grid;
+  gap: 0.8rem;
+  margin-top: 0.85rem;
+}
+
+.settings-vault-section {
+  border: 1px solid rgba(var(--overlay-rgb), 0.09);
+  border-radius: 0.95rem;
+  background: rgba(var(--surface-rgb), 0.34);
+  padding: 0.9rem;
+}
+
+.settings-vault-section > .settings-section__title {
+  margin: 0;
+}
+
+.settings-vault-section__hint {
+  margin: 0.22rem 0 0.75rem;
+  color: var(--dialog-hint);
+  font-size: var(--dialog-hint-size);
+  line-height: 1.45;
+}
+
+.settings-vault-section .ai-dialog__grid {
+  margin-top: 0;
+}
+
 /* Inside the agent's <summary>: inline, or the disclosure marker loses its
    line. */
 .ai-dialog__section > summary > .settings-section__title {
