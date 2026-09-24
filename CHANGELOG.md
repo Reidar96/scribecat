@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.20.8] - 2026-09-24
+
+### Improvement
+- Match the mobile month and year selector height to the previous/next calendar buttons for a more even calendar header.
+
 ## [0.20.7] - 2026-09-24
 
 ### Improvement
