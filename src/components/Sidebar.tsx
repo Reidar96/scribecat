@@ -18,6 +18,7 @@ import {
   ListChecks,
   Move,
   Plus,
+  Search,
   Server,
   Settings2,
   Trash2,
@@ -42,7 +43,9 @@ import { FileTree, type BatchEntry, type PendingEntryRename } from "@/components
 import type { VaultIconMap } from "@/lib/vaultIcons";
 import { WorkingSetPanel } from "@/components/sidebar/WorkingSetPanel";
 import { TagsOverview } from "@/components/sidebar/TagsOverview";
+import { SidebarSearchResults } from "@/components/sidebar/SidebarSearchResults";
 import { useTagIndex } from "@/hooks/useTagIndex";
+import { useVaultSearch } from "@/hooks/useVaultSearch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useStoredCollapsed, useWorkingSetHeight } from "@/hooks/useWorkingSetHeight";
 import {
@@ -195,7 +198,16 @@ export function Sidebar({
 }: SidebarProps) {
   const { t } = useTranslation();
   const [selectionMode, setSelectionMode] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const tagSummaries = useTagIndex(filePaths, selectedFilePath, selectedFileContent);
+  const vaultSearch = useVaultSearch(
+    searchQuery,
+    folderPath,
+    filePaths,
+    selectedFilePath,
+    selectedFileContent
+  );
+  const searchActive = searchQuery.trim().length > 0;
   // A server vault whose entry is gone (forgotten in the settings) has
   // nothing to open; the recent list is cleaned on forget, this is the net.
   const recentVaults = recentFolderPaths
@@ -483,6 +495,36 @@ export function Sidebar({
           </Button>
 
         </div>
+        {folderPath !== null ? (
+          <label className="sidebar-search">
+            <Search aria-hidden="true" />
+            <input
+              type="search"
+              value={searchQuery}
+              placeholder={t("sidebar.searchPlaceholder")}
+              aria-label={t("sidebar.searchPlaceholder")}
+              spellCheck={false}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Escape") {
+                  setSearchQuery("");
+                  event.currentTarget.blur();
+                }
+              }}
+            />
+            {searchQuery ? (
+              <button
+                type="button"
+                aria-label={t("sidebar.searchClear")}
+                title={t("sidebar.searchClear")}
+                onClick={() => setSearchQuery("")}
+              >
+                <X aria-hidden="true" />
+              </button>
+            ) : null}
+          </label>
+        ) : null}
+
         <div className="sidebar-panel__folder-wrap">
           {onClose ? (
             // In the sheet the vault name row has the room the action row
@@ -687,6 +729,17 @@ export function Sidebar({
         </button>
       ) : null}
 
+      {searchActive ? (
+        <ScrollArea className="sidebar-panel__search-scroll">
+          <SidebarSearchResults
+            results={vaultSearch.results}
+            loading={vaultSearch.loading}
+            onOpen={(filePath) => {
+              void onSelectFilePath(filePath);
+            }}
+          />
+        </ScrollArea>
+      ) : (
       <div className="sidebar-panel__sections" ref={sectionsRef}>
         {hasWorkingSet ? (
           <WorkingSetPanel
@@ -810,6 +863,7 @@ export function Sidebar({
       </ScrollArea>
         </section>
       </div>
+      )}
     </aside>
   );
 }
