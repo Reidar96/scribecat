@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.22.7] - 2026-09-24
+
+### Improvements
+- Introduce a shared UI typography scale for compact, small, medium and heading text.
+- Reduce oversized task-navigation text so filters, categories and the new-task action match the rest of the interface better.
+- Increase small Calendar/Diary text such as search fields, day labels and tags for better balance and readability.
+- Align typography in Start cards, Graph filters, sidebar search/tags and the working-set list.
+- Keep document/prose text and touch-focused mobile form inputs separate from the UI scale.
+
 ## [0.22.6] - 2026-09-24
 
 ### Fixes
