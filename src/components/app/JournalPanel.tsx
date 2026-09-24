@@ -17,7 +17,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { ImageLightbox } from "@/components/ImageLightbox";
 import { useLayoutMode } from "@/hooks/useLayoutMode";
-import { extractTags } from "@/lib/documentFrontmatter";
+import { extractTags, normalizeTag, setTags } from "@/lib/documentFrontmatter";
 import {
   ABSOLUTE_URL_PATTERN,
   getRelativeDisplayPath,
@@ -92,31 +92,14 @@ function normalizeLocale(value: string): string {
   return value || "en";
 }
 
-function JournalImageCard({
-  image,
-  filePath,
-  index,
-  count,
-  onMove,
-  onDragStart,
-  onDrop
-}: {
-  image: JournalImage;
-  filePath: string;
-  index: number;
-  count: number;
-  onMove: (from: number, to: number) => void;
-  onDragStart: (index: number) => void;
-  onDrop: (index: number) => void;
-}) {
-  const { t } = useTranslation();
+function useJournalImageUrl(image: JournalImage, filePath: string) {
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
-  const [previewOpen, setPreviewOpen] = useState(false);
   const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     if (!image.src) {
       setLoadError(true);
+      setObjectUrl(null);
       return;
     }
 
@@ -155,6 +138,67 @@ function JournalImageCard({
     };
   }, [filePath, image.src]);
 
+  return { objectUrl, loadError };
+}
+
+function JournalImageLightbox({
+  images,
+  filePath,
+  index,
+  onIndexChange,
+  onClose
+}: {
+  images: JournalImage[];
+  filePath: string;
+  index: number;
+  onIndexChange: (index: number) => void;
+  onClose: () => void;
+}) {
+  const image = images[index];
+  const { objectUrl } = useJournalImageUrl(image, filePath);
+
+  if (!objectUrl) {
+    return null;
+  }
+
+  const previous = () =>
+    onIndexChange((index - 1 + images.length) % images.length);
+  const next = () => onIndexChange((index + 1) % images.length);
+
+  return (
+    <ImageLightbox
+      src={objectUrl}
+      alt={image.alt}
+      onClose={onClose}
+      onPrevious={images.length > 1 ? previous : undefined}
+      onNext={images.length > 1 ? next : undefined}
+      positionLabel={images.length > 1 ? `${index + 1} / ${images.length}` : undefined}
+    />
+  );
+}
+
+function JournalImageCard({
+  image,
+  filePath,
+  index,
+  count,
+  onMove,
+  onDragStart,
+  onDrop,
+  onOpen
+}: {
+  image: JournalImage;
+  filePath: string;
+  index: number;
+  count: number;
+  onMove: (from: number, to: number) => void;
+  onDragStart: (index: number) => void;
+  onDrop: (index: number) => void;
+  onOpen: (index: number) => void;
+}) {
+  const { t } = useTranslation();
+  const { objectUrl, loadError } = useJournalImageUrl(image, filePath);
+
   return (
     <article
       className="journal-entry__image-card"
@@ -170,7 +214,7 @@ function JournalImageCard({
         <button
           type="button"
           className="journal-entry__image-open"
-          onClick={() => setPreviewOpen(true)}
+          onClick={() => onOpen(index)}
           aria-label={t("journal.openImage", { name: image.alt || index + 1 })}
         >
           <img src={objectUrl} alt={image.alt} />
@@ -207,13 +251,6 @@ function JournalImageCard({
         </Button>
       </div>
 
-      {previewOpen && objectUrl ? (
-        <ImageLightbox
-          src={objectUrl}
-          alt={image.alt}
-          onClose={() => setPreviewOpen(false)}
-        />
-      ) : null}
     </article>
   );
 }
@@ -222,21 +259,23 @@ function JournalEntryView({
   folderPath,
   filePath,
   markdown,
+  dateLabel,
   onMarkdownChange,
   onOpenMarkdown
 }: {
   folderPath: string;
   filePath: string;
   markdown: string;
+  dateLabel: string;
   onMarkdownChange: (markdown: string) => void;
   onOpenMarkdown: () => void;
 }) {
   const { t } = useTranslation();
   const parsed = useMemo(() => parseJournalMarkdown(markdown), [markdown]);
-  const tags = useMemo(() => extractTags(markdown), [markdown]);
   const [editingText, setEditingText] = useState(false);
   const [draftText, setDraftText] = useState(parsed.textMarkdown);
   const [draggedImage, setDraggedImage] = useState<number | null>(null);
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -319,13 +358,11 @@ function JournalEntryView({
 
   return (
     <section className="journal-entry">
-      <div className="journal-entry__toolbar">
-        <div className="journal-entry__tags">
-          {tags.map((tag) => (
-            <span key={tag}>#{tag}</span>
-          ))}
-        </div>
+      <div className="journal-entry__date-field" aria-label={t("journal.entryDate")}>
+        {dateLabel}
+      </div>
 
+      <div className="journal-entry__toolbar">
         <div className="journal-entry__toolbar-actions">
           <Button
             type="button"
@@ -358,10 +395,7 @@ function JournalEntryView({
       )}
 
       <div className="journal-entry__gallery-head">
-        <div>
-          <h3>{t("journal.images")}</h3>
-          <p>{t("journal.imagesHint")}</p>
-        </div>
+        <h3>{t("journal.images")}</h3>
         <Button
           type="button"
           variant="outline"
@@ -391,6 +425,7 @@ function JournalEntryView({
               if (draggedImage !== null) moveImage(draggedImage, targetIndex);
               setDraggedImage(null);
             }}
+            onOpen={setPreviewIndex}
           />
         ))}
 
@@ -403,6 +438,16 @@ function JournalEntryView({
           <span>{t("journal.addImages")}</span>
         </button>
       </div>
+
+      {previewIndex !== null && parsed.images[previewIndex] ? (
+        <JournalImageLightbox
+          images={parsed.images}
+          filePath={filePath}
+          index={previewIndex}
+          onIndexChange={setPreviewIndex}
+          onClose={() => setPreviewIndex(null)}
+        />
+      ) : null}
     </section>
   );
 }
@@ -430,6 +475,7 @@ export function JournalPanel({
   const [selectedDate, setSelectedDate] = useState<JournalDate | null>(null);
   const [activeFilePath, setActiveFilePath] = useState<string | null>(null);
   const [openingKey, setOpeningKey] = useState<string | null>(null);
+  const [tagDraft, setTagDraft] = useState("");
   const locale = normalizeLocale(i18n.resolvedLanguage ?? i18n.language);
 
   const journalFiles = useMemo(() => {
@@ -526,6 +572,37 @@ export function JournalPanel({
     activeFilePath && selectedFilePath === activeFilePath
       ? selectedFileContent
       : null;
+  const activeTags = useMemo(
+    () => (activeMarkdown ? extractTags(activeMarkdown) : []),
+    [activeMarkdown]
+  );
+  const selectedDateLabel = useMemo(() => {
+    if (!selectedDate) return "";
+
+    const formatted = new Intl.DateTimeFormat(locale, {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric"
+    }).format(
+      new Date(selectedDate.year, selectedDate.month - 1, selectedDate.day)
+    );
+
+    return formatted.charAt(0).toLocaleUpperCase(locale) + formatted.slice(1);
+  }, [locale, selectedDate]);
+
+  const commitTags = (tags: string[]) => {
+    if (!activeMarkdown) return;
+    onMarkdownChange(setTags(activeMarkdown, tags));
+  };
+
+  const addTag = () => {
+    const tag = normalizeTag(tagDraft);
+    if (!tag) return;
+
+    commitTags([...activeTags, tag]);
+    setTagDraft("");
+  };
 
   return (
     <section className="journal-view" aria-label={t("journal.label")}>
@@ -556,10 +633,7 @@ export function JournalPanel({
 
           <div className="journal-view__title">
             <CalendarDays aria-hidden="true" />
-            <div>
-              <h2>{t("journal.title")}</h2>
-              <p>{settings.folder}</p>
-            </div>
+            <h2>{t("journal.title")}</h2>
           </div>
         </div>
 
@@ -686,7 +760,58 @@ export function JournalPanel({
             })}
           </div>
 
-          <p className="journal-calendar__hint">{t("journal.calendarHint")}</p>
+          <div className="journal-calendar__tags">
+            <h3>{t("journal.tags")}</h3>
+            <div className="journal-calendar__tag-list">
+              {activeTags.map((tag) => (
+                <span key={tag} className="journal-calendar__tag">
+                  #{tag}
+                  <button
+                    type="button"
+                    aria-label={t("journal.removeTag", { tag })}
+                    title={t("journal.removeTag", { tag })}
+                    onClick={() =>
+                      commitTags(
+                        activeTags.filter(
+                          (candidate) =>
+                            candidate.toLocaleLowerCase() !== tag.toLocaleLowerCase()
+                        )
+                      )
+                    }
+                  >
+                    <X aria-hidden="true" />
+                  </button>
+                </span>
+              ))}
+            </div>
+            <div className="journal-calendar__tag-input-row">
+              <input
+                type="text"
+                value={tagDraft}
+                disabled={!activeMarkdown}
+                placeholder={t("journal.addTag")}
+                aria-label={t("journal.addTag")}
+                onChange={(event) => setTagDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === ",") {
+                    event.preventDefault();
+                    addTag();
+                  }
+                }}
+              />
+              <Button
+                type="button"
+                size="icon-sm"
+                variant="outline"
+                disabled={!activeMarkdown || !normalizeTag(tagDraft)}
+                onClick={addTag}
+                aria-label={t("journal.addTag")}
+                title={t("journal.addTag")}
+              >
+                <Plus />
+              </Button>
+            </div>
+          </div>
         </div>
 
         <div className="journal-view__entry-area">
@@ -695,6 +820,7 @@ export function JournalPanel({
               folderPath={folderPath}
               filePath={activeFilePath}
               markdown={activeMarkdown}
+              dateLabel={selectedDateLabel}
               onMarkdownChange={onMarkdownChange}
               onOpenMarkdown={onOpenMarkdown}
             />
