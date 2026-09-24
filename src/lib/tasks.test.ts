@@ -5,6 +5,7 @@ import {
   appendTaskToMarkdown,
   createTaskDocument,
   isTasksContainerRelativePath,
+  normalizeTaskSettings,
   parseTaskMarkdown,
   removeTaskFromMarkdown,
   renameTaskDocumentHeading,
@@ -119,6 +120,13 @@ describe("tasks markdown", () => {
     expect(isTasksContainerRelativePath("Gjøremål")).toBe(true);
     expect(isTasksContainerRelativePath("Gjøremål/Jobb.md")).toBe(true);
     expect(isTasksContainerRelativePath("Notater/Gjøremål.md")).toBe(false);
+  });
+
+  it("normalizes vault task settings with hidden storage as the default", () => {
+    expect(normalizeTaskSettings(undefined)).toEqual({ hideFromSidebar: true });
+    expect(normalizeTaskSettings({ hideFromSidebar: false })).toEqual({
+      hideFromSidebar: false
+    });
   });
 
   it("renames the category heading without changing the task body", () => {
