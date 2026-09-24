@@ -102,8 +102,6 @@ type SidebarProps = {
   onOpenFolder: () => void;
   recentFolderPaths: string[];
   onOpenRecentFolder: (folderPath: string) => void;
-  /** "Add server vault…"; absent where the shell cannot reach a server. */
-  onAddRemoteVault?: () => void;
   onCreateFile: () => void;
   onCreateFileRequest: (targetDirectory: string) => void;
   onCreateFolder: () => void;
@@ -170,7 +168,6 @@ export function Sidebar({
   onOpenFolder,
   recentFolderPaths,
   onOpenRecentFolder,
-  onAddRemoteVault,
   onCreateFile,
   onCreateFileRequest,
   onCreateFolder,
@@ -697,12 +694,6 @@ export function Sidebar({
                       <FolderOpen className="size-4" aria-hidden="true" />
                       {t("sidebar.browseForFolder")}
                     </MenuItem>
-                    {onAddRemoteVault ? (
-                      <MenuItem onClick={onAddRemoteVault} data-testid="add-remote-vault">
-                        <Server className="size-4" aria-hidden="true" />
-                        {t("sidebar.addServerVault")}
-                      </MenuItem>
-                    ) : null}
                   </MenuPopup>
                 </MenuPositioner>
               </MenuPortal>
