@@ -487,6 +487,7 @@ function JournalEntryView({
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
   const [imageDropActive, setImageDropActive] = useState(false);
+  const textEditorRef = useRef<HTMLTextAreaElement>(null);
   const galleryRef = useRef<HTMLDivElement>(null);
   const addCardRef = useMasonrySpan<HTMLButtonElement>();
   const draggingKeyRef = useRef<string | null>(null);
@@ -496,6 +497,14 @@ function JournalEntryView({
   useEffect(() => {
     setDraftText(parsed.textMarkdown);
   }, [filePath, parsed.textMarkdown]);
+
+  useLayoutEffect(() => {
+    const editor = textEditorRef.current;
+    if (!editor) return;
+
+    editor.style.height = "auto";
+    editor.style.height = `${Math.max(72, editor.scrollHeight)}px`;
+  }, [draftText, filePath]);
 
   useEffect(() => {
     if (draggingKeyRef.current) return;
@@ -743,8 +752,10 @@ function JournalEntryView({
       />
 
       <textarea
+        ref={textEditorRef}
         className="journal-entry__text-editor"
         value={draftText}
+        rows={1}
         onChange={(event) => commitText(event.target.value)}
         aria-label={t("journal.text")}
         spellCheck
