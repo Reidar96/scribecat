@@ -42,7 +42,7 @@
 .tasks-view__title h2,
 .tasks-main__heading h3 {
   margin: 0;
-  font-size: 1rem;
+  font-size: var(--font-ui-lg);
   font-weight: 650;
 }
 
@@ -78,7 +78,7 @@
   gap: 0.35rem;
   padding: 0.1rem 0.55rem 0.35rem;
   color: rgba(var(--muted-rgb),0.74);
-  font-size: 0.68rem;
+  font-size: var(--font-ui-xs);
   font-weight: 650;
   letter-spacing: 0.02em;
   text-transform: uppercase;
@@ -101,6 +101,7 @@
   color: inherit;
   padding: 0.55rem 0.65rem;
   font: inherit;
+  font-size: var(--font-ui-md);
   text-align: left;
   cursor: pointer;
 }
@@ -146,6 +147,7 @@
   border-radius: 0.65rem;
   padding: 0.55rem 0.65rem;
   font: inherit;
+  font-size: var(--font-ui-md);
 }
 
 .tasks-new-trigger__label {
@@ -161,7 +163,7 @@
   background: rgba(var(--overlay-rgb),0.07);
   padding: 0.08rem 0.35rem;
   color: rgba(var(--muted-rgb),0.82);
-  font-size: 0.68rem;
+  font-size: var(--font-ui-xs);
   text-align: center;
 }
 
@@ -215,7 +217,7 @@
   border-top: 1px solid rgba(var(--overlay-rgb),0.08);
   padding: 0.8rem 0.55rem 0.2rem;
   color: rgba(var(--muted-rgb),0.82);
-  font-size: 0.72rem;
+  font-size: var(--font-ui-xs);
   cursor: pointer;
 }
 
@@ -256,7 +258,7 @@
   padding: 0.55rem 0.7rem;
   color: inherit;
   font: inherit;
-  font-size: 0.82rem;
+  font-size: var(--font-ui-md);
   resize: vertical;
 }
 
@@ -298,7 +300,7 @@
 .tasks-main__heading p {
   margin: 0.12rem 0 0;
   color: rgba(var(--muted-rgb),0.75);
-  font-size: 0.72rem;
+  font-size: var(--font-ui-xs);
 }
 
 .tasks-main__heading > svg {
@@ -432,7 +434,7 @@
 }
 
 .tasks-item__text {
-  font-size: 0.9rem;
+  font-size: var(--font-ui-md);
   line-height: 1.35;
 }
 
@@ -440,7 +442,7 @@
   min-height: 1.5rem;
   margin-top: 0.25rem;
   color: rgba(var(--muted-rgb),0.9);
-  font-size: 0.76rem;
+  font-size: var(--font-ui-sm);
   line-height: 1.4;
   resize: vertical;
 }
@@ -467,7 +469,7 @@
   background: rgba(var(--accent-rgb),0.08);
   padding: 0.18rem 0.42rem;
   color: rgba(var(--muted-rgb),0.95);
-  font-size: 0.68rem;
+  font-size: var(--font-ui-xs);
 }
 
 .tasks-item__deadline,
@@ -493,7 +495,7 @@
   color: inherit;
   padding: 0;
   font: inherit;
-  font-size: 0.7rem;
+  font-size: var(--font-ui-xs);
 }
 
 .tasks-item__tags input {
@@ -737,11 +739,11 @@
   }
 
   .tasks-item__text {
-    font-size: 1rem;
+    font-size: 0.95rem;
   }
 
   .tasks-item__note {
-    font-size: 0.88rem;
+    font-size: 0.84rem;
   }
 
   .tasks-item__meta {
