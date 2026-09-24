@@ -533,7 +533,11 @@
     "dropImportHint": "Drop files or folders — they are imported as notes",
     "logout": "Sign out",
     "close": "Close file list",
-    "addServerVault": "Add server vault…"
+    "addServerVault": "Add server vault…",
+    "hide": "Hide file sidebar",
+    "show": "Show file sidebar",
+    "selectionMode": "Select multiple notes and folders",
+    "selectionDone": "Finish selection"
   },
   "fileTree": {
     "treeLabel": "File tree",
@@ -658,7 +662,9 @@
     "lockDocument": "Lock editing",
     "lockDocumentTitle": "Lock this document against accidental edits",
     "unlockDocument": "Unlock editing",
-    "unlockDocumentTitle": "Unlock this document to edit it"
+    "unlockDocumentTitle": "Unlock this document to edit it",
+    "compactWidth": "Use compact text width",
+    "fullWidth": "Use full text width"
   },
   "findReplace": {
     "panelLabel": "Find & replace",
@@ -1132,5 +1138,17 @@
     "unpin": "Unpin",
     "pinned": "Pinned",
     "resizeLabel": "Resize the \"In progress\" list"
+  },
+  "tags": {
+    "title": "Tags",
+    "current": "Current tags",
+    "add": "Add tag",
+    "remove": "Remove tag {{tag}}",
+    "none": "No tags yet.",
+    "placeholder": "Add a tag…",
+    "lockedPlaceholder": "Unlock the document to edit tags",
+    "overview": "Tags",
+    "clearFilter": "Show all notes",
+    "noneInVault": "No tags in this vault."
   }
 }

@@ -8,6 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { DetailsFileInfoSection } from "@/components/editor/DetailsFileInfoSection";
 import { DetailsLinksSection } from "@/components/editor/DetailsLinksSection";
 import { DetailsOutlineSection } from "@/components/editor/DetailsOutlineSection";
+import { DetailsTagsSection } from "@/components/editor/DetailsTagsSection";
 import { useDocumentOutline } from "@/components/editor/useDocumentOutline";
 import type { OutlineHeading } from "@/lib/editor/documentOutline";
 
@@ -15,8 +16,12 @@ type DetailsPanelProps = {
   editor: TipTapEditor | null;
   folderPath: string | null;
   filePath: string | null;
-  /** Live markdown of the open document, shared by the text-based sections. */
+  /** Visible editor body (frontmatter removed), shared by text-based sections. */
   markdown: string;
+  /** Full Markdown including YAML frontmatter used by the tag editor. */
+  documentMarkdown: string;
+  readOnly: boolean;
+  onDocumentMarkdownChange: (markdown: string) => void;
   vaultFilePaths: string[];
   /** Bumped when the editor hands keyboard focus to the outline (Tab). */
   outlineFocusRequestId: number;
@@ -39,6 +44,9 @@ export function DetailsPanel({
   folderPath,
   filePath,
   markdown,
+  documentMarkdown,
+  readOnly,
+  onDocumentMarkdownChange,
   vaultFilePaths,
   outlineFocusRequestId,
   onJumpToHeading,
@@ -88,6 +96,11 @@ export function DetailsPanel({
           focusRequestId={outlineFocusRequestId}
           onJump={onJumpToHeading}
           onRequestEditorFocus={onRequestEditorFocus}
+        />
+        <DetailsTagsSection
+          markdown={documentMarkdown}
+          readOnly={readOnly}
+          onMarkdownChange={onDocumentMarkdownChange}
         />
         <DetailsFileInfoSection filePath={filePath} markdown={markdown} refreshId={refreshId} />
         <DetailsLinksSection

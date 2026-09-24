@@ -20,6 +20,9 @@ import {
   watchMarkdownFolder
 } from "@/lib/fileSystem";
 
+import { readDocumentLocks, writeDocumentLocks } from "@/lib/vaultMeta";
+import { removeDocumentLockPath, renameDocumentLockPath } from "@/lib/documentLocks";
+
 import {
   isDocumentDirty,
   pruneDocumentsToCurrentFolder,
@@ -140,6 +143,19 @@ export const createFolderSlice: AppSlice<FolderSlice> = (set, get) => ({
       return false;
     }
   },
+  refreshDocumentLocks: async () => {
+    const { folderPath } = get();
+
+    if (!folderPath) {
+      return;
+    }
+
+    const locks = await readDocumentLocks(folderPath);
+
+    if (get().folderPath === folderPath) {
+      set({ documentLocks: locks });
+    }
+  },
   closeFolder: () => {
     // Pending drafts carry their own vault path, so they can still go out
     // after the store has forgotten the folder.
@@ -158,7 +174,10 @@ export const createFolderSlice: AppSlice<FolderSlice> = (set, get) => ({
     set({ isRefreshing: true, folderError: null });
 
     try {
-      const markdownFiles = await listMarkdownFiles(folderPath);
+      const [markdownFiles, documentLocks] = await Promise.all([
+        listMarkdownFiles(folderPath),
+        readDocumentLocks(folderPath)
+      ]);
       const nextFilePaths = markdownFiles.map((record) => record.filePath);
       const refreshedDocuments = await refreshCleanDocumentsFromDisk(fileDocuments, markdownFiles);
 
@@ -210,6 +229,7 @@ export const createFolderSlice: AppSlice<FolderSlice> = (set, get) => ({
         fileDocuments: nextDocuments,
         fileMtimeMs: buildFileMtimeMap(markdownFiles),
         manualOrder: nextManualOrder,
+        documentLocks,
         workingSet: nextWorkingSet,
         selectedFilePath: selectedDocument ? currentSelectedFilePath : null,
         selectedFileContent: selectedDocument ? selectedDocument.content : null,
@@ -391,6 +411,7 @@ export const createFolderSlice: AppSlice<FolderSlice> = (set, get) => ({
 
       let nextManualOrder = currentState.manualOrder;
       let nextVaultIcons = currentState.vaultIcons;
+      let nextDocumentLocks = currentState.documentLocks;
 
       if (currentState.folderPath) {
         const vaultRootPath = currentState.folderPath;
@@ -413,6 +434,14 @@ export const createFolderSlice: AppSlice<FolderSlice> = (set, get) => ({
           folderPath,
           newFolderPath
         );
+        nextDocumentLocks = renameDocumentLockPath(
+          currentState.documentLocks,
+          oldRelativePath,
+          newRelativePath
+        );
+        if (nextDocumentLocks !== currentState.documentLocks) {
+          void writeDocumentLocks(vaultRootPath, nextDocumentLocks).catch(() => undefined);
+        }
       }
 
       set({
@@ -422,6 +451,7 @@ export const createFolderSlice: AppSlice<FolderSlice> = (set, get) => ({
         selectedFilePath: nextSelectedFilePath,
         manualOrder: nextManualOrder,
         vaultIcons: nextVaultIcons,
+        documentLocks: nextDocumentLocks,
         workingSet: nextWorkingSet,
         fileError: null
       });
@@ -459,6 +489,7 @@ export const createFolderSlice: AppSlice<FolderSlice> = (set, get) => ({
 
       let nextManualOrder = currentState.manualOrder;
       let nextVaultIcons = currentState.vaultIcons;
+      let nextDocumentLocks = currentState.documentLocks;
 
       if (currentState.folderPath) {
         const vaultRootPath = currentState.folderPath;
@@ -471,6 +502,10 @@ export const createFolderSlice: AppSlice<FolderSlice> = (set, get) => ({
 
         persistManualOrderIfChanged(vaultRootPath, currentState.manualOrder, nextManualOrder);
         nextVaultIcons = dropVaultIcons(vaultRootPath, currentState.vaultIcons, folderPath);
+        nextDocumentLocks = removeDocumentLockPath(currentState.documentLocks, ownRelativePath);
+        if (nextDocumentLocks !== currentState.documentLocks) {
+          void writeDocumentLocks(vaultRootPath, nextDocumentLocks).catch(() => undefined);
+        }
       }
 
       const nextWorkingSet = pruneWorkingSet(
@@ -492,6 +527,7 @@ export const createFolderSlice: AppSlice<FolderSlice> = (set, get) => ({
         isDirty: isSelectedInside ? false : currentState.isDirty,
         manualOrder: nextManualOrder,
         vaultIcons: nextVaultIcons,
+        documentLocks: nextDocumentLocks,
         workingSet: nextWorkingSet,
         fileError: null
       });

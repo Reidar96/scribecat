@@ -59,6 +59,7 @@ import { sourceFromPath } from "@/lib/import/convert";
 import { IMPORT_FILE_EXTENSIONS, type ImportSource } from "@/lib/import/importer";
 import { cn } from "@/lib/utils";
 import { normalizePathKey } from "@/store/appStore/pathUtils";
+import { isDocumentLocked as getDocumentLocked } from "@/lib/documentLocks";
 import { useAppStore } from "@/store/useAppStore";
 import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
 import { useNavigationHistoryStore } from "@/store/useNavigationHistoryStore";
@@ -66,6 +67,16 @@ import { useSessionStore } from "@/store/useSessionStore";
 import { useShortcutsStore } from "@/store/useShortcutsStore";
 
 import "./App.css";
+
+const SIDEBAR_VISIBLE_STORAGE_KEY = "scribecat-sidebar-visible";
+
+function getStoredSidebarVisible(): boolean {
+  try {
+    return window.localStorage.getItem(SIDEBAR_VISIBLE_STORAGE_KEY) !== "false";
+  } catch {
+    return true;
+  }
+}
 
 function App() {
   const { t } = useTranslation();
@@ -95,6 +106,7 @@ function App() {
   const [fileTreeSelection, setFileTreeSelection] = useState<BatchEntry[]>([]);
   // Phone layout only: the file list is a sheet over the document.
   const [isSidebarSheetOpen, setIsSidebarSheetOpen] = useState(false);
+  const [sidebarVisible, setSidebarVisible] = useState(getStoredSidebarVisible);
   const appVersion = useAppVersion();
   const editorHandleRef = useRef<EditorHandle | null>(null);
   const entryRenameRequestIdRef = useRef(0);
@@ -105,6 +117,7 @@ function App() {
   const openFolder = useAppStore((state) => state.openFolder);
   const openFolderAtPath = useAppStore((state) => state.openFolderAtPath);
   const refreshFolderFiles = useAppStore((state) => state.refreshFolderFiles);
+  const refreshDocumentLocks = useAppStore((state) => state.refreshDocumentLocks);
   const filePaths = useAppStore((state) => state.filePaths);
   const folderPath = useAppStore((state) => state.folderPath);
   const isLoading = useAppStore((state) => state.isLoading);
@@ -148,6 +161,8 @@ function App() {
   const sortMode = useAppStore((state) => state.sortMode);
   const manualOrder = useAppStore((state) => state.manualOrder);
   const vaultIcons = useAppStore((state) => state.vaultIcons);
+  const documentLocks = useAppStore((state) => state.documentLocks);
+  const setDocumentLocked = useAppStore((state) => state.setDocumentLocked);
   const setVaultIconFor = useAppStore((state) => state.setVaultIconFor);
   const fileMtimeMs = useAppStore((state) => state.fileMtimeMs);
   const emptyFolderMtimeMs = useAppStore((state) => state.emptyFolderMtimeMs);
@@ -200,6 +215,21 @@ function App() {
         .replace(/\.md$/i, "")
     : "";
 
+  const documentLocked =
+    selectedRelativePath !== null && getDocumentLocked(documentLocks, selectedRelativePath);
+
+  const toggleSidebarVisible = () => {
+    setSidebarVisible((visible) => {
+      const next = !visible;
+      try {
+        window.localStorage.setItem(SIDEBAR_VISIBLE_STORAGE_KEY, String(next));
+      } catch {
+        // localStorage can be unavailable in locked-down webviews.
+      }
+      return next;
+    });
+  };
+
   /** A note's path the way the UI names it: folder notes by their folder. */
   const labelNotePath = (filePath: string) =>
     describeNotePath(folderPath ? getRelativeDisplayPath(folderPath, filePath) : filePath, (folder) =>
@@ -238,6 +268,27 @@ function App() {
   useViewportHeight();
 
   const layout = useLayoutMode();
+
+  // Editing locks live in the vault, not in localStorage. Refresh the tiny
+  // sidecar while a vault is open so another device's lock/unlock becomes
+  // visible without re-opening the note.
+  useEffect(() => {
+    if (!folderPath) {
+      return;
+    }
+
+    const refresh = () => {
+      void refreshDocumentLocks();
+    };
+    const interval = window.setInterval(refresh, 5_000);
+    window.addEventListener("focus", refresh);
+    refresh();
+
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [folderPath, refreshDocumentLocks]);
 
   // The chat sheet covers the whole phone screen and Zen mode hides the
   // sidebar on purpose; a swipe there must not pull the file list over them.
@@ -784,6 +835,7 @@ function App() {
       filePaths={filePaths}
       emptyFolderPaths={emptyFolderPaths}
       selectedFilePath={selectedFilePath}
+      selectedFileContent={selectedFileContent}
       dirtyFilePaths={dirtyFilePaths}
       workingSet={{
         entries: workingSet,
@@ -844,6 +896,7 @@ function App() {
       onRequestEditorFocus={() => setEditorFocusRequestId((id) => id + 1)}
       sidebarFocusRequestId={sidebarFocusRequestId}
       onFileTreeSelectionChange={setFileTreeSelection}
+      fileTreeSelection={fileTreeSelection}
       fileTreeSelectionCount={fileTreeSelection.length}
       onFilesDropped={handleFilesDropped}
       onLogoutRequest={() => void logoutSafely()}
@@ -872,7 +925,8 @@ function App() {
         <section
           className={cn(
             "workspace-grid",
-            isZenMode && "workspace-grid--zen"
+            isZenMode && "workspace-grid--zen",
+            layout !== "phone" && !sidebarVisible && "workspace-grid--sidebar-hidden"
           )}
           aria-label={t("app.workspaceLabel")}
           style={
@@ -881,9 +935,9 @@ function App() {
             } as React.CSSProperties
           }
         >
-          {layout === "phone" ? null : sidebar}
+          {layout === "phone" || !sidebarVisible ? null : sidebar}
 
-          <div
+          {layout !== "phone" && sidebarVisible ? <div
             className={cn(
               "workspace-resizer",
               isResizingSidebar && "workspace-resizer--active"
@@ -899,7 +953,7 @@ function App() {
             onKeyDown={handleResizeKeyDown}
           >
             <span className="workspace-resizer__grip" aria-hidden="true" />
-          </div>
+          </div> : null}
 
           <DocumentPanel
             selectedFilePath={selectedFilePath}
@@ -939,9 +993,24 @@ function App() {
             editorFocusRequestId={editorFocusRequestId}
             onMarkdownChange={updateSelectedFileContent}
             onCanonicalMarkdown={adoptCanonicalFileContent}
-            onRequestSidebarFocus={() => setSidebarFocusRequestId((id) => id + 1)}
+            onRequestSidebarFocus={() => {
+              if (!sidebarVisible) {
+                setSidebarVisible(true);
+              }
+              window.setTimeout(() => setSidebarFocusRequestId((id) => id + 1), 0);
+            }}
             onRequestFileOpen={(targetFilePath) => void selectFilePathSafely(targetFilePath)}
             onZenModeRequest={enterZenMode}
+            documentLocked={documentLocked}
+            onDocumentLockToggle={() => {
+              if (selectedFilePath) {
+                void setDocumentLocked(selectedFilePath, !documentLocked).catch((error: unknown) => {
+                  console.error("Failed to update document lock:", error);
+                });
+              }
+            }}
+            sidebarVisible={sidebarVisible}
+            onSidebarVisibilityToggle={toggleSidebarVisible}
             onVersionDiffRequest={handleVersionDiffRequest}
             onVersionRestoreRequest={(version) => void handleVersionRestore(version)}
             onOpenSidebar={() => setIsSidebarSheetOpen(true)}

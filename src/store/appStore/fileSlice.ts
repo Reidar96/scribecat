@@ -13,6 +13,8 @@ import {
 } from "@/lib/fileSystem";
 import { readVersionContent } from "@/lib/fileVersions";
 import { getFolderNotePath, isFolderNotePath } from "@/lib/folderNotes";
+import { removeDocumentLockPath, renameDocumentLockPath, setDocumentLock as updateDocumentLockMap } from "@/lib/documentLocks";
+import { readDocumentLocks, writeDocumentLocks } from "@/lib/vaultMeta";
 
 import { isDocumentDirty, isExternallyModified } from "./documents";
 import { discardDraft, flushDrafts, moveDraftFor, scheduleDraft } from "./drafts";
@@ -781,6 +783,7 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
 
       let nextManualOrder = currentState.manualOrder;
       let nextVaultIcons = currentState.vaultIcons;
+      let nextDocumentLocks = currentState.documentLocks;
 
       if (currentState.folderPath) {
         const parentRelativePath = getRelativeDisplayPath(currentState.folderPath, targetDirectory);
@@ -799,6 +802,14 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
           filePath,
           newFilePath
         );
+        nextDocumentLocks = renameDocumentLockPath(
+          currentState.documentLocks,
+          getRelativeDisplayPath(currentState.folderPath, filePath),
+          getRelativeDisplayPath(currentState.folderPath, newFilePath)
+        );
+        if (nextDocumentLocks !== currentState.documentLocks) {
+          void writeDocumentLocks(currentState.folderPath, nextDocumentLocks).catch(() => undefined);
+        }
       }
 
       const nextWorkingSet = remapWorkingSetPaths(currentState.workingSet, (path) =>
@@ -817,6 +828,7 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
             : currentState.selectedFilePath,
         manualOrder: nextManualOrder,
         vaultIcons: nextVaultIcons,
+        documentLocks: nextDocumentLocks,
         workingSet: nextWorkingSet,
         fileError: null
       });
@@ -867,6 +879,7 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
 
       let nextManualOrder = currentState.manualOrder;
       let nextVaultIcons = currentState.vaultIcons;
+      let nextDocumentLocks = currentState.documentLocks;
 
       if (folderPath) {
         const parentDirectory = await dirname(filePath);
@@ -875,6 +888,13 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
         nextManualOrder = removeManualOrderEntry(nextManualOrder, parentRelativePath, getBasename(filePath));
         persistManualOrderIfChanged(folderPath, currentState.manualOrder, nextManualOrder);
         nextVaultIcons = dropVaultIcons(folderPath, currentState.vaultIcons, filePath);
+        nextDocumentLocks = removeDocumentLockPath(
+          currentState.documentLocks,
+          getRelativeDisplayPath(folderPath, filePath)
+        );
+        if (nextDocumentLocks !== currentState.documentLocks) {
+          void writeDocumentLocks(folderPath, nextDocumentLocks).catch(() => undefined);
+        }
 
         // Deleting a folder's note clears the folder's text, it does not
         // delete the folder — but the note may have been the only file that
@@ -904,6 +924,7 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
         isDirty: isSelected ? false : currentState.isDirty,
         manualOrder: nextManualOrder,
         vaultIcons: nextVaultIcons,
+        documentLocks: nextDocumentLocks,
         workingSet: nextWorkingSet,
         fileError: null
       });
@@ -981,6 +1002,38 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
       });
 
       return false;
+    }
+  },
+  setDocumentLocked: async (filePath: string, locked: boolean) => {
+    const { folderPath, documentLocks } = get();
+
+    if (!folderPath) {
+      return;
+    }
+
+    const relativePath = getRelativeDisplayPath(folderPath, filePath);
+    const optimisticLocks = updateDocumentLockMap(documentLocks, relativePath, locked);
+
+    if (optimisticLocks !== documentLocks) {
+      set({ documentLocks: optimisticLocks });
+    }
+
+    try {
+      // Merge this one change onto the latest shared sidecar rather than
+      // blindly writing the device's cached map. This prevents a stale device
+      // from dropping locks created on another device between refreshes.
+      const latestLocks = await readDocumentLocks(folderPath);
+      const mergedLocks = updateDocumentLockMap(latestLocks, relativePath, locked);
+      await writeDocumentLocks(folderPath, mergedLocks);
+
+      if (get().folderPath === folderPath) {
+        set({ documentLocks: mergedLocks });
+      }
+    } catch (error) {
+      if (get().folderPath === folderPath && get().documentLocks === optimisticLocks) {
+        set({ documentLocks });
+      }
+      throw error;
     }
   }
 });

@@ -66,6 +66,7 @@ import {
 import { updateSearchHighlight } from "@/lib/searchHighlight";
 import { canDownloadMarkdown, downloadNoteAsMarkdown } from "@/lib/export/markdownDownload";
 import { printMarkdown } from "@/lib/print";
+import { replaceBody } from "@/lib/documentFrontmatter";
 import { couldBeShortcut } from "@/lib/shortcuts/binding";
 import { matchFixedEditorShortcut } from "@/lib/shortcuts/fixed";
 import { isRetiredDefault, matchShortcut } from "@/lib/shortcuts/resolve";
@@ -84,7 +85,10 @@ const PAPER_SURFACE_CLASS = "editor-view__surface--paper";
 
 type EditorProps = {
   markdown: string;
+  /** Full note including YAML frontmatter; the editor itself only sees markdown body. */
+  documentMarkdown: string;
   onMarkdownChange: (markdown: string) => void;
+  onDocumentMarkdownChange: (markdown: string) => void;
   onCanonicalMarkdown?: (filePath: string, markdown: string) => void;
   folderPath: string | null;
   filePath: string | null;
@@ -146,7 +150,9 @@ function collapseNodeSelection(editor: TipTapEditor): void {
 export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   {
     markdown,
+    documentMarkdown,
     onMarkdownChange,
+    onDocumentMarkdownChange,
     onCanonicalMarkdown,
     folderPath,
     filePath,
@@ -176,8 +182,8 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   // because the editor's onUpdate reaches for it too.
   const onCanonicalMarkdownRef = useRef(onCanonicalMarkdown);
   onCanonicalMarkdownRef.current = onCanonicalMarkdown;
-  const spellcheckEnabled = useEditorSettingsStore((state) => state.spellcheckEnabled);
   const paperSurface = useEditorSettingsStore((state) => state.paperSurface);
+  const documentWidth = useEditorSettingsStore((state) => state.documentWidth);
   const detailsPanelVisible = useEditorSettingsStore((state) => state.detailsPanelVisible);
   const layout = useLayoutMode();
   // Phone and tablet show the details panel as a sheet with its own switch.
@@ -616,7 +622,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
             return;
           }
 
-          downloadNoteAsMarkdown(filePath, getEditorMarkdown(currentEditor, markdown)).catch((error: unknown) => {
+          downloadNoteAsMarkdown(filePath, replaceBody(documentMarkdown, getEditorMarkdown(currentEditor, markdown))).catch((error: unknown) => {
             console.error("Markdown download failed:", error);
           });
         }
@@ -1078,7 +1084,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
           paperSurface && PAPER_SURFACE_CLASS
         ),
         "data-testid": "editor",
-        spellcheck: String(spellcheckEnabled)
+        spellcheck: "false"
       }
     }
   });
@@ -1087,14 +1093,8 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     editorRef.current = editor;
   }
 
-  // editorProps.attributes is only read once, at editor creation, so a
-  // later toggle of the setting has to be applied to the live DOM node
-  // directly instead of relying on tiptap to re-render it.
   useEffect(() => {
-    editor?.view.dom.setAttribute("spellcheck", String(spellcheckEnabled));
-  }, [editor, spellcheckEnabled]);
-
-  useEffect(() => {
+    editor?.view.dom.setAttribute("spellcheck", "false");
     editor?.setEditable(!documentLocked);
 
     if (documentLocked && editor) {
@@ -1203,7 +1203,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   );
 
   return (
-    <div className={cn("editor-view", documentLocked && "editor-view--locked")}>
+    <div className={cn("editor-view", documentLocked && "editor-view--locked", documentWidth === "compact" && "editor-view--compact")}>
       {unserializableNodes.length > 0 ? (
         <div className="editor-view__feedback editor-view__feedback--error" role="alert">
           <span className="editor-view__feedback-message">
@@ -1284,6 +1284,9 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
                   folderPath={folderPath}
                   filePath={filePath}
                   markdown={markdown}
+                  documentMarkdown={documentMarkdown}
+                  readOnly={documentLocked}
+                  onDocumentMarkdownChange={onDocumentMarkdownChange}
                   vaultFilePaths={vaultFilePaths}
                   outlineFocusRequestId={outlineFocusRequestId}
                   onJumpToHeading={jumpToHeading}
@@ -1319,6 +1322,9 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
                   folderPath={folderPath}
                   filePath={filePath}
                   markdown={markdown}
+                  documentMarkdown={documentMarkdown}
+                  readOnly={documentLocked}
+                  onDocumentMarkdownChange={onDocumentMarkdownChange}
                   vaultFilePaths={vaultFilePaths}
                   outlineFocusRequestId={outlineFocusRequestId}
                   onJumpToHeading={jumpToHeading}

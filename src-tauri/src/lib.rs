@@ -160,109 +160,6 @@ fn watch_folder(
     Ok(())
 }
 
-#[derive(serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-struct SpellcheckDictionaryStatus {
-    available: bool,
-    install_command: Option<String>,
-}
-
-// Debian/Ubuntu name a handful of common dictionaries with a locale suffix
-// (hunspell-de-de, hunspell-en-us, hunspell-pt-br) instead of the bare
-// language code that Fedora/Arch use (hunspell-de, hunspell-pt, …). This is
-// a best-effort guess, not a verified package list — good enough for a "here's
-// roughly what to run" hint, not a guarantee the exact package name exists.
-#[cfg(target_os = "linux")]
-fn apt_package_name(language: &str) -> String {
-    match language {
-        "de" => "hunspell-de-de".to_string(),
-        "en" => "hunspell-en-us".to_string(),
-        "pt" => "hunspell-pt-br".to_string(),
-        other => format!("hunspell-{other}"),
-    }
-}
-
-// Checking `<manager> --version` is read-only and side-effect free — enough
-// to tell which of the three most common desktop package managers is
-// present, without needing to shell out to distro-detection files that vary
-// in format across releases.
-#[cfg(target_os = "linux")]
-fn detect_linux_package_manager() -> Option<&'static str> {
-    ["apt", "dnf", "pacman"]
-        .into_iter()
-        .find(|&manager| {
-            std::process::Command::new(manager)
-                .arg("--version")
-                .output()
-                .map(|output| output.status.success())
-                .unwrap_or(false)
-        })
-}
-
-#[cfg(target_os = "linux")]
-fn build_install_command(language: &str) -> Option<String> {
-    match detect_linux_package_manager()? {
-        "apt" => Some(format!("sudo apt install {}", apt_package_name(language))),
-        "dnf" => Some(format!("sudo dnf install hunspell-{language}")),
-        "pacman" => Some(format!("sudo pacman -S hunspell-{language}")),
-        _ => None,
-    }
-}
-
-// Native spellcheck on Linux comes from WebKitGTK via libenchant, which picks
-// dictionaries up from whatever Hunspell/Aspell/Nuspell packages happen to be
-// installed on the system — there's no JS/webview API to ask "is a
-// dictionary for X installed?". `enchant-lsmod` ships alongside libenchant
-// itself (WebKitGTK's own spellcheck backend), so asking it directly reuses
-// the exact same source of truth instead of guessing at distro-specific
-// dictionary paths.
-#[tauri::command]
-fn check_spellcheck_dictionary(language: String) -> SpellcheckDictionaryStatus {
-    #[cfg(target_os = "linux")]
-    {
-        let language = language.to_lowercase();
-        let output = std::process::Command::new("enchant-lsmod")
-            .arg("-list-dicts")
-            .output();
-
-        let available = match output {
-            Ok(output) if output.status.success() => {
-                let prefix = format!("{language}_");
-                let stdout = String::from_utf8_lossy(&output.stdout);
-
-                stdout.lines().any(|line| {
-                    let token = line.trim().to_lowercase();
-                    token == language || token.starts_with(&prefix)
-                })
-            }
-            // enchant-lsmod missing or failing to run isn't proof that no
-            // dictionary exists — fail open rather than block a feature that
-            // might work fine.
-            _ => true,
-        };
-
-        let install_command = if available {
-            None
-        } else {
-            build_install_command(&language)
-        };
-
-        SpellcheckDictionaryStatus {
-            available,
-            install_command,
-        }
-    }
-
-    #[cfg(not(target_os = "linux"))]
-    {
-        let _ = language;
-        SpellcheckDictionaryStatus {
-            available: true,
-            install_command: None,
-        }
-    }
-}
-
 pub(crate) const KEYRING_SERVICE: &str = "scribecat";
 
 fn collect_startup_folder_path() -> Option<String> {
@@ -369,7 +266,6 @@ pub fn run() {
             open_folder_in_file_manager,
             get_portable_status,
             watch_folder,
-            check_spellcheck_dictionary,
             remote_vault::allow_remote_vault_origin,
             remote_vault::remote_vault_request,
             remote_vault::store_remote_vault_token,

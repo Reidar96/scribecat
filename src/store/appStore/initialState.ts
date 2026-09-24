@@ -23,6 +23,7 @@ export const initialAppData: AppData = {
   sortMode: DEFAULT_SORT_MODE,
   manualOrder: {},
   vaultIcons: {},
+  documentLocks: {},
   fileMtimeMs: {},
   emptyFolderMtimeMs: {}
 };

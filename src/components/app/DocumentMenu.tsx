@@ -48,7 +48,7 @@ type DocumentMenuProps = {
 
 /**
  * The document header's "more" menu on phone and tablet. It holds what the
- * toolbar's view group (find, details, zoom, zen, print, spellcheck) offers on
+ * toolbar's view group (find, details, zoom, zen, print) offers on
  * the desktop, where that group is hidden to keep the bottom toolbar to one
  * swipeable row, plus what the phone header has no room for (back/forward,
  * versions). Every entry is a shortcut's only visible trigger on a touch
@@ -77,8 +77,6 @@ export function DocumentMenu({
   const [copyRange, setCopyRange] = useState<SelectionRange | null>(null);
   const detailsSheetOpen = useEditorSettingsStore((state) => state.detailsSheetOpen);
   const setDetailsSheetOpen = useEditorSettingsStore((state) => state.setDetailsSheetOpen);
-  const spellcheckEnabled = useEditorSettingsStore((state) => state.spellcheckEnabled);
-  const setSpellcheckEnabled = useEditorSettingsStore((state) => state.setSpellcheckEnabled);
   const autoSaveEnabled = useEditorSettingsStore((state) => state.autoSaveEnabled);
   const setAutoSaveEnabled = useEditorSettingsStore((state) => state.setAutoSaveEnabled);
   const zoomLevel = useEditorSettingsStore((state) => state.zoomLevel);
@@ -209,13 +207,6 @@ export function DocumentMenu({
               data-testid="auto-save-toggle"
             >
               {t("toolbar.autoSaveToggle")}
-              <MenuCheckboxItemIndicator />
-            </MenuCheckboxItem>
-            <MenuCheckboxItem
-              checked={spellcheckEnabled}
-              onCheckedChange={(checked) => setSpellcheckEnabled(checked)}
-            >
-              {t("toolbar.spellcheckToggle")}
               <MenuCheckboxItemIndicator />
             </MenuCheckboxItem>
             <MenuItem onClick={() => editorHandleRef.current?.printDocument()}>

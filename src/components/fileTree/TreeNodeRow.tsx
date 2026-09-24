@@ -6,7 +6,9 @@ import {
   Ellipsis,
   FileText,
   Folder,
-  FolderOpen
+  FolderOpen,
+  Square,
+  SquareCheckBig
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -43,6 +45,7 @@ type TreeNodeRowProps = {
   folderDirtyCounts: Record<string, number>;
   selectedFilePath: string | null;
   selectedKeys: Set<string>;
+  selectionMode: boolean;
   dirtyFilePaths: string[];
   /**
    * Folder notes (lib/folderNotes.ts). With them on, a folder row is also the
@@ -139,6 +142,7 @@ export function TreeNodeRow({
   folderDirtyCounts,
   selectedFilePath,
   selectedKeys,
+  selectionMode,
   dirtyFilePaths,
   folderNotesEnabled,
   activeFolderNotePath,
@@ -362,6 +366,11 @@ export function TreeNodeRow({
             }}
             {...dragHandlers}
           >
+            {selectionMode ? (
+              <span className="file-tree__select-box" aria-hidden="true">
+                {isMultiSelected ? <SquareCheckBig /> : <Square />}
+              </span>
+            ) : null}
             {/* A span, not a nested button (invalid inside the row's button):
                 its click is stopped before it reaches the row, which with
                 folder notes on would open the note instead of toggling. */}
@@ -434,6 +443,7 @@ export function TreeNodeRow({
                 folderDirtyCounts={folderDirtyCounts}
                 selectedFilePath={selectedFilePath}
                 selectedKeys={selectedKeys}
+                selectionMode={selectionMode}
                 dirtyFilePaths={dirtyFilePaths}
                 folderNotesEnabled={folderNotesEnabled}
                 activeFolderNotePath={activeFolderNotePath}
@@ -530,6 +540,11 @@ export function TreeNodeRow({
           }}
           {...dragHandlers}
         >
+          {selectionMode ? (
+            <span className="file-tree__select-box" aria-hidden="true">
+              {isMultiSelected ? <SquareCheckBig /> : <Square />}
+            </span>
+          ) : null}
           <span className="file-tree__chevron" aria-hidden="true" />
           <RowIcon
             icon={getVaultIcon(vaultIcons, node.relativePath)}

@@ -347,3 +347,21 @@
 .file-tree-context-menu__item:disabled:hover {
   background: transparent;
 }
+
+
+.file-tree__select-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  color: rgba(var(--muted-rgb),0.95);
+}
+
+.file-tree__select-box svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.file-tree__row--selected .file-tree__select-box {
+  color: rgb(var(--accent-rgb));
+}

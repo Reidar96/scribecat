@@ -17,7 +17,6 @@ import { isRemoteVaultPath } from "@/platform/remote/vaultRoot";
 import type {
   Platform,
   PortableStatus,
-  SpellcheckDictionaryStatus,
   VoiceModelDownloadProgress,
   VoiceModelStatus
 } from "@/platform/types";
@@ -52,7 +51,6 @@ export const platform: Platform = {
     updater: true,
     voiceInput: true,
     portableMode: true,
-    spellcheckDictionary: true,
     session: false,
     remoteVaults: true
   },
@@ -144,10 +142,6 @@ export const platform: Platform = {
       return portableStatus;
     }
   },
-  spellcheck: {
-    checkDictionary: (language) => invoke<SpellcheckDictionaryStatus>("check_spellcheck_dictionary", { language })
-  },
-
   dialogs: {
     chooseFolder: async ({ title, defaultPath }) => {
       const selected = await openDialog({ directory: true, recursive: true, title, defaultPath });

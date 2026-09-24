@@ -337,3 +337,95 @@ button.details-sidebar__outline-item:hover {
 /* Below the desktop width the panel is a sheet (Editor.tsx renders it through
    MobileSheet, styled in responsive.css); nothing is docked here anymore, so
    there is nothing to hide. */
+
+
+/* Portable YAML-frontmatter tags. */
+.details-tags {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.details-tags__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.details-tags__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  max-width: 100%;
+  border: 1px solid rgba(var(--overlay-rgb),0.14);
+  border-radius: 999px;
+  background: rgba(var(--overlay-rgb),0.07);
+  padding: 0.2rem 0.35rem 0.2rem 0.5rem;
+  font-size: 0.78rem;
+}
+
+.details-tags__chip > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.details-tags__remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(var(--muted-rgb),0.95);
+  padding: 0;
+  cursor: pointer;
+}
+
+.details-tags__remove:hover {
+  background: rgba(var(--overlay-rgb),0.12);
+}
+
+.details-tags__remove svg {
+  width: 0.7rem;
+  height: 0.7rem;
+}
+
+.details-tags__add {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.35rem;
+}
+
+.details-tags__add input {
+  min-width: 0;
+  border: 1px solid rgba(var(--overlay-rgb),0.14);
+  border-radius: 0.55rem;
+  background: rgba(var(--surface-raised-rgb),0.72);
+  color: inherit;
+  padding: 0.35rem 0.5rem;
+  font: inherit;
+  font-size: 0.8rem;
+}
+
+.details-tags__add button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  border: 1px solid rgba(var(--overlay-rgb),0.14);
+  border-radius: 0.55rem;
+  background: rgba(var(--surface-raised-rgb),0.72);
+  color: inherit;
+}
+
+.details-tags__add button:disabled,
+.details-tags__add input:disabled {
+  opacity: 0.45;
+}
+
+.details-tags__add button svg {
+  width: 0.9rem;
+  height: 0.9rem;
+}

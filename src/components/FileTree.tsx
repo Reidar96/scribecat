@@ -87,6 +87,8 @@ type FileTreeProps = {
   onRequestEditorFocus?: () => void;
   focusRequestId?: number;
   onSelectionChange?: (entries: BatchEntry[]) => void;
+  /** Explicit checkbox-style selection mode for touch and mouse users. */
+  selectionMode?: boolean;
 };
 
 /**
@@ -146,7 +148,8 @@ export function FileTree({
   onExportMultipleRequest,
   onRequestEditorFocus,
   focusRequestId,
-  onSelectionChange
+  onSelectionChange,
+  selectionMode = false
 }: FileTreeProps) {
   const { t } = useTranslation();
   const capabilities = getVaultCapabilities();
@@ -274,6 +277,13 @@ export function FileTree({
 
   const clearSelection = useCallback(() => setSelectedKeys(new Set()), [setSelectedKeys]);
 
+  useEffect(() => {
+    if (!selectionMode) {
+      clearSelection();
+    }
+  }, [selectionMode, clearSelection]);
+
+
   const {
     dragSourceKeys,
     dropIndicator,
@@ -379,6 +389,18 @@ export function FileTree({
 
   const handleRowClick = (node: FileTreeNode, event: React.MouseEvent) => {
     const key = getNodeKey(node);
+
+    if (selectionMode) {
+      setSelectedKeys((currentKeys) => {
+        const nextKeys = new Set(currentKeys);
+        if (nextKeys.has(key)) nextKeys.delete(key);
+        else nextKeys.add(key);
+        return nextKeys;
+      });
+      setActiveKey(key);
+      setRangeFocusKey(null);
+      return;
+    }
 
     if (event.ctrlKey || event.metaKey) {
       setSelectedKeys((currentKeys) => {
@@ -668,6 +690,7 @@ export function FileTree({
             folderDirtyCounts={folderDirtyCounts}
             selectedFilePath={selectedFilePath}
             selectedKeys={selectedKeys}
+            selectionMode={selectionMode}
             dirtyFilePaths={dirtyFilePaths}
             folderNotesEnabled={folderNotesEnabled}
             activeFolderNotePath={activeFolderNotePath}

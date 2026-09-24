@@ -25,14 +25,13 @@ import {
 } from "@/lib/vaultMeta";
 import { setAutoAdmitWorkingSetProvider, setRestoreWorkingSetProvider } from "@/store/appStore/workingSetSlice";
 
-export const SPELLCHECK_STORAGE_KEY = "scribecat-spellcheck-enabled";
 export const REOPEN_LAST_NOTE_STORAGE_KEY = "scribecat-reopen-last-note";
 export const DETAILS_PANEL_STORAGE_KEY = "scribecat-details-panel-visible";
 export const OUTLINE_DEPTH_STORAGE_KEY = "scribecat-outline-max-depth";
 export const DETAILS_COLLAPSED_STORAGE_KEY = "scribecat-details-collapsed-sections";
 
 /** The details panel's sections, each of which can be folded away. */
-export type DetailsSectionId = "outline" | "fileInfo" | "outgoingLinks" | "backlinks";
+export type DetailsSectionId = "outline" | "tags" | "fileInfo" | "outgoingLinks" | "backlinks";
 export const ZOOM_STORAGE_KEY = "scribecat-zoom-level";
 export const ZEN_WIDTH_STORAGE_KEY = "scribecat-zen-width";
 export const ZEN_FONT_SIZE_STORAGE_KEY = "scribecat-zen-font-size-pt";
@@ -43,6 +42,9 @@ export const AUTO_SAVE_STORAGE_KEY = "scribecat-auto-save-enabled";
 export const RESTORE_WORKING_SET_STORAGE_KEY = "scribecat-restore-working-set";
 export const AUTO_ADMIT_WORKING_SET_STORAGE_KEY = "scribecat-auto-admit-working-set";
 export const PASTE_MARKDOWN_STORAGE_KEY = "scribecat-paste-markdown";
+export const DOCUMENT_WIDTH_STORAGE_KEY = "scribecat-document-width";
+
+export type DocumentWidthMode = "compact" | "full";
 
 // Zoom level is an offset in percent relative to normal size (0 = 100%).
 export const ZOOM_MIN = -30;
@@ -123,17 +125,17 @@ function persistZenFontSizePt(sizePt: number | null): void {
   }
 }
 
-function getStoredSpellcheckEnabled(): boolean {
+function getStoredDocumentWidth(): DocumentWidthMode {
   try {
-    return window.localStorage.getItem(SPELLCHECK_STORAGE_KEY) === "true";
+    return window.localStorage.getItem(DOCUMENT_WIDTH_STORAGE_KEY) === "compact" ? "compact" : "full";
   } catch {
-    return false;
+    return "full";
   }
 }
 
-function persistSpellcheckEnabled(enabled: boolean): void {
+function persistDocumentWidth(mode: DocumentWidthMode): void {
   try {
-    window.localStorage.setItem(SPELLCHECK_STORAGE_KEY, String(enabled));
+    window.localStorage.setItem(DOCUMENT_WIDTH_STORAGE_KEY, mode);
   } catch {
     // localStorage may be unavailable in some environments.
   }
@@ -334,8 +336,6 @@ function persistFontSizePt(sizePt: number): void {
 }
 
 type EditorSettingsState = {
-  spellcheckEnabled: boolean;
-  setSpellcheckEnabled: (enabled: boolean) => void;
   /**
    * Save the open note on its own once typing has paused (see
    * hooks/useAutoSave.ts). App-wide, not per vault: it is a way of working,
@@ -343,6 +343,9 @@ type EditorSettingsState = {
    */
   autoSaveEnabled: boolean;
   setAutoSaveEnabled: (enabled: boolean) => void;
+  /** Normal editor column width; compact is centered at about 900px. */
+  documentWidth: DocumentWidthMode;
+  setDocumentWidth: (mode: DocumentWidthMode) => void;
   /**
    * Put the "In progress" list back when a vault is opened
    * (store/appStore/workingSetSlice.ts). Only the list: notes with unsaved
@@ -464,15 +467,15 @@ applyDocumentFont(initialFontId);
 applyDocumentFontScale(initialFontSizePt);
 
 export const useEditorSettingsStore = create<EditorSettingsState>((set, get) => ({
-  spellcheckEnabled: getStoredSpellcheckEnabled(),
-  setSpellcheckEnabled: (enabled: boolean) => {
-    persistSpellcheckEnabled(enabled);
-    set({ spellcheckEnabled: enabled });
-  },
   autoSaveEnabled: getStoredAutoSaveEnabled(),
   setAutoSaveEnabled: (enabled: boolean) => {
     persistAutoSaveEnabled(enabled);
     set({ autoSaveEnabled: enabled });
+  },
+  documentWidth: getStoredDocumentWidth(),
+  setDocumentWidth: (mode: DocumentWidthMode) => {
+    persistDocumentWidth(mode);
+    set({ documentWidth: mode });
   },
   restoreWorkingSet: getStoredRestoreWorkingSet(),
   setRestoreWorkingSet: (enabled: boolean) => {

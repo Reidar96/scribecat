@@ -1,6 +1,7 @@
 import type { StateCreator } from "zustand";
 
 import type { ManualOrderMap, SortMode } from "@/lib/vaultMeta";
+import type { DocumentLockMap } from "@/lib/documentLocks";
 import type { VaultIconMap } from "@/lib/vaultIcons";
 
 import type { WorkingSetEntry } from "./workingSet";
@@ -61,6 +62,8 @@ export type AppData = {
   manualOrder: ManualOrderMap;
   /** Per-entry emoji icons, keyed by vault-relative path (lib/vaultIcons.ts). */
   vaultIcons: VaultIconMap;
+  /** Per-note editing locks stored in .scribecat/document-locks.json. */
+  documentLocks: DocumentLockMap;
   fileMtimeMs: Record<string, number>;
   emptyFolderMtimeMs: Record<string, number>;
 };
@@ -72,6 +75,8 @@ export type FolderSlice = {
   /** Closes the open vault without opening another; the app shows the empty state. */
   closeFolder: () => void;
   refreshFolderFiles: () => Promise<boolean>;
+  /** Reload only the cross-device document lock sidecar. */
+  refreshDocumentLocks: () => Promise<void>;
   createNewFolder: (targetDirectory?: string, insertAfterBasename?: string | null) => Promise<string | null>;
   /** Creates a folder at exactly this path (see createFileAtPath for the why). */
   createFolderAtPath: (folderPath: string) => Promise<boolean>;
@@ -136,6 +141,8 @@ export type FileSlice = {
   renameFilePath: (filePath: string, newBaseName: string) => Promise<boolean>;
   deleteFilePath: (filePath: string) => Promise<boolean>;
   replaceFileContent: (filePath: string, newContent: string) => Promise<boolean>;
+  /** Persist or clear the editing lock for a note across devices. */
+  setDocumentLocked: (filePath: string, locked: boolean) => Promise<void>;
 };
 
 /** How the tree is ordered, and moving entries within it. */

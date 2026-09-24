@@ -76,6 +76,10 @@ body {
   overflow: hidden;
 }
 
+.workspace-grid--sidebar-hidden {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .workspace-resizer {
   position: relative;
   display: flex;

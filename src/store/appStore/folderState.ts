@@ -1,5 +1,5 @@
 import { readMarkdownFile, type MarkdownFileRecord } from "@/lib/fileSystem";
-import { readManualOrder, readSortMode, readVaultIcons } from "@/lib/vaultMeta";
+import { readDocumentLocks, readManualOrder, readSortMode, readVaultIcons } from "@/lib/vaultMeta";
 
 import { loadDraftDocuments } from "./drafts";
 import { reconcileManualOrder } from "./manualOrder";
@@ -27,10 +27,11 @@ export async function createLoadedFolderState(
   folderPath: string,
   markdownFiles: MarkdownFileRecord[]
 ) {
-  const [sortMode, storedManualOrder, vaultIcons, fileDocuments] = await Promise.all([
+  const [sortMode, storedManualOrder, vaultIcons, documentLocks, fileDocuments] = await Promise.all([
     readSortMode(folderPath),
     readManualOrder(folderPath),
     readVaultIcons(folderPath),
+    readDocumentLocks(folderPath),
     loadDraftDocuments(folderPath, markdownFiles, readMarkdownFile)
   ]);
 
@@ -57,6 +58,7 @@ export async function createLoadedFolderState(
     sortMode,
     manualOrder,
     vaultIcons,
+    documentLocks,
     fileMtimeMs: buildFileMtimeMap(markdownFiles),
     emptyFolderMtimeMs: {} as Record<string, number>
   };

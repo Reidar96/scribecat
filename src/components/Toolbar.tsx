@@ -27,6 +27,8 @@ import {
   List,
   ListOrdered,
   Megaphone,
+  Minimize2,
+  Maximize2,
   OctagonAlert,
   PanelRight,
   Pilcrow,
@@ -42,7 +44,6 @@ import {
   X
 } from "lucide-react";
 import { useEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
-import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
 import type { Editor } from "@tiptap/react";
@@ -66,7 +67,6 @@ import { ZoomControl } from "@/components/ZoomControl";
 import { CALLOUT_VARIANTS, type CalloutVariant } from "@/lib/editor/extensions/callout";
 import { isHighlighterModeActive } from "@/lib/editor/extensions/highlight";
 import { isInTableCell } from "@/lib/editor/extensions/table";
-import { checkSpellcheckDictionary } from "@/lib/spellcheckDictionary";
 import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
 
 type ToolbarProps = {
@@ -132,10 +132,23 @@ function DetailsPanelToggle() {
   );
 }
 
-type MissingDictionary = {
-  language: string;
-  installCommand: string | null;
-};
+function DocumentWidthToggle() {
+  const { t } = useTranslation();
+  const documentWidth = useEditorSettingsStore((state) => state.documentWidth);
+  const setDocumentWidth = useEditorSettingsStore((state) => state.setDocumentWidth);
+  const compact = documentWidth === "compact";
+
+  return (
+    <Toggle
+      pressed={compact}
+      aria-label={t(compact ? "toolbar.fullWidth" : "toolbar.compactWidth")}
+      title={t(compact ? "toolbar.fullWidth" : "toolbar.compactWidth")}
+      onClick={() => setDocumentWidth(compact ? "full" : "compact")}
+    >
+      {compact ? <Maximize2 /> : <Minimize2 />}
+    </Toggle>
+  );
+}
 
 function EditorOptionsMenu({
   onPrintRequest,
@@ -144,104 +157,54 @@ function EditorOptionsMenu({
   onPrintRequest: () => void;
   onDownloadMarkdownRequest: (() => void) | null;
 }) {
-  const { t, i18n } = useTranslation();
-  const spellcheckEnabled = useEditorSettingsStore((state) => state.spellcheckEnabled);
-  const setSpellcheckEnabled = useEditorSettingsStore((state) => state.setSpellcheckEnabled);
+  const { t } = useTranslation();
   const autoSaveEnabled = useEditorSettingsStore((state) => state.autoSaveEnabled);
   const setAutoSaveEnabled = useEditorSettingsStore((state) => state.setAutoSaveEnabled);
-  const [missingDictionary, setMissingDictionary] = useState<MissingDictionary | null>(null);
-
-  const handleSpellcheckChange = (checked: boolean) => {
-    setSpellcheckEnabled(checked);
-
-    if (!checked) {
-      return;
-    }
-
-    const language = i18n.resolvedLanguage ?? i18n.language;
-
-    void checkSpellcheckDictionary(language).then((status) => {
-      if (!status.available) {
-        setMissingDictionary({ language, installCommand: status.installCommand });
-      }
-    });
-  };
 
   return (
-    <>
-      <Menu>
-        <MenuTrigger
-          render={
-            <Button
-              type="button"
-              size="icon-sm"
-              variant="outline"
-              aria-label={t("toolbar.optionsMenu")}
-              title={t("toolbar.optionsMenu")}
-              onMouseDown={(event) => {
-                event.preventDefault();
-              }}
-            />
-          }
-        >
-          <EllipsisVertical />
-        </MenuTrigger>
-        <MenuPortal>
-          <MenuPositioner align="end">
-            <MenuPopup>
-              <MenuCheckboxItem
-                checked={autoSaveEnabled}
-                onCheckedChange={(checked) => setAutoSaveEnabled(checked)}
-                title={t("toolbar.autoSaveToggleTitle")}
-                data-testid="auto-save-toggle"
-              >
-                {t("toolbar.autoSaveToggle")}
-                <MenuCheckboxItemIndicator />
-              </MenuCheckboxItem>
-              <MenuCheckboxItem
-                checked={spellcheckEnabled}
-                onCheckedChange={handleSpellcheckChange}
-              >
-                {t("toolbar.spellcheckToggle")}
-                <MenuCheckboxItemIndicator />
-              </MenuCheckboxItem>
-              <MenuItem onClick={onPrintRequest}>
-                <Printer className="size-4" />
-                {t("toolbar.printButton")}
+    <Menu>
+      <MenuTrigger
+        render={
+          <Button
+            type="button"
+            size="icon-sm"
+            variant="outline"
+            aria-label={t("toolbar.optionsMenu")}
+            title={t("toolbar.optionsMenu")}
+            onMouseDown={(event) => {
+              event.preventDefault();
+            }}
+          />
+        }
+      >
+        <EllipsisVertical />
+      </MenuTrigger>
+      <MenuPortal>
+        <MenuPositioner align="end">
+          <MenuPopup>
+            <MenuCheckboxItem
+              checked={autoSaveEnabled}
+              onCheckedChange={(checked) => setAutoSaveEnabled(checked)}
+              title={t("toolbar.autoSaveToggleTitle")}
+              data-testid="auto-save-toggle"
+            >
+              {t("toolbar.autoSaveToggle")}
+              <MenuCheckboxItemIndicator />
+            </MenuCheckboxItem>
+            <MenuItem onClick={onPrintRequest}>
+              <Printer className="size-4" />
+              {t("toolbar.printButton")}
+            </MenuItem>
+            {onDownloadMarkdownRequest ? (
+              <MenuItem onClick={onDownloadMarkdownRequest}>
+                <FileDown className="size-4" />
+                {t("toolbar.downloadMarkdown")}
               </MenuItem>
-              {onDownloadMarkdownRequest ? (
-                <MenuItem onClick={onDownloadMarkdownRequest}>
-                  <FileDown className="size-4" />
-                  {t("toolbar.downloadMarkdown")}
-                </MenuItem>
-              ) : null}
-            </MenuPopup>
-          </MenuPositioner>
-        </MenuPortal>
-      </Menu>
-
-      {missingDictionary
-        ? createPortal(
-            <div className="spellcheck-toast" role="status">
-              <div className="spellcheck-toast__body">
-                <span>{t("toolbar.spellcheckDictionaryMissing", { code: missingDictionary.language })}</span>
-                {missingDictionary.installCommand ? (
-                  <code className="spellcheck-toast__command">{missingDictionary.installCommand}</code>
-                ) : null}
-              </div>
-              <button
-                type="button"
-                className="spellcheck-toast__dismiss"
-                aria-label={t("updateNotification.dismiss")}
-                onClick={() => setMissingDictionary(null)}
-              >
-                <X aria-hidden="true" />
-              </button>
-            </div>,
-            document.body
-          )
-        : null}
-    </>
+            ) : null}
+          </MenuPopup>
+        </MenuPositioner>
+      </MenuPortal>
+    </Menu>
   );
 }
 
@@ -717,6 +680,7 @@ export function Toolbar({
           <Search />
         </Button>
         <DetailsPanelToggle />
+        <DocumentWidthToggle />
         <ZoomControl />
         <Button
           type="button"
