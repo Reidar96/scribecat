@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.22.6] - 2026-09-24
+
+### Fixes
+- Apply the same hidden-storage rules to the Start/folder collection view as the sidebar, so hidden Diary and Tasks folders no longer reappear on Start.
+- Hide the active server-vault address row from the sidebar, so the server IP/host is no longer shown there.
+
 ## [0.22.5] - 2026-09-24
 
 ### Improvements
