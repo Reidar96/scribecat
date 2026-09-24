@@ -79,6 +79,10 @@
   display: none;
 }
 
+.collection-panel__loading {
+  min-height: 8rem;
+}
+
 .collection-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
