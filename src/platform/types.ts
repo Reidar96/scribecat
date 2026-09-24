@@ -247,11 +247,6 @@ export type PortableStatus = {
   configDir: string;
 };
 
-export type SpellcheckDictionaryStatus = {
-  available: boolean;
-  installCommand: string | null;
-};
-
 export type SessionStatus = {
   authenticated: boolean;
 };
@@ -351,8 +346,6 @@ export type PlatformFeatures = {
   updater: boolean;
   voiceInput: boolean;
   portableMode: boolean;
-  /** Linux dictionary check for the spellchecker. */
-  spellcheckDictionary: boolean;
   /** Password login/logout. */
   session: boolean;
   /** Vaults on a ScribeCat server next to local folders (see RemoteVaultsApi). */
@@ -386,7 +379,6 @@ export type Platform = {
   http: { fetch(url: string, init?: RequestInit): Promise<Response> };
   window: WindowApi;
   portable: { getStatus(): Promise<PortableStatus> };
-  spellcheck: { checkDictionary(language: string): Promise<SpellcheckDictionaryStatus> };
 
   dialogs: DialogsApi | null;
   imagePicker: ImagePickerApi;
