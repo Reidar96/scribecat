@@ -256,6 +256,16 @@
   vector-effect: non-scaling-stroke;
 }
 
+.graph-view__node-focus-ring {
+  stroke-width: 2.5;
+  stroke-dasharray: 2 2;
+  filter: drop-shadow(0 0 4px rgba(var(--accent-rgb),0.24));
+}
+
+.graph-view__node--focused .graph-view__node-label {
+  font-weight: 680;
+}
+
 .graph-view__node-label {
   fill: rgba(var(--text-rgb),0.9);
   stroke: rgba(var(--surface-rgb),0.96);

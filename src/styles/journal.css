@@ -467,10 +467,15 @@
 }
 
 .journal-entry__add-card:hover,
-.journal-entry__add-card:focus-visible {
-  border-color: rgba(var(--accent-rgb),0.26);
-  background: rgba(var(--accent-rgb),0.06);
-  color: rgba(var(--text-rgb),0.92);
+.journal-entry__add-card:focus-visible,
+.journal-entry__add-card--drop-active {
+  border-color: rgba(var(--accent-rgb),0.38);
+  background: rgba(var(--accent-rgb),0.09);
+  color: rgba(var(--text-rgb),0.96);
+}
+
+.journal-entry__add-card--drop-active {
+  border-style: dashed;
 }
 
 .journal-entry__add-card > svg {
@@ -641,8 +646,65 @@
     margin-bottom: 0.7rem;
   }
 
+  .journal-entry__mobile-nav > button {
+    min-height: 3rem;
+    font-size: 1rem;
+  }
+
+  .journal-entry__mobile-nav > button:first-child,
+  .journal-entry__mobile-nav > button:last-child {
+    width: 3rem;
+  }
+
   .journal-entry__mobile-nav > button:nth-child(2) {
     justify-content: center;
+  }
+
+  .journal-calendar__controls select,
+  .journal-calendar__controls button {
+    min-height: 2.85rem;
+    font-size: 1rem;
+  }
+
+  .journal-calendar__controls > button {
+    min-width: 2.85rem;
+  }
+
+  .journal-calendar__search-row input,
+  .journal-calendar__search-row button {
+    min-height: 2.85rem;
+    font-size: 1rem;
+  }
+
+  .journal-calendar__search-row button {
+    min-width: 2.85rem;
+  }
+
+  .journal-calendar__tag-filter {
+    min-height: 2.7rem;
+    padding: 0.45rem 0.65rem;
+    font-size: 0.9rem;
+  }
+
+  .journal-entry__tag {
+    min-height: 2.7rem;
+    padding: 0.4rem 0.48rem 0.4rem 0.65rem;
+    font-size: 0.9rem;
+  }
+
+  .journal-entry__tag button {
+    width: 1.65rem;
+    height: 1.65rem;
+  }
+
+  .journal-entry__tag-input-row input,
+  .journal-entry__tag-input-row button {
+    min-height: 2.85rem;
+    font-size: 1rem;
+  }
+
+  .journal-entry__tag-input-row button {
+    min-width: 2.85rem;
   }
 
   .journal-entry__date-field {

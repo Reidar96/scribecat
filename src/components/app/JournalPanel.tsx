@@ -1,9 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type DragEvent as ReactDragEvent
+} from "react";
 import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
-  ImagePlus,
   PanelLeft,
   PanelLeftOpen,
   Plus,
@@ -423,6 +427,7 @@ function JournalEntryView({
   const [draggedImage, setDraggedImage] = useState<number | null>(null);
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
+  const [imageDropActive, setImageDropActive] = useState(false);
 
   useEffect(() => {
     setDraftText(parsed.textMarkdown);
@@ -442,29 +447,15 @@ function JournalEntryView({
     onMarkdownChange(composeJournalMarkdown(markdown, parsed.textMarkdown, next));
   };
 
-  const handleAddImages = async () => {
+  const persistImages = async (picked: PickedImageFile[]) => {
+    if (picked.length === 0) return;
+
     setImageError(null);
 
     if (!getVaultCapabilities().images) {
       setImageError(vaultCapabilityHint());
       return;
     }
-
-    let picked: PickedImageFile[];
-
-    try {
-      picked = await platform.imagePicker.pickImages({
-        defaultPath: folderPath,
-        title: t("journal.addImages"),
-        filterName: t("editor.imageDialogFilter"),
-        extensions: IMAGE_EXTENSIONS
-      });
-    } catch (error) {
-      setImageError(error instanceof Error ? error.message : String(error));
-      return;
-    }
-
-    if (picked.length === 0) return;
 
     const nextImages = [...parsed.images];
 
@@ -495,6 +486,42 @@ function JournalEntryView({
     onMarkdownChange(
       composeJournalMarkdown(markdown, parsed.textMarkdown, nextImages)
     );
+  };
+
+  const handleAddImages = async () => {
+    try {
+      const picked = await platform.imagePicker.pickImages({
+        defaultPath: folderPath,
+        title: t("journal.addImages"),
+        filterName: t("editor.imageDialogFilter"),
+        extensions: IMAGE_EXTENSIONS
+      });
+      await persistImages(picked);
+    } catch (error) {
+      setImageError(error instanceof Error ? error.message : String(error));
+    }
+  };
+
+  const handleDroppedImages = async (
+    event: ReactDragEvent<HTMLButtonElement>
+  ) => {
+    event.preventDefault();
+    setImageDropActive(false);
+
+    const picked: PickedImageFile[] = Array.from(event.dataTransfer.files)
+      .filter((file) => {
+        const extension = file.name.split(".").pop()?.toLocaleLowerCase() ?? "";
+        return file.type.startsWith("image/") || IMAGE_EXTENSIONS.includes(extension);
+      })
+      .map((file) => ({
+        fileName: file.name,
+        read: async () => ({
+          mimeType: file.type || guessImageMimeType(file.name),
+          data: new Uint8Array(await file.arrayBuffer())
+        })
+      }));
+
+    await persistImages(picked);
   };
 
   return (
@@ -552,15 +579,6 @@ function JournalEntryView({
 
       <div className="journal-entry__gallery-head">
         <h3>{t("journal.images")}</h3>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => void handleAddImages()}
-        >
-          <ImagePlus />
-          {t("journal.addImages")}
-        </Button>
       </div>
 
       {imageError ? (
@@ -589,11 +607,26 @@ function JournalEntryView({
 
         <button
           type="button"
-          className="journal-entry__add-card"
+          className={cn(
+            "journal-entry__add-card",
+            imageDropActive && "journal-entry__add-card--drop-active"
+          )}
           onClick={() => void handleAddImages()}
+          onDragEnter={(event) => {
+            event.preventDefault();
+            setImageDropActive(true);
+          }}
+          onDragOver={(event) => {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = "copy";
+            setImageDropActive(true);
+          }}
+          onDragLeave={() => setImageDropActive(false)}
+          onDrop={(event) => void handleDroppedImages(event)}
+          aria-label={t("journal.addImages")}
         >
           <Plus aria-hidden="true" />
-          <span>{t("journal.addImages")}</span>
+          <span>{t("journal.addImagesDrop")}</span>
         </button>
       </div>
 

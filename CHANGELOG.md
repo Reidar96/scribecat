@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.20.3] - 2026-09-24
+
+### Improvements
+- Rework Graph View into a softer organic bubble: disconnected groups use a spiral layout instead of rectangular cells, and focusing a node pushes unrelated nodes away while keeping its direct neighbours close. Click once to focus a node and click it again to open it.
+- Remove the duplicate diary "Add images" toolbar button. The gallery add tile remains the single image entry point and already supports selecting multiple images at once.
+- Allow multiple image files to be dropped directly onto the diary gallery add tile and store them through the same ordinary Markdown image flow.
+- Increase phone touch targets for the diary's calendar controls, day-navigation bar, tag chips, tag input and search controls.
+
 ## [0.20.2] - 2026-09-24
 
 ### Improvements
