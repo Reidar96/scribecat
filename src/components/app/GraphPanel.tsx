@@ -4,7 +4,7 @@ import {
   PanelLeft,
   PanelLeftOpen,
   RefreshCw,
-  X
+  Home
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -118,16 +118,6 @@ export function GraphPanel({
     return { nodes, edges };
   }, [graph, visibility]);
 
-  const counts = useMemo(
-    () => ({
-      notes: graph.nodes.filter((node) => node.kind === "note").length,
-      tags: graph.nodes.filter((node) => node.kind === "tag").length,
-      folders: graph.nodes.filter((node) => node.kind === "folder").length,
-      links: graph.edges.filter((edge) => edge.kind === "link").length
-    }),
-    [graph]
-  );
-
   const setKindVisible = (kind: GraphNodeKind) => {
     setVisibility((current) => ({ ...current, [kind]: !current[kind] }));
   };
@@ -196,9 +186,6 @@ export function GraphPanel({
                 <Network aria-hidden="true" />
                 <h2>{t("graph.title")}</h2>
               </div>
-              <p>
-                {t("graph.summary", counts)}
-              </p>
             </div>
           </div>
 
@@ -217,11 +204,11 @@ export function GraphPanel({
               type="button"
               size="icon-sm"
               variant="ghost"
-              aria-label={t("graph.close")}
-              title={t("graph.close")}
+              aria-label={t("common.goHome")}
+              title={t("common.goHome")}
               onClick={onClose}
             >
-              <X />
+              <Home />
             </Button>
           </div>
         </header>

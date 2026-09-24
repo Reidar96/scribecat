@@ -15,7 +15,8 @@
       "enter": "Enter",
       "rightClick": "Høyreklikk"
     },
-    "close": "Lukk"
+    "close": "Lukk",
+    "goHome": "Gå til Start"
   },
   "app": {
     "shellLabel": "ScribeCat-programvindu",
@@ -71,6 +72,10 @@
     "titleFolder": "Slette mappen permanent?",
     "descriptionFolderWithName": "Mappen {{folderLabel}} og alle filene i den slettes permanent fra disken.",
     "descriptionFolderGeneric": "Mappen og alle filene i den slettes permanent fra disken.",
+    "eyebrowCategory": "Slett kategori",
+    "titleCategory": "Slette kategorien permanent?",
+    "descriptionCategoryWithName": "Kategorien «{{categoryLabel}}» og alle gjøremålene i den slettes permanent.",
+    "descriptionCategoryGeneric": "Kategorien og alle gjøremålene i den slettes permanent.",
     "eyebrowMultiple": "Slett elementer",
     "titleMultiple": "Slette flere elementer permanent?",
     "descriptionMultiple_one": "{{count}} element (og alt innhold hvis det er en mappe) slettes permanent fra disken.",

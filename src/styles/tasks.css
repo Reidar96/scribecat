@@ -10,6 +10,9 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+  height: 3.5rem;
+  min-height: 3.5rem;
+  box-sizing: border-box;
   border-bottom: 1px solid rgba(var(--overlay-rgb),0.1);
   padding: 0.8rem 1rem;
 }
@@ -132,6 +135,11 @@
   width: 0.85rem;
   height: 0.85rem;
   flex: none;
+}
+
+.tasks-new-trigger {
+  justify-self: start;
+  margin: 0.12rem 0 0.28rem;
 }
 
 .tasks-category small {
@@ -623,11 +631,49 @@
   }
 
   .tasks-view__layout {
-    height: calc(100% - 3rem);
+    height: calc(100% - 3.5rem);
   }
 
   .tasks-main {
     padding: 0.75rem 0.7rem 2rem;
+  }
+
+  .tasks-categories {
+    display: grid;
+    align-items: stretch;
+    gap: 0.45rem;
+    overflow: hidden;
+  }
+
+  .tasks-filter-section {
+    display: flex;
+    min-width: 0;
+    gap: 0.35rem;
+    overflow-x: auto;
+    padding-bottom: 0.1rem;
+    scrollbar-width: none;
+  }
+
+  .tasks-filter-section::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tasks-filter-section + .tasks-filter-section {
+    border-left: 0;
+    border-top: 1px solid rgba(var(--overlay-rgb),0.08);
+    padding: 0.45rem 0 0;
+  }
+
+  .tasks-filter-section__heading {
+    display: flex;
+    min-width: max-content;
+    align-items: center;
+    padding: 0 0.25rem;
+  }
+
+  .tasks-new-trigger {
+    flex: none;
+    margin: 0;
   }
 
   .tasks-create {

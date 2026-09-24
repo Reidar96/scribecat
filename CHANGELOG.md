@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.22.2] - 2026-09-24
+
+### Improvements
+- Add a right-click delete action to diary overview/search entries, using the same confirmation dialog as normal note deletion.
+- Move the server-connection action out of the sidebar vault switcher and into Settings > Server.
+- Replace close X buttons in Calendar, Graph, Tasks and collection views with a Start/Home action, and align the primary view headers to the same height.
+- Hide the new-task composer behind a + button placed next to the task time filters.
+- Replace the native task-category delete prompt with ScribeCat's standard delete dialog.
+- Keep task categories visible on their own row below the time filters on phones.
+- Tighten the spacing between diary tags and the note field.
+
 ## [0.22.1] - 2026-09-24
 
 ### Improvements

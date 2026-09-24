@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 
 type DeleteFileDialogProps = {
   open: boolean;
-  kind?: "file" | "folder";
+  kind?: "file" | "folder" | "category";
   fileLabel: string | null;
   count?: number;
   isDeleting: boolean;
@@ -86,12 +86,20 @@ export function DeleteFileDialog({
         <p className="unsaved-dialog__eyebrow">
           {count !== undefined && count > 1
             ? t("deleteDialog.eyebrowMultiple")
-            : t(kind === "folder" ? "deleteDialog.eyebrowFolder" : "deleteDialog.eyebrow")}
+            : kind === "folder"
+              ? t("deleteDialog.eyebrowFolder")
+              : kind === "category"
+                ? t("deleteDialog.eyebrowCategory")
+                : t("deleteDialog.eyebrow")}
         </p>
         <h3 id="delete-dialog-title">
           {count !== undefined && count > 1
             ? t("deleteDialog.titleMultiple")
-            : t(kind === "folder" ? "deleteDialog.titleFolder" : "deleteDialog.title")}
+            : kind === "folder"
+              ? t("deleteDialog.titleFolder")
+              : kind === "category"
+                ? t("deleteDialog.titleCategory")
+                : t("deleteDialog.title")}
         </h3>
         <p id="delete-dialog-description" className="unsaved-dialog__description">
           {count !== undefined && count > 1
@@ -100,9 +108,13 @@ export function DeleteFileDialog({
               ? fileLabel
                 ? t("deleteDialog.descriptionFolderWithName", { folderLabel: fileLabel })
                 : t("deleteDialog.descriptionFolderGeneric")
-              : fileLabel
-                ? t("deleteDialog.descriptionWithName", { fileLabel })
-                : t("deleteDialog.descriptionGeneric")}
+              : kind === "category"
+                ? fileLabel
+                  ? t("deleteDialog.descriptionCategoryWithName", { categoryLabel: fileLabel })
+                  : t("deleteDialog.descriptionCategoryGeneric")
+                : fileLabel
+                  ? t("deleteDialog.descriptionWithName", { fileLabel })
+                  : t("deleteDialog.descriptionGeneric")}
         </p>
 
         <div className="unsaved-dialog__actions">

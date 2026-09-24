@@ -15,11 +15,15 @@ import {
   PanelLeftOpen,
   Plus,
   Search,
+  Home,
+  Trash2,
   X
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { ImageLightbox } from "@/components/ImageLightbox";
+import { ContextMenuSurface } from "@/components/fileTree/ContextMenuSurface";
+import { useContextMenuState } from "@/components/fileTree/useContextMenuState";
 import { Button } from "@/components/ui/button";
 import { useLayoutMode } from "@/hooks/useLayoutMode";
 import { extractTags, normalizeTag, setTags } from "@/lib/documentFrontmatter";
@@ -60,6 +64,7 @@ type JournalPanelProps = {
   onSidebarVisibilityToggle: () => void;
   onOpenSidebar: () => void;
   onClose: () => void;
+  onDeleteEntry: (filePath: string) => void;
   onOpenDate: (
     date: JournalDate,
     relativePath: string,
@@ -866,15 +871,23 @@ function JournalResults({
   entries,
   locale,
   onOpen,
+  onDelete,
   onClear
 }: {
   title: string;
   entries: JournalIndexEntry[];
   locale: string;
   onOpen: (date: JournalDate) => void;
+  onDelete: (filePath: string) => void;
   onClear?: () => void;
 }) {
   const { t } = useTranslation();
+  const { contextMenu, setContextMenu } = useContextMenuState<{
+    x: number;
+    y: number;
+    filePath: string;
+    label: string;
+  }>();
 
   return (
     <section className="journal-results">
@@ -907,6 +920,15 @@ function JournalResults({
               type="button"
               className="journal-results__item"
               onClick={() => onOpen(entry.date)}
+              onContextMenu={(event) => {
+                event.preventDefault();
+                setContextMenu({
+                  x: event.clientX,
+                  y: event.clientY,
+                  filePath: entry.filePath,
+                  label: formatJournalDate(entry.date, locale)
+                });
+              }}
             >
               <span className="journal-results__content">
                 <strong>{formatJournalDate(entry.date, locale)}</strong>
@@ -924,6 +946,28 @@ function JournalResults({
           ))}
         </div>
       )}
+
+      {contextMenu ? (
+        <ContextMenuSurface
+          x={contextMenu.x}
+          y={contextMenu.y}
+          title={contextMenu.label}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <button
+            type="button"
+            role="menuitem"
+            className="file-tree-context-menu__item file-tree-context-menu__item--danger"
+            onClick={() => {
+              onDelete(contextMenu.filePath);
+              setContextMenu(null);
+            }}
+          >
+            <Trash2 aria-hidden="true" />
+            {t("common.delete")}
+          </button>
+        </ContextMenuSurface>
+      ) : null}
     </section>
   );
 }
@@ -937,6 +981,7 @@ export function JournalPanel({
   onSidebarVisibilityToggle,
   onOpenSidebar,
   onClose,
+  onDeleteEntry,
   onOpenDate,
   onMarkdownChange
 }: JournalPanelProps) {
@@ -1303,11 +1348,11 @@ export function JournalPanel({
           type="button"
           size="icon-sm"
           variant="ghost"
-          aria-label={t("journal.close")}
-          title={t("journal.close")}
+          aria-label={t("common.goHome")}
+          title={t("common.goHome")}
           onClick={onClose}
         >
-          <X />
+          <Home />
         </Button>
       </header>
 
@@ -1517,6 +1562,7 @@ export function JournalPanel({
               entries={resultEntries}
               locale={locale}
               onOpen={(date) => void openJournalDate(date)}
+              onDelete={onDeleteEntry}
               onClear={clearResults}
             />
           ) : showOverviewList ? (
@@ -1525,6 +1571,7 @@ export function JournalPanel({
               entries={indexedEntries}
               locale={locale}
               onOpen={(date) => void openJournalDate(date)}
+              onDelete={onDeleteEntry}
               onClear={
                 isPhone
                   ? () => setShowMobileCalendar(true)

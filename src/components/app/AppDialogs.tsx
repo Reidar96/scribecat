@@ -32,6 +32,7 @@ type AppDialogsProps = {
   settingsInitialTab: SettingsTab;
   onCloseSettings: () => void;
   onLogoutRequest: () => void;
+  onAddRemoteVault?: () => void;
 
   // Move to folder (tree context menu)
   moveRequest: MoveRequest | null;
@@ -88,6 +89,7 @@ export function AppDialogs({
   settingsInitialTab,
   onCloseSettings,
   onLogoutRequest,
+  onAddRemoteVault,
   moveRequest,
   fileRelativePaths,
   emptyFolderRelativePaths,
@@ -142,6 +144,7 @@ export function AppDialogs({
         initialTab={settingsInitialTab}
         onClose={onCloseSettings}
         onLogoutRequest={onLogoutRequest}
+        onAddRemoteVault={onAddRemoteVault}
       />
 
       <MoveToDialog

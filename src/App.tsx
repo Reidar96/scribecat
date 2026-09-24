@@ -936,7 +936,6 @@ function App() {
       onOpenFolder={openFolderSafely}
       recentFolderPaths={getRecentFolderPaths()}
       onOpenRecentFolder={(targetFolderPath) => void openRecentFolderSafely(targetFolderPath)}
-      onAddRemoteVault={platform.features.remoteVaults ? remoteVaultDialog.openAddDialog : undefined}
       onCreateFile={() => void handleCreateFile()}
       onCreateFileRequest={(targetDirectory) => void handleCreateFile(targetDirectory)}
       onCreateFolder={() => void handleCreateFolder()}
@@ -1108,6 +1107,7 @@ function App() {
               onClose={() =>
                 void openCollectionSafely({ kind: "folder", relativePath: "" })
               }
+              onDeleteEntry={requestDeleteFile}
               onOpenDate={async (_date, relativePath, initialMarkdown) =>
                 openJournalDateSafely(relativePath, initialMarkdown)
               }
@@ -1286,6 +1286,14 @@ function App() {
           setIsSettingsOpen(false);
           void logoutSafely();
         }}
+        onAddRemoteVault={
+          platform.features.remoteVaults
+            ? () => {
+                setIsSettingsOpen(false);
+                remoteVaultDialog.openAddDialog();
+              }
+            : undefined
+        }
         moveRequest={moveRequest}
         fileRelativePaths={fileRelativePaths}
         emptyFolderRelativePaths={emptyFolderRelativePaths}
