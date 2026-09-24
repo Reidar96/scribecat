@@ -835,6 +835,7 @@ function App() {
       filePaths={filePaths}
       emptyFolderPaths={emptyFolderPaths}
       selectedFilePath={selectedFilePath}
+      selectedFileContent={selectedFileContent}
       dirtyFilePaths={dirtyFilePaths}
       workingSet={{
         entries: workingSet,
@@ -895,6 +896,7 @@ function App() {
       onRequestEditorFocus={() => setEditorFocusRequestId((id) => id + 1)}
       sidebarFocusRequestId={sidebarFocusRequestId}
       onFileTreeSelectionChange={setFileTreeSelection}
+      fileTreeSelection={fileTreeSelection}
       fileTreeSelectionCount={fileTreeSelection.length}
       onFilesDropped={handleFilesDropped}
       onLogoutRequest={() => void logoutSafely()}
