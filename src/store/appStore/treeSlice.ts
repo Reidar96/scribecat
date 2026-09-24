@@ -11,8 +11,9 @@ import {
   writeMarkdownFile
 } from "@/lib/fileSystem";
 import { isDescendantRelativePath } from "@/lib/fileTree";
+import { renameDocumentLockPath } from "@/lib/documentLocks";
 import { setVaultIcon } from "@/lib/vaultIcons";
-import { writeManualOrder, writeSortMode, type SortMode } from "@/lib/vaultMeta";
+import { writeDocumentLocks, writeManualOrder, writeSortMode, type SortMode } from "@/lib/vaultMeta";
 
 import { isDocumentDirty } from "./documents";
 import { moveDraftFor, moveFolderDraftsFor, scheduleDraft } from "./drafts";
@@ -288,6 +289,18 @@ export const createTreeSlice: AppSlice<TreeSlice> = (set, get) => ({
         ? state.vaultIcons
         : moveVaultIcons(folderPath, state.vaultIcons, sourcePath, newPath);
 
+      const nextDocumentLocks = isSameParent
+        ? state.documentLocks
+        : renameDocumentLockPath(
+            state.documentLocks,
+            getRelativeDisplayPath(folderPath, sourcePath),
+            getRelativeDisplayPath(folderPath, newPath)
+          );
+
+      if (nextDocumentLocks !== state.documentLocks) {
+        void writeDocumentLocks(folderPath, nextDocumentLocks).catch(() => undefined);
+      }
+
       // The editor renders selectedFileContent, not fileDocuments. Without
       // mirroring the moved document into these fields, an open file keeps
       // showing its pre-move markdown — with the image paths that the move
@@ -298,6 +311,7 @@ export const createTreeSlice: AppSlice<TreeSlice> = (set, get) => ({
 
       set({
         vaultIcons: nextVaultIcons,
+        documentLocks: nextDocumentLocks,
         filePaths: nextFilePaths,
         emptyFolderPaths: nextEmptyFolderPaths,
         fileDocuments: nextDocuments,
