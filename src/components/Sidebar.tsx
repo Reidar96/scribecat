@@ -16,6 +16,8 @@ import {
   GripVertical,
   Import,
   LogOut,
+  ListChecks,
+  Move,
   Plus,
   Server,
   Settings2,
@@ -40,6 +42,8 @@ import {
 import { FileTree, type BatchEntry, type PendingEntryRename } from "@/components/FileTree";
 import type { VaultIconMap } from "@/lib/vaultIcons";
 import { WorkingSetPanel } from "@/components/sidebar/WorkingSetPanel";
+import { TagsOverview } from "@/components/sidebar/TagsOverview";
+import { useTagIndex } from "@/hooks/useTagIndex";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useStoredCollapsed, useWorkingSetHeight } from "@/hooks/useWorkingSetHeight";
 import {
@@ -74,6 +78,7 @@ type SidebarProps = {
   filePaths: string[];
   emptyFolderPaths: string[];
   selectedFilePath: string | null;
+  selectedFileContent: string | null;
   dirtyFilePaths: string[];
   workingSet: WorkingSetHandlers;
   folderError: string | null;
@@ -117,6 +122,7 @@ type SidebarProps = {
   onRequestEditorFocus: () => void;
   sidebarFocusRequestId: number;
   onFileTreeSelectionChange: (entries: BatchEntry[]) => void;
+  fileTreeSelection: BatchEntry[];
   fileTreeSelectionCount: number;
   // Files dragged in from outside the app, with the vault-relative folder they
   // were dropped on ("" is the vault root).
@@ -132,6 +138,7 @@ export function Sidebar({
   filePaths,
   emptyFolderPaths,
   selectedFilePath,
+  selectedFileContent,
   dirtyFilePaths,
   workingSet,
   folderError,
@@ -174,12 +181,27 @@ export function Sidebar({
   onRequestEditorFocus,
   sidebarFocusRequestId,
   onFileTreeSelectionChange,
+  fileTreeSelection,
   fileTreeSelectionCount,
   onFilesDropped,
   onLogoutRequest,
   onClose
 }: SidebarProps) {
   const { t } = useTranslation();
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [activeTag, setActiveTag] = useState<string | null>(null);
+  const tagSummaries = useTagIndex(filePaths, selectedFilePath, selectedFileContent);
+  const activeTagSummary = activeTag
+    ? tagSummaries.find((summary) => summary.tag.toLocaleLowerCase() === activeTag.toLocaleLowerCase())
+    : null;
+  const visibleFilePaths = activeTag ? activeTagSummary?.filePaths ?? [] : filePaths;
+
+  useEffect(() => {
+    if (activeTag && tagSummaries.length > 0 && !activeTagSummary) {
+      setActiveTag(null);
+    }
+  }, [activeTag, activeTagSummary, tagSummaries]);
+
 
   // A server vault whose entry is gone (forgotten in the settings) has
   // nothing to open; the recent list is cleaned on forget, this is the net.
@@ -439,6 +461,19 @@ export function Sidebar({
 
           <Button
             type="button"
+            variant={selectionMode ? "default" : "outline"}
+            size="sm"
+            onClick={() => setSelectionMode((current) => !current)}
+            disabled={folderPath === null}
+            aria-pressed={selectionMode}
+            aria-label={t(selectionMode ? "sidebar.selectionDone" : "sidebar.selectionMode")}
+            title={t(selectionMode ? "sidebar.selectionDone" : "sidebar.selectionMode")}
+          >
+            <ListChecks />
+          </Button>
+
+          <Button
+            type="button"
             variant="outline"
             size="sm"
             onClick={onSettingsRequest}
@@ -554,6 +589,32 @@ export function Sidebar({
         </div>
       </div>
 
+      {selectionMode ? (
+        <div className="sidebar-panel__selection-actions">
+          <span>{t("fileTree.selectionCount", { count: fileTreeSelectionCount })}</span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={fileTreeSelectionCount === 0 || !capabilities.move}
+            onClick={() => onMoveRequest(fileTreeSelection)}
+          >
+            <Move />
+            {t("fileTree.moveTo")}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={fileTreeSelectionCount === 0 || !capabilities.delete}
+            onClick={() => onDeleteMultipleRequest(fileTreeSelection)}
+          >
+            <Trash2 />
+            {t("common.delete")}
+          </Button>
+        </div>
+      ) : null}
+
       {rootContextMenu && folderPath !== null && (offersExport || offersVaultArchive)
         ? createPortal(
             <div
@@ -629,7 +690,7 @@ export function Sidebar({
           <FolderOpen />
           <p>{t("sidebar.openFolderPrompt")}</p>
         </button>
-      ) : filePaths.length === 0 && emptyFolderPaths.length === 0 ? (
+      ) : visibleFilePaths.length === 0 && emptyFolderPaths.length === 0 && activeTag === null ? (
         <button
           type="button"
           className="sidebar-panel__empty sidebar-panel__empty--interactive"
@@ -699,8 +760,8 @@ export function Sidebar({
           <FileTree
             key={folderPath}
             folderPath={folderPath}
-            filePaths={filePaths}
-            emptyFolderPaths={emptyFolderPaths}
+            filePaths={visibleFilePaths}
+            emptyFolderPaths={activeTag ? [] : emptyFolderPaths}
             selectedFilePath={selectedFilePath}
             dirtyFilePaths={dirtyFilePaths}
             workingSetFilePaths={workingSet.entries.map((entry) => entry.filePath)}
@@ -736,7 +797,11 @@ export function Sidebar({
             onRequestEditorFocus={onRequestEditorFocus}
             focusRequestId={sidebarFocusRequestId + treeRevealRequestId}
             onSelectionChange={onFileTreeSelectionChange}
+            selectionMode={selectionMode}
           />
+        ) : null}
+        {folderPath !== null ? (
+          <TagsOverview summaries={tagSummaries} activeTag={activeTag} onSelect={setActiveTag} />
         ) : null}
       </ScrollArea>
         </section>
