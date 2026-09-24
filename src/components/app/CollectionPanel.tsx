@@ -136,6 +136,7 @@ export function CollectionPanel({
   const folderNotesEnabled = useEditorSettingsStore((state) => state.folderNotesEnabled);
   const journalSettings = useEditorSettingsStore((state) => state.journalSettings);
   const taskSettings = useEditorSettingsStore((state) => state.taskSettings);
+  const vaultSettingsReady = useEditorSettingsStore((state) => state.vaultSettingsReady);
   const [tagsByPath, setTagsByPath] = useState<Record<string, string[]>>({});
 
   const visibleCollectionFilePaths = useMemo(
@@ -435,7 +436,7 @@ export function CollectionPanel({
             </div>
           </div>
 
-          {!isRootCollection || selectedFilePath !== null ? (
+          {!isRootCollection ? (
             <Button
               type="button"
               size="icon-sm"
@@ -485,7 +486,9 @@ export function CollectionPanel({
             </div>
           ) : null}
 
-          {cards.length === 0 ? (
+          {!vaultSettingsReady ? (
+            <div className="collection-panel__loading" aria-busy="true" />
+          ) : cards.length === 0 ? (
             <div className="collection-panel__empty">
               <FileText aria-hidden="true" />
               <p>{t(request.kind === "tag" ? "collection.emptyTag" : isRootCollection ? "collection.emptyRoot" : "collection.emptyFolder")}</p>
