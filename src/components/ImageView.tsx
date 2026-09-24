@@ -1,5 +1,6 @@
 import { useContext, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Trash2 } from "lucide-react";
 
 import { dirname, join } from "@/platform/paths";
 import { readFile } from "@/platform/vaultFs";
@@ -8,6 +9,8 @@ import { NodeViewWrapper, type ReactNodeViewProps } from "@tiptap/react";
 
 import { EditorFileContext } from "@/lib/editorFileContext";
 import { ImageLightbox } from "@/components/ImageLightbox";
+import { ContextMenuSurface } from "@/components/fileTree/ContextMenuSurface";
+import { useContextMenuState } from "@/components/fileTree/useContextMenuState";
 import { ABSOLUTE_URL_PATTERN, guessImageMimeType } from "@/lib/fileSystem";
 
 const MIN_IMAGE_WIDTH = 48;
@@ -25,6 +28,7 @@ export function ImageView({ node, editor, getPos, updateAttributes, selected }: 
   const [loadError, setLoadError] = useState(false);
   const [dragWidth, setDragWidth] = useState<number | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const { contextMenu, setContextMenu } = useContextMenuState<{ x: number; y: number }>();
   const imgRef = useRef<HTMLImageElement>(null);
   const dragWidthRef = useRef<number | null>(null);
 
@@ -140,13 +144,32 @@ export function ImageView({ node, editor, getPos, updateAttributes, selected }: 
     editor.view.dispatch(state.tr.setSelection(NodeSelection.create(state.doc, pos)));
   };
 
+  const deleteImage = () => {
+    if (!editor.isEditable) return;
+
+    const pos = getPos();
+    if (pos === undefined) return;
+
+    setPreviewOpen(false);
+    setContextMenu(null);
+    editor.view.dispatch(editor.state.tr.delete(pos, pos + node.nodeSize));
+  };
+
   return (
-    <NodeViewWrapper
-      as="div"
-      className="editor-image-wrapper"
-      data-drag-handle
-      onPointerDown={selectOnTouch}
-    >
+    <>
+      <NodeViewWrapper
+        as="div"
+        className="editor-image-wrapper"
+        data-drag-handle
+        onPointerDown={selectOnTouch}
+        onContextMenu={(event) => {
+          if (!editor.isEditable) return;
+
+          event.preventDefault();
+          event.stopPropagation();
+          setContextMenu({ x: event.clientX, y: event.clientY });
+        }}
+      >
       {displaySrc ? (
         <>
           <img
@@ -184,6 +207,26 @@ export function ImageView({ node, editor, getPos, updateAttributes, selected }: 
           {loadError ? t("imageView.notFound", { src }) : t("imageView.loading")}
         </span>
       )}
-    </NodeViewWrapper>
+      </NodeViewWrapper>
+
+      {contextMenu ? (
+        <ContextMenuSurface
+          x={contextMenu.x}
+          y={contextMenu.y}
+          title={alt || t("imageView.preview")}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <button
+            type="button"
+            role="menuitem"
+            className="file-tree-context-menu__item file-tree-context-menu__item--danger"
+            onClick={deleteImage}
+          >
+            <Trash2 aria-hidden="true" />
+            {t("imageView.delete")}
+          </button>
+        </ContextMenuSurface>
+      ) : null}
+    </>
   );
 }
