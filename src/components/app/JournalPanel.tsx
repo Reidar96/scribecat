@@ -52,7 +52,7 @@ import type { PickedImageFile } from "@/platform/types";
 import { readFile } from "@/platform/vaultFs";
 import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
 
-const IMAGE_EXTENSIONS = ["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp"];
+const IMAGE_EXTENSIONS = ["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "avif", "heic", "heif"];
 const EARLIEST_PICKER_YEAR = 1900;
 
 type JournalPanelProps = {
