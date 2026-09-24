@@ -177,19 +177,26 @@ export function CollectionPanel({
         });
     }
 
-    // The empty relative path is the vault home. Keep it intentionally
-    // folder-only: this is the calm overview shown instead of an empty editor
-    // before a note is opened.
+    // The empty relative path is the vault home. It can contain both folders
+    // and notes, just like any other folder; "Start/Home" describes the place
+    // without pretending everything in it is a folder.
     if (request.relativePath === "") {
-      return treeNodes.flatMap((node): CollectionCard[] =>
+      return treeNodes.map((node): CollectionCard =>
         node.kind === "folder"
-          ? [{
+          ? {
               kind: "folder",
               relativePath: node.relativePath,
               title: node.name,
               mtimeMs: node.effectiveMtimeMs
-            }]
-          : []
+            }
+          : {
+              kind: "note",
+              filePath: node.filePath,
+              relativePath: node.relativePath,
+              title: getNoteDisplayName(node.name),
+              mtimeMs: node.mtimeMs,
+              folderNote: false
+            }
       );
     }
 
@@ -286,7 +293,7 @@ export function CollectionPanel({
     request.kind === "tag"
       ? t("collection.noteCount", { count: noteCount })
       : isRootCollection
-        ? t("collection.folderCount", { count: folderCount })
+        ? t("collection.folderSummary", { notes: noteCount, folders: folderCount })
         : folderCount > 0
           ? t("collection.folderSummary", { notes: noteCount, folders: folderCount })
           : t("collection.noteCount", { count: noteCount });
@@ -423,13 +430,31 @@ export function CollectionPanel({
                 const tags = tagsByPath[card.filePath] ?? [];
                 const location = request.kind === "tag" ? parentLabel(card.relativePath) : "";
 
+                const locationCrumbs =
+                  request.kind === "tag"
+                    ? [
+                        { name: t("collection.root"), relativePath: "" },
+                        ...location
+                          .split("/")
+                          .filter(Boolean)
+                          .map((name, index, segments) => ({
+                            name,
+                            relativePath: segments.slice(0, index + 1).join("/")
+                          }))
+                      ]
+                    : [];
+
                 return (
-                  <button
+                  <article
                     key={`note:${card.filePath}`}
-                    type="button"
                     className="collection-card collection-card--note"
-                    onClick={() => onOpenFile(card.filePath)}
                   >
+                    <button
+                      type="button"
+                      className="collection-card__click-target"
+                      aria-label={t("collection.openNote", { title: card.title })}
+                      onClick={() => onOpenFile(card.filePath)}
+                    />
                     <div className="collection-card__top">
                       <FileText aria-hidden="true" />
                       <span className="collection-card__kind">
@@ -437,7 +462,29 @@ export function CollectionPanel({
                       </span>
                     </div>
                     <h3>{card.title}</h3>
-                    {location ? <p className="collection-card__path">{location}</p> : null}
+                    {request.kind === "tag" ? (
+                      <nav
+                        className="collection-card__path"
+                        aria-label={t("collection.noteLocation")}
+                      >
+                        {locationCrumbs.map((crumb, index) => (
+                          <span key={crumb.relativePath || "__root__"}>
+                            {index > 0 ? <span aria-hidden="true">/</span> : null}
+                            <button
+                              type="button"
+                              onClick={() => onOpenFolder(crumb.relativePath)}
+                              title={
+                                crumb.relativePath
+                                  ? t("fileTree.openFolderCollection", { path: crumb.relativePath })
+                                  : t("collection.openRoot")
+                              }
+                            >
+                              {crumb.name}
+                            </button>
+                          </span>
+                        ))}
+                      </nav>
+                    ) : null}
                     {tags.length > 0 ? (
                       <div className="collection-card__tags" aria-label={t("tags.current")}>
                         {tags.map((tag) => (
@@ -450,7 +497,7 @@ export function CollectionPanel({
                         {formatModifiedLabel(card.mtimeMs, i18n.resolvedLanguage ?? i18n.language)}
                       </span>
                     ) : null}
-                  </button>
+                  </article>
                 );
               })}
             </div>
