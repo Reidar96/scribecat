@@ -1166,6 +1166,8 @@
     "note": "Note",
     "folderCount_one": "{{count}} folder",
     "folderCount_other": "{{count}} folders",
-    "emptyRoot": "There are no folders in this vault yet."
+    "emptyRoot": "There are no folders in this vault yet.",
+    "breadcrumb": "Folder path",
+    "openRoot": "Open folder overview"
   }
 }

@@ -203,3 +203,21 @@
     min-height: 116px;
   }
 }
+
+
+.collection-panel__breadcrumb {
+  min-width: 0;
+  flex: 1;
+  font-size: 1rem;
+  font-weight: 650;
+}
+
+.collection-panel__folder-note-button {
+  flex: none;
+  color: rgba(var(--muted-rgb),0.95);
+}
+
+.collection-panel__folder-note-button:hover,
+.collection-panel__folder-note-button:focus-visible {
+  color: rgba(var(--text-rgb),0.95);
+}

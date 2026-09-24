@@ -60,8 +60,8 @@ type DocumentPanelProps = {
   onCommitTitleRename: () => void;
   onCancelTitleRename: () => void;
   onStartTitleRename: () => void;
-  /** Opens a folder's note from a breadcrumb crumb; the path is vault-relative. */
-  onOpenFolderNote: (folderRelativePath: string) => void;
+  /** Opens a breadcrumb folder as a collection grid; the path is vault-relative. */
+  onOpenFolderCollection: (folderRelativePath: string) => void;
 
   isSaving: boolean;
   isDirty: boolean;
@@ -164,7 +164,7 @@ export function DocumentPanel({
   onCommitTitleRename,
   onCancelTitleRename,
   onStartTitleRename,
-  onOpenFolderNote,
+  onOpenFolderCollection,
   isSaving,
   isDirty,
   isSelectedFileMissing,
@@ -214,11 +214,9 @@ export function DocumentPanel({
   const versioningEnabled = useVersioningSettingsStore((state) => state.versioningEnabled);
   const closeFindPanel = useSearchStore((state) => state.closePanel);
   const autoSaveEnabled = useEditorSettingsStore((state) => state.autoSaveEnabled);
-  // Folder notes turn every folder into something that can be opened, so the
-  // crumbs in front of the note become links; with the feature off the same
-  // crumbs are plain text. The ".md" is dropped from the label first, so the
-  // rendered text stays exactly the path the title showed before.
-  const folderNotesEnabled = useEditorSettingsStore((state) => state.folderNotesEnabled);
+  // Folder crumbs always navigate to the corresponding collection grid.
+  // A folder note's final crumb is also a folder, so it links back to that
+  // folder collection rather than behaving like an ordinary note leaf.
   // Split on the full label: the crumbs carry the paths icons are keyed by,
   // and those keep the extension. Only the rendered name drops it, since
   // every note is a .md file and the suffix says nothing.
@@ -414,25 +412,33 @@ export function DocumentPanel({
                             }
                             label={t("fileTree.changeIcon")}
                           />
-                          {crumb.folderRelativePath !== null && folderNotesEnabled ? (
-                            <button
-                              type="button"
-                              className="detail-panel__crumb detail-panel__crumb--link"
-                              onClick={() => onOpenFolderNote(crumb.folderRelativePath as string)}
-                              title={t("fileTree.openFolderNote", { path: crumb.folderRelativePath })}
-                            >
-                              {crumbDisplayName(crumb.name)}
-                            </button>
-                          ) : (
-                            <span
-                              className={cn(
-                                "detail-panel__crumb",
-                                crumb.folderRelativePath === null && "detail-panel__crumb--leaf"
-                              )}
-                            >
-                              {crumbDisplayName(crumb.name)}
-                            </span>
-                          )}
+                          {(() => {
+                            const folderCollectionPath =
+                              crumb.folderRelativePath ??
+                              (isSelectedFolderNote ? crumb.relativePath : null);
+
+                            return folderCollectionPath !== null ? (
+                              <button
+                                type="button"
+                                className={cn(
+                                  "detail-panel__crumb detail-panel__crumb--link",
+                                  isSelectedFolderNote &&
+                                    crumb.folderRelativePath === null &&
+                                    "detail-panel__crumb--leaf"
+                                )}
+                                onClick={() => onOpenFolderCollection(folderCollectionPath)}
+                                title={t("fileTree.openFolderCollection", {
+                                  path: folderCollectionPath
+                                })}
+                              >
+                                {crumbDisplayName(crumb.name)}
+                              </button>
+                            ) : (
+                              <span className="detail-panel__crumb detail-panel__crumb--leaf">
+                                {crumbDisplayName(crumb.name)}
+                              </span>
+                            );
+                          })()}
                         </Fragment>
                       ))}
                     </span>

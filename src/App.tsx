@@ -1018,12 +1018,8 @@ function App() {
               onCommitTitleRename={() => void commitTitleRename()}
               onCancelTitleRename={cancelTitleRename}
               onStartTitleRename={() => startTitleRename(selectedFileBaseName, selectedFilePath)}
-              onOpenFolderNote={(folderRelativePath) => {
-                if (!folderPath) {
-                  return;
-                }
-  
-                void join(folderPath, folderRelativePath).then(openFolderNoteSafely);
+              onOpenFolderCollection={(folderRelativePath) => {
+                void openCollectionSafely({ kind: "folder", relativePath: folderRelativePath });
               }}
               isSaving={isSaving}
               isDirty={isDirty}

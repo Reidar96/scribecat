@@ -11,8 +11,10 @@ import {
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import type { CollectionViewRequest } from "@/components/app/collectionTypes";
 import { useLayoutMode } from "@/hooks/useLayoutMode";
+import { useBreadcrumbScroll } from "@/hooks/useBreadcrumbScroll";
 import { extractTags } from "@/lib/documentFrontmatter";
 import {
   getRelativeDisplayPath,
@@ -198,17 +200,6 @@ export function CollectionPanel({
 
     const result: CollectionCard[] = [];
 
-    if (folderNotesEnabled && folder.folderNotePath) {
-      result.push({
-        kind: "note",
-        filePath: folder.folderNotePath,
-        relativePath: getRelativeDisplayPath(folderPath, folder.folderNotePath),
-        title: getNoteDisplayName(folder.folderNotePath),
-        mtimeMs: folder.folderNoteMtimeMs ?? 0,
-        folderNote: true
-      });
-    }
-
     for (const child of folder.children) {
       if (child.kind === "folder") {
         result.push({
@@ -263,12 +254,34 @@ export function CollectionPanel({
   const noteCount = cards.filter((card) => card.kind === "note").length;
   const folderCount = cards.filter((card) => card.kind === "folder").length;
   const isRootCollection = request.kind === "folder" && request.relativePath === "";
+  const currentFolder =
+    request.kind === "folder" && request.relativePath
+      ? findFolder(treeNodes, request.relativePath)
+      : null;
+  const currentFolderNotePath =
+    folderNotesEnabled && currentFolder?.folderNotePath ? currentFolder.folderNotePath : null;
   const title =
     request.kind === "tag"
       ? `#${request.tag}`
       : isRootCollection
         ? t("collection.root")
         : request.relativePath.split("/").filter(Boolean).pop() ?? t("collection.root");
+  const folderBreadcrumbs =
+    request.kind === "folder"
+      ? [
+          { name: t("collection.root"), relativePath: "" },
+          ...request.relativePath
+            .split("/")
+            .filter(Boolean)
+            .map((name, index, segments) => ({
+              name,
+              relativePath: segments.slice(0, index + 1).join("/")
+            }))
+        ]
+      : [];
+  const breadcrumbScroll = useBreadcrumbScroll<HTMLHeadingElement>(
+    request.kind === "folder" ? request.relativePath || "__root__" : null
+  );
   const subtitle =
     request.kind === "tag"
       ? t("collection.noteCount", { count: noteCount })
@@ -296,8 +309,67 @@ export function CollectionPanel({
 
             <div className="collection-panel__heading">
               <div className="collection-panel__title-row">
-                {request.kind === "tag" ? <Tag aria-hidden="true" /> : <FolderOpen aria-hidden="true" />}
-                <h2>{title}</h2>
+                {request.kind === "tag" ? (
+                  <>
+                    <Tag aria-hidden="true" />
+                    <h2>{title}</h2>
+                  </>
+                ) : (
+                  <>
+                    <FolderOpen aria-hidden="true" />
+                    <h2
+                      ref={breadcrumbScroll.elementRef}
+                      onScroll={breadcrumbScroll.onScroll}
+                      className={cn(
+                        "detail-panel__breadcrumb collection-panel__breadcrumb",
+                        breadcrumbScroll.isAtStart && "detail-panel__breadcrumb--at-start"
+                      )}
+                    >
+                      <span
+                        className="detail-panel__breadcrumb-text"
+                        aria-label={t("collection.breadcrumb")}
+                      >
+                        {folderBreadcrumbs.map((crumb, index) => (
+                          <span key={crumb.relativePath || "__root__"}>
+                            {index > 0 ? (
+                              <span className="detail-panel__crumb-separator" aria-hidden="true">
+                                /
+                              </span>
+                            ) : null}
+                            <button
+                              type="button"
+                              className={cn(
+                                "detail-panel__crumb detail-panel__crumb--link",
+                                index === folderBreadcrumbs.length - 1 && "detail-panel__crumb--leaf"
+                              )}
+                              onClick={() => onOpenFolder(crumb.relativePath)}
+                              title={
+                                crumb.relativePath
+                                  ? t("fileTree.openFolderCollection", { path: crumb.relativePath })
+                                  : t("collection.openRoot")
+                              }
+                            >
+                              {crumb.name}
+                            </button>
+                          </span>
+                        ))}
+                      </span>
+                    </h2>
+                    {currentFolderNotePath ? (
+                      <Button
+                        type="button"
+                        size="icon-sm"
+                        variant="ghost"
+                        className="collection-panel__folder-note-button"
+                        aria-label={t("fileTree.openFolderNoteButton")}
+                        title={t("fileTree.openFolderNoteButton")}
+                        onClick={() => onOpenFile(currentFolderNotePath)}
+                      >
+                        <FileText />
+                      </Button>
+                    ) : null}
+                  </>
+                )}
               </div>
               <p>{subtitle}</p>
             </div>
