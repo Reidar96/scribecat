@@ -136,7 +136,12 @@ export function CollectionPanel({
   const folderNotesEnabled = useEditorSettingsStore((state) => state.folderNotesEnabled);
   const journalSettings = useEditorSettingsStore((state) => state.journalSettings);
   const taskSettings = useEditorSettingsStore((state) => state.taskSettings);
-  const vaultSettingsReady = useEditorSettingsStore((state) => state.vaultSettingsReady);
+  const vaultSettingsLoadedPath = useEditorSettingsStore(
+    (state) => state.headingNumberingVaultPath
+  );
+  const vaultSettingsReady =
+    useEditorSettingsStore((state) => state.vaultSettingsReady) &&
+    vaultSettingsLoadedPath === folderPath;
   const [tagsByPath, setTagsByPath] = useState<Record<string, string[]>>({});
 
   const visibleCollectionFilePaths = useMemo(
