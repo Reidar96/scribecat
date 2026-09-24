@@ -11,32 +11,95 @@
 
 ScribeCat is a streamlined Markdown writing environment for people who want the comfort of a visual editor without giving up ordinary files.
 
-Your notes remain plain `.md` files in a normal folder. Images are stored beside the notes in local `_attachments/` folders, so the library remains portable and readable outside ScribeCat.
+Your notes remain plain `.md` files in a normal folder. Images are stored beside the notes in local `_attachments/` folders, tags are stored as portable YAML frontmatter, and the library remains readable outside ScribeCat.
 
-## What ScribeCat keeps
+## Highlights
 
 - True WYSIWYG Markdown editing
+- Plain Markdown files with no proprietary document format
 - File and folder navigation
 - Tables, links, images, lists, callouts and formatting
 - Search and replace
 - Version history
 - Import and export
-- Auto-save and draft recovery
+- Auto-save enabled by default, with draft recovery
 - Light and dark appearance
-- Multiple interface languages
-- Server edition for browser access
+- English and Norwegian Bokmål, plus the other bundled interface languages
+- Server edition for browser access and self-hosting
+- Local offline dictation with whisper.cpp
 - Plain relative Markdown links and image paths
 - Note-local `_attachments/` folders
+- Customizable keyboard shortcuts, including the option to disable individual shortcuts
+
+### Portable tags
+
+ScribeCat supports multiple tags per note. Tags are edited from the Details panel and stored directly in standard YAML frontmatter:
+
+```markdown
+---
+tags:
+  - "project"
+  - "important"
+  - "work"
+---
+
+# My note
+```
+
+The YAML metadata is hidden from the WYSIWYG writing surface and from rendered exports such as PDF, DOCX, HTML and print, while remaining part of the original Markdown file.
+
+The file sidebar includes a tag overview with counts. Selecting a tag filters the file list to matching notes.
+
+### Cross-device document locking
+
+A note can be locked against accidental editing. Locks are stored with the vault in:
+
+```text
+.scribecat/document-locks.json
+```
+
+This means a note locked on one device also opens locked on another device using the same vault. Locks are preserved when notes or folders are renamed or moved.
+
+A locked note remains readable and searchable. The lock icon indicates the state without adding a red tint or border around the document.
+
+### Auto-save
+
+Auto-save is enabled by default for new installations. It can be changed globally under **Settings → General**, and the document menu controls the same setting.
+
+### Flexible writing layout
+
+On desktop and tablet, the file sidebar can be hidden and restored with a dedicated button.
+
+The editor also offers two document-width modes:
+
+- **Full width** — uses the available editor space
+- **Compact** — centers the writing area at roughly 900 px for a more comfortable reading and writing width on large screens
+
+The chosen layout is remembered locally on the device.
+
+### Multi-select file operations
+
+The file sidebar includes an explicit selection mode with checkbox-style markers. Multiple notes and folders can be selected and then moved or deleted together.
+
+Keyboard multi-selection is still available, while the visible selection mode makes the same workflow practical on touch devices.
+
+### Server account controls
+
+In the server edition, account actions live under **Settings → Account**. This includes password management, signed-in devices, server certificate information and **Sign out**.
 
 ## What ScribeCat intentionally leaves out
 
 All AI writing tools and AI integrations have been removed from ScribeCat: no AI assistant, model selector, AI rewriting, agent chat, knowledge-base AI, model-provider settings, AI OCR, LLM proxy, or AI credential storage.
 
-Local offline dictation is kept as a normal non-AI writing feature. The goal is a quieter writing tool: open a folder, write, organize, and keep the files yours.
+Local offline dictation is kept as a normal writing feature and runs on the device with whisper.cpp.
+
+The built-in spellcheck feature has also been removed; the editor does not depend on ScribeCat-managed spellcheck dictionaries.
+
+The goal is a quieter writing tool: open a folder, write, organize, and keep the files yours.
 
 ## Language
 
-All bundled interface languages are retained. English is the default language for a new installation.
+All bundled interface languages are retained. English is the default language for a new installation, and Norwegian Bokmål is included as a complete interface option.
 
 ## File layout
 
@@ -85,6 +148,12 @@ services:
 ```
 
 For a first start, use a strong password and remove `SCRIBECAT_INIT_PASSWORD` from the Compose file after the server has initialized its authentication data.
+
+Versioned Docker images are published alongside `latest`, for example:
+
+```text
+ghcr.io/reidar96/scribecat-server:0.17.1
+```
 
 ## Development
 
