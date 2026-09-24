@@ -25,7 +25,10 @@ const EXTENSION_BY_MIME_TYPE: Record<string, string> = {
   "image/gif": "gif",
   "image/webp": "webp",
   "image/svg+xml": "svg",
-  "image/bmp": "bmp"
+  "image/bmp": "bmp",
+  "image/avif": "avif",
+  "image/heic": "heic",
+  "image/heif": "heif"
 };
 
 const LAST_FOLDER_PATH_STORAGE_KEY = "scribecat:lastFolderPath";
