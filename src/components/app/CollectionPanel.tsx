@@ -4,6 +4,7 @@ import {
   FileText,
   Folder,
   FolderOpen,
+  Home,
   SquareCheck,
   Network,
   PanelLeft,
@@ -332,7 +333,7 @@ export function CollectionPanel({
                   </>
                 ) : (
                   <>
-                    <FolderOpen aria-hidden="true" />
+                    {isRootCollection ? <Home aria-hidden="true" /> : <FolderOpen aria-hidden="true" />}
                     <h2
                       ref={breadcrumbScroll.elementRef}
                       onScroll={breadcrumbScroll.onScroll}
@@ -387,7 +388,7 @@ export function CollectionPanel({
                   </>
                 )}
               </div>
-              <p>{subtitle}</p>
+              {!isRootCollection ? <p>{subtitle}</p> : null}
             </div>
           </div>
 
@@ -396,11 +397,11 @@ export function CollectionPanel({
               type="button"
               size="icon-sm"
               variant="ghost"
-              aria-label={t("collection.close")}
-              title={t("collection.close")}
+              aria-label={t("common.goHome")}
+              title={t("common.goHome")}
               onClick={onClose}
             >
-              <X />
+              <Home />
             </Button>
           ) : null}
         </header>
