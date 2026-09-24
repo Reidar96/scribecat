@@ -87,7 +87,6 @@ function buildComponentAnchors(
 
   for (const node of nodes) {
     if (visited.has(node.id)) continue;
-
     const component: string[] = [];
     const queue = [node.id];
     visited.add(node.id);
@@ -95,7 +94,6 @@ function buildComponentAnchors(
     for (let index = 0; index < queue.length; index += 1) {
       const current = queue[index];
       component.push(current);
-
       for (const neighbor of adjacency.get(current) ?? []) {
         if (visited.has(neighbor)) continue;
         visited.add(neighbor);
@@ -109,24 +107,18 @@ function buildComponentAnchors(
   components.sort((left, right) => right.length - left.length || left[0].localeCompare(right[0]));
 
   const anchors = new Map<string, { x: number; y: number }>();
-  if (components.length === 1) {
-    for (const id of components[0]) anchors.set(id, { x: width / 2, y: height / 2 });
-    return anchors;
-  }
-
-  // Put disconnected islands in separate cells instead of pulling everything
-  // into one central cloud. Within each cell, the spring forces below still
-  // decide the shape of the connected cluster.
-  const aspect = Math.max(0.65, Math.min(1.8, width / Math.max(1, height)));
-  const columns = Math.max(1, Math.ceil(Math.sqrt(components.length * aspect)));
-  const rows = Math.max(1, Math.ceil(components.length / columns));
+  const centerX = width / 2;
+  const centerY = height / 2;
+  const goldenAngle = Math.PI * (3 - Math.sqrt(5));
 
   components.forEach((component, index) => {
-    const column = index % columns;
-    const row = Math.floor(index / columns);
+    // A loose sunflower spiral keeps disconnected islands organic instead of
+    // arranging them in a visible rectangular grid.
+    const radius = index === 0 ? 0 : 105 + Math.sqrt(index) * 115;
+    const angle = index * goldenAngle;
     const anchor = {
-      x: ((column + 0.5) / columns) * width,
-      y: ((row + 0.5) / rows) * height
+      x: centerX + Math.cos(angle) * radius,
+      y: centerY + Math.sin(angle) * radius
     };
 
     for (const id of component) anchors.set(id, anchor);
@@ -135,7 +127,7 @@ function buildComponentAnchors(
   return anchors;
 }
 
-function edgeLength(kind: VaultGraphEdge["kind"]): number {
+function edgeLengthfunction edgeLength(kind: VaultGraphEdge["kind"]): number {
   if (kind === "tag") return 66;
   if (kind === "folder") return 74;
   return 82;
@@ -163,6 +155,7 @@ export function GraphCanvas({
   const [frame, setFrame] = useState(0);
   const [view, setView] = useState<ViewTransform>({ x: 0, y: 0, scale: 1 });
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [focusedId, setFocusedId] = useState<string | null>(null);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -192,14 +185,16 @@ export function GraphCanvas({
   }, [edges]);
 
   const neighborIds = useMemo(() => {
-    if (!hoveredId) return null;
-    const result = new Set<string>([hoveredId]);
+    const sourceId = hoveredId ?? focusedId;
+    if (!sourceId) return null;
+
+    const result = new Set<string>([sourceId]);
     for (const edge of edges) {
-      if (edge.source === hoveredId) result.add(edge.target);
-      if (edge.target === hoveredId) result.add(edge.source);
+      if (edge.source === sourceId) result.add(edge.target);
+      if (edge.target === sourceId) result.add(edge.source);
     }
     return result;
-  }, [edges, hoveredId]);
+  }, [edges, focusedId, hoveredId]);
 
   useEffect(() => {
     if (size.width <= 1 || size.height <= 1 || nodes.length === 0) return;
@@ -214,6 +209,14 @@ export function GraphCanvas({
     const connectedPairs = new Set(
       edges.map((edge) => connectionKey(edge.source, edge.target))
     );
+    const focusNeighbors = new Set<string>();
+    if (focusedId) {
+      focusNeighbors.add(focusedId);
+      for (const edge of edges) {
+        if (edge.source === focusedId) focusNeighbors.add(edge.target);
+        if (edge.target === focusedId) focusNeighbors.add(edge.source);
+      }
+    }
 
     for (const node of nodes) {
       if (!points.has(node.id)) {
@@ -277,10 +280,24 @@ export function GraphCanvas({
               // Connected nodes are allowed to form a tight "string". Nodes
               // without a direct connection repel each other over a much
               // longer distance, which opens visible gaps between groups.
-              const separation = directlyConnected ? 34 : 210;
+              const involvesFocus =
+                focusedId !== null && (node.id === focusedId || otherId === focusedId);
+              const separation = involvesFocus
+                ? directlyConnected
+                  ? 72
+                  : 300
+                : directlyConnected
+                  ? 38
+                  : 175;
               if (distance > separation) continue;
 
-              const strength = directlyConnected ? 0.045 : 0.09;
+              const strength = involvesFocus
+                ? directlyConnected
+                  ? 0.055
+                  : 0.16
+                : directlyConnected
+                  ? 0.04
+                  : 0.07;
               const force = ((separation - distance) / separation) * strength;
               const fx = (dx / distance) * force;
               const fy = (dy / distance) * force;
@@ -302,7 +319,11 @@ export function GraphCanvas({
         const dx = target.x - source.x;
         const dy = target.y - source.y;
         const distance = Math.max(1, Math.sqrt(dx * dx + dy * dy));
-        const force = (distance - edgeLength(edge.kind)) * 0.0052;
+        const focusEdge =
+          focusedId !== null &&
+          (edge.source === focusedId || edge.target === focusedId);
+        const desiredLength = focusEdge ? Math.max(64, edgeLength(edge.kind) - 8) : edgeLength(edge.kind);
+        const force = (distance - desiredLength) * (focusEdge ? 0.0068 : 0.0046);
         const fx = (dx / distance) * force;
         const fy = (dy / distance) * force;
         source.vx += fx;
@@ -320,15 +341,47 @@ export function GraphCanvas({
         if (!point) continue;
 
         const anchor = componentAnchors.get(node.id) ?? { x: centerX, y: centerY };
-        // Component gravity is stronger than global gravity: disconnected
-        // groups keep their own territory, while related nodes stay together
-        // because their edges are substantially stronger than this pull.
-        point.vx += (anchor.x - point.x) * 0.00072;
-        point.vy += (anchor.y - point.y) * 0.00072;
-        point.vx += (centerX - point.x) * 0.00004;
-        point.vy += (centerY - point.y) * 0.00004;
-        point.vx *= 0.84;
-        point.vy *= 0.84;
+
+        if (focusedId) {
+          if (node.id === focusedId) {
+            // The selected node becomes the calm centre of the bubble.
+            point.vx += (centerX - point.x) * 0.012;
+            point.vy += (centerY - point.y) * 0.012;
+          } else if (focusNeighbors.has(node.id)) {
+            // Direct neighbours orbit close to the focus but keep their own
+            // spring-determined angles, so the shape remains alive.
+            const dx = point.x - centerX;
+            const dy = point.y - centerY;
+            const distance = Math.max(1, Math.sqrt(dx * dx + dy * dy));
+            const targetRadius = 115;
+            const radialForce = (distance - targetRadius) * 0.0018;
+            point.vx -= (dx / distance) * radialForce;
+            point.vy -= (dy / distance) * radialForce;
+          } else {
+            // Everything unrelated yields space around the chosen node.
+            const dx = point.x - centerX;
+            const dy = point.y - centerY;
+            const distance = Math.max(1, Math.sqrt(dx * dx + dy * dy));
+            const keepOutRadius = 245;
+            if (distance < keepOutRadius) {
+              const force = ((keepOutRadius - distance) / keepOutRadius) * 0.12;
+              point.vx += (dx / distance) * force;
+              point.vy += (dy / distance) * force;
+            }
+
+            point.vx += (anchor.x - point.x) * 0.00022;
+            point.vy += (anchor.y - point.y) * 0.00022;
+          }
+        } else {
+          // Without a focus the whole graph behaves as one soft, rounded cloud.
+          point.vx += (anchor.x - point.x) * 0.00034;
+          point.vy += (anchor.y - point.y) * 0.00034;
+          point.vx += (centerX - point.x) * 0.00011;
+          point.vy += (centerY - point.y) * 0.00011;
+        }
+
+        point.vx *= 0.86;
+        point.vy *= 0.86;
 
         const speed = Math.sqrt(point.vx * point.vx + point.vy * point.vy);
         if (speed > 6) {
@@ -342,14 +395,14 @@ export function GraphCanvas({
       }
 
       setFrame((value) => value + 1);
-      if (iterations < 240 && (iterations < 80 || movement > nodes.length * 0.01)) {
+      if (iterations < 300 && (iterations < 100 || movement > nodes.length * 0.008)) {
         animationFrame = window.requestAnimationFrame(step);
       }
     };
 
     animationFrame = window.requestAnimationFrame(step);
     return () => window.cancelAnimationFrame(animationFrame);
-  }, [nodes, edges, size.width, size.height]);
+  }, [nodes, edges, focusedId, size.width, size.height]);
 
   void frame;
 
@@ -424,6 +477,7 @@ export function GraphCanvas({
     const target = event.target instanceof Element ? event.target : null;
     if (target?.closest(".graph-view__node")) return;
 
+    setFocusedId(null);
     panDragRef.current = {
       pointerId: event.pointerId,
       startClientX: event.clientX,
@@ -510,7 +564,13 @@ export function GraphCanvas({
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
 
-    if (!drag.moved) onActivateNode(node);
+    if (!drag.moved) {
+      if (focusedId === node.id) {
+        onActivateNode(node);
+      } else {
+        setFocusedId(node.id);
+      }
+    }
   };
 
   const onNodePointerCancel = (event: ReactPointerEvent<SVGGElement>) => {
@@ -570,6 +630,7 @@ export function GraphCanvas({
               const degree = degreeById.get(node.id) ?? 0;
               const radius = NODE_RADIUS + Math.min(5, Math.sqrt(degree) * 1.25);
               const active = node.kind === "note" && node.filePath === activeFilePath;
+              const focused = focusedId === node.id;
               const dimmed = neighborIds !== null && !neighborIds.has(node.id);
               const label =
                 node.kind === "note"
@@ -585,6 +646,7 @@ export function GraphCanvas({
                     "graph-view__node",
                     "graph-view__node--" + node.kind,
                     active && "graph-view__node--active",
+                    focused && "graph-view__node--focused",
                     dimmed && "graph-view__node--dimmed"
                   )}
                   transform={"translate(" + point.x + " " + point.y + ")"}
@@ -602,12 +664,24 @@ export function GraphCanvas({
                   onKeyDown={(event) => {
                     if (event.key === "Enter" || event.key === " ") {
                       event.preventDefault();
-                      onActivateNode(node);
+                      if (focusedId === node.id) {
+                        onActivateNode(node);
+                      } else {
+                        setFocusedId(node.id);
+                      }
                     }
                   }}
                 >
                   <title>{nodeTitle(node)}</title>
-                  {active ? <circle className="graph-view__node-active-ring" r={radius + 5} /> : null}
+                  {active || focused ? (
+                    <circle
+                      className={cn(
+                        "graph-view__node-active-ring",
+                        focused && "graph-view__node-focus-ring"
+                      )}
+                      r={radius + 5}
+                    />
+                  ) : null}
                   {node.kind === "note" ? (
                     <circle className="graph-view__node-shape" r={radius} />
                   ) : node.kind === "tag" ? (
