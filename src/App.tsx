@@ -1286,6 +1286,14 @@ function App() {
           setIsSettingsOpen(false);
           void logoutSafely();
         }}
+        onAddRemoteVault={
+          platform.features.remoteVaults
+            ? () => {
+                setIsSettingsOpen(false);
+                remoteVaultDialog.openAddDialog();
+              }
+            : undefined
+        }
         moveRequest={moveRequest}
         fileRelativePaths={fileRelativePaths}
         emptyFolderRelativePaths={emptyFolderRelativePaths}
