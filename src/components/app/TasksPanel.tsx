@@ -840,7 +840,6 @@ export function TasksPanel({
 
             <Button
               type="button"
-              size="icon-sm"
               variant={createOpen ? "default" : "outline"}
               className="tasks-new-trigger"
               aria-pressed={createOpen}
@@ -849,6 +848,7 @@ export function TasksPanel({
               onClick={() => setCreateOpen((open) => !open)}
             >
               <Plus />
+              <span className="tasks-new-trigger__label">{t("tasks.newTask")}</span>
             </Button>
 
             {[
@@ -878,7 +878,7 @@ export function TasksPanel({
             ))}
           </div>
 
-          <div className="tasks-filter-section">
+          <div className="tasks-filter-section tasks-filter-section--categories">
             <div className="tasks-filter-section__heading">
               <span>{t("tasks.categories")}</span>
             </div>
@@ -892,6 +892,7 @@ export function TasksPanel({
                   key={category}
                   className={cn(
                     "tasks-category-row",
+                    active && "tasks-category-row--active",
                     dropActive && "tasks-category-row--drop"
                   )}
                   onDragOver={(event) => {
