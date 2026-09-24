@@ -351,7 +351,6 @@ function App() {
     requestDeleteFile,
     requestDeleteFolder,
     requestDeleteMultiple,
-    requestDeleteFromToolbar,
     cancelDeleteTarget,
     confirmDeleteTarget
   } = useDeleteTarget({
@@ -1003,7 +1002,6 @@ function App() {
       onDuplicateFileRequest={(filePath) => void duplicateFile(filePath)}
       onDeleteFolderRequest={requestDeleteFolder}
       onDeleteMultipleRequest={requestDeleteMultiple}
-      onDeleteToolbarRequest={requestDeleteFromToolbar}
       onExportFileRequest={requestExportFile}
       onExportFolderRequest={requestExportFolder}
       onExportMultipleRequest={requestExportMultiple}
@@ -1089,10 +1087,14 @@ function App() {
               sidebarVisible={sidebarVisible}
               onSidebarVisibilityToggle={toggleSidebarVisible}
               onOpenSidebar={() => setIsSidebarSheetOpen(true)}
-              onClose={() => setTasksViewOpen(false)}
+              onClose={() =>
+                void openCollectionSafely({ kind: "folder", relativePath: "" })
+              }
               onPersistTaskFile={(filePath, markdown) =>
                 createFileAtPath(filePath, markdown)
               }
+              onRenameTaskFile={renameFilePathFromTree}
+              onDeleteTaskFile={deleteFilePath}
             />
           ) : journalViewOpen && folderPath ? (
             <JournalPanel
@@ -1103,7 +1105,9 @@ function App() {
               sidebarVisible={sidebarVisible}
               onSidebarVisibilityToggle={toggleSidebarVisible}
               onOpenSidebar={() => setIsSidebarSheetOpen(true)}
-              onClose={() => setJournalViewOpen(false)}
+              onClose={() =>
+                void openCollectionSafely({ kind: "folder", relativePath: "" })
+              }
               onOpenDate={async (_date, relativePath, initialMarkdown) =>
                 openJournalDateSafely(relativePath, initialMarkdown)
               }
@@ -1118,7 +1122,9 @@ function App() {
               sidebarVisible={sidebarVisible}
               onSidebarVisibilityToggle={toggleSidebarVisible}
               onOpenSidebar={() => setIsSidebarSheetOpen(true)}
-              onClose={() => setGraphViewOpen(false)}
+              onClose={() =>
+                void openCollectionSafely({ kind: "folder", relativePath: "" })
+              }
               onOpenFile={(filePath) => void selectFilePathSafely(filePath)}
               onOpenFolder={(relativePath) => {
                 void openCollectionSafely({ kind: "folder", relativePath });
