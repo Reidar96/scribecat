@@ -15,7 +15,8 @@
       "enter": "Enter",
       "rightClick": "Right click"
     },
-    "close": "Close"
+    "close": "Close",
+    "goHome": "Go to Start"
   },
   "app": {
     "shellLabel": "ScribeCat app shell",
@@ -75,6 +76,10 @@
     "titleFolder": "Delete folder permanently?",
     "descriptionFolderWithName": "The folder {{folderLabel}} and all files it contains will be permanently deleted from disk.",
     "descriptionFolderGeneric": "The folder and all files it contains will be permanently deleted from disk.",
+    "eyebrowCategory": "Delete category",
+    "titleCategory": "Delete category permanently?",
+    "descriptionCategoryWithName": "The category “{{categoryLabel}}” and all tasks in it will be permanently deleted.",
+    "descriptionCategoryGeneric": "The category and all tasks in it will be permanently deleted.",
     "eyebrowMultiple": "Delete items",
     "titleMultiple": "Delete multiple items permanently?",
     "descriptionMultiple_one": "{{count}} item (and everything it contains, if it's a folder) will be permanently deleted from disk.",
