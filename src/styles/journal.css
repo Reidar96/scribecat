@@ -289,7 +289,7 @@
 
 .journal-entry__date-nav {
   display: grid;
-  grid-template-columns: 2.8rem minmax(0, 1fr) 2.8rem;
+  grid-template-columns: minmax(0, 1fr) 2.8rem 2.8rem;
   align-items: stretch;
   gap: 0.55rem;
 }
