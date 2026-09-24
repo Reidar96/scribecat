@@ -1107,6 +1107,7 @@ function App() {
               onClose={() =>
                 void openCollectionSafely({ kind: "folder", relativePath: "" })
               }
+              onDeleteEntry={requestDeleteFile}
               onOpenDate={async (_date, relativePath, initialMarkdown) =>
                 openJournalDateSafely(relativePath, initialMarkdown)
               }
