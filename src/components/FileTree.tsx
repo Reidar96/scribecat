@@ -89,6 +89,8 @@ type FileTreeProps = {
   onExportMultipleRequest: (entries: BatchEntry[], mode: ExportMode) => void;
   onRequestEditorFocus?: () => void;
   focusRequestId?: number;
+  /** Incremented by the sidebar to fold every currently open folder. */
+  collapseAllRequestId?: number;
   onSelectionChange?: (entries: BatchEntry[]) => void;
   /** Explicit checkbox-style selection mode for touch and mouse users. */
   selectionMode?: boolean;
@@ -153,6 +155,7 @@ export function FileTree({
   onExportMultipleRequest,
   onRequestEditorFocus,
   focusRequestId,
+  collapseAllRequestId = 0,
   onSelectionChange,
   selectionMode = false
 }: FileTreeProps) {
@@ -166,8 +169,13 @@ export function FileTree({
   const offersMarkdownDownload = canDownloadMarkdown(folderPath);
   const offersFolderArchive = canDownloadFolderArchive(folderPath);
   const offersRevealInFileManager = platform.shell.openFolderInFileManager !== null;
-  const { expandedFolderPaths, toggleFolder, expandAncestorsOf, expandFolders } =
-    useExpandedFolders(folderPath);
+  const {
+    expandedFolderPaths,
+    toggleFolder,
+    expandAncestorsOf,
+    expandFolders,
+    collapseAllFolders
+  } = useExpandedFolders(folderPath);
   const { contextMenu, setContextMenu } = useTreeContextMenu();
   // The entry whose icon is being picked, kept after the menu that opened it
   // has closed.
@@ -179,6 +187,16 @@ export function FileTree({
     contextMenu === null ? null : getVaultIcon(vaultIcons, getContextMenuRelativePath(contextMenu, folderPath) ?? "");
   const fileMatchCounts = useSearchStore((state) => state.fileMatchCounts);
   const lastHandledEntryRenameRequestIdRef = useRef<number | undefined>(undefined);
+  const lastCollapseAllRequestIdRef = useRef(collapseAllRequestId);
+
+  useEffect(() => {
+    if (collapseAllRequestId === lastCollapseAllRequestIdRef.current) {
+      return;
+    }
+
+    lastCollapseAllRequestIdRef.current = collapseAllRequestId;
+    collapseAllFolders();
+  }, [collapseAllRequestId, collapseAllFolders]);
 
   // Folder notes on: a click on a folder's name opens its note and only the
   // chevron toggles it. Off: the whole row toggles, as it always has.
