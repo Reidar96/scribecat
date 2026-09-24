@@ -936,7 +936,6 @@ function App() {
       onOpenFolder={openFolderSafely}
       recentFolderPaths={getRecentFolderPaths()}
       onOpenRecentFolder={(targetFolderPath) => void openRecentFolderSafely(targetFolderPath)}
-      onAddRemoteVault={platform.features.remoteVaults ? remoteVaultDialog.openAddDialog : undefined}
       onCreateFile={() => void handleCreateFile()}
       onCreateFileRequest={(targetDirectory) => void handleCreateFile(targetDirectory)}
       onCreateFolder={() => void handleCreateFolder()}
