@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.20.7] - 2026-09-24
+
+### Improvement
+- Add a close/back button to the diary Overview on phones. It mirrors the search/tag result close control and returns directly to the calendar view.
+
 ## [0.20.6] - 2026-09-24
 
 ### Improvements
