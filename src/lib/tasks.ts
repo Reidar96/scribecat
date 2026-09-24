@@ -1,7 +1,23 @@
 export const TASKS_FOLDER_NAME = "Gjøremål";
 export const UNCATEGORIZED_TASK_CATEGORY = "Uten kategori";
-export const TASKS_HIDE_FROM_SIDEBAR_STORAGE_KEY = "scribecat-tasks-hide-from-sidebar";
-export const TASKS_SETTINGS_EVENT = "scribecat-tasks-settings";
+
+export type TaskSettings = {
+  hideFromSidebar: boolean;
+};
+
+export const DEFAULT_TASK_SETTINGS: TaskSettings = {
+  hideFromSidebar: true
+};
+
+export function normalizeTaskSettings(value: unknown): TaskSettings {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return DEFAULT_TASK_SETTINGS;
+  }
+
+  return {
+    hideFromSidebar: (value as { hideFromSidebar?: unknown }).hideFromSidebar !== false
+  };
+}
 
 export type TaskDeadline = string | null;
 export type TaskPriority = "high" | "medium" | "low" | null;
@@ -109,28 +125,6 @@ export function isTaskRelativePath(relativePath: string): boolean {
 export function isTasksContainerRelativePath(relativePath: string): boolean {
   const normalized = normalizeRelativePath(relativePath);
   return normalized === TASKS_FOLDER_NAME || normalized.startsWith(`${TASKS_FOLDER_NAME}/`);
-}
-
-export function getTasksHideFromSidebar(): boolean {
-  try {
-    return window.localStorage.getItem(TASKS_HIDE_FROM_SIDEBAR_STORAGE_KEY) !== "false";
-  } catch {
-    return true;
-  }
-}
-
-export function setTasksHideFromSidebar(hidden: boolean): void {
-  try {
-    window.localStorage.setItem(TASKS_HIDE_FROM_SIDEBAR_STORAGE_KEY, hidden ? "true" : "false");
-  } catch {
-    // localStorage may be unavailable in some embedded environments.
-  }
-
-  try {
-    window.dispatchEvent(new CustomEvent(TASKS_SETTINGS_EVENT, { detail: { hidden } }));
-  } catch {
-    // No window event target in non-browser test environments.
-  }
 }
 
 function parseTaskContent(rawContent: string): {
