@@ -218,11 +218,13 @@ export function Sidebar({
   const hideTasksFromSidebar = useEditorSettingsStore(
     (state) => state.taskSettings.hideFromSidebar
   );
+  const vaultSettingsReady = useEditorSettingsStore((state) => state.vaultSettingsReady);
 
   const visibleSidebarFilePaths = useMemo(
     () =>
       folderPath
-        ? filePaths.filter((filePath) => {
+        ? vaultSettingsReady
+          ? filePaths.filter((filePath) => {
             const relativePath = getRelativeDisplayPath(folderPath, filePath);
             return (
               !(
@@ -235,13 +237,15 @@ export function Sidebar({
               )
             );
           })
+          : []
         : filePaths,
-    [filePaths, folderPath, hideTasksFromSidebar, journalSettings]
+    [filePaths, folderPath, hideTasksFromSidebar, journalSettings, vaultSettingsReady]
   );
   const visibleSidebarEmptyFolderPaths = useMemo(
     () =>
       folderPath
-        ? emptyFolderPaths.filter((entryPath) => {
+        ? vaultSettingsReady
+          ? emptyFolderPaths.filter((entryPath) => {
             const relativePath = getRelativeDisplayPath(folderPath, entryPath);
             return (
               !(
@@ -254,8 +258,9 @@ export function Sidebar({
               )
             );
           })
+          : []
         : emptyFolderPaths,
-    [emptyFolderPaths, folderPath, hideTasksFromSidebar, journalSettings]
+    [emptyFolderPaths, folderPath, hideTasksFromSidebar, journalSettings, vaultSettingsReady]
   );
   // Hidden diary/task storage is also excluded from the ordinary tag overview.
   // The underlying Markdown remains searchable and portable.
