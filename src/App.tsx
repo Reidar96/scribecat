@@ -899,7 +899,6 @@ function App() {
       fileTreeSelection={fileTreeSelection}
       fileTreeSelectionCount={fileTreeSelection.length}
       onFilesDropped={handleFilesDropped}
-      onLogoutRequest={() => void logoutSafely()}
       onClose={layout === "phone" ? () => setIsSidebarSheetOpen(false) : undefined}
     />
   );
@@ -1062,6 +1061,10 @@ function App() {
         isSettingsOpen={isSettingsOpen}
         settingsInitialTab={settingsInitialTab}
         onCloseSettings={() => setIsSettingsOpen(false)}
+        onLogoutRequest={() => {
+          setIsSettingsOpen(false);
+          void logoutSafely();
+        }}
         moveRequest={moveRequest}
         fileRelativePaths={fileRelativePaths}
         emptyFolderRelativePaths={emptyFolderRelativePaths}

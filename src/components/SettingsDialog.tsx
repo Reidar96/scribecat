@@ -116,12 +116,14 @@ type SettingsDialogProps = {
   open: boolean;
   initialTab?: SettingsTab;
   onClose: () => void;
+  onLogoutRequest: () => void;
 };
 
 export function SettingsDialog({
   open,
   initialTab = "application",
-  onClose
+  onClose,
+  onLogoutRequest
 }: SettingsDialogProps) {
   const { t, i18n } = useTranslation();
   const [activeTab, setActiveTab] = useState<SettingsTab>("application");
@@ -337,7 +339,7 @@ export function SettingsDialog({
               ) : activeTab === "vault" ? (
                 <SettingsPage tab="vault"><VaultSettings /></SettingsPage>
               ) : activeTab === "account" ? (
-                <SettingsPage tab="account"><AccountSettings /></SettingsPage>
+                <SettingsPage tab="account"><AccountSettings onLogoutRequest={onLogoutRequest} /></SettingsPage>
               ) : (
                 <SettingsPage tab="server"><RemoteVaultsSettings /></SettingsPage>
               )}
