@@ -61,6 +61,11 @@ import {
 import { canDownloadFolderArchive } from "@/lib/export/markdownDownload";
 import { formatFolderLabel, getFolderBasename, getRelativeDisplayPath } from "@/lib/fileSystem";
 import { isJournalRelativePath } from "@/lib/journal";
+import {
+  getTasksHideFromSidebar,
+  isTasksContainerRelativePath,
+  TASKS_SETTINGS_EVENT
+} from "@/lib/tasks";
 import { isRemoteVaultPath, remoteVaultFor } from "@/lib/remoteVaults";
 import { getVaultCapabilities, platform, vaultCapabilityHint } from "@/platform";
 import type { ManualOrderMap, SortMode } from "@/lib/vaultMeta";
@@ -219,34 +224,65 @@ export function Sidebar({
   const [searchQuery, setSearchQuery] = useState("");
   const [collapseFoldersRequestId, setCollapseFoldersRequestId] = useState(0);
   const journalSettings = useEditorSettingsStore((state) => state.journalSettings);
+  const [hideTasksFromSidebar, setHideTasksFromSidebar] = useState(
+    getTasksHideFromSidebar
+  );
+
+  useEffect(() => {
+    const handleTasksSettings = (event: Event) => {
+      const detail = (event as CustomEvent<{ hidden?: boolean }>).detail;
+      setHideTasksFromSidebar(
+        typeof detail?.hidden === "boolean"
+          ? detail.hidden
+          : getTasksHideFromSidebar()
+      );
+    };
+
+    window.addEventListener(TASKS_SETTINGS_EVENT, handleTasksSettings);
+    return () =>
+      window.removeEventListener(TASKS_SETTINGS_EVENT, handleTasksSettings);
+  }, []);
+
   const visibleSidebarFilePaths = useMemo(
     () =>
-      journalSettings.hideFromSidebar && folderPath
-        ? filePaths.filter(
-            (filePath) =>
-              !isJournalRelativePath(
-                getRelativeDisplayPath(folderPath, filePath),
-                journalSettings
+      folderPath
+        ? filePaths.filter((filePath) => {
+            const relativePath = getRelativeDisplayPath(folderPath, filePath);
+            return (
+              !(
+                journalSettings.hideFromSidebar &&
+                isJournalRelativePath(relativePath, journalSettings)
+              ) &&
+              !(
+                hideTasksFromSidebar &&
+                isTasksContainerRelativePath(relativePath)
               )
-          )
+            );
+          })
         : filePaths,
-    [filePaths, folderPath, journalSettings]
+    [filePaths, folderPath, hideTasksFromSidebar, journalSettings]
   );
   const visibleSidebarEmptyFolderPaths = useMemo(
     () =>
-      journalSettings.hideFromSidebar && folderPath
-        ? emptyFolderPaths.filter(
-            (entryPath) =>
-              !isJournalRelativePath(
-                getRelativeDisplayPath(folderPath, entryPath),
-                journalSettings
+      folderPath
+        ? emptyFolderPaths.filter((entryPath) => {
+            const relativePath = getRelativeDisplayPath(folderPath, entryPath);
+            return (
+              !(
+                journalSettings.hideFromSidebar &&
+                isJournalRelativePath(relativePath, journalSettings)
+              ) &&
+              !(
+                hideTasksFromSidebar &&
+                isTasksContainerRelativePath(relativePath)
               )
-          )
+            );
+          })
         : emptyFolderPaths,
-    [emptyFolderPaths, folderPath, journalSettings]
+    [emptyFolderPaths, folderPath, hideTasksFromSidebar, journalSettings]
   );
-  // Hiding the diary from the sidebar also removes diary-only tag occurrences
-  // from the ordinary tag overview. The files remain searchable and portable.
+  // Hidden diary/task storage is also excluded from the ordinary tag overview.
+  // The underlying Markdown remains searchable and portable.
   const tagSummaries = useTagIndex(
     visibleSidebarFilePaths,
     selectedFilePath,
