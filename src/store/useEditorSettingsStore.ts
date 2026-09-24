@@ -20,9 +20,16 @@ import {
 import {
   readFolderNotesEnabled,
   readHeadingNumbering,
+  readJournalSettings,
   writeFolderNotesEnabled,
-  writeHeadingNumbering
+  writeHeadingNumbering,
+  writeJournalSettings
 } from "@/lib/vaultMeta";
+import {
+  DEFAULT_JOURNAL_SETTINGS,
+  normalizeJournalSettings,
+  type JournalSettings
+} from "@/lib/journal";
 import { setAutoAdmitWorkingSetProvider, setRestoreWorkingSetProvider } from "@/store/appStore/workingSetSlice";
 
 export const REOPEN_LAST_NOTE_STORAGE_KEY = "scribecat-reopen-last-note";
@@ -397,6 +404,9 @@ type EditorSettingsState = {
    */
   folderNotesEnabled: boolean;
   setFolderNotesEnabled: (enabled: boolean) => void;
+  /** Daily-note folder/layout for the open vault. */
+  journalSettings: JournalSettings;
+  setJournalSettings: (patch: Partial<JournalSettings>) => void;
   /** Details sidebar next to the document, toggled from the toolbar. */
   detailsPanelVisible: boolean;
   setDetailsPanelVisible: (visible: boolean) => void;
@@ -418,9 +428,9 @@ type EditorSettingsState = {
    * defaults while no vault is open and reloads with every vault switch.
    */
   headingNumbering: HeadingNumberingSettings;
-  /** Vault the current headingNumbering and folderNotesEnabled were read from; writes go there. */
+  /** Vault the current headingNumbering, folderNotesEnabled and journal settings were read from; writes go there. */
   headingNumberingVaultPath: string | null;
-  /** Loads every per-vault setting of this store (heading numbering, folder notes). */
+  /** Loads every per-vault setting of this store. */
   loadHeadingNumbering: (folderPath: string | null) => Promise<void>;
   setHeadingNumbering: (patch: Partial<HeadingNumberingSettings>) => void;
   /** Sections of the details panel the user folded away; app-wide like the panel itself. */
@@ -527,6 +537,18 @@ export const useEditorSettingsStore = create<EditorSettingsState>((set, get) => 
       });
     }
   },
+  journalSettings: DEFAULT_JOURNAL_SETTINGS,
+  setJournalSettings: (patch: Partial<JournalSettings>) => {
+    const state = get();
+    const next = normalizeJournalSettings({ ...state.journalSettings, ...patch });
+    set({ journalSettings: next });
+
+    if (state.headingNumberingVaultPath) {
+      writeJournalSettings(state.headingNumberingVaultPath, next).catch((error: unknown) => {
+        console.error("Failed to save journal settings:", error);
+      });
+    }
+  },
   detailsPanelVisible: getStoredDetailsPanelVisible(),
   setDetailsPanelVisible: (visible: boolean) => {
     persistDetailsPanelVisible(visible);
@@ -549,20 +571,22 @@ export const useEditorSettingsStore = create<EditorSettingsState>((set, get) => 
     set({
       headingNumberingVaultPath: folderPath,
       headingNumbering: DEFAULT_HEADING_NUMBERING,
-      folderNotesEnabled: false
+      folderNotesEnabled: false,
+      journalSettings: DEFAULT_JOURNAL_SETTINGS
     });
 
     if (!folderPath) {
       return;
     }
 
-    const [settings, folderNotesEnabled] = await Promise.all([
+    const [settings, folderNotesEnabled, journalSettings] = await Promise.all([
       readHeadingNumbering(folderPath),
-      readFolderNotesEnabled(folderPath)
+      readFolderNotesEnabled(folderPath),
+      readJournalSettings(folderPath)
     ]);
 
     if (get().headingNumberingVaultPath === folderPath) {
-      set({ headingNumbering: settings, folderNotesEnabled });
+      set({ headingNumbering: settings, folderNotesEnabled, journalSettings });
     }
   },
   setHeadingNumbering: (patch: Partial<HeadingNumberingSettings>) => {
