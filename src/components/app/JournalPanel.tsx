@@ -798,6 +798,10 @@ function JournalEntryView({
         </div>
       ) : (
         <div className="journal-entry__date-nav">
+          <div className="journal-entry__date-field" aria-label={t("journal.entryDate")}>
+            {dateLabel}
+          </div>
+
           <Button
             type="button"
             size="icon-sm"
@@ -809,10 +813,6 @@ function JournalEntryView({
           >
             <ChevronLeft />
           </Button>
-
-          <div className="journal-entry__date-field" aria-label={t("journal.entryDate")}>
-            {dateLabel}
-          </div>
 
           <Button
             type="button"
