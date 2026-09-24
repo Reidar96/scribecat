@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { FindReplacePanel } from "@/components/FindReplacePanel";
 import { LinkDialog, type LinkDialogResult } from "@/components/LinkDialog";
 import { Toolbar } from "@/components/Toolbar";
+import { TableEdgeControls } from "@/components/TableEdgeControls";
 import { FileLinkSuggestionPopover } from "@/components/editor/FileLinkSuggestionPopover";
 import { DetailsPanel } from "@/components/editor/DetailsPanel";
 import { SelectionContextMenu, type SelectionContextMenuState } from "@/components/editor/SelectionContextMenu";
@@ -1270,6 +1271,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
                 }}
               />
             </ScrollArea>
+            <TableEdgeControls editor={editor} disabled={documentLocked} />
 
             {detailsSheetOpen && layout !== "desktop" ? (
               <MobileSheet
