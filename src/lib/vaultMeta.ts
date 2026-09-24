@@ -14,6 +14,11 @@ import {
   normalizeJournalSettings,
   type JournalSettings
 } from "@/lib/journal";
+import {
+  DEFAULT_TASK_SETTINGS,
+  normalizeTaskSettings,
+  type TaskSettings
+} from "@/lib/tasks";
 import { normalizeStoredWorkingSet, type StoredWorkingSet } from "@/store/appStore/workingSet";
 
 export type SortMode = "name" | "modified" | "manual";
@@ -27,6 +32,7 @@ const MANUSCRIPT_FILE_NAME = "manuscript.json";
 const HEADING_NUMBERING_FILE_NAME = "heading-numbering.json";
 const FOLDER_NOTES_FILE_NAME = "folder-notes.json";
 const JOURNAL_FILE_NAME = "journal.json";
+const TASKS_FILE_NAME = "tasks.json";
 const ICONS_FILE_NAME = "icons.json";
 const WORKING_SET_FILE_NAME = "open-files.json";
 const DOCUMENT_LOCKS_FILE_NAME = "document-locks.json";
@@ -266,6 +272,33 @@ export async function writeJournalSettings(
   await writeTextFile(
     await join(dirPath, JOURNAL_FILE_NAME),
     JSON.stringify(normalizeJournalSettings(settings), null, 2)
+  );
+}
+
+/** Task-view preferences that travel with the open vault. */
+export async function readTaskSettings(folderPath: string): Promise<TaskSettings> {
+  try {
+    const filePath = await join(await vaultMetaDirPath(folderPath), TASKS_FILE_NAME);
+
+    if (!(await exists(filePath))) {
+      return DEFAULT_TASK_SETTINGS;
+    }
+
+    return normalizeTaskSettings(JSON.parse(await readTextFile(filePath)));
+  } catch {
+    return DEFAULT_TASK_SETTINGS;
+  }
+}
+
+export async function writeTaskSettings(
+  folderPath: string,
+  settings: TaskSettings
+): Promise<void> {
+  const dirPath = await vaultMetaDirPath(folderPath);
+  await mkdir(dirPath, { recursive: true });
+  await writeTextFile(
+    await join(dirPath, TASKS_FILE_NAME),
+    JSON.stringify(normalizeTaskSettings(settings), null, 2)
   );
 }
 

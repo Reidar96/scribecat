@@ -21,15 +21,22 @@ import {
   readFolderNotesEnabled,
   readHeadingNumbering,
   readJournalSettings,
+  readTaskSettings,
   writeFolderNotesEnabled,
   writeHeadingNumbering,
-  writeJournalSettings
+  writeJournalSettings,
+  writeTaskSettings
 } from "@/lib/vaultMeta";
 import {
   DEFAULT_JOURNAL_SETTINGS,
   normalizeJournalSettings,
   type JournalSettings
 } from "@/lib/journal";
+import {
+  DEFAULT_TASK_SETTINGS,
+  normalizeTaskSettings,
+  type TaskSettings
+} from "@/lib/tasks";
 import { setAutoAdmitWorkingSetProvider, setRestoreWorkingSetProvider } from "@/store/appStore/workingSetSlice";
 
 export const REOPEN_LAST_NOTE_STORAGE_KEY = "scribecat-reopen-last-note";
@@ -407,6 +414,9 @@ type EditorSettingsState = {
   /** Daily-note folder/layout for the open vault. */
   journalSettings: JournalSettings;
   setJournalSettings: (patch: Partial<JournalSettings>) => void;
+  /** Task-view preferences for the open vault. */
+  taskSettings: TaskSettings;
+  setTaskSettings: (patch: Partial<TaskSettings>) => void;
   /** Details sidebar next to the document, toggled from the toolbar. */
   detailsPanelVisible: boolean;
   setDetailsPanelVisible: (visible: boolean) => void;
@@ -428,7 +438,7 @@ type EditorSettingsState = {
    * defaults while no vault is open and reloads with every vault switch.
    */
   headingNumbering: HeadingNumberingSettings;
-  /** Vault the current headingNumbering, folderNotesEnabled and journal settings were read from; writes go there. */
+  /** Vault the current heading numbering, folder notes, diary and task settings were read from; writes go there. */
   headingNumberingVaultPath: string | null;
   /** Loads every per-vault setting of this store. */
   loadHeadingNumbering: (folderPath: string | null) => Promise<void>;
@@ -549,6 +559,18 @@ export const useEditorSettingsStore = create<EditorSettingsState>((set, get) => 
       });
     }
   },
+  taskSettings: DEFAULT_TASK_SETTINGS,
+  setTaskSettings: (patch: Partial<TaskSettings>) => {
+    const state = get();
+    const next = normalizeTaskSettings({ ...state.taskSettings, ...patch });
+    set({ taskSettings: next });
+
+    if (state.headingNumberingVaultPath) {
+      writeTaskSettings(state.headingNumberingVaultPath, next).catch((error: unknown) => {
+        console.error("Failed to save task settings:", error);
+      });
+    }
+  },
   detailsPanelVisible: getStoredDetailsPanelVisible(),
   setDetailsPanelVisible: (visible: boolean) => {
     persistDetailsPanelVisible(visible);
@@ -572,21 +594,23 @@ export const useEditorSettingsStore = create<EditorSettingsState>((set, get) => 
       headingNumberingVaultPath: folderPath,
       headingNumbering: DEFAULT_HEADING_NUMBERING,
       folderNotesEnabled: false,
-      journalSettings: DEFAULT_JOURNAL_SETTINGS
+      journalSettings: DEFAULT_JOURNAL_SETTINGS,
+      taskSettings: DEFAULT_TASK_SETTINGS
     });
 
     if (!folderPath) {
       return;
     }
 
-    const [settings, folderNotesEnabled, journalSettings] = await Promise.all([
+    const [settings, folderNotesEnabled, journalSettings, taskSettings] = await Promise.all([
       readHeadingNumbering(folderPath),
       readFolderNotesEnabled(folderPath),
-      readJournalSettings(folderPath)
+      readJournalSettings(folderPath),
+      readTaskSettings(folderPath)
     ]);
 
     if (get().headingNumberingVaultPath === folderPath) {
-      set({ headingNumbering: settings, folderNotesEnabled, journalSettings });
+      set({ headingNumbering: settings, folderNotesEnabled, journalSettings, taskSettings });
     }
   },
   setHeadingNumbering: (patch: Partial<HeadingNumberingSettings>) => {

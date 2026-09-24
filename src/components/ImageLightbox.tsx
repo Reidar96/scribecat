@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -21,6 +21,7 @@ export function ImageLightbox({
   positionLabel
 }: ImageLightboxProps) {
   const { t } = useTranslation();
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -49,6 +50,28 @@ export function ImageLightbox({
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) {
           onClose();
+        }
+      }}
+      onTouchStart={(event) => {
+        const touch = event.changedTouches[0];
+        touchStartRef.current = touch ? { x: touch.clientX, y: touch.clientY } : null;
+      }}
+      onTouchEnd={(event) => {
+        const start = touchStartRef.current;
+        const touch = event.changedTouches[0];
+        touchStartRef.current = null;
+        if (!start || !touch) return;
+
+        const deltaX = touch.clientX - start.x;
+        const deltaY = touch.clientY - start.y;
+        if (Math.abs(deltaX) < 48 || Math.abs(deltaX) <= Math.abs(deltaY) * 1.15) {
+          return;
+        }
+
+        if (deltaX > 0) {
+          onPrevious?.();
+        } else {
+          onNext?.();
         }
       }}
     >

@@ -49,7 +49,6 @@ import { WorkingSetPanel } from "@/components/sidebar/WorkingSetPanel";
 import { TagsOverview } from "@/components/sidebar/TagsOverview";
 import { SidebarSearchResults } from "@/components/sidebar/SidebarSearchResults";
 import { useTagIndex } from "@/hooks/useTagIndex";
-import { useLayoutMode } from "@/hooks/useLayoutMode";
 import { useVaultSearch } from "@/hooks/useVaultSearch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useStoredCollapsed, useWorkingSetHeight } from "@/hooks/useWorkingSetHeight";
@@ -61,11 +60,7 @@ import {
 import { canDownloadFolderArchive } from "@/lib/export/markdownDownload";
 import { formatFolderLabel, getFolderBasename, getRelativeDisplayPath } from "@/lib/fileSystem";
 import { isJournalRelativePath } from "@/lib/journal";
-import {
-  getTasksHideFromSidebar,
-  isTasksContainerRelativePath,
-  TASKS_SETTINGS_EVENT
-} from "@/lib/tasks";
+import { isTasksContainerRelativePath } from "@/lib/tasks";
 import { isRemoteVaultPath, remoteVaultFor } from "@/lib/remoteVaults";
 import { getVaultCapabilities, platform, vaultCapabilityHint } from "@/platform";
 import type { ManualOrderMap, SortMode } from "@/lib/vaultMeta";
@@ -219,29 +214,13 @@ export function Sidebar({
   onClose
 }: SidebarProps) {
   const { t } = useTranslation();
-  const layout = useLayoutMode();
   const [selectionMode, setSelectionMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [collapseFoldersRequestId, setCollapseFoldersRequestId] = useState(0);
   const journalSettings = useEditorSettingsStore((state) => state.journalSettings);
-  const [hideTasksFromSidebar, setHideTasksFromSidebar] = useState(
-    getTasksHideFromSidebar
+  const hideTasksFromSidebar = useEditorSettingsStore(
+    (state) => state.taskSettings.hideFromSidebar
   );
-
-  useEffect(() => {
-    const handleTasksSettings = (event: Event) => {
-      const detail = (event as CustomEvent<{ hidden?: boolean }>).detail;
-      setHideTasksFromSidebar(
-        typeof detail?.hidden === "boolean"
-          ? detail.hidden
-          : getTasksHideFromSidebar()
-      );
-    };
-
-    window.addEventListener(TASKS_SETTINGS_EVENT, handleTasksSettings);
-    return () =>
-      window.removeEventListener(TASKS_SETTINGS_EVENT, handleTasksSettings);
-  }, []);
 
   const visibleSidebarFilePaths = useMemo(
     () =>
@@ -458,8 +437,7 @@ export function Sidebar({
       ) : null}
 
       <div className="sidebar-panel__header">
-        {layout !== "phone" ? (
-          <div className="sidebar-panel__primary-actions">
+        <div className="sidebar-panel__primary-actions">
             <Button
               type="button"
               variant={journalViewOpen ? "default" : "outline"}
@@ -495,8 +473,7 @@ export function Sidebar({
             >
               <SquareCheck />
             </Button>
-          </div>
-        ) : null}
+        </div>
 
         <div className="sidebar-panel__actions">
           <Button

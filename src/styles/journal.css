@@ -350,8 +350,10 @@
 
 .journal-entry__text-editor {
   width: 100%;
-  min-height: 15rem;
-  resize: vertical;
+  min-height: 4.5rem;
+  max-height: none;
+  overflow-y: hidden;
+  resize: none;
   border: 1px solid rgba(var(--overlay-rgb),0.1);
   border-radius: 1rem;
   outline: none;
