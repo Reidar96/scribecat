@@ -5,10 +5,14 @@ import {
   type ShortcutActionId,
   type ShortcutScope
 } from "@/lib/shortcuts/definitions";
-import type { ShortcutOverrides } from "@/lib/shortcuts/storage";
+import { DISABLED_SHORTCUT, type ShortcutOverrides } from "@/lib/shortcuts/storage";
 
-export function resolveBinding(overrides: ShortcutOverrides, id: ShortcutActionId): ShortcutBinding {
+export function resolveBinding(overrides: ShortcutOverrides, id: ShortcutActionId): ShortcutBinding | null {
   const override = overrides[id];
+
+  if (override === DISABLED_SHORTCUT) {
+    return null;
+  }
 
   if (override) {
     return override;
@@ -23,9 +27,17 @@ export function resolveBinding(overrides: ShortcutOverrides, id: ShortcutActionI
   return definition.defaultBinding;
 }
 
+export function isShortcutDisabled(overrides: ShortcutOverrides, id: ShortcutActionId): boolean {
+  return overrides[id] === DISABLED_SHORTCUT;
+}
+
 export function isCustomBinding(overrides: ShortcutOverrides, id: ShortcutActionId): boolean {
   const override = overrides[id];
   const definition = SHORTCUT_DEFINITIONS_BY_ID.get(id);
+
+  if (override === DISABLED_SHORTCUT) {
+    return true;
+  }
 
   return Boolean(override && definition && !bindingsEqual(override, definition.defaultBinding));
 }
@@ -42,6 +54,10 @@ function matchesAction(
   }
 
   const override = overrides[id];
+
+  if (override === DISABLED_SHORTCUT) {
+    return false;
+  }
 
   if (override) {
     return matchesBinding(event, override);
@@ -108,7 +124,9 @@ export function findConflict(
       continue;
     }
 
-    if (bindingsConflict(resolveBinding(overrides, definition.id), binding)) {
+    const resolved = resolveBinding(overrides, definition.id);
+
+    if (resolved && bindingsConflict(resolved, binding)) {
       return definition.id;
     }
   }
