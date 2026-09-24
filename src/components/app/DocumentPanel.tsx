@@ -1,4 +1,4 @@
-import { Fragment, useState, type RefObject } from "react";
+import { Fragment, useEffect, useState, type RefObject } from "react";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -185,6 +185,21 @@ export function DocumentPanel({
   // Bumped by the header menu's "Versions" entry on the phone, where the
   // popover's own trigger button has no room in the header.
   const [versionsRequestId, setVersionsRequestId] = useState(0);
+  // A lightweight editing lock for the currently open note. It is deliberately
+  // session-only: switching notes starts the next note unlocked, while a locked
+  // note can still be read, searched, copied and saved.
+  const [documentLocked, setDocumentLocked] = useState(false);
+
+  useEffect(() => {
+    setDocumentLocked(false);
+  }, [selectedFilePath]);
+
+  const toggleDocumentLocked = () => {
+    if (!documentLocked && isRenamingTitle) {
+      onCancelTitleRename();
+    }
+    setDocumentLocked((locked) => !locked);
+  };
   const capabilities = getVaultCapabilities();
   const capabilityHint = vaultCapabilityHint();
   const versioningEnabled = useVersioningSettingsStore((state) => state.versioningEnabled);
@@ -413,12 +428,14 @@ export function DocumentPanel({
                     type="button"
                     className="detail-panel__title-edit-button"
                     onClick={onStartTitleRename}
-                    disabled={!capabilities.rename}
+                    disabled={documentLocked || !capabilities.rename}
                     aria-label={t(isSelectedFolderNote ? "app.renameFolder" : "app.renameFile")}
                     title={
-                      capabilities.rename
-                        ? t(isSelectedFolderNote ? "app.renameFolder" : "app.renameFile")
-                        : capabilityHint
+                      documentLocked
+                        ? t("toolbar.unlockDocumentTitle")
+                        : capabilities.rename
+                          ? t(isSelectedFolderNote ? "app.renameFolder" : "app.renameFile")
+                          : capabilityHint
                     }
                   >
                     <Pencil size={14} />
@@ -492,6 +509,8 @@ export function DocumentPanel({
                   onVersionsRequest={() => setVersionsRequestId((id) => id + 1)}
                   versioningEnabled={versioningEnabled}
                   onZenModeRequest={onZenModeRequest}
+                  documentLocked={documentLocked}
+                  onDocumentLockToggle={toggleDocumentLocked}
                 />
               ) : null}
             </div>
@@ -519,6 +538,8 @@ export function DocumentPanel({
                 onRequestSidebarFocus={onRequestSidebarFocus}
                 onRequestFileOpen={onRequestFileOpen}
                 onZenModeRequest={onZenModeRequest}
+                documentLocked={documentLocked}
+                onDocumentLockToggle={toggleDocumentLocked}
                 toolbarContainer={layout === "desktop" ? toolbarSlot : null}
               />
             )}
