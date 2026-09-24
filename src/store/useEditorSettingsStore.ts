@@ -139,14 +139,14 @@ function persistSpellcheckEnabled(enabled: boolean): void {
   }
 }
 
-// Off by default: existing users save with Ctrl+S on purpose, "discard
-// changes" is a free undo level for a whole session that auto-save takes
-// away, and every write is an upload for a synced or remote vault.
+// On by default for new installations. The setting remains app-wide and
+// persisted, so a user who prefers manual saves can switch it off once in
+// Settings (or from the document menu) and keep that choice.
 function getStoredAutoSaveEnabled(): boolean {
   try {
-    return window.localStorage.getItem(AUTO_SAVE_STORAGE_KEY) === "true";
+    return window.localStorage.getItem(AUTO_SAVE_STORAGE_KEY) !== "false";
   } catch {
-    return false;
+    return true;
   }
 }
 

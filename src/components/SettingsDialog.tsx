@@ -134,6 +134,8 @@ export function SettingsDialog({
   const setCheckForUpdatesEnabled = useUpdateSettingsStore((state) => state.setCheckForUpdatesEnabled);
   const reopenLastNote = useEditorSettingsStore((state) => state.reopenLastNote);
   const setReopenLastNote = useEditorSettingsStore((state) => state.setReopenLastNote);
+  const autoSaveEnabled = useEditorSettingsStore((state) => state.autoSaveEnabled);
+  const setAutoSaveEnabled = useEditorSettingsStore((state) => state.setAutoSaveEnabled);
   const pasteMarkdown = useEditorSettingsStore((state) => state.pasteMarkdown);
   const setPasteMarkdown = useEditorSettingsStore((state) => state.setPasteMarkdown);
   const restoreWorkingSet = useEditorSettingsStore((state) => state.restoreWorkingSet);
@@ -207,6 +209,7 @@ export function SettingsDialog({
                         <option value="es">{t("settingsDialog.languageSpanish")}</option>
                         <option value="zh">{t("settingsDialog.languageChinese")}</option>
                         <option value="ja">{t("settingsDialog.languageJapanese")}</option>
+                        <option value="nb">{t("settingsDialog.languageNorwegianBokmal")}</option>
                         <option value="pt">{t("settingsDialog.languagePortuguese")}</option>
                         <option value="ru">{t("settingsDialog.languageRussian")}</option>
                         <option value="it">{t("settingsDialog.languageItalian")}</option>
@@ -223,6 +226,19 @@ export function SettingsDialog({
                         type="checkbox"
                         checked={reopenLastNote}
                         onChange={(event) => setReopenLastNote(event.target.checked)}
+                      />
+                    </SettingRow>
+
+                    <SettingRow
+                      layout="switch"
+                      label={t("settingsDialog.autoSave")}
+                      hint={t("settingsDialog.autoSaveShort")}
+                      info={t("settingsDialog.autoSaveHint")}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={autoSaveEnabled}
+                        onChange={(event) => setAutoSaveEnabled(event.target.checked)}
                       />
                     </SettingRow>
 

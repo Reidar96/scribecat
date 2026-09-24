@@ -92,6 +92,8 @@ type EditorProps = {
   onRequestSidebarFocus?: () => void;
   onRequestFileOpen?: (filePath: string) => void;
   onZenModeRequest: () => void;
+  documentLocked: boolean;
+  onDocumentLockToggle: () => void;
   /** Where the toolbar renders instead of inside the editor (the document
    *  panel's slot above the title row on desktop); null keeps it inline. */
   toolbarContainer?: HTMLElement | null;
@@ -152,12 +154,16 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     onRequestSidebarFocus,
     onRequestFileOpen,
     onZenModeRequest,
+    documentLocked,
+    onDocumentLockToggle,
     toolbarContainer = null
   },
   ref
 ) {
   const { t } = useTranslation();
   const editorRef = useRef<TipTapEditor | null>(null);
+  const documentLockedRef = useRef(documentLocked);
+  documentLockedRef.current = documentLocked;
   // The pointer type of the last press inside the editor, for the context
   // menu guard below: the event itself does not always say where it came from.
   const lastPointerTypeRef = useRef<string | null>(null);
@@ -688,7 +694,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   const editor = useEditor({
     extensions: buildEditorExtensions(),
     content: markdown,
-    editable: true,
+    editable: !documentLocked,
     // editorRef is assigned during render (below), not here: under
     // React.StrictMode useEditor creates a second instance and discards the
     // first, and the first one's deferred onCreate would put the destroyed
@@ -745,6 +751,11 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     },
     editorProps: {
       handleDrop: (view, event, _slice, moved) => {
+        if (documentLockedRef.current) {
+          event.preventDefault();
+          return true;
+        }
+
         if (moved) {
           return false;
         }
@@ -789,6 +800,11 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       },
       transformPasted: (slice) => normalizePastedSlice(slice),
       handlePaste: (view, event) => {
+        if (documentLockedRef.current) {
+          event.preventDefault();
+          return true;
+        }
+
         const plainPasteRequested = plainPasteRequestedRef.current;
         plainPasteRequestedRef.current = false;
 
@@ -881,11 +897,12 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
           // to right.
           const currentEditor = editorRef.current;
           const tabHasMeaning =
-            currentEditor?.isActive("bulletList") ||
-            currentEditor?.isActive("orderedList") ||
-            currentEditor?.isActive("taskList") ||
-            currentEditor?.isActive("table") ||
-            currentEditor?.isActive("codeBlock");
+            !documentLockedRef.current &&
+            (currentEditor?.isActive("bulletList") ||
+              currentEditor?.isActive("orderedList") ||
+              currentEditor?.isActive("taskList") ||
+              currentEditor?.isActive("table") ||
+              currentEditor?.isActive("codeBlock"));
 
           if (tabHasMeaning) {
             return false;
@@ -950,6 +967,15 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         // without recreating the editor.
         const { overrides } = useShortcutsStore.getState();
         const action = matchShortcut(overrides, event, "editor");
+
+        if (documentLockedRef.current) {
+          if (action || isRetiredDefault(overrides, event, "editor")) {
+            event.preventDefault();
+            return true;
+          }
+
+          return false;
+        }
 
         if (!action) {
           // A default the user moved elsewhere must not silently fall through
@@ -1069,6 +1095,14 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   }, [editor, spellcheckEnabled]);
 
   useEffect(() => {
+    editor?.setEditable(!documentLocked);
+
+    if (documentLocked && editor) {
+      collapseNodeSelection(editor);
+    }
+  }, [editor, documentLocked]);
+
+  useEffect(() => {
     editor?.view.dom.classList.toggle(PAPER_SURFACE_CLASS, paperSurface);
   }, [editor, paperSurface]);
 
@@ -1163,11 +1197,13 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       onDownloadMarkdownRequest={downloadDocument}
       onSearchRequest={openFindPanel}
       onZenModeRequest={onZenModeRequest}
+      documentLocked={documentLocked}
+      onDocumentLockToggle={onDocumentLockToggle}
     />
   );
 
   return (
-    <div className="editor-view">
+    <div className={cn("editor-view", documentLocked && "editor-view--locked")}>
       {unserializableNodes.length > 0 ? (
         <div className="editor-view__feedback editor-view__feedback--error" role="alert">
           <span className="editor-view__feedback-message">
@@ -1225,7 +1261,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
                 // which then lights up as a stray caret. Treat it as "after
                 // the last paragraph" instead, the way editors do.
                 onMouseDown={(event) => {
-                  if (event.target !== event.currentTarget || !editor) {
+                  if (event.target !== event.currentTarget || !editor || documentLockedRef.current) {
                     return;
                   }
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
-import { RotateCcw } from "lucide-react";
+import { Ban, RotateCcw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { bindingFromEvent, formatBinding, hasPrimaryModifier } from "@/lib/shortcuts/binding";
@@ -13,7 +13,7 @@ import {
   type ShortcutCategory
 } from "@/lib/shortcuts/definitions";
 import { findFixedConflict } from "@/lib/shortcuts/fixed";
-import { findConflict, isCustomBinding, resolveBinding } from "@/lib/shortcuts/resolve";
+import { findConflict, isCustomBinding, isShortcutDisabled, resolveBinding } from "@/lib/shortcuts/resolve";
 import { useShortcutsStore } from "@/store/useShortcutsStore";
 
 type KeyToken = { mod: "ctrl" | "alt" | "shift" } | { special: "esc" | "enter" | "rightClick" } | { literal: string };
@@ -85,6 +85,7 @@ export function ShortcutsSettings() {
   const overrides = useShortcutsStore((state) => state.overrides);
   const saveError = useShortcutsStore((state) => state.saveError);
   const setBinding = useShortcutsStore((state) => state.setBinding);
+  const setDisabled = useShortcutsStore((state) => state.setDisabled);
   const resetBinding = useShortcutsStore((state) => state.resetBinding);
   const resetAllBindings = useShortcutsStore((state) => state.resetAllBindings);
 
@@ -170,9 +171,15 @@ export function ShortcutsSettings() {
           {definitions.map((definition) => {
             const isRecording = recordingId === definition.id;
             const isCustom = isCustomBinding(overrides, definition.id);
+            const isDisabled = isShortcutDisabled(overrides, definition.id);
+            const binding = resolveBinding(overrides, definition.id);
 
             return (
-              <li key={definition.id} className="shortcuts-list__item">
+              <li
+                key={definition.id}
+                className="shortcuts-list__item"
+                data-disabled={isDisabled ? "true" : undefined}
+              >
                 <span className="shortcuts-list__label">{t(definition.descriptionKey)}</span>
                 <span className="shortcuts-list__keys-group">
                   <button
@@ -187,7 +194,26 @@ export function ShortcutsSettings() {
                   >
                     {isRecording
                       ? t("shortcutsDialog.recording")
-                      : formatBinding(t, resolveBinding(overrides, definition.id))}
+                      : isDisabled
+                        ? t("shortcutsDialog.disabled")
+                        : formatBinding(t, binding!)}
+                  </button>
+                  <button
+                    type="button"
+                    className="shortcuts-list__reset shortcuts-list__disable"
+                    aria-pressed={isDisabled}
+                    aria-label={t(isDisabled ? "shortcutsDialog.enableOne" : "shortcutsDialog.disableOne", {
+                      action: t(definition.descriptionKey)
+                    })}
+                    title={t(isDisabled ? "shortcutsDialog.enableOne" : "shortcutsDialog.disableOne", {
+                      action: t(definition.descriptionKey)
+                    })}
+                    onClick={() => {
+                      stopRecording();
+                      void setDisabled(definition.id, !isDisabled);
+                    }}
+                  >
+                    <Ban aria-hidden="true" />
                   </button>
                   <button
                     type="button"

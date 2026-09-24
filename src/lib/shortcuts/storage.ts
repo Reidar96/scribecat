@@ -10,7 +10,9 @@ import { isShortcutActionId, type ShortcutActionId } from "@/lib/shortcuts/defin
  * following the app defaults, so a later default change still reaches users who
  * never touched that entry.
  */
-export type ShortcutOverrides = Partial<Record<ShortcutActionId, ShortcutBinding>>;
+export const DISABLED_SHORTCUT = "disabled" as const;
+export type ShortcutOverride = ShortcutBinding | typeof DISABLED_SHORTCUT;
+export type ShortcutOverrides = Partial<Record<ShortcutActionId, ShortcutOverride>>;
 
 const FILE_NAME = "shortcuts.json";
 const FILE_VERSION = 1;
@@ -58,7 +60,13 @@ function parseOverrides(raw: string): ShortcutOverrides {
   // A combo without Ctrl/Alt would swallow ordinary typing, so it is dropped
   // here too — the dialog rejects those, a hand-edited file must not slip past.
   for (const [id, binding] of Object.entries(bindings)) {
-    if (isShortcutActionId(id) && isShortcutBinding(binding) && hasPrimaryModifier(binding)) {
+    if (!isShortcutActionId(id)) {
+      continue;
+    }
+
+    if (binding === DISABLED_SHORTCUT) {
+      overrides[id] = DISABLED_SHORTCUT;
+    } else if (isShortcutBinding(binding) && hasPrimaryModifier(binding)) {
       overrides[id] = binding;
     }
   }

@@ -758,6 +758,20 @@
   cursor: default;
 }
 
+.shortcuts-list__item[data-disabled="true"] {
+  border-style: dashed;
+}
+
+.shortcuts-list__item[data-disabled="true"] .shortcuts-list__label,
+.shortcuts-list__item[data-disabled="true"] .shortcuts-list__keys {
+  color: rgba(var(--text-rgb), 0.5);
+}
+
+.shortcuts-list__disable[aria-pressed="true"] {
+  background: rgba(var(--overlay-rgb), 0.1);
+  color: rgba(var(--text-rgb), 0.9);
+}
+
 .unsaved-dialog {
   position: fixed;
   inset: 0;

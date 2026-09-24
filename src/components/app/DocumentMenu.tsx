@@ -6,6 +6,8 @@ import {
   FileCode,
   Focus,
   History,
+  Lock,
+  LockOpen,
   PanelRight,
   Printer,
   Search,
@@ -40,6 +42,8 @@ type DocumentMenuProps = {
   onVersionsRequest: () => void;
   versioningEnabled: boolean;
   onZenModeRequest: () => void;
+  documentLocked: boolean;
+  onDocumentLockToggle: () => void;
 };
 
 /**
@@ -61,7 +65,9 @@ export function DocumentMenu({
   onNavigateForward,
   onVersionsRequest,
   versioningEnabled,
-  onZenModeRequest
+  onZenModeRequest,
+  documentLocked,
+  onDocumentLockToggle
 }: DocumentMenuProps) {
   const { t } = useTranslation();
   const openFindPanel = useSearchStore((state) => state.openPanel);
@@ -168,6 +174,10 @@ export function DocumentMenu({
             <MenuItem onClick={onZenModeRequest}>
               <Focus className="size-4" />
               {t("toolbar.zenModeButton")}
+            </MenuItem>
+            <MenuItem onClick={onDocumentLockToggle}>
+              {documentLocked ? <LockOpen className="size-4" /> : <Lock className="size-4" />}
+              {t(documentLocked ? "toolbar.unlockDocument" : "toolbar.lockDocument")}
             </MenuItem>
             <div className="editor-toolbar__menu-separator" role="separator" />
 

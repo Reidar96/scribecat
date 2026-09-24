@@ -11,6 +11,17 @@
   min-height: 100%;
 }
 
+.editor-view--locked .editor-view__surface::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+  border-radius: inherit;
+  background: rgba(248, 113, 113, 0.035);
+  box-shadow: inset 0 0 0 1px rgba(248, 113, 113, 0.32);
+}
+
 .editor-view__surface {
   position: relative;
   /* Own stacking context: lets the outline-jump highlight below sit behind

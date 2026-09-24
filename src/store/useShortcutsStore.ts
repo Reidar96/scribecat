@@ -3,6 +3,7 @@ import { create } from "zustand";
 import type { ShortcutBinding } from "@/lib/shortcuts/binding";
 import type { ShortcutActionId } from "@/lib/shortcuts/definitions";
 import {
+  DISABLED_SHORTCUT,
   readShortcutOverrides,
   writeShortcutOverrides,
   type ShortcutOverrides
@@ -16,6 +17,7 @@ type ShortcutsState = {
   saveError: string | null;
   loadOverrides: () => Promise<void>;
   setBinding: (id: ShortcutActionId, binding: ShortcutBinding) => Promise<void>;
+  setDisabled: (id: ShortcutActionId, disabled: boolean) => Promise<void>;
   resetBinding: (id: ShortcutActionId) => Promise<void>;
   resetAllBindings: () => Promise<void>;
 };
@@ -43,6 +45,16 @@ export const useShortcutsStore = create<ShortcutsState>((set, get) => {
     },
     setBinding: async (id, binding) => {
       await persist({ ...get().overrides, [id]: binding });
+    },
+    setDisabled: async (id, disabled) => {
+      if (disabled) {
+        await persist({ ...get().overrides, [id]: DISABLED_SHORTCUT });
+        return;
+      }
+
+      const next = { ...get().overrides };
+      delete next[id];
+      await persist(next);
     },
     resetBinding: async (id) => {
       const next = { ...get().overrides };

@@ -16,6 +16,7 @@ describe("getCurrentLanguageEnglishName", () => {
   it("returns the English name of the active UI language", async () => {
     await withLanguage("de", () => expect(getCurrentLanguageEnglishName()).toBe("German"));
     await withLanguage("fr", () => expect(getCurrentLanguageEnglishName()).toBe("French"));
+    await withLanguage("nb", () => expect(getCurrentLanguageEnglishName()).toBe("Norwegian Bokmål"));
     await withLanguage("uk", () => expect(getCurrentLanguageEnglishName()).toBe("Ukrainian"));
   });
 

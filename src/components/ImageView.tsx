@@ -76,7 +76,7 @@ export function ImageView({ node, editor, getPos, updateAttributes, selected }: 
   const startResize = (handle: ResizeHandle) => (event: React.PointerEvent<HTMLSpanElement>) => {
     const imgEl = imgRef.current;
 
-    if (!imgEl || event.button !== 0) {
+    if (!editor.isEditable || !imgEl || event.button !== 0) {
       return;
     }
 
@@ -155,6 +155,7 @@ export function ImageView({ node, editor, getPos, updateAttributes, selected }: 
             style={effectiveWidth ? { width: effectiveWidth, height: "auto" } : undefined}
           />
           {selected &&
+            editor.isEditable &&
             RESIZE_HANDLES.map((handle) => (
               <span
                 key={handle}
