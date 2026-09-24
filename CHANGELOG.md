@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.22.8] - 2026-09-24
+
+### Improvements
+- Add previous/next day controls to the desktop diary entry view.
+- Group both day-navigation arrows together on the right side of the date field.
+- Reuse the existing mobile date-navigation rules, including disabling forward navigation at today.
+
 ## [0.22.7] - 2026-09-24
 
 ### Improvements

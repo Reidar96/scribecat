@@ -287,6 +287,19 @@
   display: none;
 }
 
+.journal-entry__date-nav {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 2.8rem 2.8rem;
+  align-items: stretch;
+  gap: 0.55rem;
+}
+
+.journal-entry__date-nav > button {
+  width: 2.8rem;
+  height: auto;
+  min-height: 100%;
+}
+
 .journal-entry__date-field {
   border: 1px solid rgba(var(--overlay-rgb),0.1);
   border-radius: 0.9rem;

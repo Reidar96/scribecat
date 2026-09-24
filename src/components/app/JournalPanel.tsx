@@ -792,9 +792,41 @@ function JournalEntryView({
         </div>
       ) : null}
 
-      <div className="journal-entry__date-field" aria-label={t("journal.entryDate")}>
-        {dateLabel}
-      </div>
+      {isPhone ? (
+        <div className="journal-entry__date-field" aria-label={t("journal.entryDate")}>
+          {dateLabel}
+        </div>
+      ) : (
+        <div className="journal-entry__date-nav">
+          <div className="journal-entry__date-field" aria-label={t("journal.entryDate")}>
+            {dateLabel}
+          </div>
+
+          <Button
+            type="button"
+            size="icon-sm"
+            variant="outline"
+            disabled={!canPreviousDay}
+            onClick={onPreviousDay}
+            aria-label={t("journal.previousDay")}
+            title={t("journal.previousDay")}
+          >
+            <ChevronLeft />
+          </Button>
+
+          <Button
+            type="button"
+            size="icon-sm"
+            variant="outline"
+            disabled={!canNextDay}
+            onClick={onNextDay}
+            aria-label={t("journal.nextDay")}
+            title={t("journal.nextDay")}
+          >
+            <ChevronRight />
+          </Button>
+        </div>
+      )}
 
       <JournalTagEditor
         tags={tags}
