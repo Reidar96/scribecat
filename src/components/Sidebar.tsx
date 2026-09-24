@@ -18,7 +18,7 @@ import {
   GripVertical,
   Import,
   ListChecks,
-  ListTodo,
+  SquareCheck,
   Move,
   Network,
   Plus,
@@ -126,7 +126,6 @@ type SidebarProps = {
   onDuplicateFileRequest: (filePath: string) => void;
   onDeleteFolderRequest: (folderPath: string) => void;
   onDeleteMultipleRequest: (entries: BatchEntry[]) => void;
-  onDeleteToolbarRequest: () => void;
   onExportFileRequest: (filePath: string, mode: ExportMode) => void;
   onExportFolderRequest: (folderPath: string, mode: ExportMode) => void;
   onExportMultipleRequest: (entries: BatchEntry[], mode: ExportMode) => void;
@@ -194,7 +193,6 @@ export function Sidebar({
   onDuplicateFileRequest,
   onDeleteFolderRequest,
   onDeleteMultipleRequest,
-  onDeleteToolbarRequest,
   onExportFileRequest,
   onExportFolderRequest,
   onExportMultipleRequest,
@@ -432,9 +430,10 @@ export function Sidebar({
               onClick={onJournalViewToggle}
               disabled={isLoading || folderPath === null}
               aria-pressed={journalViewOpen}
+              aria-label={t("sidebar.calendar")}
+              title={t("sidebar.calendar")}
             >
               <CalendarDays />
-              <span>{t("sidebar.calendar")}</span>
             </Button>
 
             <Button
@@ -443,9 +442,10 @@ export function Sidebar({
               onClick={onGraphViewToggle}
               disabled={isLoading || folderPath === null}
               aria-pressed={graphViewOpen}
+              aria-label={t("sidebar.graph")}
+              title={t("sidebar.graph")}
             >
               <Network />
-              <span>{t("sidebar.graph")}</span>
             </Button>
 
             <Button
@@ -454,9 +454,10 @@ export function Sidebar({
               onClick={onTasksViewToggle}
               disabled={isLoading || folderPath === null}
               aria-pressed={tasksViewOpen}
+              aria-label={t("sidebar.tasks")}
+              title={t("sidebar.tasks")}
             >
-              <ListTodo />
-              <span>{t("sidebar.tasks")}</span>
+              <SquareCheck />
             </Button>
           </div>
         ) : null}
@@ -499,18 +500,6 @@ export function Sidebar({
               <Import />
             </Button>
           ) : null}
-
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onDeleteToolbarRequest}
-            disabled={isLoading || !capabilities.delete || (selectedFilePath === null && fileTreeSelectionCount === 0)}
-            aria-label={t("sidebar.deleteFile")}
-            title={capabilities.delete ? t("sidebar.deleteSelectedFile") : capabilityHint}
-          >
-            <Trash2 />
-          </Button>
 
           <Menu>
             <MenuTrigger
