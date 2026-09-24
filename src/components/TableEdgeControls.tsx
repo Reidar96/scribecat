@@ -25,12 +25,6 @@ type TableEdgeControlsProps = {
 };
 
 const EDGE_HIT_SIZE = 7;
-const HANDLE_EDGE_PADDING = 13;
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max);
-}
-
 function selectionPosition(editor: Editor, cell: HTMLTableCellElement): number | null {
   try {
     const domPos = editor.view.posAtDOM(cell, 0);
@@ -178,36 +172,51 @@ export function TableEdgeControls({ editor, disabled = false }: TableEdgeControl
 
       const rect = cell.getBoundingClientRect();
       const row = cell.parentElement;
+      const table = cell.closest("table");
 
-      if (!(row instanceof HTMLTableRowElement)) {
+      if (!(row instanceof HTMLTableRowElement) || !(table instanceof HTMLTableElement)) {
         setHandle(null);
         return;
       }
 
       const rowRect = row.getBoundingClientRect();
+      const tableRect = table.getBoundingClientRect();
+      const wrapper = table.closest(".tableWrapper");
+      const wrapperRect = wrapper?.getBoundingClientRect();
+
+      // The plus belongs to the line, not to the pointer. Centre it on the
+      // visible part of that table border so it stays perfectly still while
+      // the pointer moves along the same line, including in a scrolled table.
+      const visibleLeft = Math.max(tableRect.left, wrapperRect?.left ?? tableRect.left);
+      const visibleRight = Math.min(tableRect.right, wrapperRect?.right ?? tableRect.right);
+      const visibleTop = Math.max(tableRect.top, wrapperRect?.top ?? tableRect.top);
+      const visibleBottom = Math.min(tableRect.bottom, wrapperRect?.bottom ?? tableRect.bottom);
+      const lineCenterX = (visibleLeft + visibleRight) / 2;
+      const lineCenterY = (visibleTop + visibleBottom) / 2;
+
       const distances: Array<{ action: EdgeAction; distance: number; x: number; y: number }> = [
         {
           action: "column-before",
           distance: Math.abs(event.clientX - rect.left),
           x: rect.left,
-          y: clamp(event.clientY, rect.top + HANDLE_EDGE_PADDING, rect.bottom - HANDLE_EDGE_PADDING)
+          y: lineCenterY
         },
         {
           action: "column-after",
           distance: Math.abs(event.clientX - rect.right),
           x: rect.right,
-          y: clamp(event.clientY, rect.top + HANDLE_EDGE_PADDING, rect.bottom - HANDLE_EDGE_PADDING)
+          y: lineCenterY
         },
         {
           action: "row-before",
           distance: Math.abs(event.clientY - rowRect.top),
-          x: clamp(event.clientX, rowRect.left + HANDLE_EDGE_PADDING, rowRect.right - HANDLE_EDGE_PADDING),
+          x: lineCenterX,
           y: rowRect.top
         },
         {
           action: "row-after",
           distance: Math.abs(event.clientY - rowRect.bottom),
-          x: clamp(event.clientX, rowRect.left + HANDLE_EDGE_PADDING, rowRect.right - HANDLE_EDGE_PADDING),
+          x: lineCenterX,
           y: rowRect.bottom
         }
       ];

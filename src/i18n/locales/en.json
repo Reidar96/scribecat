@@ -756,7 +756,9 @@
   },
   "imageView": {
     "notFound": "Image not found: {{src}}",
-    "loading": "Loading image …"
+    "loading": "Loading image …",
+    "preview": "Image preview",
+    "openPreview": "Open larger image"
   },
   "codeBlock": {
     "copy": "Copy code",
@@ -1182,5 +1184,13 @@
     "addColumnAfter": "Add column here",
     "addRowBefore": "Add row here",
     "addRowAfter": "Add row here"
+  },
+  "pdfViewer": {
+    "title": "PDF preview: {{name}}",
+    "loading": "Loading PDF …",
+    "error": "The PDF could not be opened.",
+    "previous": "Previous page",
+    "next": "Next page",
+    "pageCount": "Page {{page}} of {{count}}"
   }
 }

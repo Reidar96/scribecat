@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { FindReplacePanel } from "@/components/FindReplacePanel";
 import { LinkDialog, type LinkDialogResult } from "@/components/LinkDialog";
 import { Toolbar } from "@/components/Toolbar";
+import { PdfViewerModal } from "@/components/PdfViewerModal";
 import { TableEdgeControls } from "@/components/TableEdgeControls";
 import { FileLinkSuggestionPopover } from "@/components/editor/FileLinkSuggestionPopover";
 import { DetailsPanel } from "@/components/editor/DetailsPanel";
@@ -60,10 +61,12 @@ import {
   type SelectionRange
 } from "@/lib/editor/selectionClipboard";
 import {
+  ABSOLUTE_URL_PATTERN,
   getLastOpenedFolderPath,
   getRelativeImageMarkdownPath,
   saveImageToFolder
 } from "@/lib/fileSystem";
+import { dirname, join } from "@/platform/paths";
 import { updateSearchHighlight } from "@/lib/searchHighlight";
 import { canDownloadMarkdown, downloadNoteAsMarkdown } from "@/lib/export/markdownDownload";
 import { printMarkdown } from "@/lib/print";
@@ -124,6 +127,25 @@ type LinkDialogState = {
   selectedText: string;
   isLinkActive: boolean;
 };
+
+type PdfPreviewState = {
+  absolutePath: string;
+  label: string;
+};
+
+function isLocalPdfHref(href: string): boolean {
+  if (
+    !href ||
+    ABSOLUTE_URL_PATTERN.test(href) ||
+    href.startsWith("//") ||
+    href.startsWith("#")
+  ) {
+    return false;
+  }
+
+  const [path] = href.split(/[?#]/);
+  return /\.pdf$/i.test(path);
+}
 
 // The selected passage as markdown — the form the chat agent's get_selection
 // tool and the composer's selection chip both work with. Plain text would drop
@@ -198,6 +220,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     handleDetailsPanelResizeKeyDown
   } = useDetailsPanelWidth();
   const [linkDialog, setLinkDialog] = useState<LinkDialogState | null>(null);
+  const [pdfPreview, setPdfPreview] = useState<PdfPreviewState | null>(null);
   // Node types the serializer replaced with a placeholder in the last
   // serialization (see lib/editor/serializationGuard). While the list is
   // not empty the document is not reported to the store, so nothing with a
@@ -466,6 +489,26 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     }
 
     onRequestFileOpen?.(targetFilePath);
+  };
+
+  const openLocalPdf = async (href: string) => {
+    if (!filePath) {
+      return;
+    }
+
+    const [rawPath] = href.split(/[?#]/);
+    const decodedPath = decodeFileLinkHref(rawPath);
+
+    try {
+      const absolutePath = await join(await dirname(filePath), decodedPath);
+      const label = decodedPath.replace(/\\/g, "/").split("/").pop() || decodedPath;
+      setPdfPreview({ absolutePath, label });
+    } catch {
+      setFeedback({
+        kind: "error",
+        message: t("pdfViewer.error")
+      });
+    }
   };
 
   type ImagePayload = { fileName: string; mimeType: string; data: Uint8Array };
@@ -882,6 +925,8 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 
           if (isFileLinkHref(rawHref)) {
             openFileLink(rawHref);
+          } else if (isLocalPdfHref(rawHref)) {
+            void openLocalPdf(rawHref);
           } else {
             void platform.shell.openUrl(anchor.href);
           }
@@ -1205,6 +1250,13 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 
   return (
     <div className={cn("editor-view", documentLocked && "editor-view--locked", documentWidth === "compact" && "editor-view--compact")}>
+      {pdfPreview ? (
+        <PdfViewerModal
+          absolutePath={pdfPreview.absolutePath}
+          label={pdfPreview.label}
+          onClose={() => setPdfPreview(null)}
+        />
+      ) : null}
       {unserializableNodes.length > 0 ? (
         <div className="editor-view__feedback editor-view__feedback--error" role="alert">
           <span className="editor-view__feedback-message">

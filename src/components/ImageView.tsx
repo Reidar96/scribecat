@@ -7,6 +7,7 @@ import { NodeSelection } from "@tiptap/pm/state";
 import { NodeViewWrapper, type ReactNodeViewProps } from "@tiptap/react";
 
 import { EditorFileContext } from "@/lib/editorFileContext";
+import { ImageLightbox } from "@/components/ImageLightbox";
 import { ABSOLUTE_URL_PATTERN, guessImageMimeType } from "@/lib/fileSystem";
 
 const MIN_IMAGE_WIDTH = 48;
@@ -23,6 +24,7 @@ export function ImageView({ node, editor, getPos, updateAttributes, selected }: 
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [dragWidth, setDragWidth] = useState<number | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
   const dragWidthRef = useRef<number | null>(null);
 
@@ -123,7 +125,7 @@ export function ImageView({ node, editor, getPos, updateAttributes, selected }: 
   // and an editor that is already focused stays focused (the keyboard is up
   // anyway, and Backspace on the selected image should keep working).
   const selectOnTouch = (event: React.PointerEvent<HTMLElement>) => {
-    if (event.pointerType === "mouse" || event.button !== 0) {
+    if (!editor.isEditable || event.pointerType === "mouse" || event.button !== 0) {
       return;
     }
 
@@ -153,7 +155,20 @@ export function ImageView({ node, editor, getPos, updateAttributes, selected }: 
             alt={alt}
             className="editor-image-wrapper__img"
             style={effectiveWidth ? { width: effectiveWidth, height: "auto" } : undefined}
+            title={t("imageView.openPreview")}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              setPreviewOpen(true);
+            }}
           />
+          {previewOpen ? (
+            <ImageLightbox
+              src={displaySrc}
+              alt={alt}
+              onClose={() => setPreviewOpen(false)}
+            />
+          ) : null}
           {selected &&
             editor.isEditable &&
             RESIZE_HANDLES.map((handle) => (
