@@ -633,6 +633,22 @@
     display: inline-flex;
   }
 
+  .file-tree__row--folder-collection {
+    padding-right: 5.75rem;
+  }
+
+  .file-tree__folder-note-button {
+    top: 0.125rem;
+    right: 3rem;
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+
+  .file-tree__folder-note-button svg {
+    width: 1.05rem;
+    height: 1.05rem;
+  }
+
   /* Renaming happens in the tree on touch, next to the row being renamed:
      the title row is the first thing truncated here, and a target that small
      between the path and the status icons is one a finger keeps missing. The

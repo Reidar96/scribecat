@@ -410,7 +410,9 @@
     "unpinWorkingSet": "Løsne fra Under arbeid",
     "discardChanges": "Forkast endringer",
     "unsavedChangesInside": "Ulagrede endringer i denne mappen",
-    "closeWorkingSet": "Lukk i «Under arbeid»"
+    "closeWorkingSet": "Lukk i «Under arbeid»",
+    "openFolderCollection": "Åpne {{path}} som grid",
+    "openFolderNoteButton": "Åpne mappenotat"
   },
   "moveDialog": {
     "eyebrow": "Flytt",
@@ -784,7 +786,18 @@
     "placeholder": "Legg til en tag…",
     "lockedPlaceholder": "Lås opp dokumentet for å endre tags",
     "overview": "Tags",
-    "clearFilter": "Vis alle notater",
+    "clearFilter": "Lukk taggvisning",
     "noneInVault": "Ingen tags i denne mappen."
+  },
+  "collection": {
+    "label": "Notatsamling",
+    "root": "Notater",
+    "close": "Lukk samlingsvisning",
+    "noteCount_one": "{{count}} notat",
+    "noteCount_other": "{{count}} notater",
+    "folderSummary": "{{notes}} notater · {{folders}} mapper",
+    "folder": "Mappe",
+    "emptyTag": "Ingen notater bruker denne taggen nå.",
+    "emptyFolder": "Denne mappen har ingen notater eller undermapper."
   }
 }
