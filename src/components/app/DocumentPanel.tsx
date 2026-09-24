@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState, type RefObject } from "react";
+import { Fragment, useState, type RefObject } from "react";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -7,6 +7,8 @@ import {
   FolderOpen,
   Loader2,
   PanelLeft,
+  PanelLeftClose,
+  PanelLeftOpen,
   Pencil,
   Save
 } from "lucide-react";
@@ -26,6 +28,7 @@ import { getVaultIcon, type VaultIconMap } from "@/lib/vaultIcons";
 import { anchorForTrigger, type PopoverAnchor } from "@/lib/usePopoverOverflowAlign";
 import type { FileVersion } from "@/lib/fileVersions";
 import { cn } from "@/lib/utils";
+import { replaceBody, splitFrontmatter } from "@/lib/documentFrontmatter";
 import { getVaultCapabilities, vaultCapabilityHint } from "@/platform";
 import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
 import { useSearchStore } from "@/store/useSearchStore";
@@ -74,6 +77,11 @@ type DocumentPanelProps = {
   onRequestSidebarFocus: () => void;
   onRequestFileOpen: (targetFilePath: string) => void;
   onZenModeRequest: () => void;
+  documentLocked: boolean;
+  onDocumentLockToggle: () => void;
+  /** Desktop/tablet: whether the vault sidebar is currently visible. */
+  sidebarVisible: boolean;
+  onSidebarVisibilityToggle: () => void;
   onVersionDiffRequest: (version: FileVersion) => void;
   onVersionRestoreRequest: (version: FileVersion) => void;
 
@@ -170,6 +178,10 @@ export function DocumentPanel({
   onRequestSidebarFocus,
   onRequestFileOpen,
   onZenModeRequest,
+  documentLocked,
+  onDocumentLockToggle,
+  sidebarVisible,
+  onSidebarVisibilityToggle,
   onVersionDiffRequest,
   onVersionRestoreRequest,
   onOpenSidebar,
@@ -185,20 +197,11 @@ export function DocumentPanel({
   // Bumped by the header menu's "Versions" entry on the phone, where the
   // popover's own trigger button has no room in the header.
   const [versionsRequestId, setVersionsRequestId] = useState(0);
-  // A lightweight editing lock for the currently open note. It is deliberately
-  // session-only: switching notes starts the next note unlocked, while a locked
-  // note can still be read, searched, copied and saved.
-  const [documentLocked, setDocumentLocked] = useState(false);
-
-  useEffect(() => {
-    setDocumentLocked(false);
-  }, [selectedFilePath]);
-
   const toggleDocumentLocked = () => {
     if (!documentLocked && isRenamingTitle) {
       onCancelTitleRename();
     }
-    setDocumentLocked((locked) => !locked);
+    onDocumentLockToggle();
   };
   const capabilities = getVaultCapabilities();
   const capabilityHint = vaultCapabilityHint();
@@ -245,6 +248,19 @@ export function DocumentPanel({
   // document). Whenever no editor is mounted — no file open, or the selected
   // one still loading/failed — this standalone copy takes over so Ctrl+F is
   // never a dead shortcut; it searches the vault and jumps into the first hit.
+  const editorMarkdown =
+    selectedFileContent === null ? null : splitFrontmatter(selectedFileContent).body;
+  const handleEditorMarkdownChange = (body: string) => {
+    if (selectedFileContent !== null) {
+      onMarkdownChange(replaceBody(selectedFileContent, body));
+    }
+  };
+  const handleCanonicalMarkdown = (filePath: string, body: string) => {
+    if (selectedFileContent !== null) {
+      onCanonicalMarkdown(filePath, replaceBody(selectedFileContent, body));
+    }
+  };
+
   const isEditorMounted =
     Boolean(selectedFilePath) &&
     !fileError &&
@@ -284,6 +300,19 @@ export function DocumentPanel({
                   onClick={onOpenSidebar}
                 >
                   <PanelLeft />
+                </Button>
+              ) : null}
+              {layout !== "phone" ? (
+                <Button
+                  type="button"
+                  size="icon-sm"
+                  variant="ghost"
+                  className="detail-panel__sidebar-button"
+                  aria-label={t(sidebarVisible ? "sidebar.hide" : "sidebar.show")}
+                  title={t(sidebarVisible ? "sidebar.hide" : "sidebar.show")}
+                  onClick={onSidebarVisibilityToggle}
+                >
+                  {sidebarVisible ? <PanelLeftClose /> : <PanelLeftOpen />}
                 </Button>
               ) : null}
               {/* Navigation across notes belongs to the document as a whole, so
@@ -529,9 +558,11 @@ export function DocumentPanel({
               <Editor
                 key={selectedFilePath}
                 ref={editorHandleRef}
-                markdown={selectedFileContent}
-                onMarkdownChange={onMarkdownChange}
-                onCanonicalMarkdown={onCanonicalMarkdown}
+                markdown={editorMarkdown ?? ""}
+                documentMarkdown={selectedFileContent}
+                onMarkdownChange={handleEditorMarkdownChange}
+                onDocumentMarkdownChange={onMarkdownChange}
+                onCanonicalMarkdown={handleCanonicalMarkdown}
                 folderPath={folderPath}
                 filePath={selectedFilePath}
                 editorFocusRequestId={editorFocusRequestId}
