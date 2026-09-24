@@ -9,8 +9,13 @@ describe("guessImageMimeType", () => {
     expect(guessImageMimeType("diagram.svg")).toBe("image/svg+xml");
   });
 
+  it("recognizes modern phone photo formats", () => {
+    expect(guessImageMimeType("photo.HEIC")).toBe("image/heic");
+    expect(guessImageMimeType("photo.heif")).toBe("image/heif");
+    expect(guessImageMimeType("photo.avif")).toBe("image/avif");
+  });
+
   it("falls back to a generic type for anything it does not know", () => {
-    expect(guessImageMimeType("photo.heic")).toBe("application/octet-stream");
     expect(guessImageMimeType("no-extension")).toBe("application/octet-stream");
   });
 });
