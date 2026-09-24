@@ -62,3 +62,26 @@ describe("web platform session", () => {
     await expect(platform.session?.changePassword("old", "x")).rejects.toMatchObject({ code: "weak_password" });
   });
 });
+
+describe("web platform image picker", () => {
+  it("attaches the picker input to the document for mobile WebKit and cleans it up", async () => {
+    const click = vi
+      .spyOn(HTMLInputElement.prototype, "click")
+      .mockImplementation(function (this: HTMLInputElement) {
+        expect(document.body.contains(this)).toBe(true);
+        expect(this.accept).toContain("image/*");
+        this.dispatchEvent(new Event("cancel"));
+      });
+
+    await expect(
+      platform.imagePicker.pickImages({
+        title: "Images",
+        filterName: "Images",
+        extensions: ["png", "jpg", "heic"]
+      })
+    ).resolves.toEqual([]);
+
+    expect(document.querySelector('input[type="file"]')).toBeNull();
+    click.mockRestore();
+  });
+});
