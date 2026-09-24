@@ -3,6 +3,7 @@ import {
   CalendarClock,
   CheckCircle2,
   GripVertical,
+  Home,
   PanelLeft,
   PanelLeftOpen,
   Pencil,
@@ -14,6 +15,7 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { DeleteFileDialog } from "@/components/DeleteFileDialog";
 import { Button } from "@/components/ui/button";
 import { useLayoutMode } from "@/hooks/useLayoutMode";
 import { getRelativeDisplayPath, readMarkdownFile } from "@/lib/fileSystem";
@@ -334,6 +336,8 @@ export function TasksPanel({
   const [priorityDraft, setPriorityDraft] = useState<TaskPriority>(null);
   const [saving, setSaving] = useState(false);
   const [dragOverCategory, setDragOverCategory] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [categoryDelete, setCategoryDelete] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -559,6 +563,7 @@ export function TasksPanel({
         setNoteDraft("");
         setTagsDraft("");
         setPriorityDraft(null);
+        setCreateOpen(false);
 
         if (selectedView.startsWith(CATEGORY_PREFIX)) {
           setSelectedView(categoryView(category));
@@ -715,17 +720,18 @@ export function TasksPanel({
     }
   };
 
-  const deleteCategory = async (category: string) => {
-    const document = documents[category];
-    if (!document || saving) return;
+  const deleteCategory = (category: string) => {
+    if (!documents[category] || saving) return;
+    setCategoryDelete(category);
+  };
 
-    const confirmed = window.confirm(
-      t("tasks.deleteCategoryConfirm", {
-        category,
-        count: document.tasks.length
-      })
-    );
-    if (!confirmed) return;
+  const confirmDeleteCategory = async () => {
+    if (!categoryDelete || saving) return;
+    const document = documents[categoryDelete];
+    if (!document) {
+      setCategoryDelete(null);
+      return;
+    }
 
     setSaving(true);
     try {
@@ -733,16 +739,17 @@ export function TasksPanel({
 
       setDocuments((current) => {
         const next = { ...current };
-        delete next[category];
+        delete next[categoryDelete];
         return next;
       });
 
-      if (selectedView === categoryView(category)) {
+      if (selectedView === categoryView(categoryDelete)) {
         setSelectedView(ALL_TASKS);
       }
-      if (categoryDraft === category) {
+      if (categoryDraft === categoryDelete) {
         setCategoryDraft("");
       }
+      setCategoryDelete(null);
     } finally {
       setSaving(false);
     }
@@ -807,10 +814,10 @@ export function TasksPanel({
           size="icon-sm"
           variant="ghost"
           onClick={onClose}
-          aria-label={t("tasks.close")}
-          title={t("tasks.close")}
+          aria-label={t("common.goHome")}
+          title={t("common.goHome")}
         >
-          <X />
+          <Home />
         </Button>
       </header>
 
@@ -831,6 +838,19 @@ export function TasksPanel({
               <span>{t("tasks.all")}</span>
               <small>{allTasks.length}</small>
             </button>
+
+            <Button
+              type="button"
+              size="icon-sm"
+              variant={createOpen ? "default" : "outline"}
+              className="tasks-new-trigger"
+              aria-pressed={createOpen}
+              aria-label={t("tasks.newTask")}
+              title={t("tasks.newTask")}
+              onClick={() => setCreateOpen((open) => !open)}
+            >
+              <Plus />
+            </Button>
 
             {[
               [TODAY_TASKS, t("tasks.today"), todayCount],
@@ -968,13 +988,14 @@ export function TasksPanel({
         </aside>
 
         <main className="tasks-main">
-          <form
-            className="tasks-create"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void addTask();
-            }}
-          >
+          {createOpen ? (
+            <form
+              className="tasks-create"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void addTask();
+              }}
+            >
             <input
               className="tasks-create__text"
               value={textDraft}
@@ -1048,7 +1069,8 @@ export function TasksPanel({
               <Plus />
               {t("tasks.add")}
             </Button>
-          </form>
+            </form>
+          ) : null}
 
           <div className="tasks-main__heading">
             <div>
@@ -1086,6 +1108,17 @@ export function TasksPanel({
           )}
         </main>
       </div>
+
+      <DeleteFileDialog
+        open={categoryDelete !== null}
+        kind="category"
+        fileLabel={categoryDelete}
+        isDeleting={saving}
+        onConfirm={() => void confirmDeleteCategory()}
+        onCancel={() => {
+          if (!saving) setCategoryDelete(null);
+        }}
+      />
     </section>
   );
 }
