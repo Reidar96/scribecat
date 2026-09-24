@@ -791,13 +791,17 @@
   },
   "collection": {
     "label": "Notatsamling",
-    "root": "Notater",
+    "root": "Mapper",
     "close": "Lukk samlingsvisning",
     "noteCount_one": "{{count}} notat",
     "noteCount_other": "{{count}} notater",
     "folderSummary": "{{notes}} notater · {{folders}} mapper",
     "folder": "Mappe",
     "emptyTag": "Ingen notater bruker denne taggen nå.",
-    "emptyFolder": "Denne mappen har ingen notater eller undermapper."
+    "emptyFolder": "Denne mappen har ingen notater eller undermapper.",
+    "note": "Notat",
+    "folderCount_one": "{{count}} mappe",
+    "folderCount_other": "{{count}} mapper",
+    "emptyRoot": "Det finnes ingen mapper i denne mappen ennå."
   }
 }

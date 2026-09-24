@@ -175,6 +175,22 @@ export function CollectionPanel({
         });
     }
 
+    // The empty relative path is the vault home. Keep it intentionally
+    // folder-only: this is the calm overview shown instead of an empty editor
+    // before a note is opened.
+    if (request.relativePath === "") {
+      return treeNodes.flatMap((node): CollectionCard[] =>
+        node.kind === "folder"
+          ? [{
+              kind: "folder",
+              relativePath: node.relativePath,
+              title: node.name,
+              mtimeMs: node.effectiveMtimeMs
+            }]
+          : []
+      );
+    }
+
     const folder = findFolder(treeNodes, request.relativePath);
     if (!folder) {
       return [];
@@ -246,16 +262,21 @@ export function CollectionPanel({
 
   const noteCount = cards.filter((card) => card.kind === "note").length;
   const folderCount = cards.filter((card) => card.kind === "folder").length;
+  const isRootCollection = request.kind === "folder" && request.relativePath === "";
   const title =
     request.kind === "tag"
       ? `#${request.tag}`
-      : request.relativePath.split("/").filter(Boolean).pop() ?? t("collection.root");
+      : isRootCollection
+        ? t("collection.root")
+        : request.relativePath.split("/").filter(Boolean).pop() ?? t("collection.root");
   const subtitle =
     request.kind === "tag"
       ? t("collection.noteCount", { count: noteCount })
-      : folderCount > 0
-        ? t("collection.folderSummary", { notes: noteCount, folders: folderCount })
-        : t("collection.noteCount", { count: noteCount });
+      : isRootCollection
+        ? t("collection.folderCount", { count: folderCount })
+        : folderCount > 0
+          ? t("collection.folderSummary", { notes: noteCount, folders: folderCount })
+          : t("collection.noteCount", { count: noteCount });
 
   return (
     <section className="collection-panel" aria-label={t("collection.label")}>
@@ -282,23 +303,25 @@ export function CollectionPanel({
             </div>
           </div>
 
-          <Button
-            type="button"
-            size="icon-sm"
-            variant="ghost"
-            aria-label={t("collection.close")}
-            title={t("collection.close")}
-            onClick={onClose}
-          >
-            <X />
-          </Button>
+          {!isRootCollection || selectedFilePath !== null ? (
+            <Button
+              type="button"
+              size="icon-sm"
+              variant="ghost"
+              aria-label={t("collection.close")}
+              title={t("collection.close")}
+              onClick={onClose}
+            >
+              <X />
+            </Button>
+          ) : null}
         </header>
 
         <div className="collection-panel__body">
           {cards.length === 0 ? (
             <div className="collection-panel__empty">
               <FileText aria-hidden="true" />
-              <p>{t(request.kind === "tag" ? "collection.emptyTag" : "collection.emptyFolder")}</p>
+              <p>{t(request.kind === "tag" ? "collection.emptyTag" : isRootCollection ? "collection.emptyRoot" : "collection.emptyFolder")}</p>
             </div>
           ) : (
             <div className="collection-grid">
@@ -337,9 +360,9 @@ export function CollectionPanel({
                   >
                     <div className="collection-card__top">
                       <FileText aria-hidden="true" />
-                      {card.folderNote ? (
-                        <span className="collection-card__kind">{t("app.folderNoteBadge")}</span>
-                      ) : null}
+                      <span className="collection-card__kind">
+                        {t(card.folderNote ? "app.folderNoteBadge" : "collection.note")}
+                      </span>
                     </div>
                     <h3>{card.title}</h3>
                     {location ? <p className="collection-card__path">{location}</p> : null}

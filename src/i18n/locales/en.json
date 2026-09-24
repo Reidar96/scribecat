@@ -1155,13 +1155,17 @@
   },
   "collection": {
     "label": "Note collection",
-    "root": "Notes",
+    "root": "Folders",
     "close": "Close collection view",
     "noteCount_one": "{{count}} note",
     "noteCount_other": "{{count}} notes",
     "folderSummary": "{{notes}} notes · {{folders}} folders",
     "folder": "Folder",
     "emptyTag": "No notes currently use this tag.",
-    "emptyFolder": "This folder has no notes or subfolders."
+    "emptyFolder": "This folder has no notes or subfolders.",
+    "note": "Note",
+    "folderCount_one": "{{count}} folder",
+    "folderCount_other": "{{count}} folders",
+    "emptyRoot": "There are no folders in this vault yet."
   }
 }
