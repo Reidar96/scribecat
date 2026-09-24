@@ -65,6 +65,9 @@ type FileTreeProps = {
   onSelectFilePath: (filePath: string) => Promise<void>;
   /** Absolute folder path; the store resolves the note inside it. */
   onOpenFolderNote: (folderPath: string) => Promise<void>;
+  /** Plain folder-name click opens the folder as a grid in the main area. */
+  onOpenFolderCollection: (relativePath: string) => void;
+  activeCollectionFolderPath?: string | null;
   onCreateFileRequest: (targetDirectory: string) => void;
   onCreateFolderRequest: (targetDirectory: string) => void;
   onDeleteFileRequest: (filePath: string) => void;
@@ -130,6 +133,8 @@ export function FileTree({
   emptyFolderMtimeMs,
   onSelectFilePath,
   onOpenFolderNote,
+  onOpenFolderCollection,
+  activeCollectionFolderPath = null,
   onCreateFileRequest,
   onCreateFolderRequest,
   onDeleteFileRequest,
@@ -433,19 +438,10 @@ export function FileTree({
     setRangeFocusKey(null);
 
     if (node.kind === "folder") {
-      // A plain click toggles the folder — it is not a request to select it,
-      // so unlike the file branch below this does not touch selectedKeys.
-      // Selecting a folder is still possible (Ctrl/Shift-click above, right-
-      // click for the context menu below), it just does not happen as a side
-      // effect of every expand/collapse, or the folder would stay marked
-      // long after the click that opened it.
-      // With folder notes on, the name opens the folder's note instead and the
-      // chevron (its own click target in the row) is what toggles.
-      if (folderNotesEnabled) {
-        openFolderNoteOf(node);
-      } else {
-        toggleFolderNode(node);
-      }
+      // Folder names are navigation now: the main area becomes a collection
+      // grid. Expanding/collapsing remains the chevron's job, so opening a
+      // collection never changes the tree structure as a side effect.
+      onOpenFolderCollection(node.relativePath);
     } else {
       setSelectedKeys(new Set([key]));
       void onSelectFilePath(node.filePath);
@@ -559,16 +555,16 @@ export function FileTree({
     if (event.key === "Enter" && isFromRow && activeKey && !event.ctrlKey && !event.metaKey && !event.altKey) {
       const activeNode = flatNodes.find((node) => getNodeKey(node) === activeKey);
 
-      if (activeNode && (activeNode.kind === "file" || folderNotesEnabled)) {
+      if (activeNode) {
         event.preventDefault();
 
         if (activeNode.kind === "file") {
           void onSelectFilePath(activeNode.filePath);
+          pinNode(activeNode);
         } else {
-          openFolderNoteOf(activeNode);
+          onOpenFolderCollection(activeNode.relativePath);
         }
 
-        pinNode(activeNode);
         return;
       }
     }
@@ -694,6 +690,7 @@ export function FileTree({
             dirtyFilePaths={dirtyFilePaths}
             folderNotesEnabled={folderNotesEnabled}
             activeFolderNotePath={activeFolderNotePath}
+            activeCollectionFolderPath={activeCollectionFolderPath}
             dirtyFolderNotePaths={dirtyFolderNotePaths}
             activeKey={activeKey}
             renamingTarget={renamingTarget}
@@ -705,6 +702,7 @@ export function FileTree({
             onRowClick={handleRowClick}
             onRowDoubleClick={pinNode}
             onToggleFolder={toggleFolderNode}
+            onOpenFolderNote={openFolderNoteOf}
             onRowContextMenu={handleRowContextMenu}
             onRenameDraftChange={setRenameDraft}
             onCommitRename={() => void commitRename()}
