@@ -304,7 +304,8 @@ function JournalImageCard({
   onDragEnter,
   onDragEnd,
   onDrop,
-  onOpen
+  onOpen,
+  onDelete
 }: {
   itemKey: string;
   image: JournalImage;
@@ -319,36 +320,44 @@ function JournalImageCard({
   onDragEnd: () => void;
   onDrop: () => void;
   onOpen: (index: number) => void;
+  onDelete: (itemKey: string) => void;
 }) {
   const { t } = useTranslation();
   const { objectUrl, loadError } = useJournalImageUrl(image, filePath);
+  const { contextMenu, setContextMenu } = useContextMenuState<{ x: number; y: number }>();
   const [ratioClass, setRatioClass] = useState<ImageRatioClass>("landscape");
   const masonryRef = useMasonrySpan<HTMLElement>();
 
   return (
-    <article
-      ref={masonryRef}
-      className={cn(
-        "journal-entry__image-card",
-        isDragging && "journal-entry__image-card--dragging"
-      )}
-      data-journal-image-key={itemKey}
-      draggable
-      onDragStart={(event) => onDragStart(event, itemKey)}
-      onDragEnter={(event) => {
-        event.preventDefault();
-        onDragEnter(itemKey);
-      }}
-      onDragOver={(event) => {
-        event.preventDefault();
-        event.dataTransfer.dropEffect = "move";
-      }}
-      onDragEnd={onDragEnd}
-      onDrop={(event) => {
-        event.preventDefault();
-        onDrop();
-      }}
-    >
+    <>
+      <article
+        ref={masonryRef}
+        className={cn(
+          "journal-entry__image-card",
+          isDragging && "journal-entry__image-card--dragging"
+        )}
+        data-journal-image-key={itemKey}
+        draggable
+        onDragStart={(event) => onDragStart(event, itemKey)}
+        onDragEnter={(event) => {
+          event.preventDefault();
+          onDragEnter(itemKey);
+        }}
+        onDragOver={(event) => {
+          event.preventDefault();
+          event.dataTransfer.dropEffect = "move";
+        }}
+        onDragEnd={onDragEnd}
+        onDrop={(event) => {
+          event.preventDefault();
+          onDrop();
+        }}
+        onContextMenu={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          setContextMenu({ x: event.clientX, y: event.clientY });
+        }}
+      >
       {objectUrl ? (
         <button
           type="button"
@@ -378,7 +387,30 @@ function JournalImageCard({
         </div>
       )}
 
-    </article>
+      </article>
+
+      {contextMenu ? (
+        <ContextMenuSurface
+          x={contextMenu.x}
+          y={contextMenu.y}
+          title={image.alt || t("imageView.preview")}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <button
+            type="button"
+            role="menuitem"
+            className="file-tree-context-menu__item file-tree-context-menu__item--danger"
+            onClick={() => {
+              setContextMenu(null);
+              onDelete(itemKey);
+            }}
+          >
+            <Trash2 aria-hidden="true" />
+            {t("imageView.delete")}
+          </button>
+        </ContextMenuSurface>
+      ) : null}
+    </>
   );
 }
 
@@ -630,6 +662,22 @@ function JournalEntryView({
     }
   };
 
+  const deleteGalleryImage = (itemKey: string) => {
+    const nextItems = galleryItems.filter((item) => item.key !== itemKey);
+    if (nextItems.length === galleryItems.length) return;
+
+    previousGalleryRectsRef.current = captureGalleryRects();
+    setGalleryItems(nextItems);
+    setPreviewIndex(null);
+    onMarkdownChange(
+      composeJournalMarkdown(
+        markdown,
+        draftText,
+        nextItems.map((item) => item.image)
+      )
+    );
+  };
+
   const persistImages = async (picked: PickedImageFile[]) => {
     if (picked.length === 0) return;
 
@@ -790,6 +838,7 @@ function JournalEntryView({
             onDragEnd={() => finishImageDrag(false)}
             onDrop={() => finishImageDrag(true)}
             onOpen={setPreviewIndex}
+            onDelete={deleteGalleryImage}
           />
         ))}
 
