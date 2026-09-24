@@ -543,7 +543,28 @@
     "searchLoading": "Searching notes…",
     "searchNoResults": "No matching notes.",
     "searchResults": "Search results",
-    "collapseAllFolders": "Collapse all folders"
+    "collapseAllFolders": "Collapse all folders",
+    "graphView": "Open graph view"
+  },
+  "graph": {
+    "label": "Graph view",
+    "title": "Graph",
+    "summary": "{{notes}} notes · {{links}} links · {{tags}} tags · {{folders}} folders",
+    "filters": "Graph contents",
+    "notes": "Notes",
+    "tags": "Tags",
+    "folders": "Folders",
+    "hint": "Drag nodes · drag the background to pan · scroll to zoom",
+    "loading": "Building graph…",
+    "empty": "There are no notes to graph yet.",
+    "allHidden": "All node types are hidden.",
+    "refresh": "Refresh graph",
+    "close": "Close graph view",
+    "fit": "Fit graph to view",
+    "canvasLabel": "Interactive vault graph",
+    "openNote": "Open note {{name}}",
+    "openTag": "Open tag {{name}}",
+    "openFolder": "Open folder {{name}}"
   },
   "fileTree": {
     "treeLabel": "File tree",
