@@ -7,13 +7,14 @@ import fr from "@/i18n/locales/fr.json";
 import es from "@/i18n/locales/es.json";
 import zh from "@/i18n/locales/zh.json";
 import ja from "@/i18n/locales/ja.json";
+import nb from "@/i18n/locales/nb.json";
 import pt from "@/i18n/locales/pt.json";
 import ru from "@/i18n/locales/ru.json";
 import it from "@/i18n/locales/it.json";
 import uk from "@/i18n/locales/uk.json";
 
 export const LANGUAGE_STORAGE_KEY = "scribecat-language";
-export const SUPPORTED_LANGUAGES = ["de", "en", "fr", "es", "zh", "ja", "pt", "ru", "it", "uk"] as const;
+export const SUPPORTED_LANGUAGES = ["de", "en", "fr", "es", "zh", "ja", "nb", "pt", "ru", "it", "uk"] as const;
 export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
 const DEFAULT_LANGUAGE: SupportedLanguage = "en";
 
@@ -26,6 +27,7 @@ const LANGUAGE_ENGLISH_NAME: Record<SupportedLanguage, string> = {
   es: "Spanish",
   zh: "Chinese",
   ja: "Japanese",
+  nb: "Norwegian Bokmål",
   pt: "Portuguese",
   ru: "Russian",
   it: "Italian",
@@ -67,6 +69,7 @@ void i18n.use(initReactI18next).init({
     es: { translation: es },
     zh: { translation: zh },
     ja: { translation: ja },
+    nb: { translation: nb },
     pt: { translation: pt },
     ru: { translation: ru },
     it: { translation: it },
