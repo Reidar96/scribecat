@@ -774,7 +774,7 @@ function App() {
     setVersionDiffTarget(null);
   }, [selectedFilePath]);
 
-  useStartupFolder(openFolderAtPath);
+  const startupFolderResolved = useStartupFolder(openFolderAtPath);
   useFolderWatcher(refreshFolderFiles);
   const remoteVaultDialog = useRemoteVaultDialog({ openVault: openRecentFolderSafely });
 
@@ -975,7 +975,9 @@ function App() {
             <span className="workspace-resizer__grip" aria-hidden="true" />
           </div> : null}
 
-          {(collectionView || (folderPath && selectedFilePath === null)) && folderPath ? (
+          {!startupFolderResolved && folderPath === null ? (
+            <div className="workspace-startup-placeholder" aria-busy="true" />
+          ) : (collectionView || (folderPath && selectedFilePath === null)) && folderPath ? (
             <CollectionPanel
               request={collectionView ?? { kind: "folder", relativePath: "" }}
               folderPath={folderPath}

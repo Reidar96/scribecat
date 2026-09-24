@@ -629,3 +629,39 @@
 .editor-view__surface .callout--danger::before {
   content: "⛔";
 }
+
+
+/* Hover affordance for inserting table structure. The button is portalled to
+   the viewport so it can sit exactly on a collapsed table border even when
+   the table itself scrolls horizontally. The full table menu remains the
+   keyboard/touch fallback. */
+.table-edge-add {
+  position: fixed;
+  z-index: 120;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(var(--accent-rgb),0.52);
+  border-radius: 999px;
+  background: rgb(var(--surface-raised-rgb));
+  color: rgb(var(--accent-rgb));
+  padding: 0;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.18);
+  cursor: pointer;
+}
+
+.table-edge-add:hover,
+.table-edge-add:focus-visible {
+  border-color: rgba(var(--accent-rgb),0.82);
+  background: rgba(var(--accent-rgb),0.13);
+  outline: none;
+}
+
+.table-edge-add svg {
+  width: 0.82rem;
+  height: 0.82rem;
+  stroke-width: 2.4;
+}

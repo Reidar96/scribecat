@@ -1,11 +1,13 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { clearLastOpenedFolderPath, getLastOpenedFolderPath } from "@/lib/fileSystem";
 import { platform } from "@/platform";
 
 export function useStartupFolder(
   openFolderAtPath: (folderPath: string) => Promise<boolean>
-): void {
+): boolean {
+  const [resolved, setResolved] = useState(false);
+
   useEffect(() => {
     let isActive = true;
 
@@ -14,14 +16,25 @@ export function useStartupFolder(
       const targetFolderPath =
         startupFolderPath ?? (platform.features.localFolders ? getLastOpenedFolderPath() : null);
 
-      if (!isActive || !targetFolderPath) {
+      if (!isActive) {
         return;
       }
 
-      const didOpenFolder = await openFolderAtPath(targetFolderPath);
+      if (!targetFolderPath) {
+        setResolved(true);
+        return;
+      }
 
-      if (!didOpenFolder && !startupFolderPath) {
-        clearLastOpenedFolderPath();
+      try {
+        const didOpenFolder = await openFolderAtPath(targetFolderPath);
+
+        if (!didOpenFolder && !startupFolderPath) {
+          clearLastOpenedFolderPath();
+        }
+      } finally {
+        if (isActive) {
+          setResolved(true);
+        }
       }
     };
 
@@ -31,4 +44,6 @@ export function useStartupFolder(
       isActive = false;
     };
   }, [openFolderAtPath]);
+
+  return resolved;
 }
