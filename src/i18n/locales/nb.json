@@ -582,7 +582,9 @@
   },
   "imageView": {
     "notFound": "Fant ikke bildet: {{src}}",
-    "loading": "Laster bilde …"
+    "loading": "Laster bilde …",
+    "preview": "Bildevisning",
+    "openPreview": "Åpne større bilde"
   },
   "codeBlock": {
     "copy": "Kopier kode",
@@ -818,5 +820,13 @@
     "addColumnAfter": "Legg til kolonne her",
     "addRowBefore": "Legg til rad her",
     "addRowAfter": "Legg til rad her"
+  },
+  "pdfViewer": {
+    "title": "PDF-visning: {{name}}",
+    "loading": "Laster PDF …",
+    "error": "PDF-en kunne ikke åpnes.",
+    "previous": "Forrige side",
+    "next": "Neste side",
+    "pageCount": "Side {{page}} av {{count}}"
   }
 }
