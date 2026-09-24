@@ -52,22 +52,93 @@ function hashString(value: string): number {
   return hash >>> 0;
 }
 
-function initialPoint(id: string, width: number, height: number): Point {
+function initialPoint(id: string, centerX: number, centerY: number): Point {
   const hash = hashString(id);
   const angle = ((hash % 3600) / 3600) * Math.PI * 2;
-  const radius = 30 + ((hash >>> 8) % 100);
+  const radius = 22 + ((hash >>> 8) % 58);
   return {
-    x: width / 2 + Math.cos(angle) * radius,
-    y: height / 2 + Math.sin(angle) * radius,
+    x: centerX + Math.cos(angle) * radius,
+    y: centerY + Math.sin(angle) * radius,
     vx: 0,
     vy: 0
   };
 }
 
+function connectionKey(left: string, right: string): string {
+  return left < right ? left + "\u0000" + right : right + "\u0000" + left;
+}
+
+function buildComponentAnchors(
+  nodes: VaultGraphNode[],
+  edges: VaultGraphEdge[],
+  width: number,
+  height: number
+): Map<string, { x: number; y: number }> {
+  const adjacency = new Map<string, string[]>();
+  for (const node of nodes) adjacency.set(node.id, []);
+
+  for (const edge of edges) {
+    adjacency.get(edge.source)?.push(edge.target);
+    adjacency.get(edge.target)?.push(edge.source);
+  }
+
+  const visited = new Set<string>();
+  const components: string[][] = [];
+
+  for (const node of nodes) {
+    if (visited.has(node.id)) continue;
+
+    const component: string[] = [];
+    const queue = [node.id];
+    visited.add(node.id);
+
+    for (let index = 0; index < queue.length; index += 1) {
+      const current = queue[index];
+      component.push(current);
+
+      for (const neighbor of adjacency.get(current) ?? []) {
+        if (visited.has(neighbor)) continue;
+        visited.add(neighbor);
+        queue.push(neighbor);
+      }
+    }
+
+    components.push(component);
+  }
+
+  components.sort((left, right) => right.length - left.length || left[0].localeCompare(right[0]));
+
+  const anchors = new Map<string, { x: number; y: number }>();
+  if (components.length === 1) {
+    for (const id of components[0]) anchors.set(id, { x: width / 2, y: height / 2 });
+    return anchors;
+  }
+
+  // Put disconnected islands in separate cells instead of pulling everything
+  // into one central cloud. Within each cell, the spring forces below still
+  // decide the shape of the connected cluster.
+  const aspect = Math.max(0.65, Math.min(1.8, width / Math.max(1, height)));
+  const columns = Math.max(1, Math.ceil(Math.sqrt(components.length * aspect)));
+  const rows = Math.max(1, Math.ceil(components.length / columns));
+
+  components.forEach((component, index) => {
+    const column = index % columns;
+    const row = Math.floor(index / columns);
+    const anchor = {
+      x: ((column + 0.5) / columns) * width,
+      y: ((row + 0.5) / rows) * height
+    };
+
+    for (const id of component) anchors.set(id, anchor);
+  });
+
+  return anchors;
+}
+
 function edgeLength(kind: VaultGraphEdge["kind"]): number {
-  if (kind === "tag") return 82;
-  if (kind === "folder") return 96;
-  return 118;
+  if (kind === "tag") return 66;
+  if (kind === "folder") return 74;
+  return 82;
 }
 
 function nodeTitle(node: VaultGraphNode): string {
@@ -134,9 +205,23 @@ export function GraphCanvas({
     if (size.width <= 1 || size.height <= 1 || nodes.length === 0) return;
 
     const points = pointsRef.current;
+    const componentAnchors = buildComponentAnchors(
+      nodes,
+      edges,
+      size.width,
+      size.height
+    );
+    const connectedPairs = new Set(
+      edges.map((edge) => connectionKey(edge.source, edge.target))
+    );
+
     for (const node of nodes) {
       if (!points.has(node.id)) {
-        points.set(node.id, initialPoint(node.id, size.width, size.height));
+        const anchor = componentAnchors.get(node.id) ?? {
+          x: size.width / 2,
+          y: size.height / 2
+        };
+        points.set(node.id, initialPoint(node.id, anchor.x, anchor.y));
       }
     }
 
@@ -146,7 +231,7 @@ export function GraphCanvas({
 
     const step = () => {
       iterations += 1;
-      const cellSize = 105;
+      const cellSize = 220;
       const buckets = new Map<string, string[]>();
 
       for (const node of nodes) {
@@ -186,8 +271,17 @@ export function GraphCanvas({
               }
 
               const distance = Math.sqrt(distanceSquared);
-              if (distance > 105) continue;
-              const force = ((105 - distance) / 105) * 0.055;
+              const directlyConnected = connectedPairs.has(
+                connectionKey(node.id, otherId)
+              );
+              // Connected nodes are allowed to form a tight "string". Nodes
+              // without a direct connection repel each other over a much
+              // longer distance, which opens visible gaps between groups.
+              const separation = directlyConnected ? 34 : 210;
+              if (distance > separation) continue;
+
+              const strength = directlyConnected ? 0.045 : 0.09;
+              const force = ((separation - distance) / separation) * strength;
               const fx = (dx / distance) * force;
               const fy = (dy / distance) * force;
               point.vx -= fx;
@@ -208,7 +302,7 @@ export function GraphCanvas({
         const dx = target.x - source.x;
         const dy = target.y - source.y;
         const distance = Math.max(1, Math.sqrt(dx * dx + dy * dy));
-        const force = (distance - edgeLength(edge.kind)) * 0.0018;
+        const force = (distance - edgeLength(edge.kind)) * 0.0052;
         const fx = (dx / distance) * force;
         const fy = (dy / distance) * force;
         source.vx += fx;
@@ -224,10 +318,17 @@ export function GraphCanvas({
       for (const node of nodes) {
         const point = points.get(node.id);
         if (!point) continue;
-        point.vx += (centerX - point.x) * 0.00055;
-        point.vy += (centerY - point.y) * 0.00055;
-        point.vx *= 0.86;
-        point.vy *= 0.86;
+
+        const anchor = componentAnchors.get(node.id) ?? { x: centerX, y: centerY };
+        // Component gravity is stronger than global gravity: disconnected
+        // groups keep their own territory, while related nodes stay together
+        // because their edges are substantially stronger than this pull.
+        point.vx += (anchor.x - point.x) * 0.00072;
+        point.vy += (anchor.y - point.y) * 0.00072;
+        point.vx += (centerX - point.x) * 0.00004;
+        point.vy += (centerY - point.y) * 0.00004;
+        point.vx *= 0.84;
+        point.vy *= 0.84;
 
         const speed = Math.sqrt(point.vx * point.vx + point.vy * point.vy);
         if (speed > 6) {
@@ -241,7 +342,7 @@ export function GraphCanvas({
       }
 
       setFrame((value) => value + 1);
-      if (iterations < 180 && (iterations < 55 || movement > nodes.length * 0.012)) {
+      if (iterations < 240 && (iterations < 80 || movement > nodes.length * 0.01)) {
         animationFrame = window.requestAnimationFrame(step);
       }
     };
