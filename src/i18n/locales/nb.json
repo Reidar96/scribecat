@@ -442,7 +442,9 @@
     "searchResults": "Søk: {{query}}",
     "tagResults": "Tagg: #{{tag}}",
     "resultCount": "{{count}} dager",
-    "noResults": "Ingen dagbokdager samsvarer."
+    "noResults": "Ingen dagbokdager samsvarer.",
+    "overview": "Oversikt",
+    "closeResults": "Lukk resultatlisten"
   },
   "graph": {
     "label": "Grafvisning",

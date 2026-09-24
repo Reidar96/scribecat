@@ -443,17 +443,6 @@
   text-align: center;
 }
 
-.journal-entry__image-order {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.2rem;
-  border-top: 1px solid rgba(var(--overlay-rgb),0.08);
-  padding: 0.2rem;
-  color: rgba(var(--muted-rgb),0.75);
-  font-size: 0.68rem;
-}
-
 .journal-entry__add-card {
   display: grid;
   place-items: center;
@@ -516,12 +505,15 @@
 }
 
 .journal-results__item {
-  display: block;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.9rem;
   width: 100%;
   border: 1px solid rgba(var(--overlay-rgb),0.09);
   border-radius: 0.85rem;
   background: rgba(var(--surface-raised-rgb),0.35);
-  padding: 0.8rem 0.9rem;
+  padding: 0.75rem;
   color: inherit;
   font: inherit;
   text-align: left;
@@ -559,6 +551,39 @@
   padding: 0.18rem 0.38rem;
   color: rgba(var(--muted-rgb),0.88);
   font-size: 0.66rem;
+}
+
+.journal-results__content {
+  min-width: 0;
+}
+
+.journal-results__thumbnail {
+  display: block;
+  width: 6.4rem;
+  aspect-ratio: 1 / 1;
+  flex: none;
+  overflow: hidden;
+  border-radius: 0.7rem;
+  background: rgba(var(--overlay-rgb),0.05);
+}
+
+.journal-results__thumbnail img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.journal-results__thumbnail--empty {
+  opacity: 0;
+}
+
+.journal-calendar__overview-button {
+  display: none;
+  width: 100%;
+  justify-content: center;
+  gap: 0.45rem;
+  margin-top: 0.9rem;
 }
 
 .journal-results__empty {
@@ -641,9 +666,15 @@
 
   .journal-entry__mobile-nav {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) auto;
     gap: 0.4rem;
     margin-bottom: 0.7rem;
+  }
+
+  .journal-calendar__overview-button {
+    display: flex;
+    min-height: 3rem;
+    font-size: 1rem;
   }
 
   .journal-entry__mobile-nav > button {
@@ -656,8 +687,11 @@
     width: 3rem;
   }
 
-  .journal-entry__mobile-nav > button:nth-child(2) {
+  .journal-entry__mobile-nav > button:nth-child(2),
+  .journal-entry__mobile-nav > button:nth-child(3) {
     justify-content: center;
+    min-width: 0;
+    padding-inline: 0.55rem;
   }
 
   .journal-calendar__controls select,
@@ -727,5 +761,14 @@
 
   .journal-entry__gallery-head {
     align-items: flex-start;
+  }
+
+  .journal-results__item {
+    gap: 0.65rem;
+    padding: 0.65rem;
+  }
+
+  .journal-results__thumbnail {
+    width: 5.2rem;
   }
 }

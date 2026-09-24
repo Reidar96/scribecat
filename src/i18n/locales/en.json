@@ -597,7 +597,9 @@
     "searchResults": "Search: {{query}}",
     "tagResults": "Tag: #{{tag}}",
     "resultCount": "{{count}} days",
-    "noResults": "No matching diary days."
+    "noResults": "No matching diary days.",
+    "overview": "Overview",
+    "closeResults": "Close results"
   },
   "graph": {
     "label": "Graph view",

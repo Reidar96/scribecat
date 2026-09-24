@@ -8,6 +8,7 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
+  List,
   PanelLeft,
   PanelLeftOpen,
   Plus,
@@ -74,6 +75,7 @@ type JournalIndexEntry = JournalFileRecord & {
   markdown: string;
   tags: string[];
   text: string;
+  images: JournalImage[];
 };
 
 type ImageRatioClass = "wide" | "landscape" | "square" | "portrait" | "tall";
@@ -235,8 +237,6 @@ function JournalImageCard({
   image,
   filePath,
   index,
-  count,
-  onMove,
   onDragStart,
   onDrop,
   onOpen
@@ -244,8 +244,6 @@ function JournalImageCard({
   image: JournalImage;
   filePath: string;
   index: number;
-  count: number;
-  onMove: (from: number, to: number) => void;
   onDragStart: (index: number) => void;
   onDrop: (index: number) => void;
   onOpen: (index: number) => void;
@@ -294,31 +292,6 @@ function JournalImageCard({
         </div>
       )}
 
-      <div className="journal-entry__image-order">
-        <Button
-          type="button"
-          size="icon-sm"
-          variant="ghost"
-          disabled={index === 0}
-          onClick={() => onMove(index, index - 1)}
-          aria-label={t("journal.moveImageLeft")}
-          title={t("journal.moveImageLeft")}
-        >
-          <ChevronLeft />
-        </Button>
-        <span>{index + 1}</span>
-        <Button
-          type="button"
-          size="icon-sm"
-          variant="ghost"
-          disabled={index >= count - 1}
-          onClick={() => onMove(index, index + 1)}
-          aria-label={t("journal.moveImageRight")}
-          title={t("journal.moveImageRight")}
-        >
-          <ChevronRight />
-        </Button>
-      </div>
     </article>
   );
 }
@@ -402,6 +375,7 @@ function JournalEntryView({
   onPreviousDay,
   onNextDay,
   onShowCalendar,
+  onShowOverview,
   onMarkdownChange
 }: {
   folderPath: string;
@@ -419,6 +393,7 @@ function JournalEntryView({
   onPreviousDay: () => void;
   onNextDay: () => void;
   onShowCalendar: () => void;
+  onShowOverview: () => void;
   onMarkdownChange: (markdown: string) => void;
 }) {
   const { t } = useTranslation();
@@ -543,6 +518,10 @@ function JournalEntryView({
             <CalendarDays />
             {t("journal.showCalendar")}
           </Button>
+          <Button type="button" variant="outline" size="sm" onClick={onShowOverview}>
+            <List />
+            {t("journal.overview")}
+          </Button>
           <Button
             type="button"
             size="icon-sm"
@@ -594,8 +573,6 @@ function JournalEntryView({
             image={image}
             filePath={filePath}
             index={index}
-            count={parsed.images.length}
-            onMove={moveImage}
             onDragStart={setDraggedImage}
             onDrop={(targetIndex) => {
               if (draggedImage !== null) moveImage(draggedImage, targetIndex);
@@ -643,6 +620,40 @@ function JournalEntryView({
   );
 }
 
+function JournalResultThumbnail({
+  entry
+}: {
+  entry: JournalIndexEntry;
+}) {
+  const image = entry.images[0];
+
+  if (!image) {
+    return null;
+  }
+
+  return <JournalResultThumbnailImage image={image} filePath={entry.filePath} />;
+}
+
+function JournalResultThumbnailImage({
+  image,
+  filePath
+}: {
+  image: JournalImage;
+  filePath: string;
+}) {
+  const { objectUrl } = useJournalImageUrl(image, filePath);
+
+  if (!objectUrl) {
+    return <span className="journal-results__thumbnail journal-results__thumbnail--empty" />;
+  }
+
+  return (
+    <span className="journal-results__thumbnail">
+      <img src={objectUrl} alt="" loading="lazy" />
+    </span>
+  );
+}
+
 function JournalResults({
   title,
   entries,
@@ -654,7 +665,7 @@ function JournalResults({
   entries: JournalIndexEntry[];
   locale: string;
   onOpen: (date: JournalDate) => void;
-  onClear: () => void;
+  onClear?: () => void;
 }) {
   const { t } = useTranslation();
 
@@ -665,9 +676,18 @@ function JournalResults({
           <h2>{title}</h2>
           <span>{t("journal.resultCount", { count: entries.length })}</span>
         </div>
-        <Button type="button" size="icon-sm" variant="ghost" onClick={onClear}>
-          <X aria-hidden="true" />
-        </Button>
+        {onClear ? (
+          <Button
+            type="button"
+            size="icon-sm"
+            variant="ghost"
+            onClick={onClear}
+            aria-label={t("journal.closeResults")}
+            title={t("journal.closeResults")}
+          >
+            <X aria-hidden="true" />
+          </Button>
+        ) : null}
       </header>
 
       {entries.length === 0 ? (
@@ -681,15 +701,18 @@ function JournalResults({
               className="journal-results__item"
               onClick={() => onOpen(entry.date)}
             >
-              <strong>{formatJournalDate(entry.date, locale)}</strong>
-              {entry.text ? <p>{plainExcerpt(entry.text)}</p> : null}
-              {entry.tags.length > 0 ? (
-                <div className="journal-results__tags">
-                  {entry.tags.map((tag) => (
-                    <span key={tag}>#{tag}</span>
-                  ))}
-                </div>
-              ) : null}
+              <span className="journal-results__content">
+                <strong>{formatJournalDate(entry.date, locale)}</strong>
+                {entry.text ? <p>{plainExcerpt(entry.text)}</p> : null}
+                {entry.tags.length > 0 ? (
+                  <span className="journal-results__tags">
+                    {entry.tags.map((tag) => (
+                      <span key={tag}>#{tag}</span>
+                    ))}
+                  </span>
+                ) : null}
+              </span>
+              <JournalResultThumbnail entry={entry} />
             </button>
           ))}
         </div>
@@ -728,6 +751,7 @@ export function JournalPanel({
   const [searchDraft, setSearchDraft] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [showMobileCalendar, setShowMobileCalendar] = useState(true);
+  const [overviewOpen, setOverviewOpen] = useState(true);
   const [markdownByPath, setMarkdownByPath] = useState<Record<string, string>>({});
 
   const journalFiles = useMemo<JournalFileRecord[]>(() => {
@@ -796,6 +820,7 @@ export function JournalPanel({
     setActiveFilePath(selectedFilePath);
     setYear(date.year);
     setMonth(date.month);
+    setOverviewOpen(false);
   }, [folderPath, selectedFilePath, settings]);
 
   useEffect(() => {
@@ -811,7 +836,8 @@ export function JournalPanel({
           ...record,
           markdown,
           tags: extractTags(markdown),
-          text: parsed.textMarkdown
+          text: parsed.textMarkdown,
+          images: parsed.images
         };
       })
       .sort((left, right) => dateToNumber(right.date) - dateToNumber(left.date));
@@ -935,6 +961,7 @@ export function JournalPanel({
       setSelectedTag(null);
       setSearchQuery("");
       setSearchDraft("");
+      setOverviewOpen(false);
       if (isPhone) setShowMobileCalendar(false);
     } finally {
       setOpeningKey(null);
@@ -997,6 +1024,7 @@ export function JournalPanel({
     const query = searchDraft.trim();
     setSearchQuery(query);
     setSelectedTag(null);
+    setOverviewOpen(false);
     if (query && isPhone) setShowMobileCalendar(false);
   };
 
@@ -1004,17 +1032,24 @@ export function JournalPanel({
     setSelectedTag(tag);
     setSearchDraft("");
     setSearchQuery("");
+    setOverviewOpen(false);
+    if (isPhone) setShowMobileCalendar(false);
+  };
+
+  const showOverview = () => {
+    setSelectedTag(null);
+    setSearchQuery("");
+    setSearchDraft("");
+    setOverviewOpen(true);
     if (isPhone) setShowMobileCalendar(false);
   };
 
   const clearResults = () => {
-    setSelectedTag(null);
-    setSearchQuery("");
-    setSearchDraft("");
-    if (isPhone) setShowMobileCalendar(true);
+    showOverview();
   };
 
   const showResults = Boolean(selectedTag || searchQuery.trim());
+  const showOverviewList = overviewOpen || (!selectedDate && !showResults);
   const previousDate = selectedDate ? shiftDate(selectedDate, -1) : null;
   const nextDate = selectedDate ? shiftDate(selectedDate, 1) : null;
   const canPreviousDay = Boolean(
@@ -1226,6 +1261,18 @@ export function JournalPanel({
             })}
           </div>
 
+          {isPhone ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="journal-calendar__overview-button"
+              onClick={showOverview}
+            >
+              <List />
+              {t("journal.overview")}
+            </Button>
+          ) : null}
+
           <div className="journal-calendar__search">
             <div className="journal-calendar__search-row">
               <Search aria-hidden="true" />
@@ -1291,6 +1338,13 @@ export function JournalPanel({
               onOpen={(date) => void openJournalDate(date)}
               onClear={clearResults}
             />
+          ) : showOverviewList ? (
+            <JournalResults
+              title={t("journal.overview")}
+              entries={indexedEntries}
+              locale={locale}
+              onOpen={(date) => void openJournalDate(date)}
+            />
           ) : activeFilePath && activeMarkdown !== null ? (
             <JournalEntryView
               folderPath={folderPath}
@@ -1312,6 +1366,7 @@ export function JournalPanel({
                 if (nextDate) void openJournalDate(nextDate);
               }}
               onShowCalendar={() => setShowMobileCalendar(true)}
+              onShowOverview={showOverview}
               onMarkdownChange={onMarkdownChange}
             />
           ) : selectedDate ? (
