@@ -378,7 +378,11 @@
     "dropImportHint": "Slipp filer eller mapper her — de importeres som notater",
     "logout": "Logg ut",
     "close": "Lukk fillisten",
-    "addServerVault": "Legg til servermappe …"
+    "addServerVault": "Legg til servermappe …",
+    "hide": "Skjul filoversikten",
+    "show": "Vis filoversikten",
+    "selectionMode": "Velg flere notater og mapper",
+    "selectionDone": "Avslutt valg"
   },
   "fileTree": {
     "treeLabel": "Filtre",
@@ -484,7 +488,9 @@
     "lockDocument": "Lås redigering",
     "lockDocumentTitle": "Lås dokumentet mot utilsiktede endringer",
     "unlockDocument": "Lås opp redigering",
-    "unlockDocumentTitle": "Lås opp dokumentet for å redigere"
+    "unlockDocumentTitle": "Lås opp dokumentet for å redigere",
+    "compactWidth": "Bruk kompakt tekstbredde",
+    "fullWidth": "Bruk full tekstbredde"
   },
   "findReplace": {
     "panelLabel": "Søk og erstatt",
@@ -768,5 +774,17 @@
     "unpin": "Løsne",
     "pinned": "Festet",
     "resizeLabel": "Endre størrelsen på listen «Under arbeid»"
+  },
+  "tags": {
+    "title": "Tags",
+    "current": "Valgte tags",
+    "add": "Legg til tag",
+    "remove": "Fjern taggen {{tag}}",
+    "none": "Ingen tags ennå.",
+    "placeholder": "Legg til en tag…",
+    "lockedPlaceholder": "Lås opp dokumentet for å endre tags",
+    "overview": "Tags",
+    "clearFilter": "Vis alle notater",
+    "noneInVault": "Ingen tags i denne mappen."
   }
 }
