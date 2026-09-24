@@ -1,0 +1,306 @@
+.graph-view {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.graph-view__card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 100%;
+  background: var(--surface);
+}
+
+.graph-view__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid rgba(var(--overlay-rgb),0.1);
+  padding: 0.8rem 1rem;
+}
+
+.graph-view__header-leading,
+.graph-view__header-actions,
+.graph-view__title-row,
+.graph-view__filters {
+  display: flex;
+  align-items: center;
+}
+
+.graph-view__header-leading {
+  min-width: 0;
+  gap: 0.65rem;
+}
+
+.graph-view__header-actions {
+  flex: none;
+  gap: 0.25rem;
+}
+
+.graph-view__heading {
+  min-width: 0;
+}
+
+.graph-view__title-row {
+  min-width: 0;
+  gap: 0.45rem;
+}
+
+.graph-view__title-row > svg {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  color: rgba(var(--muted-rgb),0.95);
+}
+
+.graph-view__title-row h2 {
+  margin: 0;
+  overflow: hidden;
+  font-size: 1rem;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.graph-view__heading p {
+  margin: 0.1rem 0 0;
+  color: rgba(var(--muted-rgb),0.85);
+  font-size: 0.76rem;
+}
+
+.graph-view__filters {
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  border-bottom: 1px solid rgba(var(--overlay-rgb),0.08);
+  padding: 0.55rem 1rem;
+  background: rgba(var(--surface-raised-rgb),0.36);
+}
+
+.graph-view__filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.38rem;
+  border: 1px solid rgba(var(--overlay-rgb),0.12);
+  border-radius: 999px;
+  background: rgba(var(--surface-rgb),0.7);
+  color: rgba(var(--muted-rgb),0.92);
+  padding: 0.3rem 0.55rem;
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.graph-view__filter:hover,
+.graph-view__filter:focus-visible {
+  border-color: rgba(var(--overlay-rgb),0.24);
+  color: rgba(var(--text-rgb),0.96);
+}
+
+.graph-view__filter[data-active="true"] {
+  border-color: rgba(var(--accent-rgb),0.36);
+  background: rgba(var(--accent-rgb),0.1);
+  color: rgba(var(--text-rgb),0.96);
+}
+
+.graph-view__legend-shape {
+  display: inline-block;
+  width: 0.55rem;
+  height: 0.55rem;
+  flex: none;
+}
+
+.graph-view__legend-shape--note {
+  border-radius: 50%;
+  background: rgb(var(--accent-rgb));
+}
+
+.graph-view__legend-shape--tag {
+  border-radius: 1px;
+  background: var(--blue-fg);
+  transform: rotate(45deg) scale(0.78);
+}
+
+.graph-view__legend-shape--folder {
+  border-radius: 2px;
+  background: var(--amber-fg);
+}
+
+.graph-view__hint {
+  margin-left: auto;
+  color: rgba(var(--muted-rgb),0.76);
+  font-size: 0.7rem;
+}
+
+.graph-view__body {
+  position: relative;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.graph-view__state {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 0.55rem;
+  height: 100%;
+  min-height: 45vh;
+  color: rgba(var(--muted-rgb),0.8);
+  text-align: center;
+}
+
+.graph-view__state > svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.graph-view__state p {
+  margin: 0;
+}
+
+.graph-view__canvas-shell {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 45%, rgba(var(--accent-rgb),0.035), transparent 38%),
+    rgba(var(--surface-rgb),0.18);
+}
+
+.graph-view__canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+}
+
+.graph-view__canvas:active {
+  cursor: grabbing;
+}
+
+.graph-view__edge {
+  stroke: rgba(var(--muted-rgb),0.34);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  transition: opacity 120ms ease;
+}
+
+.graph-view__edge--link {
+  stroke: rgba(var(--text-rgb),0.34);
+  stroke-width: 1.2;
+}
+
+.graph-view__edge--tag {
+  stroke-dasharray: 2 3;
+}
+
+.graph-view__edge--folder {
+  stroke: rgba(var(--muted-rgb),0.25);
+}
+
+.graph-view__edge--dimmed {
+  opacity: 0.08;
+}
+
+.graph-view__node {
+  outline: none;
+  cursor: pointer;
+  transition: opacity 120ms ease;
+}
+
+.graph-view__node--dimmed {
+  opacity: 0.16;
+}
+
+.graph-view__node-shape {
+  stroke: rgba(var(--surface-strong-rgb),0.9);
+  stroke-width: 1.25;
+  vector-effect: non-scaling-stroke;
+  transition:
+    filter 120ms ease,
+    stroke-width 120ms ease;
+}
+
+.graph-view__node--note .graph-view__node-shape {
+  fill: rgb(var(--accent-rgb));
+}
+
+.graph-view__node--tag .graph-view__node-shape {
+  fill: var(--blue-fg);
+}
+
+.graph-view__node--folder .graph-view__node-shape {
+  fill: var(--amber-fg);
+}
+
+.graph-view__node:hover .graph-view__node-shape,
+.graph-view__node:focus-visible .graph-view__node-shape {
+  stroke: rgba(var(--text-rgb),0.95);
+  stroke-width: 2;
+  filter: drop-shadow(0 2px 4px rgba(var(--backdrop-rgb),0.25));
+}
+
+.graph-view__node-active-ring {
+  fill: none;
+  stroke: rgb(var(--accent-rgb));
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.graph-view__node-label {
+  fill: rgba(var(--text-rgb),0.9);
+  stroke: rgba(var(--surface-rgb),0.96);
+  stroke-width: 3px;
+  paint-order: stroke fill;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 520;
+  pointer-events: none;
+}
+
+.graph-view__node--tag .graph-view__node-label,
+.graph-view__node--folder .graph-view__node-label {
+  fill: rgba(var(--muted-rgb),0.95);
+}
+
+.graph-view__zoom-controls {
+  position: absolute;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  display: flex;
+  gap: 0.3rem;
+  border: 1px solid rgba(var(--overlay-rgb),0.1);
+  border-radius: 0.75rem;
+  background: rgba(var(--surface-strong-rgb),0.86);
+  padding: 0.3rem;
+  box-shadow: 0 8px 24px rgba(var(--backdrop-rgb),0.12);
+  backdrop-filter: blur(8px);
+}
+
+@media (max-width: 720px) {
+  .graph-view__header {
+    padding: 0.55rem 0.65rem;
+  }
+
+  .graph-view__filters {
+    padding: 0.45rem 0.6rem;
+  }
+
+  .graph-view__hint {
+    display: none;
+  }
+
+  .graph-view__zoom-controls {
+    right: max(0.6rem, env(safe-area-inset-right));
+    bottom: max(0.6rem, env(safe-area-inset-bottom));
+  }
+}
