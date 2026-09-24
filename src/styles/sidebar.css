@@ -54,10 +54,40 @@
   gap: 0.75rem;
 }
 
+.sidebar-panel__primary-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem;
+  flex: 1 1 100%;
+}
+
+.sidebar-panel__primary-actions > button {
+  min-width: 0;
+  min-height: 2.6rem;
+  justify-content: center;
+  gap: 0.4rem;
+  padding-inline: 0.55rem;
+}
+
+.sidebar-panel__primary-actions > button span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.74rem;
+}
+
+.sidebar-panel__primary-actions > button svg {
+  flex: none;
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
 .sidebar-panel__actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+  flex: 1 1 100%;
 }
 
 .sidebar-panel__folder-wrap {

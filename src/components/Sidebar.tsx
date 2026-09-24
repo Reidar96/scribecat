@@ -18,6 +18,7 @@ import {
   GripVertical,
   Import,
   ListChecks,
+  ListTodo,
   Move,
   Network,
   Plus,
@@ -48,6 +49,7 @@ import { WorkingSetPanel } from "@/components/sidebar/WorkingSetPanel";
 import { TagsOverview } from "@/components/sidebar/TagsOverview";
 import { SidebarSearchResults } from "@/components/sidebar/SidebarSearchResults";
 import { useTagIndex } from "@/hooks/useTagIndex";
+import { useLayoutMode } from "@/hooks/useLayoutMode";
 import { useVaultSearch } from "@/hooks/useVaultSearch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useStoredCollapsed, useWorkingSetHeight } from "@/hooks/useWorkingSetHeight";
@@ -118,6 +120,8 @@ type SidebarProps = {
   onGraphViewToggle: () => void;
   journalViewOpen: boolean;
   onJournalViewToggle: () => void;
+  tasksViewOpen: boolean;
+  onTasksViewToggle: () => void;
   onDeleteFileRequest: (filePath: string) => void;
   onDuplicateFileRequest: (filePath: string) => void;
   onDeleteFolderRequest: (folderPath: string) => void;
@@ -184,6 +188,8 @@ export function Sidebar({
   onGraphViewToggle,
   journalViewOpen,
   onJournalViewToggle,
+  tasksViewOpen,
+  onTasksViewToggle,
   onDeleteFileRequest,
   onDuplicateFileRequest,
   onDeleteFolderRequest,
@@ -210,6 +216,7 @@ export function Sidebar({
   onClose
 }: SidebarProps) {
   const { t } = useTranslation();
+  const layout = useLayoutMode();
   const [selectionMode, setSelectionMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [collapseFoldersRequestId, setCollapseFoldersRequestId] = useState(0);
@@ -417,6 +424,43 @@ export function Sidebar({
       ) : null}
 
       <div className="sidebar-panel__header">
+        {layout !== "phone" ? (
+          <div className="sidebar-panel__primary-actions">
+            <Button
+              type="button"
+              variant={journalViewOpen ? "default" : "outline"}
+              onClick={onJournalViewToggle}
+              disabled={isLoading || folderPath === null}
+              aria-pressed={journalViewOpen}
+            >
+              <CalendarDays />
+              <span>{t("sidebar.calendar")}</span>
+            </Button>
+
+            <Button
+              type="button"
+              variant={graphViewOpen ? "default" : "outline"}
+              onClick={onGraphViewToggle}
+              disabled={isLoading || folderPath === null}
+              aria-pressed={graphViewOpen}
+            >
+              <Network />
+              <span>{t("sidebar.graph")}</span>
+            </Button>
+
+            <Button
+              type="button"
+              variant={tasksViewOpen ? "default" : "outline"}
+              onClick={onTasksViewToggle}
+              disabled={isLoading || folderPath === null}
+              aria-pressed={tasksViewOpen}
+            >
+              <ListTodo />
+              <span>{t("sidebar.tasks")}</span>
+            </Button>
+          </div>
+        ) : null}
+
         <div className="sidebar-panel__actions">
           <Button
             type="button"
@@ -539,32 +583,6 @@ export function Sidebar({
             title={t(selectionMode ? "sidebar.selectionDone" : "sidebar.selectionMode")}
           >
             <ListChecks />
-          </Button>
-
-          <Button
-            type="button"
-            variant={graphViewOpen ? "default" : "outline"}
-            size="sm"
-            onClick={onGraphViewToggle}
-            disabled={isLoading || folderPath === null}
-            aria-pressed={graphViewOpen}
-            aria-label={t("sidebar.graphView")}
-            title={t("sidebar.graphView")}
-          >
-            <Network />
-          </Button>
-
-          <Button
-            type="button"
-            variant={journalViewOpen ? "default" : "outline"}
-            size="sm"
-            onClick={onJournalViewToggle}
-            disabled={isLoading || folderPath === null}
-            aria-pressed={journalViewOpen}
-            aria-label={t("sidebar.journalView")}
-            title={t("sidebar.journalView")}
-          >
-            <CalendarDays />
           </Button>
 
           <Button

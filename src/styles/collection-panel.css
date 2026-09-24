@@ -72,6 +72,10 @@
   padding: 1rem;
 }
 
+.collection-home-actions {
+  display: none;
+}
+
 .collection-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
@@ -234,6 +238,35 @@
 @media (max-width: 720px) {
   .collection-panel__body {
     padding: 0.7rem;
+  }
+
+  .collection-home-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.45rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .collection-home-actions > button {
+    min-width: 0;
+    min-height: 3rem;
+    justify-content: center;
+    gap: 0.35rem;
+    padding-inline: 0.45rem;
+  }
+
+  .collection-home-actions > button span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.78rem;
+  }
+
+  .collection-home-actions > button svg {
+    flex: none;
+    width: 1rem;
+    height: 1rem;
   }
 
   .collection-grid {

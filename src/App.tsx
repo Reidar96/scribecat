@@ -12,6 +12,7 @@ import { DocumentPanel } from "@/components/app/DocumentPanel";
 import { CollectionPanel } from "@/components/app/CollectionPanel";
 import { GraphPanel } from "@/components/app/GraphPanel";
 import { JournalPanel } from "@/components/app/JournalPanel";
+import { TasksPanel } from "@/components/app/TasksPanel";
 import type { CollectionViewRequest } from "@/components/app/collectionTypes";
 import { MobileSheet } from "@/components/app/MobileSheet";
 import { ZenMode } from "@/components/app/ZenMode";
@@ -114,6 +115,7 @@ function App() {
   const [collectionView, setCollectionView] = useState<CollectionViewRequest | null>(null);
   const [graphViewOpen, setGraphViewOpen] = useState(false);
   const [journalViewOpen, setJournalViewOpen] = useState(false);
+  const [tasksViewOpen, setTasksViewOpen] = useState(false);
   const appVersion = useAppVersion();
   const editorHandleRef = useRef<EditorHandle | null>(null);
   const entryRenameRequestIdRef = useRef(0);
@@ -230,6 +232,7 @@ function App() {
     setCollectionView(null);
     setGraphViewOpen(false);
     setJournalViewOpen(false);
+    setTasksViewOpen(false);
   }, [folderPath]);
 
 
@@ -463,6 +466,7 @@ function App() {
       setCollectionView(null);
       setGraphViewOpen(false);
       setJournalViewOpen(false);
+      setTasksViewOpen(false);
       return;
     }
 
@@ -477,6 +481,7 @@ function App() {
     setCollectionView(null);
     setGraphViewOpen(false);
     setJournalViewOpen(false);
+    setTasksViewOpen(false);
   };
 
   // Same for a folder's note (the tree hands over the folder, the store
@@ -494,6 +499,7 @@ function App() {
     setCollectionView(null);
     setGraphViewOpen(false);
     setJournalViewOpen(false);
+    setTasksViewOpen(false);
   };
 
   const openCollectionSafely = async (request: CollectionViewRequest) => {
@@ -504,6 +510,7 @@ function App() {
     setCollectionView(request);
     setGraphViewOpen(false);
     setJournalViewOpen(false);
+    setTasksViewOpen(false);
     setIsSidebarSheetOpen(false);
   };
 
@@ -546,6 +553,7 @@ function App() {
     setCollectionView(null);
     setGraphViewOpen(false);
     setJournalViewOpen(true);
+    setTasksViewOpen(false);
     setIsSidebarSheetOpen(false);
     return resolvedPath;
   };
@@ -956,16 +964,36 @@ function App() {
       onGraphViewToggle={() => {
         setGraphViewOpen((open) => {
           const next = !open;
-          if (next) setJournalViewOpen(false);
+          if (next) {
+            setJournalViewOpen(false);
+            setTasksViewOpen(false);
+          }
           return next;
         });
+        setCollectionView(null);
         setIsSidebarSheetOpen(false);
       }}
       journalViewOpen={journalViewOpen}
       onJournalViewToggle={() => {
         setJournalViewOpen((open) => {
           const next = !open;
-          if (next) setGraphViewOpen(false);
+          if (next) {
+            setGraphViewOpen(false);
+            setTasksViewOpen(false);
+          }
+          return next;
+        });
+        setCollectionView(null);
+        setIsSidebarSheetOpen(false);
+      }}
+      tasksViewOpen={tasksViewOpen}
+      onTasksViewToggle={() => {
+        setTasksViewOpen((open) => {
+          const next = !open;
+          if (next) {
+            setGraphViewOpen(false);
+            setJournalViewOpen(false);
+          }
           return next;
         });
         setCollectionView(null);
@@ -1054,6 +1082,18 @@ function App() {
 
           {!startupFolderResolved && folderPath === null ? (
             <div className="workspace-startup-placeholder" aria-busy="true" />
+          ) : tasksViewOpen && folderPath ? (
+            <TasksPanel
+              folderPath={folderPath}
+              filePaths={filePaths}
+              sidebarVisible={sidebarVisible}
+              onSidebarVisibilityToggle={toggleSidebarVisible}
+              onOpenSidebar={() => setIsSidebarSheetOpen(true)}
+              onClose={() => setTasksViewOpen(false)}
+              onPersistTaskFile={(filePath, markdown) =>
+                createFileAtPath(filePath, markdown)
+              }
+            />
           ) : journalViewOpen && folderPath ? (
             <JournalPanel
               folderPath={folderPath}
@@ -1106,6 +1146,24 @@ function App() {
               onOpenFile={(filePath) => void selectFilePathSafely(filePath)}
               onOpenFolder={(relativePath) => {
                 void openCollectionSafely({ kind: "folder", relativePath });
+              }}
+              onOpenJournal={() => {
+                setJournalViewOpen(true);
+                setGraphViewOpen(false);
+                setTasksViewOpen(false);
+                setCollectionView(null);
+              }}
+              onOpenGraph={() => {
+                setGraphViewOpen(true);
+                setJournalViewOpen(false);
+                setTasksViewOpen(false);
+                setCollectionView(null);
+              }}
+              onOpenTasks={() => {
+                setTasksViewOpen(true);
+                setJournalViewOpen(false);
+                setGraphViewOpen(false);
+                setCollectionView(null);
               }}
             />
           ) : (
