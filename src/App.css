@@ -21,6 +21,7 @@
 @import "./styles/working-set.css";
 @import "./styles/detail-panel.css";
 @import "./styles/collection-panel.css";
+@import "./styles/graph.css";
 @import "./styles/editor-shell.css";
 @import "./styles/editor-toolbar.css";
 @import "./styles/editor-content.css";
