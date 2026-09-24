@@ -5,7 +5,7 @@ import WebSocket from "ws";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { SERVER_META_DIR } from "../src/auth/authStore.js";
-import { openTokenStore } from "../src/auth/tokenStore.js";
+import { openTokenStore, TOKEN_PREFIX } from "../src/auth/tokenStore.js";
 import { REVOKED_CLOSE_CODE } from "../src/vault/eventRoutes.js";
 import { createTempVault, createTestContext, TEST_PASSWORD, type TestContext } from "./helpers.js";
 
@@ -42,7 +42,9 @@ describe("token store", () => {
     expect(store.verify(undefined, 1)).toBeNull();
 
     const onDisk = await readFile(path.join(vaultPath, SERVER_META_DIR, "tokens.json"), "utf8");
-    expect(onDisk).not.toContain(issued.token.split("_")[2]);
+    const secret = issued.token.slice(`${TOKEN_PREFIX}${issued.id}_`.length);
+    expect(secret.length).toBeGreaterThan(0);
+    expect(onDisk).not.toContain(secret);
     expect(onDisk).toContain(issued.id);
   });
 
