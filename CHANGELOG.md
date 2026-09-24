@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.22.5] - 2026-09-24
+
+### Improvements
+- Move the desktop “Nytt gjøremål” button above “Alle”.
+- Match the new-task button height and typography to the “Alle” filter button.
+- Keep the phone new-task control as a compact + before “Alle”.
+- Revert the mobile task-category chips to the previous category layout from 0.22.3.
+
 ## [0.22.4] - 2026-09-24
 
 ### Improvements

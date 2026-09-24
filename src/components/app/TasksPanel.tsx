@@ -823,6 +823,19 @@ export function TasksPanel({
       <div className="tasks-view__layout">
         <aside className="tasks-categories">
           <div className="tasks-filter-section">
+            <Button
+              type="button"
+              variant={createOpen ? "default" : "outline"}
+              className="tasks-new-trigger"
+              aria-pressed={createOpen}
+              aria-label={t("tasks.newTask")}
+              title={t("tasks.newTask")}
+              onClick={() => setCreateOpen((open) => !open)}
+            >
+              <Plus />
+              <span className="tasks-new-trigger__label">{t("tasks.newTask")}</span>
+            </Button>
+
             <button
               type="button"
               className={cn(
@@ -837,19 +850,6 @@ export function TasksPanel({
               <span>{t("tasks.all")}</span>
               <small>{allTasks.length}</small>
             </button>
-
-            <Button
-              type="button"
-              variant={createOpen ? "default" : "outline"}
-              className="tasks-new-trigger"
-              aria-pressed={createOpen}
-              aria-label={t("tasks.newTask")}
-              title={t("tasks.newTask")}
-              onClick={() => setCreateOpen((open) => !open)}
-            >
-              <Plus />
-              <span className="tasks-new-trigger__label">{t("tasks.newTask")}</span>
-            </Button>
 
             {[
               [TODAY_TASKS, t("tasks.today"), todayCount],
@@ -878,7 +878,7 @@ export function TasksPanel({
             ))}
           </div>
 
-          <div className="tasks-filter-section tasks-filter-section--categories">
+          <div className="tasks-filter-section">
             <div className="tasks-filter-section__heading">
               <span>{t("tasks.categories")}</span>
             </div>
@@ -892,7 +892,6 @@ export function TasksPanel({
                   key={category}
                   className={cn(
                     "tasks-category-row",
-                    active && "tasks-category-row--active",
                     dropActive && "tasks-category-row--drop"
                   )}
                   onDragOver={(event) => {
