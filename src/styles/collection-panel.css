@@ -239,6 +239,10 @@
 }
 
 @media (max-width: 720px) {
+  .collection-panel__header {
+    padding: 0.55rem 0.65rem;
+  }
+
   .collection-panel__body {
     padding: 0.7rem;
   }
