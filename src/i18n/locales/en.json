@@ -567,7 +567,9 @@
     "unpinWorkingSet": "Unpin from In progress",
     "discardChanges": "Discard changes",
     "unsavedChangesInside": "Unsaved changes in this folder",
-    "closeWorkingSet": "Close in \"In progress\""
+    "closeWorkingSet": "Close in \"In progress\"",
+    "openFolderCollection": "Open {{path}} as a grid",
+    "openFolderNoteButton": "Open folder note"
   },
   "moveDialog": {
     "eyebrow": "Move",
@@ -1148,7 +1150,18 @@
     "placeholder": "Add a tag…",
     "lockedPlaceholder": "Unlock the document to edit tags",
     "overview": "Tags",
-    "clearFilter": "Show all notes",
+    "clearFilter": "Close tag view",
     "noneInVault": "No tags in this vault."
+  },
+  "collection": {
+    "label": "Note collection",
+    "root": "Notes",
+    "close": "Close collection view",
+    "noteCount_one": "{{count}} note",
+    "noteCount_other": "{{count}} notes",
+    "folderSummary": "{{notes}} notes · {{folders}} folders",
+    "folder": "Folder",
+    "emptyTag": "No notes currently use this tag.",
+    "emptyFolder": "This folder has no notes or subfolders."
   }
 }
