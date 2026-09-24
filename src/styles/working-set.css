@@ -46,7 +46,7 @@
   padding: 0.25rem 0.4rem;
   color: rgba(var(--muted-rgb), 0.95);
   font: inherit;
-  font-size: 0.72rem;
+  font-size: var(--font-ui-xs);
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -179,14 +179,14 @@
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  font-size: 0.9rem;
+  font-size: var(--font-ui-md);
 }
 
 .working-set__folder {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  font-size: 0.7rem;
+  font-size: var(--font-ui-xs);
   color: rgba(var(--muted-rgb), 0.85);
 }
 

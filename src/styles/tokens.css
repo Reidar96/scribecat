@@ -11,6 +11,12 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
+  /* Shared interface typography scale. Document/prose sizing stays separate. */
+  --font-ui-xs: 0.72rem;
+  --font-ui-sm: 0.8rem;
+  --font-ui-md: 0.875rem;
+  --font-ui-lg: 1rem;
+
   /* The app's accent color for links, controls and highlights. Defaults to
      the violet ramp inherited from the original design;
      src/store/useAccentColorStore.ts overwrites these as inline styles on

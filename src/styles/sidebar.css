@@ -41,7 +41,7 @@
   border-radius: 0.75rem;
   background: rgba(var(--surface-rgb), 0.95);
   color: var(--blue-fg);
-  font-size: 0.8rem;
+  font-size: var(--font-ui-sm);
   text-align: center;
   pointer-events: none;
 }
@@ -74,7 +74,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.74rem;
+  font-size: var(--font-ui-xs);
 }
 
 .sidebar-panel__primary-actions > button svg {
@@ -102,7 +102,7 @@
   width: 100%;
   max-width: none;
   min-width: 0;
-  font-size: 0.9rem;
+  font-size: var(--font-ui-md);
   font-family: inherit;
   color: rgba(var(--text-rgb),var(--text-default-alpha));
   border: none;
@@ -280,7 +280,7 @@
   border-radius: 0.7rem;
   background: rgba(var(--surface-raised-rgb),0.65);
   padding: 0.45rem 0.55rem;
-  font-size: 0.78rem;
+  font-size: var(--font-ui-sm);
 }
 
 .sidebar-panel__selection-actions > span {
@@ -345,7 +345,7 @@
   color: inherit;
   padding: 0.25rem 0.5rem;
   font: inherit;
-  font-size: 0.75rem;
+  font-size: var(--font-ui-sm);
 }
 
 .sidebar-tags__item[data-active="true"] {
@@ -393,7 +393,7 @@
   background: transparent;
   color: rgba(var(--text-rgb),0.96);
   font: inherit;
-  font-size: 0.82rem;
+  font-size: var(--font-ui-md);
 }
 
 .sidebar-search input::placeholder {
@@ -481,7 +481,7 @@
 .sidebar-search-result__path {
   overflow: hidden;
   color: rgba(var(--muted-rgb),0.78);
-  font-size: 0.71rem;
+  font-size: var(--font-ui-xs);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -497,13 +497,13 @@
   background: rgba(var(--overlay-rgb),0.07);
   padding: 0.12rem 0.34rem;
   color: rgba(var(--muted-rgb),0.88);
-  font-size: 0.66rem;
+  font-size: var(--font-ui-xs);
 }
 
 .sidebar-search-results__empty {
   margin: 0;
   padding: 1rem 0.5rem;
   color: rgba(var(--muted-rgb),0.8);
-  font-size: 0.8rem;
+  font-size: var(--font-ui-sm);
   text-align: center;
 }

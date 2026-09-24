@@ -47,7 +47,7 @@
 .journal-calendar__tags h3,
 .journal-results__header h2 {
   margin: 0;
-  font-size: 1rem;
+  font-size: var(--font-ui-lg);
   font-weight: 650;
 }
 
@@ -83,7 +83,7 @@
   padding: 0 1.65rem 0 0.55rem;
   color: inherit;
   font: inherit;
-  font-size: 0.76rem;
+  font-size: var(--font-ui-sm);
 }
 
 .journal-calendar__weekdays,
@@ -100,7 +100,7 @@
 .journal-calendar__weekdays span {
   padding: 0.25rem 0;
   color: rgba(var(--muted-rgb),0.72);
-  font-size: 0.68rem;
+  font-size: var(--font-ui-xs);
   font-weight: 600;
   text-align: center;
   text-transform: uppercase;
@@ -120,7 +120,7 @@
   background: transparent;
   color: rgba(var(--text-rgb),0.92);
   font: inherit;
-  font-size: 0.82rem;
+  font-size: var(--font-ui-md);
   cursor: pointer;
   transition:
     border-color 120ms ease,
@@ -199,7 +199,7 @@
   padding: 0 0.6rem;
   color: inherit;
   font: inherit;
-  font-size: 0.76rem;
+  font-size: var(--font-ui-md);
 }
 
 .journal-calendar__search-row input:focus,
@@ -210,7 +210,7 @@
 
 .journal-calendar__tags h3 {
   margin-bottom: 0.55rem;
-  font-size: 0.8rem;
+  font-size: var(--font-ui-sm);
 }
 
 .journal-calendar__tag-list {
@@ -229,7 +229,7 @@
   padding: 0.28rem 0.45rem 0.28rem 0.55rem;
   color: rgba(var(--text-rgb),0.9);
   font: inherit;
-  font-size: 0.72rem;
+  font-size: var(--font-ui-sm);
   cursor: pointer;
 }
 
@@ -247,7 +247,7 @@
   background: rgba(var(--overlay-rgb),0.07);
   padding: 0.08rem 0.3rem;
   color: rgba(var(--muted-rgb),0.8);
-  font-size: 0.64rem;
+  font-size: var(--font-ui-xs);
   text-align: center;
 }
 
@@ -316,7 +316,7 @@
   background: rgba(var(--accent-rgb),0.1);
   padding: 0.25rem 0.35rem 0.25rem 0.5rem;
   color: rgba(var(--text-rgb),0.92);
-  font-size: 0.72rem;
+  font-size: var(--font-ui-sm);
 }
 
 .journal-entry__tag button {
@@ -460,7 +460,7 @@
   aspect-ratio: 4 / 3;
   padding: 1rem;
   color: rgba(var(--muted-rgb),0.75);
-  font-size: 0.76rem;
+  font-size: var(--font-ui-sm);
   text-align: center;
 }
 
@@ -472,7 +472,7 @@
   min-height: 9rem;
   color: rgba(var(--muted-rgb),0.8);
   font: inherit;
-  font-size: 0.78rem;
+  font-size: var(--font-ui-sm);
   cursor: pointer;
 }
 
@@ -496,7 +496,7 @@
 .journal-entry__image-error {
   margin: 0 0 0.7rem;
   color: var(--error-fg);
-  font-size: 0.78rem;
+  font-size: var(--font-ui-sm);
 }
 
 .journal-results {
@@ -517,7 +517,7 @@
   display: block;
   margin-top: 0.15rem;
   color: rgba(var(--muted-rgb),0.76);
-  font-size: 0.72rem;
+  font-size: var(--font-ui-xs);
 }
 
 .journal-results__list {
@@ -549,13 +549,13 @@
 }
 
 .journal-results__item strong {
-  font-size: 0.9rem;
+  font-size: var(--font-ui-md);
 }
 
 .journal-results__item p {
   margin: 0.35rem 0 0;
   color: rgba(var(--muted-rgb),0.9);
-  font-size: 0.78rem;
+  font-size: var(--font-ui-sm);
   line-height: 1.45;
 }
 
@@ -571,7 +571,7 @@
   background: rgba(var(--accent-rgb),0.08);
   padding: 0.18rem 0.38rem;
   color: rgba(var(--muted-rgb),0.88);
-  font-size: 0.66rem;
+  font-size: var(--font-ui-xs);
 }
 
 .journal-results__content {
@@ -740,13 +740,13 @@
   .journal-calendar__tag-filter {
     min-height: 2.7rem;
     padding: 0.45rem 0.65rem;
-    font-size: 0.9rem;
+    font-size: var(--font-ui-md);
   }
 
   .journal-entry__tag {
     min-height: 2.7rem;
     padding: 0.4rem 0.48rem 0.4rem 0.65rem;
-    font-size: 0.9rem;
+    font-size: var(--font-ui-md);
   }
 
   .journal-entry__tag button {
