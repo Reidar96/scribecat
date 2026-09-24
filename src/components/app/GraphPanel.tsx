@@ -118,16 +118,6 @@ export function GraphPanel({
     return { nodes, edges };
   }, [graph, visibility]);
 
-  const counts = useMemo(
-    () => ({
-      notes: graph.nodes.filter((node) => node.kind === "note").length,
-      tags: graph.nodes.filter((node) => node.kind === "tag").length,
-      folders: graph.nodes.filter((node) => node.kind === "folder").length,
-      links: graph.edges.filter((edge) => edge.kind === "link").length
-    }),
-    [graph]
-  );
-
   const setKindVisible = (kind: GraphNodeKind) => {
     setVisibility((current) => ({ ...current, [kind]: !current[kind] }));
   };
