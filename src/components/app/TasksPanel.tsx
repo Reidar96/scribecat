@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type DragEvent } from "react";
 import {
   CalendarClock,
   CheckCircle2,
   Eye,
   EyeOff,
   GripVertical,
+  PanelLeft,
+  PanelLeftOpen,
   Pencil,
   Plus,
   SquareCheck,
@@ -179,7 +181,7 @@ function TaskRow({
     setTagsDraft(next.map((tag) => `#${tag}`).join(" "));
   };
 
-  const startDrag = (event: React.DragEvent<HTMLButtonElement>) => {
+  const startDrag = (event: DragEvent<HTMLButtonElement>) => {
     event.dataTransfer.effectAllowed = "move";
     event.dataTransfer.setData(
       TASK_DRAG_MIME,
@@ -630,7 +632,7 @@ export function TasksPanel({
     }
   };
 
-  const taskFromDrop = (event: React.DragEvent): TaskItem | null => {
+  const taskFromDrop = (event: DragEvent): TaskItem | null => {
     const raw = event.dataTransfer.getData(TASK_DRAG_MIME);
     if (!raw) return null;
 
@@ -789,9 +791,9 @@ export function TasksPanel({
             }
           >
             {layout === "phone" || sidebarVisible ? (
-              <SquareCheck />
+              <PanelLeft />
             ) : (
-              <SquareCheck />
+              <PanelLeftOpen />
             )}
           </Button>
           <div className="tasks-view__title">
