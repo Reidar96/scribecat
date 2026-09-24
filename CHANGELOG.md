@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.20.1] - 2026-09-24
+
+### Improvements
+- Keep the diary date separate and read-only in the diary view, with the weekday shown before the full date. Existing Markdown date headings are preserved on disk but no longer appear inside the editable daily text.
+- Move diary tags below the calendar and add inline controls for adding and removing YAML tags.
+- Allow previous/next browsing in the enlarged diary image viewer, including keyboard arrow navigation and an image counter.
+- Show three gallery columns on large screens and two on narrower layouts.
+- Remove the explanatory helper text from the diary view and diary-specific vault settings.
+
 ## [0.20.0] - 2026-09-24
 
 ### Highlights

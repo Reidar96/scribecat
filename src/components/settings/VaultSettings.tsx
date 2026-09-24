@@ -152,11 +152,7 @@ export function VaultSettings() {
           </>
         ) : null}
 
-        <SettingRow
-          label={t("settingsDialog.journalFolder")}
-          hint={t("settingsDialog.journalFolderShort")}
-          info={t("settingsDialog.journalFolderHint")}
-        >
+        <SettingRow label={t("settingsDialog.journalFolder")}>
           <>
             <input
               type="text"
@@ -173,10 +169,7 @@ export function VaultSettings() {
           </>
         </SettingRow>
 
-        <SettingRow
-          label={t("settingsDialog.journalStructure")}
-          hint={t("settingsDialog.journalStructureShort")}
-        >
+        <SettingRow label={t("settingsDialog.journalStructure")}>
           <select
             value={journalSettings.structure}
             disabled={disabled}
@@ -200,8 +193,6 @@ export function VaultSettings() {
         <SettingRow
           layout="switch"
           label={t("settingsDialog.journalHide")}
-          hint={t("settingsDialog.journalHideShort")}
-          info={t("settingsDialog.journalHideHint")}
         >
           <input
             type="checkbox"

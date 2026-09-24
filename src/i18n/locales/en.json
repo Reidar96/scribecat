@@ -578,8 +578,11 @@
     "doneText": "Done",
     "openMarkdown": "Open full Markdown",
     "emptyText": "_No text yet._",
+    "entryDate": "Diary date",
+    "tags": "Tags",
+    "addTag": "Add tag",
+    "removeTag": "Remove tag {{tag}}",
     "images": "Images",
-    "imagesHint": "The gallery order is the same order stored in Markdown.",
     "addImages": "Add images",
     "openImage": "Open image {{name}}",
     "imageMissing": "Image could not be loaded",
@@ -820,7 +823,9 @@
     "notFound": "Image not found: {{src}}",
     "loading": "Loading image …",
     "preview": "Image preview",
-    "openPreview": "Open larger image"
+    "openPreview": "Open larger image",
+    "previous": "Previous image",
+    "next": "Next image"
   },
   "codeBlock": {
     "copy": "Copy code",

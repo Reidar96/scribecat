@@ -423,8 +423,11 @@
     "doneText": "Ferdig",
     "openMarkdown": "Åpne full Markdown",
     "emptyText": "_Ingen tekst ennå._",
+    "entryDate": "Dagbokdato",
+    "tags": "Tags",
+    "addTag": "Legg til tagg",
+    "removeTag": "Fjern taggen {{tag}}",
     "images": "Bilder",
-    "imagesHint": "Rekkefølgen i galleriet er den samme som rekkefølgen som lagres i Markdown.",
     "addImages": "Legg til bilder",
     "openImage": "Åpne bilde {{name}}",
     "imageMissing": "Bildet kunne ikke lastes",
@@ -646,7 +649,9 @@
     "notFound": "Fant ikke bildet: {{src}}",
     "loading": "Laster bilde …",
     "preview": "Bildevisning",
-    "openPreview": "Åpne større bilde"
+    "openPreview": "Åpne større bilde",
+    "previous": "Forrige bilde",
+    "next": "Neste bilde"
   },
   "codeBlock": {
     "copy": "Kopier kode",

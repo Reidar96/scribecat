@@ -17,6 +17,7 @@ export const DEFAULT_JOURNAL_SETTINGS: JournalSettings = {
 
 const IMAGE_PATTERN = /!\[([^\]]*)\]\(\s*<?([^()<>\s]+)>?(?:\s+"[^"]*")?\s*\)/g;
 const GALLERY_HEADING = /^##\s+(?:Bilder|Images)\s*$/im;
+const LEADING_TITLE = /^#\s+(.+)\r?\n(?:\r?\n)?/;
 
 export type JournalImage = {
   alt: string;
@@ -180,11 +181,26 @@ function stripImageOnlyLines(markdown: string): string {
     .trim();
 }
 
+function splitLeadingTitle(body: string): { title: string | null; body: string } {
+  const match = LEADING_TITLE.exec(body);
+
+  if (!match) {
+    return { title: null, body };
+  }
+
+  return {
+    title: match[1].trim() || null,
+    body: body.slice(match[0].length)
+  };
+}
+
 export function parseJournalMarkdown(markdown: string): {
+  title: string | null;
   textMarkdown: string;
   images: JournalImage[];
 } {
-  const { body } = splitFrontmatter(markdown);
+  const { body: fullBody } = splitFrontmatter(markdown);
+  const { title, body } = splitLeadingTitle(fullBody);
   const heading = GALLERY_HEADING.exec(body);
 
   if (heading) {
@@ -195,6 +211,7 @@ export function parseJournalMarkdown(markdown: string): {
     const gallery = nextHeading ? after.slice(0, nextHeading.index) : after;
     const remainder = nextHeading ? after.slice(nextHeading.index).trimStart() : "";
     return {
+      title,
       textMarkdown: [before, remainder].filter(Boolean).join("\n\n").trim(),
       images: imagesIn(gallery)
     };
@@ -202,6 +219,7 @@ export function parseJournalMarkdown(markdown: string): {
 
   const images = imagesIn(body);
   return {
+    title,
     textMarkdown: stripImageOnlyLines(body),
     images
   };
@@ -212,7 +230,8 @@ export function composeJournalMarkdown(
   textMarkdown: string,
   images: JournalImage[]
 ): string {
-  const { frontmatter } = splitFrontmatter(originalMarkdown);
+  const { frontmatter, body: originalBody } = splitFrontmatter(originalMarkdown);
+  const { title } = splitLeadingTitle(originalBody);
   const text = textMarkdown.trim();
   const gallery =
     images.length > 0
@@ -220,7 +239,9 @@ export function composeJournalMarkdown(
           .map((image) => `![${image.alt.replace(/\]/g, "\\]")}](${image.src})`)
           .join("\n\n")}`
       : "## Bilder";
-  const body = [text, gallery].filter(Boolean).join("\n\n") + "\n";
+  const body = [title ? `# ${title}` : "", text, gallery]
+    .filter(Boolean)
+    .join("\n\n") + "\n";
 
   return composeFrontmatter(frontmatter, body);
 }
