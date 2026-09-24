@@ -209,6 +209,7 @@ export function SettingsDialog({
                         <option value="es">{t("settingsDialog.languageSpanish")}</option>
                         <option value="zh">{t("settingsDialog.languageChinese")}</option>
                         <option value="ja">{t("settingsDialog.languageJapanese")}</option>
+                        <option value="nb">{t("settingsDialog.languageNorwegianBokmal")}</option>
                         <option value="pt">{t("settingsDialog.languagePortuguese")}</option>
                         <option value="ru">{t("settingsDialog.languageRussian")}</option>
                         <option value="it">{t("settingsDialog.languageItalian")}</option>
