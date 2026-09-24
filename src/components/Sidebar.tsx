@@ -49,7 +49,6 @@ import { WorkingSetPanel } from "@/components/sidebar/WorkingSetPanel";
 import { TagsOverview } from "@/components/sidebar/TagsOverview";
 import { SidebarSearchResults } from "@/components/sidebar/SidebarSearchResults";
 import { useTagIndex } from "@/hooks/useTagIndex";
-import { useLayoutMode } from "@/hooks/useLayoutMode";
 import { useVaultSearch } from "@/hooks/useVaultSearch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useStoredCollapsed, useWorkingSetHeight } from "@/hooks/useWorkingSetHeight";
@@ -215,7 +214,6 @@ export function Sidebar({
   onClose
 }: SidebarProps) {
   const { t } = useTranslation();
-  const layout = useLayoutMode();
   const [selectionMode, setSelectionMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [collapseFoldersRequestId, setCollapseFoldersRequestId] = useState(0);
