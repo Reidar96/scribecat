@@ -751,6 +751,11 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     },
     editorProps: {
       handleDrop: (view, event, _slice, moved) => {
+        if (documentLockedRef.current) {
+          event.preventDefault();
+          return true;
+        }
+
         if (moved) {
           return false;
         }
@@ -795,6 +800,11 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       },
       transformPasted: (slice) => normalizePastedSlice(slice),
       handlePaste: (view, event) => {
+        if (documentLockedRef.current) {
+          event.preventDefault();
+          return true;
+        }
+
         const plainPasteRequested = plainPasteRequestedRef.current;
         plainPasteRequestedRef.current = false;
 
