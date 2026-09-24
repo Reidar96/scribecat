@@ -274,6 +274,11 @@ function sanitizeImageFileName(fileName: string, mimeType: string): string {
   const sanitized = baseNameOnly.replace(/[^a-zA-Z0-9._-]/g, "_").replace(/^\.+/, "");
 
   if (sanitized) {
+    const fallbackExtension = EXTENSION_BY_MIME_TYPE[mimeType];
+    if (fallbackExtension && !/\.[a-zA-Z0-9]+$/.test(sanitized)) {
+      return `${sanitized}.${fallbackExtension}`;
+    }
+
     return sanitized;
   }
 
