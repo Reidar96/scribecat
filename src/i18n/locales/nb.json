@@ -719,7 +719,8 @@
     "preview": "Bildevisning",
     "openPreview": "Åpne større bilde",
     "previous": "Forrige bilde",
-    "next": "Neste bilde"
+    "next": "Neste bilde",
+    "delete": "Slett bilde"
   },
   "codeBlock": {
     "copy": "Kopier kode",
