@@ -22,6 +22,8 @@ import {
   Info,
   Italic,
   Link2,
+  Lock,
+  LockOpen,
   List,
   ListOrdered,
   Megaphone,
@@ -76,6 +78,8 @@ type ToolbarProps = {
   onDownloadMarkdownRequest: (() => void) | null;
   onSearchRequest: () => void;
   onZenModeRequest: () => void;
+  documentLocked: boolean;
+  onDocumentLockToggle: () => void;
 };
 
 type ToggleButtonProps = {
@@ -395,7 +399,9 @@ export function Toolbar({
   onPrintRequest,
   onDownloadMarkdownRequest,
   onSearchRequest,
-  onZenModeRequest
+  onZenModeRequest,
+  documentLocked,
+  onDocumentLockToggle
 }: ToolbarProps) {
   const { t } = useTranslation();
   const [, forceRerender] = useState(0);
@@ -444,10 +450,14 @@ export function Toolbar({
   }, [editor]);
 
   return (
-    <div className="editor-toolbar" aria-label={t("toolbar.formattingLabel")}>
+    <div
+      className="editor-toolbar"
+      aria-label={t("toolbar.formattingLabel")}
+      data-document-locked={documentLocked ? "true" : undefined}
+    >
 
 
-      <div className="editor-toolbar__group">
+      <div className="editor-toolbar__group" inert={documentLocked}>
         <Button
           type="button"
           size="icon-sm"
@@ -490,7 +500,7 @@ export function Toolbar({
 
       <div className="editor-toolbar__separator" aria-hidden="true" />
 
-      <div className="editor-toolbar__group">
+      <div className="editor-toolbar__group" inert={documentLocked}>
         <ToggleButton
           pressed={editor.isActive("bold")}
           label={t("toolbar.bold")}
@@ -551,7 +561,7 @@ export function Toolbar({
 
       <div className="editor-toolbar__separator" aria-hidden="true" />
 
-      <div className="editor-toolbar__group">
+      <div className="editor-toolbar__group" inert={documentLocked}>
         <HeadingMenu editor={editor} />
         <Button
           type="button"
@@ -586,7 +596,7 @@ export function Toolbar({
       <div className="editor-toolbar__separator" aria-hidden="true" />
 
       {/* A Markdown table cell can't hold a list (see lib/editor/extensions/lists.ts). */}
-      <div className="editor-toolbar__group">
+      <div className="editor-toolbar__group" inert={documentLocked}>
         <ToggleButton
           pressed={editor.isActive("bulletList")}
           label={t("toolbar.bulletList")}
@@ -624,7 +634,7 @@ export function Toolbar({
 
       <div className="editor-toolbar__separator" aria-hidden="true" />
 
-      <div className="editor-toolbar__group">
+      <div className="editor-toolbar__group" inert={documentLocked}>
         <ToggleButton
           pressed={editor.isActive("code")}
           label={t("toolbar.inlineCode")}
@@ -667,7 +677,7 @@ export function Toolbar({
 
       <div className="editor-toolbar__separator" aria-hidden="true" />
 
-      <div className="editor-toolbar__group">
+      <div className="editor-toolbar__group" inert={documentLocked}>
         <TableGridPicker editor={editor} />
         {editor.isActive("table") ? <TableMenu editor={editor} /> : null}
         <EmojiPicker editor={editor} />
@@ -720,6 +730,21 @@ export function Toolbar({
           onClick={onZenModeRequest}
         >
           <Focus />
+        </Button>
+        <Button
+          type="button"
+          size="icon-sm"
+          variant="outline"
+          className="editor-toolbar__lock-button"
+          aria-pressed={documentLocked}
+          aria-label={t(documentLocked ? "toolbar.unlockDocument" : "toolbar.lockDocument")}
+          title={t(documentLocked ? "toolbar.unlockDocumentTitle" : "toolbar.lockDocumentTitle")}
+          onMouseDown={(event) => {
+            event.preventDefault();
+          }}
+          onClick={onDocumentLockToggle}
+        >
+          {documentLocked ? <LockOpen /> : <Lock />}
         </Button>
         <EditorOptionsMenu
           onPrintRequest={onPrintRequest}
