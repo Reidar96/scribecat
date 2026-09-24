@@ -346,7 +346,6 @@ function JournalImageCard({
     >
       {objectUrl ? (
         <button
-          ref={addCardRef}
           type="button"
           className={cn(
             "journal-entry__image-open",
@@ -779,6 +778,7 @@ function JournalEntryView({
         ))}
 
         <button
+          ref={addCardRef}
           type="button"
           className={cn(
             "journal-entry__add-card",
