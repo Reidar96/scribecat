@@ -1,6 +1,8 @@
 import {
   useEffect,
+  useLayoutEffect,
   useMemo,
+  useRef,
   useState,
   type DragEvent as ReactDragEvent
 } from "react";
@@ -79,6 +81,25 @@ type JournalIndexEntry = JournalFileRecord & {
 };
 
 type ImageRatioClass = "wide" | "landscape" | "square" | "portrait" | "tall";
+
+type JournalGalleryItem = {
+  key: string;
+  image: JournalImage;
+};
+
+function buildGalleryItems(images: JournalImage[]): JournalGalleryItem[] {
+  const occurrences = new Map<string, number>();
+
+  return images.map((image) => {
+    const base = image.src + "\u0000" + image.alt;
+    const occurrence = occurrences.get(base) ?? 0;
+    occurrences.set(base, occurrence + 1);
+    return {
+      key: base + "\u0000" + occurrence,
+      image
+    };
+  });
+}
 
 function dateParts(date: Date): JournalDate {
   return {
@@ -234,18 +255,29 @@ function JournalImageLightbox({
 }
 
 function JournalImageCard({
+  itemKey,
   image,
   filePath,
   index,
+  isDragging,
   onDragStart,
+  onDragEnter,
+  onDragEnd,
   onDrop,
   onOpen
 }: {
+  itemKey: string;
   image: JournalImage;
   filePath: string;
   index: number;
-  onDragStart: (index: number) => void;
-  onDrop: (index: number) => void;
+  isDragging: boolean;
+  onDragStart: (
+    event: ReactDragEvent<HTMLElement>,
+    itemKey: string
+  ) => void;
+  onDragEnter: (itemKey: string) => void;
+  onDragEnd: () => void;
+  onDrop: () => void;
   onOpen: (index: number) => void;
 }) {
   const { t } = useTranslation();
@@ -254,13 +286,25 @@ function JournalImageCard({
 
   return (
     <article
-      className="journal-entry__image-card"
+      className={cn(
+        "journal-entry__image-card",
+        isDragging && "journal-entry__image-card--dragging"
+      )}
+      data-journal-image-key={itemKey}
       draggable
-      onDragStart={() => onDragStart(index)}
-      onDragOver={(event) => event.preventDefault()}
+      onDragStart={(event) => onDragStart(event, itemKey)}
+      onDragEnter={(event) => {
+        event.preventDefault();
+        onDragEnter(itemKey);
+      }}
+      onDragOver={(event) => {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+      }}
+      onDragEnd={onDragEnd}
       onDrop={(event) => {
         event.preventDefault();
-        onDrop(index);
+        onDrop();
       }}
     >
       {objectUrl ? (
@@ -399,27 +443,139 @@ function JournalEntryView({
   const { t } = useTranslation();
   const parsed = useMemo(() => parseJournalMarkdown(markdown), [markdown]);
   const [draftText, setDraftText] = useState(parsed.textMarkdown);
-  const [draggedImage, setDraggedImage] = useState<number | null>(null);
+  const [galleryItems, setGalleryItems] = useState<JournalGalleryItem[]>(() =>
+    buildGalleryItems(parsed.images)
+  );
+  const [draggingKey, setDraggingKey] = useState<string | null>(null);
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
   const [imageDropActive, setImageDropActive] = useState(false);
+  const galleryRef = useRef<HTMLDivElement>(null);
+  const draggingKeyRef = useRef<string | null>(null);
+  const dragCommittedRef = useRef(false);
+  const previousGalleryRectsRef = useRef<Map<string, DOMRect> | null>(null);
 
   useEffect(() => {
     setDraftText(parsed.textMarkdown);
   }, [filePath, parsed.textMarkdown]);
 
-  const commitText = (nextText: string) => {
-    setDraftText(nextText);
-    onMarkdownChange(composeJournalMarkdown(markdown, nextText, parsed.images));
+  useEffect(() => {
+    if (draggingKeyRef.current) return;
+    setGalleryItems(buildGalleryItems(parsed.images));
+  }, [filePath, parsed.images]);
+
+  useLayoutEffect(() => {
+    const previousRects = previousGalleryRectsRef.current;
+    const gallery = galleryRef.current;
+    if (!previousRects || !gallery) return;
+
+    previousGalleryRectsRef.current = null;
+
+    for (const node of gallery.querySelectorAll<HTMLElement>(
+      "[data-journal-image-key]"
+    )) {
+      const key = node.dataset.journalImageKey;
+      if (!key) continue;
+
+      const previous = previousRects.get(key);
+      if (!previous) continue;
+
+      const next = node.getBoundingClientRect();
+      const deltaX = previous.left - next.left;
+      const deltaY = previous.top - next.top;
+
+      if (Math.abs(deltaX) < 1 && Math.abs(deltaY) < 1) continue;
+
+      node.animate(
+        [
+          { transform: `translate(${deltaX}px, ${deltaY}px)` },
+          { transform: "translate(0, 0)" }
+        ],
+        {
+          duration: 180,
+          easing: "cubic-bezier(0.2, 0.8, 0.2, 1)"
+        }
+      );
+    }
+  }, [galleryItems]);
+
+  const currentGalleryImages = galleryItems.map((item) => item.image);
+
+  const captureGalleryRects = () => {
+    const gallery = galleryRef.current;
+    if (!gallery) return null;
+
+    const rects = new Map<string, DOMRect>();
+    for (const node of gallery.querySelectorAll<HTMLElement>(
+      "[data-journal-image-key]"
+    )) {
+      const key = node.dataset.journalImageKey;
+      if (key) rects.set(key, node.getBoundingClientRect());
+    }
+    return rects;
   };
 
-  const moveImage = (from: number, to: number) => {
-    if (from === to || to < 0 || to >= parsed.images.length) return;
+  const commitText = (nextText: string) => {
+    setDraftText(nextText);
+    onMarkdownChange(
+      composeJournalMarkdown(markdown, nextText, currentGalleryImages)
+    );
+  };
 
-    const next = [...parsed.images];
+  const handleImageDragStart = (
+    event: ReactDragEvent<HTMLElement>,
+    itemKey: string
+  ) => {
+    draggingKeyRef.current = itemKey;
+    dragCommittedRef.current = false;
+    setDraggingKey(itemKey);
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", itemKey);
+    event.dataTransfer.setData("application/x-scribecat-journal-image", itemKey);
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    event.dataTransfer.setDragImage(
+      event.currentTarget,
+      Math.min(rect.width / 2, 120),
+      Math.min(rect.height / 2, 80)
+    );
+  };
+
+  const handleImageDragEnter = (targetKey: string) => {
+    const draggedKey = draggingKeyRef.current;
+    if (!draggedKey || draggedKey === targetKey) return;
+
+    const from = galleryItems.findIndex((item) => item.key === draggedKey);
+    const to = galleryItems.findIndex((item) => item.key === targetKey);
+    if (from < 0 || to < 0 || from === to) return;
+
+    previousGalleryRectsRef.current = captureGalleryRects();
+
+    const next = [...galleryItems];
     const [item] = next.splice(from, 1);
     next.splice(to, 0, item);
-    onMarkdownChange(composeJournalMarkdown(markdown, parsed.textMarkdown, next));
+    setGalleryItems(next);
+  };
+
+  const finishImageDrag = (commit: boolean) => {
+    if (commit && draggingKeyRef.current) {
+      dragCommittedRef.current = true;
+      onMarkdownChange(
+        composeJournalMarkdown(
+          markdown,
+          parsed.textMarkdown,
+          galleryItems.map((item) => item.image)
+        )
+      );
+    }
+
+    draggingKeyRef.current = null;
+    setDraggingKey(null);
+
+    if (!commit && !dragCommittedRef.current) {
+      previousGalleryRectsRef.current = captureGalleryRects();
+      setGalleryItems(buildGalleryItems(parsed.images));
+    }
   };
 
   const persistImages = async (picked: PickedImageFile[]) => {
@@ -432,7 +588,7 @@ function JournalEntryView({
       return;
     }
 
-    const nextImages = [...parsed.images];
+    const nextImages = [...currentGalleryImages];
 
     for (const pickedImage of picked) {
       try {
@@ -566,18 +722,19 @@ function JournalEntryView({
         </p>
       ) : null}
 
-      <div className="journal-entry__gallery">
-        {parsed.images.map((image, index) => (
+      <div ref={galleryRef} className="journal-entry__gallery">
+        {galleryItems.map((item, index) => (
           <JournalImageCard
-            key={image.src + ":" + index}
-            image={image}
+            key={item.key}
+            itemKey={item.key}
+            image={item.image}
             filePath={filePath}
             index={index}
-            onDragStart={setDraggedImage}
-            onDrop={(targetIndex) => {
-              if (draggedImage !== null) moveImage(draggedImage, targetIndex);
-              setDraggedImage(null);
-            }}
+            isDragging={draggingKey === item.key}
+            onDragStart={handleImageDragStart}
+            onDragEnter={handleImageDragEnter}
+            onDragEnd={() => finishImageDrag(false)}
+            onDrop={() => finishImageDrag(true)}
             onOpen={setPreviewIndex}
           />
         ))}
@@ -607,9 +764,9 @@ function JournalEntryView({
         </button>
       </div>
 
-      {previewIndex !== null && parsed.images[previewIndex] ? (
+      {previewIndex !== null && currentGalleryImages[previewIndex] ? (
         <JournalImageLightbox
-          images={parsed.images}
+          images={currentGalleryImages}
           filePath={filePath}
           index={previewIndex}
           onIndexChange={setPreviewIndex}
