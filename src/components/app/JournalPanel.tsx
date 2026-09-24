@@ -1514,6 +1514,11 @@ export function JournalPanel({
               entries={indexedEntries}
               locale={locale}
               onOpen={(date) => void openJournalDate(date)}
+              onClear={
+                isPhone
+                  ? () => setShowMobileCalendar(true)
+                  : undefined
+              }
             />
           ) : activeFilePath && activeMarkdown !== null ? (
             <JournalEntryView
