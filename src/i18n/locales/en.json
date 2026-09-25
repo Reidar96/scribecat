@@ -1387,6 +1387,8 @@
     "swap": "Swap left and right documents",
     "dropTitle": "Open in split view",
     "dropHintLeft": "Release to open on the left",
-    "dropHintRight": "Release to open on the right"
+    "dropHintRight": "Release to open on the right",
+    "replace": "Replace this split document",
+    "closePane": "Close this split pane"
   }
 }
