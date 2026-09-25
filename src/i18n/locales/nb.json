@@ -742,6 +742,11 @@
     "openPreview": "Åpne større bilde",
     "previous": "Forrige bilde",
     "next": "Neste bilde",
+    "copy": "Kopier bilde",
+    "download": "Last ned bilde",
+    "copyUnavailable": "Bildekopiering er ikke tilgjengelig her.",
+    "copyFailed": "Kunne ikke kopiere bildet.",
+    "downloadFailed": "Kunne ikke laste ned bildet.",
     "delete": "Slett bilde"
   },
   "codeBlock": {
@@ -764,7 +769,9 @@
     "copyMarkdown": "Kopier tekst som Markdown",
     "copyPlainText": "Kopier bare tekst",
     "pastePlainText": "Lim inn bare tekst",
-    "copyFailed": "Kunne ikke kopiere til utklippstavlen."
+    "paste": "Lim inn",
+    "copyFailed": "Kunne ikke kopiere til utklippstavlen.",
+    "pasteFailed": "Kunne ikke lese fra utklippstavlen."
   },
   "fileSystem": {
     "chooseFolderTitle": "Åpne mappe",
