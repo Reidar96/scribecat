@@ -355,11 +355,18 @@
 }
 
 .tasks-item--subtask-completed {
-  display: block;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
   min-height: 0;
+  gap: 0.5rem;
   border-left-width: 2px;
   padding: 0.48rem 0.7rem;
   opacity: 0.62;
+}
+
+.tasks-item__check--compact {
+  margin-top: 0;
 }
 
 .tasks-item__completed-title {
