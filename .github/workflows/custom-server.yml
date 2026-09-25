@@ -92,26 +92,41 @@ jobs:
             echo "GitHub release v$VERSION already exists."
             ASSET_COUNT=$(gh release view "v$VERSION" --json assets --jq '.assets | length')
             if [ "$ASSET_COUNT" -eq 0 ]; then
-              echo "dispatch=true" >> "$GITHUB_OUTPUT"
+              echo "desktop_dispatch=true" >> "$GITHUB_OUTPUT"
             else
-              echo "dispatch=false" >> "$GITHUB_OUTPUT"
+              echo "desktop_dispatch=false" >> "$GITHUB_OUTPUT"
             fi
           else
             gh release create "v$VERSION" \
               --target "$GITHUB_SHA" \
               --title "ScribeCat $VERSION" \
               --generate-notes
-            echo "dispatch=true" >> "$GITHUB_OUTPUT"
+            echo "desktop_dispatch=true" >> "$GITHUB_OUTPUT"
+          fi
+
+          SERVER_IMAGE=ghcr.io/reidar96/scribedog-server
+          if docker manifest inspect "$SERVER_IMAGE:$VERSION" >/dev/null 2>&1; then
+            echo "server_dispatch=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "server_dispatch=true" >> "$GITHUB_OUTPUT"
           fi
 
       # A tag created by GITHUB_TOKEN does not emit another workflow event.
       # Dispatch explicitly so the desktop assets and multi-arch server image
       # are actually built for the version we just published.
       - name: Dispatch versioned release workflows
-        if: steps.release.outputs.dispatch == 'true'
+        if: steps.release.outputs.desktop_dispatch == 'true' || steps.release.outputs.server_dispatch == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DESKTOP_DISPATCH: ${{ steps.release.outputs.desktop_dispatch }}
+          SERVER_DISPATCH: ${{ steps.release.outputs.server_dispatch }}
         run: |
           VERSION=$(node -p "require('./package.json').version")
-          gh workflow run release.yml --ref main -f version="$VERSION"
-          gh workflow run release-server.yml --ref main -f version="$VERSION"
+
+          if [ "$DESKTOP_DISPATCH" = "true" ]; then
+            gh workflow run release.yml --ref main -f version="$VERSION"
+          fi
+
+          if [ "$SERVER_DISPATCH" = "true" ]; then
+            gh workflow run release-server.yml --ref main -f version="$VERSION"
+          fi
