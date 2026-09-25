@@ -346,21 +346,29 @@
 }
 
 .tasks-item--subtask {
+  margin-top: -0.5rem;
   margin-left: 2.2rem;
-  background: rgba(var(--surface-raised-rgb),0.28);
+  border-top: 0;
+  border-right-color: transparent;
+  border-bottom-color: transparent;
+  background: rgba(var(--surface-raised-rgb),0.18);
+  padding-top: 0.52rem;
+  padding-bottom: 0.52rem;
 }
 
 .tasks-item--subtask::before {
   position: absolute;
-  top: -0.55rem;
+  top: 0;
+  bottom: 0;
   left: -1.25rem;
   width: 0.8rem;
-  height: 1.65rem;
-  border-bottom: 1px solid rgba(var(--overlay-rgb),0.18);
   border-left: 1px solid rgba(var(--overlay-rgb),0.18);
-  border-radius: 0 0 0 0.55rem;
   content: "";
   pointer-events: none;
+}
+
+.tasks-item--subtask .tasks-item__drag {
+  visibility: hidden;
 }
 
 .tasks-item--overdue {
@@ -844,6 +852,7 @@
   }
 
   .tasks-item--subtask {
+    margin-top: -0.5rem;
     margin-left: 1rem;
   }
 
