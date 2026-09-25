@@ -665,6 +665,11 @@
   text-align: center;
 }
 
+.tasks-empty--active {
+  min-height: auto;
+  padding: 1.4rem 0;
+}
+
 .tasks-empty > svg {
   width: 1.5rem;
   height: 1.5rem;
