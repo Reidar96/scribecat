@@ -7,6 +7,7 @@
 - Add **Open selected as tabs** for the same two-document selection in both the sidebar and File Viewer.
 - Keep folder selections out of these actions so the commands only appear for two actual Markdown documents.
 - Fix split layout corruption after swapping the left/right panes and then opening or replacing a document on either side.
+- Hide the left/right split **+** controls until the pointer is actually over the corresponding editor edge.
 
 ## [0.24.0] - 2026-09-25
 
