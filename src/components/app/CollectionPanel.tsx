@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   CalendarDays,
+  Check,
   FileText,
   Folder,
   FolderOpen,
@@ -9,7 +10,8 @@ import {
   Network,
   PanelLeft,
   PanelLeftOpen,
-  Tag
+  Tag,
+  X
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -60,8 +62,8 @@ type CollectionPanelProps = {
   onOpenJournal?: () => void;
   onOpenGraph?: () => void;
   onOpenTasks?: () => void;
-  onCreateFolder?: () => void;
-  onCreateNote?: () => void;
+  onCreateFolder?: (name: string) => Promise<boolean>;
+  onCreateNote?: (name: string) => Promise<boolean>;
 };
 
 type NoteCard = {
@@ -147,6 +149,9 @@ export function CollectionPanel({
     useEditorSettingsStore((state) => state.vaultSettingsReady) &&
     vaultSettingsLoadedPath === folderPath;
   const [tagsByPath, setTagsByPath] = useState<Record<string, string[]>>({});
+  const [createKind, setCreateKind] = useState<"folder" | "note" | null>(null);
+  const [createDraft, setCreateDraft] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
 
   const visibleCollectionFilePaths = useMemo(
     () =>
@@ -154,10 +159,11 @@ export function CollectionPanel({
         const relativePath = getRelativeDisplayPath(folderPath, filePath);
         return (
           !(journalSettings.hideFromSidebar && isJournalRelativePath(relativePath, journalSettings)) &&
-          !(taskSettings.hideFromSidebar && isTasksContainerRelativePath(relativePath))
+          !(taskSettings.hideFromSidebar &&
+            isTasksContainerRelativePath(relativePath, taskSettings.folder))
         );
       }),
-    [filePaths, folderPath, journalSettings, taskSettings.hideFromSidebar]
+    [filePaths, folderPath, journalSettings, taskSettings]
   );
 
   const visibleCollectionFilePathSet = useMemo(
@@ -171,10 +177,11 @@ export function CollectionPanel({
         const relativePath = getRelativeDisplayPath(folderPath, entryPath);
         return (
           !(journalSettings.hideFromSidebar && isJournalRelativePath(relativePath, journalSettings)) &&
-          !(taskSettings.hideFromSidebar && isTasksContainerRelativePath(relativePath))
+          !(taskSettings.hideFromSidebar &&
+            isTasksContainerRelativePath(relativePath, taskSettings.folder))
         );
       }),
-    [emptyFolderPaths, folderPath, journalSettings, taskSettings.hideFromSidebar]
+    [emptyFolderPaths, folderPath, journalSettings, taskSettings]
   );
 
   const treeNodes = useMemo(() => {
@@ -361,6 +368,39 @@ export function CollectionPanel({
           ? t("collection.folderSummary", { notes: noteCount, folders: folderCount })
           : t("collection.noteCount", { count: noteCount });
 
+  useEffect(() => {
+    setCreateKind(null);
+    setCreateDraft("");
+    setIsCreating(false);
+  }, [request.kind, request.kind === "folder" ? request.relativePath : request.tag]);
+
+  const beginCreate = (kind: "folder" | "note") => {
+    setCreateKind(kind);
+    setCreateDraft("");
+  };
+
+  const cancelCreate = () => {
+    if (isCreating) return;
+    setCreateKind(null);
+    setCreateDraft("");
+  };
+
+  const submitCreate = async () => {
+    const name = createDraft.trim();
+    const create = createKind === "folder" ? onCreateFolder : onCreateNote;
+    if (!name || !createKind || !create || isCreating) return;
+
+    setIsCreating(true);
+    try {
+      if (await create(name)) {
+        setCreateKind(null);
+        setCreateDraft("");
+      }
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
   return (
     <section className="collection-panel" aria-label={t("collection.label")}>
       <div className="collection-panel__card">
@@ -505,28 +545,85 @@ export function CollectionPanel({
           ) : (
             <div className="collection-grid">
               {request.kind === "folder" ? (
-                <div className="collection-card collection-card--create">
-                  <button
-                    type="button"
-                    className="collection-card__create-action"
-                    onClick={onCreateFolder}
-                    disabled={!onCreateFolder}
-                    aria-label={t("sidebar.newFolder")}
-                    title={t("sidebar.newFolder")}
-                  >
-                    <Folder aria-hidden="true" />
-                  </button>
-                  <span className="collection-card__create-divider" aria-hidden="true" />
-                  <button
-                    type="button"
-                    className="collection-card__create-action"
-                    onClick={onCreateNote}
-                    disabled={!onCreateNote}
-                    aria-label={t("sidebar.newFile")}
-                    title={t("sidebar.newFile")}
-                  >
-                    <FileText aria-hidden="true" />
-                  </button>
+                <div className={cn(
+                  "collection-card",
+                  "collection-card--create",
+                  createKind && "collection-card--create-editing"
+                )}>
+                  {createKind ? (
+                    <form
+                      className="collection-card__create-form"
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        void submitCreate();
+                      }}
+                    >
+                      {createKind === "folder" ? (
+                        <Folder aria-hidden="true" />
+                      ) : (
+                        <FileText aria-hidden="true" />
+                      )}
+                      <input
+                        autoFocus
+                        value={createDraft}
+                        onChange={(event) => setCreateDraft(event.target.value)}
+                        placeholder={t(createKind === "folder" ? "sidebar.newFolder" : "sidebar.newFile")}
+                        aria-label={t(createKind === "folder" ? "sidebar.newFolder" : "sidebar.newFile")}
+                        disabled={isCreating}
+                        onKeyDown={(event) => {
+                          if (event.key === "Escape") {
+                            event.preventDefault();
+                            cancelCreate();
+                          }
+                        }}
+                      />
+                      <Button
+                        type="submit"
+                        size="icon-sm"
+                        variant="ghost"
+                        disabled={!createDraft.trim() || isCreating}
+                        aria-label={t("common.save")}
+                        title={t("common.save")}
+                      >
+                        <Check />
+                      </Button>
+                      <Button
+                        type="button"
+                        size="icon-sm"
+                        variant="ghost"
+                        disabled={isCreating}
+                        onClick={cancelCreate}
+                        aria-label={t("common.cancel")}
+                        title={t("common.cancel")}
+                      >
+                        <X />
+                      </Button>
+                    </form>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        className="collection-card__create-action"
+                        onClick={() => beginCreate("folder")}
+                        disabled={!onCreateFolder}
+                        aria-label={t("sidebar.newFolder")}
+                        title={t("sidebar.newFolder")}
+                      >
+                        <Folder aria-hidden="true" />
+                      </button>
+                      <span className="collection-card__create-divider" aria-hidden="true" />
+                      <button
+                        type="button"
+                        className="collection-card__create-action"
+                        onClick={() => beginCreate("note")}
+                        disabled={!onCreateNote}
+                        aria-label={t("sidebar.newFile")}
+                        title={t("sidebar.newFile")}
+                      >
+                        <FileText aria-hidden="true" />
+                      </button>
+                    </>
+                  )}
                 </div>
               ) : null}
               {cards.map((card) => {
