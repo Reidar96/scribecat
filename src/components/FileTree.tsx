@@ -21,6 +21,7 @@ import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
 import { useSearchStore } from "@/store/useSearchStore";
 
 import { ContextMenuSurface } from "./fileTree/ContextMenuSurface";
+import { EntryActionMenuItems } from "./fileTree/EntryActionMenuItems";
 import { TreeNodeRow } from "./fileTree/TreeNodeRow";
 import { useExpandedFolders } from "./fileTree/useExpandedFolders";
 import { useTreeContextMenu } from "./fileTree/useTreeContextMenu";
@@ -72,6 +73,8 @@ type FileTreeProps = {
   onCreateFolderRequest: (targetDirectory: string) => void;
   onDeleteFileRequest: (filePath: string) => void;
   onDuplicateFileRequest: (filePath: string) => void;
+  onDuplicateFolderRequest: (folderPath: string) => void;
+  onCopyRequest: (entries: BatchEntry[]) => void;
   onDeleteFolderRequest: (folderPath: string) => void;
   onExportFileRequest: (filePath: string, mode: ExportMode) => void;
   onExportFolderRequest: (folderPath: string, mode: ExportMode) => void;
@@ -141,6 +144,8 @@ export function FileTree({
   onCreateFolderRequest,
   onDeleteFileRequest,
   onDuplicateFileRequest,
+  onDuplicateFolderRequest,
+  onCopyRequest,
   onDeleteFolderRequest,
   onExportFileRequest,
   onExportFolderRequest,
@@ -813,6 +818,19 @@ export function FileTree({
                 type="button"
                 role="menuitem"
                 className="file-tree-context-menu__item"
+                onClick={() => {
+                  void resolveSelectedEntries(contextMenu.keys).then(onCopyRequest);
+                  setContextMenu(null);
+                }}
+              >
+                <Copy aria-hidden="true" />
+                {t("fileTree.copy")}
+              </button>
+
+              <button
+                type="button"
+                role="menuitem"
+                className="file-tree-context-menu__item"
                 disabled={!capabilities.move}
                 title={capabilities.move ? undefined : capabilityHint}
                 onClick={() => {
@@ -892,148 +910,43 @@ export function FileTree({
                 </button>
               ) : null}
 
-              <button
-                type="button"
-                role="menuitem"
-                className="file-tree-context-menu__item"
-                disabled={!capabilities.rename}
-                title={capabilities.rename ? undefined : capabilityHint}
-                onClick={() => {
+              <EntryActionMenuItems
+                canRename={capabilities.rename}
+                canDuplicate={capabilities.create}
+                canMove={capabilities.move}
+                canDelete={capabilities.delete}
+                capabilityHint={capabilityHint}
+                onRename={() => {
                   if (contextMenu.kind === "folder") {
                     startFolderRename(contextMenu.relativePath);
                   } else {
-                    startFileRename(getRelativeDisplayPath(folderPath, contextMenu.filePath));
+                    startFileRename(
+                      getRelativeDisplayPath(folderPath, contextMenu.filePath)
+                    );
                   }
-
                   setContextMenu(null);
                 }}
-              >
-                <Pencil aria-hidden="true" />
-                {t("fileTree.rename")}
-              </button>
-
-              {/* Files and folders take the same two entries: an icon is a
-                  property of the row, and which kind of entry it stands for
-                  makes no difference to picking one. */}
-              <button
-                type="button"
-                role="menuitem"
-                className="file-tree-context-menu__item"
-                onClick={(event) => {
-                  const relativePath = getContextMenuRelativePath(contextMenu, folderPath);
-
-                  if (relativePath !== null) {
-                    // Anchored to the menu entry, not to the pointer: the menu
-                    // closes with this click, so the picker has to hang
-                    // somewhere the eye is already looking.
-                    setIconPicker({
-                      relativePath,
-                      anchor: anchorForTrigger(event.currentTarget.getBoundingClientRect())
-                    });
-                  }
-
-                  setContextMenu(null);
-                }}
-              >
-                <Smile aria-hidden="true" />
-                {t("fileTree.changeIcon")}
-              </button>
-
-              {contextMenuIcon !== null ? (
-                <button
-                  type="button"
-                  role="menuitem"
-                  className="file-tree-context-menu__item"
-                  onClick={() => {
-                    const relativePath = getContextMenuRelativePath(contextMenu, folderPath);
-
-                    if (relativePath !== null) {
-                      void join(folderPath, relativePath).then((path) => onSetVaultIcon(path, null));
-                    }
-
-                    setContextMenu(null);
-                  }}
-                >
-                  <Eraser aria-hidden="true" />
-                  {t("fileTree.removeIcon")}
-                </button>
-              ) : null}
-
-              {contextMenu.kind === "file" ? (
-                <button
-                  type="button"
-                  role="menuitem"
-                  className="file-tree-context-menu__item"
-                  disabled={!capabilities.create}
-                  title={capabilities.create ? undefined : capabilityHint}
-                  onClick={() => {
+                onDuplicate={() => {
+                  if (contextMenu.kind === "folder") {
+                    void join(folderPath, contextMenu.relativePath).then(
+                      onDuplicateFolderRequest
+                    );
+                  } else {
                     onDuplicateFileRequest(contextMenu.filePath);
-                    setContextMenu(null);
-                  }}
-                >
-                  <Copy aria-hidden="true" />
-                  {t("fileTree.duplicate")}
-                </button>
-              ) : null}
-
-              {contextMenu.kind === "file" ? (
-                workingSetFilePaths.some((path) => normalizePathKey(path) === normalizePathKey(contextMenu.filePath)) ? (
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="file-tree-context-menu__item"
-                    onClick={() => {
-                      if (autoAdmitWorkingSet) {
-                        onUnpinWorkingSetEntry(contextMenu.filePath);
-                      } else {
-                        onCloseWorkingSetEntry(contextMenu.filePath);
-                      }
-
-                      setContextMenu(null);
-                    }}
-                  >
-                    {autoAdmitWorkingSet ? <PinOff aria-hidden="true" /> : <X aria-hidden="true" />}
-                    {autoAdmitWorkingSet ? t("fileTree.unpinWorkingSet") : t("fileTree.closeWorkingSet")}
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="file-tree-context-menu__item"
-                    onClick={() => {
-                      onPinWorkingSetEntry(contextMenu.filePath);
-                      setContextMenu(null);
-                    }}
-                  >
-                    <Pin aria-hidden="true" />
-                    {t("fileTree.pinWorkingSet")}
-                  </button>
-                )
-              ) : null}
-
-              {/* A draft closes from here too, with the section folded away. */}
-              {contextMenu.kind === "file" && dirtyFilePaths.includes(contextMenu.filePath) ? (
-                <button
-                  type="button"
-                  role="menuitem"
-                  className="file-tree-context-menu__item"
-                  onClick={() => {
-                    onDiscardChangesRequest(contextMenu.filePath);
-                    setContextMenu(null);
-                  }}
-                >
-                  <Undo2 aria-hidden="true" />
-                  {t("fileTree.discardChanges")}
-                </button>
-              ) : null}
-
-              <button
-                type="button"
-                role="menuitem"
-                className="file-tree-context-menu__item"
-                disabled={!capabilities.move}
-                title={capabilities.move ? undefined : capabilityHint}
-                onClick={() => {
+                  }
+                  setContextMenu(null);
+                }}
+                onCopy={() => {
+                  if (contextMenu.kind === "folder") {
+                    void join(folderPath, contextMenu.relativePath).then((path) =>
+                      onCopyRequest([{ kind: "folder", path }])
+                    );
+                  } else {
+                    onCopyRequest([{ kind: "file", path: contextMenu.filePath }]);
+                  }
+                  setContextMenu(null);
+                }}
+                onMove={() => {
                   if (contextMenu.kind === "folder") {
                     void join(folderPath, contextMenu.relativePath).then((path) =>
                       onMoveRequest([{ kind: "folder", path }])
@@ -1041,143 +954,213 @@ export function FileTree({
                   } else {
                     onMoveRequest([{ kind: "file", path: contextMenu.filePath }]);
                   }
-
                   setContextMenu(null);
                 }}
-              >
-                <FolderInput aria-hidden="true" />
-                {t("fileTree.moveTo")}
-              </button>
-
-              {offersExport ? (
-                <>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="file-tree-context-menu__item"
-                    onClick={() => {
-                      if (contextMenu.kind === "folder") {
-                        void join(folderPath, contextMenu.relativePath).then((path) =>
-                          onExportFolderRequest(path, "standard")
-                        );
-                      } else {
-                        onExportFileRequest(contextMenu.filePath, "standard");
+                onExport={
+                  offersExport
+                    ? (mode) => {
+                        if (contextMenu.kind === "folder") {
+                          void join(folderPath, contextMenu.relativePath).then(
+                            (path) => onExportFolderRequest(path, mode)
+                          );
+                        } else {
+                          onExportFileRequest(contextMenu.filePath, mode);
+                        }
+                        setContextMenu(null);
                       }
-    
-                      setContextMenu(null);
-                    }}
-                  >
-                    <Download aria-hidden="true" />
-                    {t("fileTree.export")}
-                  </button>
-    
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="file-tree-context-menu__item"
-                    onClick={() => {
-                      if (contextMenu.kind === "folder") {
-                        void join(folderPath, contextMenu.relativePath).then((path) =>
-                          onExportFolderRequest(path, "manuscript")
+                    : undefined
+                }
+                extraItems={
+                  <>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="file-tree-context-menu__item"
+                      onClick={(event) => {
+                        const relativePath = getContextMenuRelativePath(
+                          contextMenu,
+                          folderPath
                         );
-                      } else {
-                        onExportFileRequest(contextMenu.filePath, "manuscript");
-                      }
-    
-                      setContextMenu(null);
-                    }}
-                  >
-                    <BookOpen aria-hidden="true" />
-                    {t("fileTree.exportManuscript")}
-                  </button>
-                </>
-              ) : null}
+                        if (relativePath !== null) {
+                          setIconPicker({
+                            relativePath,
+                            anchor: anchorForTrigger(
+                              event.currentTarget.getBoundingClientRect()
+                            )
+                          });
+                        }
+                        setContextMenu(null);
+                      }}
+                    >
+                      <Smile aria-hidden="true" />
+                      {t("fileTree.changeIcon")}
+                    </button>
 
-              {contextMenu.kind === "file" && offersMarkdownDownload ? (
-                <button
-                  type="button"
-                  role="menuitem"
-                  className="file-tree-context-menu__item"
-                  onClick={() => {
-                    onDownloadMarkdownRequest(contextMenu.filePath);
-                    setContextMenu(null);
-                  }}
-                >
-                  <FileDown aria-hidden="true" />
-                  {t("fileTree.downloadMarkdown")}
-                </button>
-              ) : null}
+                    {contextMenuIcon !== null ? (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="file-tree-context-menu__item"
+                        onClick={() => {
+                          const relativePath = getContextMenuRelativePath(
+                            contextMenu,
+                            folderPath
+                          );
+                          if (relativePath !== null) {
+                            void join(folderPath, relativePath).then((path) =>
+                              onSetVaultIcon(path, null)
+                            );
+                          }
+                          setContextMenu(null);
+                        }}
+                      >
+                        <Eraser aria-hidden="true" />
+                        {t("fileTree.removeIcon")}
+                      </button>
+                    ) : null}
 
-              {contextMenu.kind === "folder" && offersFolderArchive ? (
-                <button
-                  type="button"
-                  role="menuitem"
-                  className="file-tree-context-menu__item"
-                  onClick={() => {
-                    const archiveName = contextMenu.relativePath.split("/").pop() ?? contextMenu.relativePath;
+                    {contextMenu.kind === "file" ? (
+                      workingSetFilePaths.some(
+                        (path) =>
+                          normalizePathKey(path) ===
+                          normalizePathKey(contextMenu.filePath)
+                      ) ? (
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="file-tree-context-menu__item"
+                          onClick={() => {
+                            if (autoAdmitWorkingSet) {
+                              onUnpinWorkingSetEntry(contextMenu.filePath);
+                            } else {
+                              onCloseWorkingSetEntry(contextMenu.filePath);
+                            }
+                            setContextMenu(null);
+                          }}
+                        >
+                          {autoAdmitWorkingSet ? (
+                            <PinOff aria-hidden="true" />
+                          ) : (
+                            <X aria-hidden="true" />
+                          )}
+                          {autoAdmitWorkingSet
+                            ? t("fileTree.unpinWorkingSet")
+                            : t("fileTree.closeWorkingSet")}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="file-tree-context-menu__item"
+                          onClick={() => {
+                            onPinWorkingSetEntry(contextMenu.filePath);
+                            setContextMenu(null);
+                          }}
+                        >
+                          <Pin aria-hidden="true" />
+                          {t("fileTree.pinWorkingSet")}
+                        </button>
+                      )
+                    ) : null}
 
-                    void join(folderPath, contextMenu.relativePath).then((path) =>
-                      onDownloadFolderArchiveRequest(path, archiveName)
-                    );
-                    setContextMenu(null);
-                  }}
-                >
-                  <FolderArchive aria-hidden="true" />
-                  {t("fileTree.downloadFolderArchive")}
-                </button>
-              ) : null}
+                    {contextMenu.kind === "file" &&
+                    dirtyFilePaths.includes(contextMenu.filePath) ? (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="file-tree-context-menu__item"
+                        onClick={() => {
+                          onDiscardChangesRequest(contextMenu.filePath);
+                          setContextMenu(null);
+                        }}
+                      >
+                        <Undo2 aria-hidden="true" />
+                        {t("fileTree.discardChanges")}
+                      </button>
+                    ) : null}
 
-              {contextMenu.kind === "file" ? (
-                <button
-                  type="button"
-                  role="menuitem"
-                  className="file-tree-context-menu__item"
-                  onClick={() => {
-                    onPrintFileRequest(contextMenu.filePath);
-                    setContextMenu(null);
-                  }}
-                >
-                  <Printer aria-hidden="true" />
-                  {t("fileTree.print")}
-                </button>
-              ) : null}
+                    {contextMenu.kind === "file" && offersMarkdownDownload ? (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="file-tree-context-menu__item"
+                        onClick={() => {
+                          onDownloadMarkdownRequest(contextMenu.filePath);
+                          setContextMenu(null);
+                        }}
+                      >
+                        <FileDown aria-hidden="true" />
+                        {t("fileTree.downloadMarkdown")}
+                      </button>
+                    ) : null}
 
-              {contextMenu.kind === "folder" && offersRevealInFileManager ? (
-                <button
-                  type="button"
-                  role="menuitem"
-                  className="file-tree-context-menu__item"
-                  onClick={() => {
-                    void join(folderPath, contextMenu.relativePath).then((path) =>
-                      platform.shell.openFolderInFileManager?.(path)
-                    );
-                    setContextMenu(null);
-                  }}
-                >
-                  <ExternalLink aria-hidden="true" />
-                  {t("fileTree.revealInFileManager")}
-                </button>
-              ) : null}
+                    {contextMenu.kind === "folder" && offersFolderArchive ? (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="file-tree-context-menu__item"
+                        onClick={() => {
+                          const archiveName =
+                            contextMenu.relativePath.split("/").pop() ??
+                            contextMenu.relativePath;
+                          void join(folderPath, contextMenu.relativePath).then(
+                            (path) =>
+                              onDownloadFolderArchiveRequest(path, archiveName)
+                          );
+                          setContextMenu(null);
+                        }}
+                      >
+                        <FolderArchive aria-hidden="true" />
+                        {t("fileTree.downloadFolderArchive")}
+                      </button>
+                    ) : null}
 
-              <button
-                type="button"
-                role="menuitem"
-                className="file-tree-context-menu__item file-tree-context-menu__item--danger"
-                disabled={!capabilities.delete}
-                title={capabilities.delete ? undefined : capabilityHint}
-                onClick={() => {
+                    {contextMenu.kind === "file" ? (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="file-tree-context-menu__item"
+                        onClick={() => {
+                          onPrintFileRequest(contextMenu.filePath);
+                          setContextMenu(null);
+                        }}
+                      >
+                        <Printer aria-hidden="true" />
+                        {t("fileTree.print")}
+                      </button>
+                    ) : null}
+
+                    {contextMenu.kind === "folder" &&
+                    offersRevealInFileManager ? (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="file-tree-context-menu__item"
+                        onClick={() => {
+                          void join(folderPath, contextMenu.relativePath).then(
+                            (path) =>
+                              platform.shell.openFolderInFileManager?.(path)
+                          );
+                          setContextMenu(null);
+                        }}
+                      >
+                        <ExternalLink aria-hidden="true" />
+                        {t("fileTree.revealInFileManager")}
+                      </button>
+                    ) : null}
+                  </>
+                }
+                onDelete={() => {
                   if (contextMenu.kind === "folder") {
-                    void join(folderPath, contextMenu.relativePath).then(onDeleteFolderRequest);
+                    void join(folderPath, contextMenu.relativePath).then(
+                      onDeleteFolderRequest
+                    );
                   } else {
                     onDeleteFileRequest(contextMenu.filePath);
                   }
-
                   setContextMenu(null);
                 }}
-              >
-                <Trash2 aria-hidden="true" />
-                {t("fileTree.delete")}
-              </button>
+              />
             </>
           )}
         </ContextMenuSurface>
