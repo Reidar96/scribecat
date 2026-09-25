@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type DragEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 import {
   CalendarClock,
   CheckCircle2,
@@ -481,6 +481,7 @@ export function TasksPanel({
   const [createOpen, setCreateOpen] = useState(false);
   const [categoryDelete, setCategoryDelete] = useState<string | null>(null);
   const [completedOpen, setCompletedOpen] = useState(false);
+  const pendingMarkdownByPathRef = useRef(new Map<string, string>());
 
   const taskFiles = useMemo(
     () =>
@@ -528,6 +529,14 @@ export function TasksPanel({
       void readMarkdownFile(filePath)
         .then((markdown) => {
           if (!active) return;
+
+          const pendingMarkdown = pendingMarkdownByPathRef.current.get(filePath);
+          if (pendingMarkdown && markdown !== pendingMarkdown) {
+            return;
+          }
+          if (pendingMarkdown === markdown) {
+            pendingMarkdownByPathRef.current.delete(filePath);
+          }
 
           const document = {
             category,
@@ -754,6 +763,9 @@ export function TasksPanel({
 
     // The Markdown file remains the source of truth, but mirror the pending
     // write immediately so checking/editing a task does not wait on disk I/O.
+    // Keep the expected Markdown around until the watcher reads it back, so
+    // a stale intermediate read cannot briefly flip a checkbox back.
+    pendingMarkdownByPathRef.current.set(filePath, markdown);
     setDocuments((current) => ({
       ...current,
       [category]: nextDocument
@@ -761,6 +773,9 @@ export function TasksPanel({
 
     const ok = await onPersistTaskFile(filePath, markdown);
     if (!ok) {
+      if (pendingMarkdownByPathRef.current.get(filePath) === markdown) {
+        pendingMarkdownByPathRef.current.delete(filePath);
+      }
       setDocuments((current) => {
         if (current[category]?.markdown !== markdown) {
           return current;

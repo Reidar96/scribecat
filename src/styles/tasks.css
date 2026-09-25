@@ -371,6 +371,8 @@
 
 .tasks-item__delete--compact {
   align-self: center;
+  justify-self: end;
+  margin-left: auto;
 }
 
 .tasks-item__completed-title {
@@ -513,6 +515,7 @@
   align-items: center;
   gap: 0.45rem;
   margin-top: 0.35rem;
+  padding-right: 4.6rem;
 }
 
 .tasks-item__category {
@@ -558,6 +561,9 @@
 }
 
 .tasks-priority {
+  position: absolute;
+  right: 0.75rem;
+  bottom: 0.7rem;
   display: inline-flex;
   align-items: center;
   gap: 0.28rem;
@@ -874,6 +880,19 @@
     grid-template-columns: auto auto minmax(0, 1fr) auto;
     gap: 0.4rem;
     padding: 0.7rem 0.55rem;
+  }
+
+  .tasks-item--subtask-completed {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .tasks-item__meta {
+    padding-right: 4rem;
+  }
+
+  .tasks-priority {
+    right: 0.55rem;
+    bottom: 0.55rem;
   }
 
   .tasks-item--subtask {

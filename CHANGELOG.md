@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.22.17] - 2026-09-25
+
+### Fixes and improvements
+- Move the task priority dots to the lower-right corner of each main task card, with reserved space so metadata does not overlap them.
+- Prevent a stale file-watcher read from briefly flipping a task's completed state back while the updated Markdown is being written.
+- Keep the delete button for completed subtasks pinned to the far right on narrow screens as well as desktop.
+
+
 ## [0.22.16] - 2026-09-25
 
 ### Fixes
