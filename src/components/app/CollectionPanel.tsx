@@ -1063,6 +1063,37 @@ export function CollectionPanel({
                 <MenuPortal>
                   <MenuPositioner align="end">
                     <MenuPopup>
+                      {selectedCards.length === 2 &&
+                      selectedCards.every((card) => card.kind === "note") ? (
+                        <>
+                          {onOpenSplitRequest ? (
+                            <MenuItem
+                              onClick={() =>
+                                onOpenSplitRequest([
+                                  (selectedCards[0] as NoteCard).filePath,
+                                  (selectedCards[1] as NoteCard).filePath
+                                ])
+                              }
+                            >
+                              <Columns2 aria-hidden="true" />
+                              {t("split.openSelected")}
+                            </MenuItem>
+                          ) : null}
+                          {onOpenTabsRequest ? (
+                            <MenuItem
+                              onClick={() =>
+                                onOpenTabsRequest([
+                                  (selectedCards[0] as NoteCard).filePath,
+                                  (selectedCards[1] as NoteCard).filePath
+                                ])
+                              }
+                            >
+                              <Files aria-hidden="true" />
+                              {t("tabs.openSelected")}
+                            </MenuItem>
+                          ) : null}
+                        </>
+                      ) : null}
                       <MenuItem
                         disabled={!capabilities.create}
                         title={capabilities.create ? undefined : capabilityHint}
