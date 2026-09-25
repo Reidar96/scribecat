@@ -92,7 +92,9 @@
 
 .collection-panel__selection-actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-end;
   gap: 0.2rem;
 }
 
@@ -418,7 +420,13 @@
   }
 
   .collection-panel__selection-bar {
+    flex-wrap: wrap;
+    align-items: flex-start;
     padding-inline: 0.65rem;
+  }
+
+  .collection-panel__selection-actions {
+    width: 100%;
   }
 
   .collection-panel__body {
