@@ -8,7 +8,9 @@ import {
   normalizeTaskSettings,
   parseTaskMarkdown,
   insertSubtaskInMarkdown,
+  moveSiblingTaskInMarkdown,
   moveSubtaskInMarkdown,
+  prependTaskToMarkdown,
   removeTaskFromMarkdown,
   renameTaskDocumentHeading,
   setTaskSubtreeCheckedInMarkdown,
@@ -189,6 +191,44 @@ describe("tasks markdown", () => {
     expect(moved).toContain("    > Notat til første");
   });
 
+  it("prepends a new root task ahead of the existing Markdown tasks", () => {
+    const markdown = "# Jobb\n\n- [ ] Andre\n- [ ] Tredje\n";
+    const next = prependTaskToMarkdown(markdown, { text: "Første" });
+
+    expect(next.indexOf("- [ ] Første")).toBeLessThan(next.indexOf("- [ ] Andre"));
+    expect(parseTaskMarkdown(next).map((task) => task.text)).toEqual([
+      "Første",
+      "Andre",
+      "Tredje"
+    ]);
+  });
+
+  it("reorders sibling root tasks without moving their subtasks away", () => {
+    const markdown = [
+      "# Jobb",
+      "",
+      "- [ ] Første",
+      "  - [ ] Barn",
+      "- [ ] Andre",
+      "- [ ] Tredje"
+    ].join("\n");
+
+    const parsed = parseTaskMarkdown(markdown);
+    const first = parsed.find((task) => task.text === "Første");
+    const third = parsed.find((task) => task.text === "Tredje");
+
+    const moved = moveSiblingTaskInMarkdown(
+      markdown,
+      first?.lineIndex ?? -1,
+      third?.lineIndex ?? -1,
+      "after"
+    );
+
+    expect(moved.indexOf("Andre")).toBeLessThan(moved.indexOf("Tredje"));
+    expect(moved.indexOf("Tredje")).toBeLessThan(moved.indexOf("Første"));
+    expect(moved.indexOf("Første")).toBeLessThan(moved.indexOf("Barn"));
+  });
+
   it("updates and removes task blocks without replacing unrelated markdown", () => {
     const markdown = "# Jobb\n\nIntro\n\n- [ ] Første\n  > Gammel note\n- [ ] Andre\n";
 
@@ -285,11 +325,19 @@ describe("tasks markdown", () => {
   it("normalizes vault task settings with folder and hidden storage defaults", () => {
     expect(normalizeTaskSettings(undefined)).toEqual({
       folder: "Gjøremål",
-      hideFromSidebar: true
+      hideFromSidebar: true,
+      sortMode: "manual"
     });
-    expect(normalizeTaskSettings({ folder: "Oppgaver / Privat", hideFromSidebar: false })).toEqual({
+    expect(
+      normalizeTaskSettings({
+        folder: "Oppgaver / Privat",
+        hideFromSidebar: false,
+        sortMode: "modified"
+      })
+    ).toEqual({
       folder: "Oppgaver / Privat",
-      hideFromSidebar: false
+      hideFromSidebar: false,
+      sortMode: "modified"
     });
   });
 
