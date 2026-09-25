@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.23.5] - 2026-09-25
+
+### Fixes and improvements
+- Add **Change order** to the Calendar image context menu, including the same long-press menu on touch devices.
+- Open a dedicated image reordering mode that uses Pointer Events for reliable finger drag-and-drop, live card movement and edge auto-scroll on mobile.
+- Keep the existing desktop HTML5 image drag-and-drop behavior unchanged unless the explicit reordering mode is opened.
+
 ## [0.23.4] - 2026-09-25
 
 ### Fixes and improvements

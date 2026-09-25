@@ -469,7 +469,9 @@
     "resultCount": "{{count}} dager",
     "noResults": "Ingen dagbokdager samsvarer.",
     "overview": "Oversikt",
-    "closeResults": "Lukk resultatlisten"
+    "closeResults": "Lukk resultatlisten",
+    "reorderImages": "Endre rekkefølge",
+    "reorderImagesHint": "Dra bildene for å endre rekkefølgen."
   },
   "tasks": {
     "label": "Gjøremål",
