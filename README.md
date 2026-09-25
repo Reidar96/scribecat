@@ -221,6 +221,8 @@ Tasks support:
 - Optional deadline
 - Optional note
 - Tags
+- One-level subtasks stored as ordinary indented Markdown checkboxes
+- A collapsible **Completed** section below active tasks
 - Three priority levels
   - Red / high
   - Yellow / medium
