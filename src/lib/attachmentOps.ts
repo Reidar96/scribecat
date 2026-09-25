@@ -167,7 +167,11 @@ export async function copyManagedAttachmentsForMarkdownVariants(
   folderPath: string,
   sourceFilePath: string,
   targetFilePath: string,
-  markdownVariants: readonly string[]
+  markdownVariants: readonly string[],
+  rewriteOptions?: {
+    markdownVariants?: readonly string[];
+    sourceFilePath?: string;
+  }
 ): Promise<{
   markdownVariants: string[];
   sourceAttachmentPaths: string[];
@@ -220,12 +224,14 @@ export async function copyManagedAttachmentsForMarkdownVariants(
     }
   }
 
+  const variantsToRewrite = rewriteOptions?.markdownVariants ?? markdownVariants;
+  const rewriteSourceFilePath = rewriteOptions?.sourceFilePath ?? sourceFilePath;
   const rewritten: string[] = [];
-  for (const markdown of markdownVariants) {
+  for (const markdown of variantsToRewrite) {
     rewritten.push(
       await rewriteManagedAttachmentRefs(
         markdown,
-        sourceFilePath,
+        rewriteSourceFilePath,
         targetFilePath,
         folderPath,
         copiedRootPaths
