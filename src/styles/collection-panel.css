@@ -375,3 +375,46 @@
     margin: 0.8rem 0;
   }
 }
+
+
+.collection-card--create-editing {
+  display: block;
+  padding: 0.75rem;
+}
+
+.collection-card__create-form {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.45rem;
+  height: 100%;
+}
+
+.collection-card__create-form > svg {
+  width: 1.2rem;
+  height: 1.2rem;
+  color: rgba(var(--muted-rgb),0.9);
+}
+
+.collection-card__create-form input {
+  min-width: 0;
+  border: 1px solid rgba(var(--overlay-rgb),0.14);
+  border-radius: 0.55rem;
+  outline: none;
+  background: rgba(var(--surface-rgb),0.7);
+  padding: 0.5rem 0.6rem;
+  color: inherit;
+  font: inherit;
+  font-size: var(--font-ui-sm);
+}
+
+.collection-card__create-form input:focus {
+  border-color: rgba(var(--accent-rgb),0.42);
+  box-shadow: 0 0 0 2px rgba(var(--accent-rgb),0.08);
+}
+
+@media (max-width: 720px) {
+  .collection-card__create-form {
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+  }
+}
