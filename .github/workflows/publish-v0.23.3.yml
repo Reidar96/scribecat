@@ -1,0 +1,31 @@
+name: Publish v0.23.3 tag
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/publish-v0.23.3.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create v0.23.3 tag on release commit
+        env:
+          RELEASE_SHA: cacaf402ec8c34cb72a2a38e4308559178da3c5d
+        run: |
+          if git rev-parse "refs/tags/v0.23.3" >/dev/null 2>&1; then
+            echo "v0.23.3 already exists"
+            exit 0
+          fi
+          git tag v0.23.3 "$RELEASE_SHA"
+          git push origin refs/tags/v0.23.3
