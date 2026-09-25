@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { suggestedImageFileName } from "@/lib/imageActions";
+import { suggestedImageFileName } from "@/lib/imageFileName";
 
 describe("image context actions", () => {
   it("keeps a source filename when it has an image extension", () => {
