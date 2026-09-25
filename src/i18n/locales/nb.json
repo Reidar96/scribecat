@@ -1013,12 +1013,16 @@
   },
   "split": {
     "open": "Åpne et dokument ved siden av dette",
+    "openLeft": "Åpne et dokument på venstre side",
+    "openRight": "Åpne et dokument på høyre side",
     "pickerTitle": "Åpne i delt visning",
     "search": "Søk i dokumenter…",
     "noMatches": "Ingen dokumenter passer.",
     "close": "Lukk delt dokument",
     "resize": "Juster bredden på de delte editorene",
+    "swap": "Bytt dokumentene mellom venstre og høyre side",
     "dropTitle": "Åpne i delt visning",
-    "dropHint": "Slipp for å åpne på høyre side"
+    "dropHintLeft": "Slipp for å åpne på venstre side",
+    "dropHintRight": "Slipp for å åpne på høyre side"
   }
 }
