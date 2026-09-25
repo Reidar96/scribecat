@@ -32,11 +32,11 @@ export function VaultSettings() {
 
   const disabled = headingNumberingVaultPath === null;
 
-  const journalFolderOptions = useMemo(() => {
-    const options = new Set<string>(["Dagbok", journalSettings.folder]);
+  const availableFolderOptions = useMemo(() => {
+    const options = new Set<string>();
 
     if (!folderPath) {
-      return [...options].filter(Boolean);
+      return [];
     }
 
     const addPrefixes = (relativePath: string, includesLeaf: boolean) => {
@@ -54,10 +54,25 @@ export function VaultSettings() {
       addPrefixes(getRelativeDisplayPath(folderPath, entryPath), true)
     );
 
+    return [...options].sort((left, right) =>
+      left.localeCompare(right, undefined, { sensitivity: "base" })
+    );
+  }, [emptyFolderPaths, filePaths, folderPath]);
+
+  const journalFolderOptions = useMemo(() => {
+    const options = new Set<string>(["Dagbok", journalSettings.folder, ...availableFolderOptions]);
+
     return [...options]
       .filter(Boolean)
       .sort((left, right) => left.localeCompare(right, undefined, { sensitivity: "base" }));
-  }, [emptyFolderPaths, filePaths, folderPath, journalSettings.folder]);
+  }, [availableFolderOptions, journalSettings.folder]);
+
+  const taskFolderOptions = useMemo(() => {
+    const options = new Set<string>(["Gjøremål", taskSettings.folder, ...availableFolderOptions]);
+    return [...options]
+      .filter(Boolean)
+      .sort((left, right) => left.localeCompare(right, undefined, { sensitivity: "base" }));
+  }, [availableFolderOptions, taskSettings.folder]);
 
   return (
     <>
@@ -247,6 +262,38 @@ export function VaultSettings() {
                   {t("settingsDialog.journalStructureYear")}
                 </option>
               </select>
+            </SettingRow>
+          </div>
+        </section>
+
+        <section className="settings-vault-section">
+          <h5 className="settings-section__title">{t("settingsDialog.vaultSectionTasks")}</h5>
+          <p className="settings-vault-section__hint">
+            {t("settingsDialog.vaultSectionTasksHint")}
+          </p>
+
+          <div className="ai-dialog__grid">
+            <SettingRow
+              label={t("settingsDialog.tasksFolder")}
+              hint={t("settingsDialog.tasksFolderShort")}
+              info={t("settingsDialog.tasksFolderHint")}
+            >
+              <>
+                <input
+                  type="text"
+                  list="tasks-folder-options"
+                  value={taskSettings.folder}
+                  disabled={disabled}
+                  onChange={(event) =>
+                    setTaskSettings({ folder: event.target.value })
+                  }
+                />
+                <datalist id="tasks-folder-options">
+                  {taskFolderOptions.map((option) => (
+                    <option key={option} value={option} />
+                  ))}
+                </datalist>
+              </>
             </SettingRow>
           </div>
         </section>
