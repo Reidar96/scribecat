@@ -837,12 +837,14 @@ export function TasksPanel({
       .find((candidate) => candidate.parentLineIndex === null);
     const filePath = await resolveFilePath(category);
 
+    if (inserted) {
+      setFocusTaskKey(`${filePath}:${inserted.lineIndex}`);
+    }
+
     setSaving(true);
     try {
-      if (await persistCategory(category, markdown)) {
-        if (inserted) {
-          setFocusTaskKey(`${filePath}:${inserted.lineIndex}`);
-        }
+      if (!(await persistCategory(category, markdown))) {
+        setFocusTaskKey(null);
       }
     } finally {
       setSaving(false);
@@ -873,12 +875,14 @@ export function TasksPanel({
         candidate.lineIndex === parent.endLineIndex + 1
     );
 
+    if (inserted) {
+      setFocusTaskKey(`${parent.filePath}:${inserted.lineIndex}`);
+    }
+
     setSaving(true);
     try {
-      if (await persistCategory(parent.category, markdown)) {
-        if (inserted) {
-          setFocusTaskKey(`${parent.filePath}:${inserted.lineIndex}`);
-        }
+      if (!(await persistCategory(parent.category, markdown))) {
+        setFocusTaskKey(null);
       }
     } finally {
       setSaving(false);
