@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { join } from "@/platform/paths";
 
 import type { BatchEntry } from "@/components/FileTree";
@@ -9,23 +9,89 @@ export type DeleteTarget =
   | { kind: "file" | "folder"; path: string }
   | { kind: "multiple"; paths: Array<{ kind: "file" | "folder"; path: string }> };
 
+type PendingDelete = {
+  target: DeleteTarget;
+  selectedFilePathBefore: string | null;
+};
+
 type UseDeleteTargetOptions = {
   folderPath: string | null;
   selectedFilePath: string | null;
   fileTreeSelection: BatchEntry[];
   deleteFilePath: (filePath: string) => Promise<boolean>;
   deleteFolderPath: (folderPath: string) => Promise<boolean>;
+  onStageDelete?: (target: DeleteTarget) => void;
+  onUndoDelete?: (target: DeleteTarget, selectedFilePathBefore: string | null) => void;
 };
+
+const UNDO_WINDOW_MS = 6_500;
 
 export function useDeleteTarget({
   folderPath,
   selectedFilePath,
   fileTreeSelection,
   deleteFilePath,
-  deleteFolderPath
+  deleteFolderPath,
+  onStageDelete,
+  onUndoDelete
 }: UseDeleteTargetOptions) {
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
+  const pendingDeleteRef = useRef<PendingDelete | null>(null);
+  const pendingTimerRef = useRef<number | null>(null);
+
+  const clearPendingTimer = useCallback(() => {
+    if (pendingTimerRef.current !== null) {
+      window.clearTimeout(pendingTimerRef.current);
+      pendingTimerRef.current = null;
+    }
+  }, []);
+
+  const executeDelete = useCallback(
+    async (target: DeleteTarget) => {
+      if (target.kind === "multiple") {
+        // Sequential: each store call reads fresh state via get(), so parallel
+        // calls would clobber each other's writes.
+        for (const entry of target.paths) {
+          await (entry.kind === "file"
+            ? deleteFilePath(entry.path)
+            : deleteFolderPath(entry.path));
+        }
+        return;
+      }
+
+      await (target.kind === "file"
+        ? deleteFilePath(target.path)
+        : deleteFolderPath(target.path));
+    },
+    [deleteFilePath, deleteFolderPath]
+  );
+
+  const finalizePendingDelete = useCallback(async () => {
+    const pending = pendingDeleteRef.current;
+    if (!pending) return;
+
+    clearPendingTimer();
+    pendingDeleteRef.current = null;
+    setPendingDelete(null);
+    await executeDelete(pending.target);
+  }, [clearPendingTimer, executeDelete]);
+
+  useEffect(
+    () => () => {
+      // A staged delete is hidden from the UI immediately but kept on disk for
+      // a short undo window. If the component is torn down (switching vault or
+      // closing the app), commit it rather than silently forgetting the user's
+      // confirmed delete.
+      const pending = pendingDeleteRef.current;
+      clearPendingTimer();
+      if (pending) {
+        void executeDelete(pending.target);
+      }
+    },
+    [clearPendingTimer, executeDelete]
+  );
 
   const requestDeleteFile = (filePath: string) => {
     setDeleteTarget({ kind: "file", path: filePath });
@@ -102,37 +168,50 @@ export function useDeleteTarget({
 
     setIsDeleting(true);
 
-    if (deleteTarget.kind === "multiple") {
-      // Sequential: each store call reads fresh state via get(), so parallel
-      // calls would clobber each other's writes.
-      for (const entry of deleteTarget.paths) {
-        await (entry.kind === "file" ? deleteFilePath(entry.path) : deleteFolderPath(entry.path));
-      }
-
-      setIsDeleting(false);
-      setDeleteTarget(null);
-      return;
+    // Only one undo slot is shown. Confirming another delete commits the
+    // previous one first so store writes remain sequential and deterministic.
+    if (pendingDeleteRef.current) {
+      await finalizePendingDelete();
     }
 
-    const didDelete =
-      deleteTarget.kind === "file"
-        ? await deleteFilePath(deleteTarget.path)
-        : await deleteFolderPath(deleteTarget.path);
+    const staged: PendingDelete = {
+      target: deleteTarget,
+      selectedFilePathBefore: selectedFilePath
+    };
+
+    pendingDeleteRef.current = staged;
+    setPendingDelete(staged);
+    setDeleteTarget(null);
+    onStageDelete?.(staged.target);
+
+    pendingTimerRef.current = window.setTimeout(() => {
+      void finalizePendingDelete();
+    }, UNDO_WINDOW_MS);
+
     setIsDeleting(false);
+  };
 
-    if (didDelete) {
-      setDeleteTarget(null);
-    }
+  const undoPendingDelete = () => {
+    const pending = pendingDeleteRef.current;
+    if (!pending) return;
+
+    clearPendingTimer();
+    pendingDeleteRef.current = null;
+    setPendingDelete(null);
+    onUndoDelete?.(pending.target, pending.selectedFilePathBefore);
   };
 
   return {
     deleteTarget,
     isDeleting,
+    pendingDelete,
     requestDeleteFile,
     requestDeleteFolder,
     requestDeleteMultiple,
     requestDeleteFromToolbar,
     cancelDeleteTarget,
-    confirmDeleteTarget
+    confirmDeleteTarget,
+    undoPendingDelete,
+    finalizePendingDelete
   };
 }
