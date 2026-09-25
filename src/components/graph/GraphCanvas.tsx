@@ -55,7 +55,7 @@ function hashString(value: string): number {
 function initialPoint(id: string, centerX: number, centerY: number): Point {
   const hash = hashString(id);
   const angle = ((hash % 3600) / 3600) * Math.PI * 2;
-  const radius = 22 + ((hash >>> 8) % 58);
+  const radius = 48 + ((hash >>> 8) % 86);
   return {
     x: centerX + Math.cos(angle) * radius,
     y: centerY + Math.sin(angle) * radius,
@@ -128,9 +128,9 @@ function buildComponentAnchors(
 }
 
 function edgeLength(kind: VaultGraphEdge["kind"]): number {
-  if (kind === "tag") return 66;
-  if (kind === "folder") return 74;
-  return 82;
+  if (kind === "tag") return 88;
+  if (kind === "folder") return 96;
+  return 108;
 }
 
 function nodeTitle(node: VaultGraphNode): string {
@@ -156,6 +156,7 @@ export function GraphCanvas({
   const [view, setView] = useState<ViewTransform>({ x: 0, y: 0, scale: 1 });
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [focusedId, setFocusedId] = useState<string | null>(null);
+  const [simulationEpoch, setSimulationEpoch] = useState(0);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -234,7 +235,7 @@ export function GraphCanvas({
 
     const step = () => {
       iterations += 1;
-      const cellSize = 220;
+      const cellSize = 260;
       const buckets = new Map<string, string[]>();
 
       for (const node of nodes) {
@@ -282,22 +283,33 @@ export function GraphCanvas({
               // longer distance, which opens visible gaps between groups.
               const involvesFocus =
                 focusedId !== null && (node.id === focusedId || otherId === focusedId);
-              const separation = involvesFocus
+              const dragging =
+                nodeDragRef.current?.nodeId === node.id ||
+                nodeDragRef.current?.nodeId === otherId;
+              const separation = dragging
                 ? directlyConnected
-                  ? 72
-                  : 300
-                : directlyConnected
-                  ? 38
-                  : 175;
+                  ? 92
+                  : 245
+                : involvesFocus
+                  ? directlyConnected
+                    ? 92
+                    : 320
+                  : directlyConnected
+                    ? 64
+                    : 205;
               if (distance > separation) continue;
 
-              const strength = involvesFocus
+              const strength = dragging
                 ? directlyConnected
-                  ? 0.055
-                  : 0.16
-                : directlyConnected
-                  ? 0.04
-                  : 0.07;
+                  ? 0.09
+                  : 0.2
+                : involvesFocus
+                  ? directlyConnected
+                    ? 0.07
+                    : 0.18
+                  : directlyConnected
+                    ? 0.055
+                    : 0.095;
               const force = ((separation - distance) / separation) * strength;
               const fx = (dx / distance) * force;
               const fy = (dy / distance) * force;
@@ -322,8 +334,10 @@ export function GraphCanvas({
         const focusEdge =
           focusedId !== null &&
           (edge.source === focusedId || edge.target === focusedId);
-        const desiredLength = focusEdge ? Math.max(64, edgeLength(edge.kind) - 8) : edgeLength(edge.kind);
-        const force = (distance - desiredLength) * (focusEdge ? 0.0068 : 0.0046);
+        const desiredLength = focusEdge
+          ? Math.max(76, edgeLength(edge.kind) - 10)
+          : edgeLength(edge.kind);
+        const force = (distance - desiredLength) * (focusEdge ? 0.0085 : 0.0064);
         const fx = (dx / distance) * force;
         const fy = (dy / distance) * force;
         source.vx += fx;
@@ -380,8 +394,8 @@ export function GraphCanvas({
           point.vy += (centerY - point.y) * 0.00011;
         }
 
-        point.vx *= 0.86;
-        point.vy *= 0.86;
+        point.vx *= 0.82;
+        point.vy *= 0.82;
 
         const speed = Math.sqrt(point.vx * point.vx + point.vy * point.vy);
         if (speed > 6) {
@@ -389,20 +403,30 @@ export function GraphCanvas({
           point.vy = (point.vy / speed) * 6;
         }
 
-        point.x += point.vx;
-        point.y += point.vy;
+        const dragged = nodeDragRef.current?.nodeId === node.id;
+        if (!dragged) {
+          point.x += point.vx;
+          point.y += point.vy;
+        } else {
+          point.vx = 0;
+          point.vy = 0;
+        }
         movement += Math.abs(point.vx) + Math.abs(point.vy);
       }
 
       setFrame((value) => value + 1);
-      if (iterations < 300 && (iterations < 100 || movement > nodes.length * 0.008)) {
+      const dragging = nodeDragRef.current !== null;
+      if (
+        iterations < 190 &&
+        (dragging || iterations < 70 || movement > nodes.length * 0.014)
+      ) {
         animationFrame = window.requestAnimationFrame(step);
       }
     };
 
     animationFrame = window.requestAnimationFrame(step);
     return () => window.cancelAnimationFrame(animationFrame);
-  }, [nodes, edges, focusedId, size.width, size.height]);
+  }, [nodes, edges, focusedId, size.width, size.height, simulationEpoch]);
 
   void frame;
 
@@ -518,6 +542,7 @@ export function GraphCanvas({
     const worldX = (event.clientX - rect.left - view.x) / view.scale;
     const worldY = (event.clientY - rect.top - view.y) / view.scale;
 
+    setSimulationEpoch((value) => value + 1);
     nodeDragRef.current = {
       pointerId: event.pointerId,
       nodeId: node.id,
@@ -560,6 +585,7 @@ export function GraphCanvas({
     if (!drag || drag.pointerId !== event.pointerId || drag.nodeId !== node.id) return;
 
     nodeDragRef.current = null;
+    setSimulationEpoch((value) => value + 1);
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
