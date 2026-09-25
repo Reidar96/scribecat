@@ -138,3 +138,14 @@ body.is-resizing-details-panel {
   backdrop-filter: blur(18px);
   clip-path: inset(0 round 1.5rem);
 }
+
+
+/* Surfaces with a ScribeCat long-press menu must not also raise the browser/
+   OS touch callout. Keep scrolling intact; only the callout/selection gesture
+   on these non-text controls is disabled. */
+@media (pointer: coarse) {
+  [data-scribecat-long-press="true"] {
+    -webkit-touch-callout: none;
+    user-select: none;
+  }
+}

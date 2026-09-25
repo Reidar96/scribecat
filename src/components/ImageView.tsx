@@ -1,6 +1,5 @@
-import { useContext, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Trash2 } from "lucide-react";
 
 import { dirname, join } from "@/platform/paths";
 import { readFile } from "@/platform/vaultFs";
@@ -9,9 +8,12 @@ import { NodeViewWrapper, type ReactNodeViewProps } from "@tiptap/react";
 
 import { EditorFileContext } from "@/lib/editorFileContext";
 import { ImageLightbox } from "@/components/ImageLightbox";
+import { ImageContextMenuItems } from "@/components/ImageContextMenuItems";
 import { ContextMenuSurface } from "@/components/fileTree/ContextMenuSurface";
 import { useContextMenuState } from "@/components/fileTree/useContextMenuState";
+import { useLongPressContextMenu } from "@/hooks/useLongPressContextMenu";
 import { ABSOLUTE_URL_PATTERN, guessImageMimeType } from "@/lib/fileSystem";
+import { suggestedImageFileName } from "@/lib/imageFileName";
 
 const MIN_IMAGE_WIDTH = 48;
 
@@ -29,6 +31,10 @@ export function ImageView({ node, editor, getPos, updateAttributes, selected }: 
   const [dragWidth, setDragWidth] = useState<number | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const { contextMenu, setContextMenu } = useContextMenuState<{ x: number; y: number }>();
+  const { getLongPressProps } = useLongPressContextMenu<null>((_target, x, y) =>
+    setContextMenu({ x, y })
+  );
+  const longPressProps = getLongPressProps(null);
   const imgRef = useRef<HTMLImageElement>(null);
   const dragWidthRef = useRef<number | null>(null);
 
@@ -160,10 +166,17 @@ export function ImageView({ node, editor, getPos, updateAttributes, selected }: 
         as="div"
         className="editor-image-wrapper"
         data-drag-handle
-        onPointerDown={selectOnTouch}
-        onContextMenu={(event: ReactMouseEvent<HTMLElement>) => {
-          if (!editor.isEditable) return;
-
+        data-scribecat-long-press={longPressProps["data-scribecat-long-press"]}
+        onPointerDown={(event: React.PointerEvent<HTMLElement>) => {
+          selectOnTouch(event);
+          longPressProps.onPointerDown(event);
+        }}
+        onPointerMove={longPressProps.onPointerMove}
+        onPointerUp={longPressProps.onPointerUp}
+        onPointerCancel={longPressProps.onPointerCancel}
+        onClickCapture={longPressProps.onClickCapture}
+        onContextMenuCapture={longPressProps.onContextMenuCapture}
+        onContextMenu={(event: React.MouseEvent<HTMLElement>) => {
           event.preventDefault();
           event.stopPropagation();
           setContextMenu({ x: event.clientX, y: event.clientY });
@@ -188,6 +201,7 @@ export function ImageView({ node, editor, getPos, updateAttributes, selected }: 
             <ImageLightbox
               src={displaySrc}
               alt={alt}
+              fileName={suggestedImageFileName(src, alt)}
               onClose={() => setPreviewOpen(false)}
             />
           ) : null}
@@ -213,15 +227,12 @@ export function ImageView({ node, editor, getPos, updateAttributes, selected }: 
           title={alt || t("imageView.preview")}
           onClick={(event) => event.stopPropagation()}
         >
-          <button
-            type="button"
-            role="menuitem"
-            className="file-tree-context-menu__item file-tree-context-menu__item--danger"
-            onClick={deleteImage}
-          >
-            <Trash2 aria-hidden="true" />
-            {t("imageView.delete")}
-          </button>
+          <ImageContextMenuItems
+            src={displaySrc}
+            fileName={suggestedImageFileName(src, alt)}
+            onClose={() => setContextMenu(null)}
+            onDelete={editor.isEditable ? deleteImage : undefined}
+          />
           </ContextMenuSurface>
         ) : null}
       </NodeViewWrapper>

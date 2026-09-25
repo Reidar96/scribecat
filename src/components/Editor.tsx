@@ -276,43 +276,144 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     void copy(currentEditor).then(reportCopyResult);
   };
 
-  // Right-click on a selection offers the three portable copy formats.
-  const handleEditorContextMenu = (event: React.MouseEvent<HTMLDivElement>) => {
+  const pasteFromClipboard = async () => {
     const currentEditor = editorRef.current;
 
-    if (!currentEditor) {
+    if (!currentEditor || documentLockedRef.current) {
       return;
     }
 
-    // On a touch screen the long press (and on Android the double tap that
-    // selects a word) arrives as this event too; it is how a word gets
-    // selected there, and our menu would open instead of the selection
-    // handles. The paw button in the toolbar is the way in on touch.
-    //
-    // The event's own pointerType is not enough: Android synthesises the
-    // contextmenu of the double tap from the selection, not from the finger,
-    // and reports it as a mouse. The last pointer that actually went down in
-    // the editor is what decides; only a menu opened without any pointer
-    // (keyboard) falls back to the device's primary pointer.
-    const nativeEvent = event.nativeEvent as PointerEvent | MouseEvent;
-    const eventPointerType = "pointerType" in nativeEvent ? nativeEvent.pointerType : "";
-    const pointerType = lastPointerTypeRef.current ?? eventPointerType;
-    const isTouchPointer = (type: string) => type === "touch" || type === "pen";
-    const fromTouch =
-      isTouchPointer(eventPointerType) ||
-      isTouchPointer(pointerType) ||
-      (pointerType === "" && window.matchMedia("(pointer: coarse)").matches);
+    currentEditor.commands.focus();
 
-    if (fromTouch) {
-      return;
+    // Native shells may still allow the old synchronous paste command. When
+    // it works, ProseMirror receives a normal paste event and keeps all of the
+    // existing image/Markdown handling.
+    try {
+      if (document.execCommand("paste")) {
+        setSelectionMenu(null);
+        return;
+      }
+    } catch {
+      // Browsers normally block execCommand("paste"); use Clipboard API below.
     }
 
-    if (currentEditor.state.selection.empty) {
+    try {
+      let text: string | null = null;
+
+      if (typeof navigator.clipboard?.read === "function") {
+        const items = await navigator.clipboard.read();
+
+        for (const item of items) {
+          const imageType = item.types.find((type) => type.startsWith("image/"));
+          if (!imageType) continue;
+
+          const blob = await item.getType(imageType);
+          const extension =
+            imageType === "image/jpeg"
+              ? "jpg"
+              : imageType.split("/")[1]?.replace(/\+xml$/i, "") || "png";
+
+          await insertImagePayloads(
+            [
+              {
+                fileName: `clipboard-image.${extension}`,
+                mimeType: imageType,
+                data: new Uint8Array(await blob.arrayBuffer())
+              }
+            ],
+            currentEditor.state.selection.from
+          );
+          setSelectionMenu(null);
+          return;
+        }
+
+        for (const item of items) {
+          if (!item.types.includes("text/plain")) continue;
+          text = await (await item.getType("text/plain")).text();
+          break;
+        }
+      }
+
+      text ??= await navigator.clipboard.readText();
+      if (!text) {
+        setSelectionMenu(null);
+        return;
+      }
+
+      const inCode =
+        currentEditor.state.selection.$from.parent.type.spec.code === true;
+      const shouldPasteMarkdown =
+        !inCode &&
+        useEditorSettingsStore.getState().pasteMarkdown &&
+        looksLikeMarkdown(text);
+
+      if (!shouldPasteMarkdown || !pasteMarkdown(currentEditor, text)) {
+        currentEditor.view.pasteText(text);
+      }
+
+      setSelectionMenu(null);
+    } catch {
+      setFeedback({
+        kind: "error",
+        message: t("editorContextMenu.pasteFailed")
+      });
+    }
+  };
+
+  // Every editor context click is handled by ScribeCat. On touch the browser
+  // may finish selecting the word just after contextmenu fires, so defer one
+  // frame before deciding whether copy actions belong in the menu.
+  const handleEditorContextMenu = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (!editorRef.current) {
       return;
     }
 
     event.preventDefault();
-    setSelectionMenu({ x: event.clientX, y: event.clientY });
+
+    const x = event.clientX;
+    const y = event.clientY;
+    const nativeEvent = event.nativeEvent as PointerEvent | MouseEvent;
+    const eventPointerType =
+      "pointerType" in nativeEvent ? nativeEvent.pointerType : "";
+    const pointerType = lastPointerTypeRef.current ?? eventPointerType;
+    const fromTouch =
+      eventPointerType === "touch" ||
+      eventPointerType === "pen" ||
+      pointerType === "touch" ||
+      pointerType === "pen" ||
+      (pointerType === "" && window.matchMedia("(pointer: coarse)").matches);
+
+    if (!fromTouch && !documentLockedRef.current) {
+      const currentEditor = editorRef.current;
+      const position = currentEditor.view.posAtCoords({ left: x, top: y })?.pos;
+      const { from, to, empty } = currentEditor.state.selection;
+
+      if (
+        position !== undefined &&
+        (empty || position < from || position > to)
+      ) {
+        currentEditor.commands.setTextSelection(position);
+      }
+    }
+
+    const openMenu = () => {
+      const currentEditor = editorRef.current;
+      if (!currentEditor) return;
+
+      const hasSelection = !currentEditor.state.selection.empty;
+      if (!hasSelection && documentLockedRef.current) {
+        setSelectionMenu(null);
+        return;
+      }
+
+      setSelectionMenu({ x, y, hasSelection });
+    };
+
+    if (fromTouch) {
+      window.requestAnimationFrame(openMenu);
+    } else {
+      openMenu();
+    }
   };
 
   // Panel visibility (and the whole search state) lives in useSearchStore
@@ -1423,9 +1524,12 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         <SelectionContextMenu
           x={selectionMenu.x}
           y={selectionMenu.y}
+          hasSelection={selectionMenu.hasSelection}
+          canPaste={!documentLocked}
           onCopyFormatted={() => copySelection("formatted")}
           onCopyMarkdown={() => copySelection("markdown")}
           onCopyPlainText={() => copySelection("plainText")}
+          onPaste={() => void pasteFromClipboard()}
           onClose={() => setSelectionMenu(null)}
         />
       ) : null}

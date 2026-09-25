@@ -916,6 +916,11 @@
     "openPreview": "Open larger image",
     "previous": "Previous image",
     "next": "Next image",
+    "copy": "Copy image",
+    "download": "Download image",
+    "copyUnavailable": "Image copying is not available here.",
+    "copyFailed": "Could not copy the image.",
+    "downloadFailed": "Could not download the image.",
     "delete": "Delete image"
   },
   "codeBlock": {
@@ -967,7 +972,9 @@
     "copyMarkdown": "Copy text as Markdown",
     "copyPlainText": "Copy text only",
     "pastePlainText": "Paste text only",
-    "copyFailed": "Could not copy to the clipboard."
+    "paste": "Paste",
+    "copyFailed": "Could not copy to the clipboard.",
+    "pasteFailed": "Could not read from the clipboard."
   },
   "aiDiffWidget": {
     "resultLabel": "AI result",

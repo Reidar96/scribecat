@@ -3,9 +3,15 @@ import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { ContextMenuSurface } from "@/components/fileTree/ContextMenuSurface";
+import { useContextMenuState } from "@/components/fileTree/useContextMenuState";
+import { ImageContextMenuItems } from "@/components/ImageContextMenuItems";
+import { useLongPressContextMenu } from "@/hooks/useLongPressContextMenu";
+
 type ImageLightboxProps = {
   src: string;
   alt: string;
+  fileName?: string;
   onClose: () => void;
   onPrevious?: () => void;
   onNext?: () => void;
@@ -15,12 +21,18 @@ type ImageLightboxProps = {
 export function ImageLightbox({
   src,
   alt,
+  fileName = "image",
   onClose,
   onPrevious,
   onNext,
   positionLabel
 }: ImageLightboxProps) {
   const { t } = useTranslation();
+  const { contextMenu, setContextMenu } = useContextMenuState<{ x: number; y: number }>();
+  const { getLongPressProps } = useLongPressContextMenu<null>((_target, x, y) =>
+    setContextMenu({ x, y })
+  );
+  const longPressProps = getLongPressProps(null);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
@@ -97,11 +109,42 @@ export function ImageLightbox({
       ) : null}
 
       <div className="media-preview__image-wrap">
-        <img src={src} alt={alt} className="media-preview__image" />
+        <img
+          src={src}
+          alt={alt}
+          className="media-preview__image"
+          data-scribecat-long-press={longPressProps["data-scribecat-long-press"]}
+          onPointerDown={longPressProps.onPointerDown}
+          onPointerMove={longPressProps.onPointerMove}
+          onPointerUp={longPressProps.onPointerUp}
+          onPointerCancel={longPressProps.onPointerCancel}
+          onClickCapture={longPressProps.onClickCapture}
+          onContextMenuCapture={longPressProps.onContextMenuCapture}
+          onContextMenu={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            setContextMenu({ x: event.clientX, y: event.clientY });
+          }}
+        />
         {positionLabel ? (
           <span className="media-preview__position">{positionLabel}</span>
         ) : null}
       </div>
+
+      {contextMenu ? (
+        <ContextMenuSurface
+          x={contextMenu.x}
+          y={contextMenu.y}
+          title={alt || t("imageView.preview")}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <ImageContextMenuItems
+            src={src}
+            fileName={fileName}
+            onClose={() => setContextMenu(null)}
+          />
+        </ContextMenuSurface>
+      ) : null}
 
       {onNext ? (
         <button
