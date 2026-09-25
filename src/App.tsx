@@ -1419,6 +1419,7 @@ function App() {
                   requestDeleteFile(selectedFilePath);
                 }
               }}
+              onDeleteFileRequest={requestDeleteFile}
               onSaveRequest={() => void saveSelectedFile()}
             />
           )}
