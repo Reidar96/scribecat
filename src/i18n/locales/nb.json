@@ -976,9 +976,5 @@
     "previous": "Forrige side",
     "next": "Neste side",
     "pageCount": "Side {{page}} av {{count}}"
-  },
-  "deleteUndo": {
-    "message": "Slettet fra visningen. Du kan angre i noen sekunder."
   }
-
 }
