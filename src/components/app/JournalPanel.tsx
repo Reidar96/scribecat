@@ -60,6 +60,8 @@ import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
 
 const IMAGE_EXTENSIONS = ["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "avif", "heic", "heif"];
 const EARLIEST_PICKER_YEAR = 1900;
+const JOURNAL_RESULTS_PAGE_SIZE = 20;
+const JOURNAL_IMAGE_ROOT_MARGIN = "360px 0px";
 
 type JournalPanelProps = {
   folderPath: string;
@@ -213,11 +215,21 @@ function plainExcerpt(value: string, maxLength = 180): string {
   return plain.length > maxLength ? plain.slice(0, maxLength).trimEnd() + "…" : plain;
 }
 
-function useJournalImageUrl(image: JournalImage, filePath: string) {
+function useJournalImageUrl(
+  image: JournalImage,
+  filePath: string,
+  enabled = true
+) {
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
   const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
+    if (!enabled) {
+      setLoadError(false);
+      setObjectUrl(null);
+      return;
+    }
+
     if (!image.src) {
       setLoadError(true);
       setObjectUrl(null);
@@ -257,7 +269,7 @@ function useJournalImageUrl(image: JournalImage, filePath: string) {
       active = false;
       if (createdUrl) URL.revokeObjectURL(createdUrl);
     };
-  }, [filePath, image.src]);
+  }, [enabled, filePath, image.src]);
 
   return { objectUrl, loadError };
 }
@@ -346,15 +358,42 @@ function JournalImageCard({
   onDelete: (itemKey: string) => void;
 }) {
   const { t } = useTranslation();
-  const { objectUrl, loadError } = useJournalImageUrl(image, filePath);
+  const [shouldLoadImage, setShouldLoadImage] = useState(false);
+  const [ratioClass, setRatioClass] = useState<ImageRatioClass>("landscape");
+  const masonryRef = useMasonrySpan<HTMLElement>();
+  const { objectUrl, loadError } = useJournalImageUrl(
+    image,
+    filePath,
+    shouldLoadImage
+  );
   const { contextMenu, setContextMenu } = useContextMenuState<{ x: number; y: number }>();
   const { getLongPressProps } = useLongPressContextMenu<null>(
     (_target, x, y) => setContextMenu({ x, y }),
     { openOnLongPress: !reorderMode }
   );
   const longPressProps = getLongPressProps(null);
-  const [ratioClass, setRatioClass] = useState<ImageRatioClass>("landscape");
-  const masonryRef = useMasonrySpan<HTMLElement>();
+
+  useEffect(() => {
+    const element = masonryRef.current;
+    if (!element) return;
+
+    if (typeof IntersectionObserver === "undefined") {
+      setShouldLoadImage(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry?.isIntersecting) return;
+        setShouldLoadImage(true);
+        observer.disconnect();
+      },
+      { rootMargin: JOURNAL_IMAGE_ROOT_MARGIN }
+    );
+
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [filePath, image.src]);
 
   return (
     <>
@@ -449,6 +488,8 @@ function JournalImageCard({
             <img
               src={objectUrl}
               alt={image.alt}
+              loading="lazy"
+              decoding="async"
               onLoad={(event) =>
                 setRatioClass(
                   imageRatioClass(
@@ -575,11 +616,14 @@ function JournalEntryView({
   isPhone,
   canPreviousDay,
   canNextDay,
+  previousDayExists,
+  nextDayExists,
   onTagDraftChange,
   onAddTag,
   onRemoveTag,
   onPreviousDay,
   onNextDay,
+  onDelete,
   onShowCalendar,
   onShowOverview,
   onMarkdownChange
@@ -593,11 +637,14 @@ function JournalEntryView({
   isPhone: boolean;
   canPreviousDay: boolean;
   canNextDay: boolean;
+  previousDayExists: boolean;
+  nextDayExists: boolean;
   onTagDraftChange: (value: string) => void;
   onAddTag: () => void;
   onRemoveTag: (tag: string) => void;
   onPreviousDay: () => void;
   onNextDay: () => void;
+  onDelete: () => void;
   onShowCalendar: () => void;
   onShowOverview: () => void;
   onMarkdownChange: (markdown: string) => void;
@@ -969,6 +1016,15 @@ function JournalEntryView({
     await persistImages(picked);
   };
 
+  const previousDayActionLabel =
+    canPreviousDay && !previousDayExists
+      ? t("journal.createPreviousDay")
+      : t("journal.previousDay");
+  const nextDayActionLabel =
+    canNextDay && !nextDayExists
+      ? t("journal.createNextDay")
+      : t("journal.nextDay");
+
   return (
     <section className="journal-entry">
       {isPhone ? (
@@ -979,10 +1035,10 @@ function JournalEntryView({
             variant="outline"
             disabled={!canPreviousDay}
             onClick={onPreviousDay}
-            aria-label={t("journal.previousDay")}
-            title={t("journal.previousDay")}
+            aria-label={previousDayActionLabel}
+            title={previousDayActionLabel}
           >
-            <ChevronLeft />
+            {canPreviousDay && !previousDayExists ? <Plus /> : <ChevronLeft />}
           </Button>
           <Button type="button" variant="outline" size="sm" onClick={onShowCalendar}>
             <CalendarDays />
@@ -998,10 +1054,10 @@ function JournalEntryView({
             variant="outline"
             disabled={!canNextDay}
             onClick={onNextDay}
-            aria-label={t("journal.nextDay")}
-            title={t("journal.nextDay")}
+            aria-label={nextDayActionLabel}
+            title={nextDayActionLabel}
           >
-            <ChevronRight />
+            {canNextDay && !nextDayExists ? <Plus /> : <ChevronRight />}
           </Button>
         </div>
       ) : null}
@@ -1022,10 +1078,10 @@ function JournalEntryView({
             variant="outline"
             disabled={!canPreviousDay}
             onClick={onPreviousDay}
-            aria-label={t("journal.previousDay")}
-            title={t("journal.previousDay")}
+            aria-label={previousDayActionLabel}
+            title={previousDayActionLabel}
           >
-            <ChevronLeft />
+            {canPreviousDay && !previousDayExists ? <Plus /> : <ChevronLeft />}
           </Button>
 
           <Button
@@ -1034,10 +1090,10 @@ function JournalEntryView({
             variant="outline"
             disabled={!canNextDay}
             onClick={onNextDay}
-            aria-label={t("journal.nextDay")}
-            title={t("journal.nextDay")}
+            aria-label={nextDayActionLabel}
+            title={nextDayActionLabel}
           >
-            <ChevronRight />
+            {canNextDay && !nextDayExists ? <Plus /> : <ChevronRight />}
           </Button>
         </div>
       )}
@@ -1141,6 +1197,17 @@ function JournalEntryView({
         ) : null}
       </div>
 
+      <div className="journal-entry__delete-row">
+        <button
+          type="button"
+          className="journal-entry__delete-button"
+          onClick={onDelete}
+        >
+          <Trash2 aria-hidden="true" />
+          <span>{t("journal.deleteEntry")}</span>
+        </button>
+      </div>
+
       {previewIndex !== null && currentGalleryImages[previewIndex] ? (
         <JournalImageLightbox
           images={currentGalleryImages}
@@ -1175,16 +1242,99 @@ function JournalResultThumbnailImage({
   image: JournalImage;
   filePath: string;
 }) {
-  const { objectUrl } = useJournalImageUrl(image, filePath);
+  const thumbnailRef = useRef<HTMLSpanElement>(null);
+  const [shouldLoadImage, setShouldLoadImage] = useState(false);
+  const { objectUrl } = useJournalImageUrl(image, filePath, shouldLoadImage);
 
-  if (!objectUrl) {
-    return <span className="journal-results__thumbnail journal-results__thumbnail--empty" />;
-  }
+  useEffect(() => {
+    const element = thumbnailRef.current;
+    if (!element) return;
+
+    if (typeof IntersectionObserver === "undefined") {
+      setShouldLoadImage(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry?.isIntersecting) return;
+        setShouldLoadImage(true);
+        observer.disconnect();
+      },
+      { rootMargin: JOURNAL_IMAGE_ROOT_MARGIN }
+    );
+
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [filePath, image.src]);
 
   return (
-    <span className="journal-results__thumbnail">
-      <img src={objectUrl} alt="" loading="lazy" />
+    <span
+      ref={thumbnailRef}
+      className={cn(
+        "journal-results__thumbnail",
+        !objectUrl && "journal-results__thumbnail--empty"
+      )}
+    >
+      {objectUrl ? (
+        <img src={objectUrl} alt="" loading="lazy" decoding="async" />
+      ) : null}
     </span>
+  );
+}
+
+function JournalResultItem({
+  entry,
+  locale,
+  onOpen,
+  onContextMenu
+}: {
+  entry: JournalIndexEntry;
+  locale: string;
+  onOpen: (date: JournalDate) => void;
+  onContextMenu: (
+    x: number,
+    y: number,
+    filePath: string,
+    label: string
+  ) => void;
+}) {
+  const label = formatJournalDate(entry.date, locale);
+  const { getLongPressProps } = useLongPressContextMenu<null>(
+    (_target, x, y) => onContextMenu(x, y, entry.filePath, label)
+  );
+  const longPressProps = getLongPressProps(null);
+
+  return (
+    <button
+      type="button"
+      className="journal-results__item"
+      data-scribecat-long-press={longPressProps["data-scribecat-long-press"]}
+      onPointerDown={longPressProps.onPointerDown}
+      onPointerMove={longPressProps.onPointerMove}
+      onPointerUp={longPressProps.onPointerUp}
+      onPointerCancel={longPressProps.onPointerCancel}
+      onClickCapture={longPressProps.onClickCapture}
+      onContextMenuCapture={longPressProps.onContextMenuCapture}
+      onClick={() => onOpen(entry.date)}
+      onContextMenu={(event) => {
+        event.preventDefault();
+        onContextMenu(event.clientX, event.clientY, entry.filePath, label);
+      }}
+    >
+      <span className="journal-results__content">
+        <strong>{label}</strong>
+        {entry.text ? <p>{plainExcerpt(entry.text)}</p> : null}
+        {entry.tags.length > 0 ? (
+          <span className="journal-results__tags">
+            {entry.tags.map((tag) => (
+              <span key={tag}>#{tag}</span>
+            ))}
+          </span>
+        ) : null}
+      </span>
+      <JournalResultThumbnail entry={entry} />
+    </button>
   );
 }
 
@@ -1210,6 +1360,42 @@ function JournalResults({
     filePath: string;
     label: string;
   }>();
+  const [visibleCount, setVisibleCount] = useState(() =>
+    Math.min(JOURNAL_RESULTS_PAGE_SIZE, entries.length)
+  );
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setVisibleCount(Math.min(JOURNAL_RESULTS_PAGE_SIZE, entries.length));
+  }, [entries]);
+
+  useEffect(() => {
+    if (visibleCount >= entries.length) return;
+
+    const element = loadMoreRef.current;
+    if (!element) return;
+
+    if (typeof IntersectionObserver === "undefined") {
+      setVisibleCount(entries.length);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry?.isIntersecting) return;
+        observer.disconnect();
+        setVisibleCount((current) =>
+          Math.min(current + JOURNAL_RESULTS_PAGE_SIZE, entries.length)
+        );
+      },
+      { rootMargin: "600px 0px" }
+    );
+
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [entries.length, visibleCount]);
+
+  const visibleEntries = entries.slice(0, visibleCount);
 
   return (
     <section className="journal-results">
@@ -1236,36 +1422,24 @@ function JournalResults({
         <div className="journal-results__empty">{t("journal.noResults")}</div>
       ) : (
         <div className="journal-results__list">
-          {entries.map((entry) => (
-            <button
+          {visibleEntries.map((entry) => (
+            <JournalResultItem
               key={entry.filePath}
-              type="button"
-              className="journal-results__item"
-              onClick={() => onOpen(entry.date)}
-              onContextMenu={(event) => {
-                event.preventDefault();
-                setContextMenu({
-                  x: event.clientX,
-                  y: event.clientY,
-                  filePath: entry.filePath,
-                  label: formatJournalDate(entry.date, locale)
-                });
-              }}
-            >
-              <span className="journal-results__content">
-                <strong>{formatJournalDate(entry.date, locale)}</strong>
-                {entry.text ? <p>{plainExcerpt(entry.text)}</p> : null}
-                {entry.tags.length > 0 ? (
-                  <span className="journal-results__tags">
-                    {entry.tags.map((tag) => (
-                      <span key={tag}>#{tag}</span>
-                    ))}
-                  </span>
-                ) : null}
-              </span>
-              <JournalResultThumbnail entry={entry} />
-            </button>
+              entry={entry}
+              locale={locale}
+              onOpen={onOpen}
+              onContextMenu={(x, y, filePath, label) =>
+                setContextMenu({ x, y, filePath, label })
+              }
+            />
           ))}
+          {visibleCount < entries.length ? (
+            <div
+              ref={loadMoreRef}
+              className="journal-results__load-more"
+              aria-hidden="true"
+            />
+          ) : null}
         </div>
       )}
 
@@ -1632,6 +1806,12 @@ export function JournalPanel({
   const canNextDay = Boolean(
     nextDate && dateToNumber(nextDate) <= dateToNumber(today)
   );
+  const previousDayExists = Boolean(
+    previousDate && journalFileByDate.has(journalDateKey(previousDate))
+  );
+  const nextDayExists = Boolean(
+    nextDate && journalFileByDate.has(journalDateKey(nextDate))
+  );
 
   return (
     <section className="journal-view" aria-label={t("journal.label")}>
@@ -1911,6 +2091,8 @@ export function JournalPanel({
               isPhone={isPhone}
               canPreviousDay={canPreviousDay}
               canNextDay={canNextDay}
+              previousDayExists={previousDayExists}
+              nextDayExists={nextDayExists}
               onTagDraftChange={setTagDraft}
               onAddTag={addTag}
               onRemoveTag={removeTag}
@@ -1920,6 +2102,7 @@ export function JournalPanel({
               onNextDay={() => {
                 if (nextDate) void openJournalDate(nextDate);
               }}
+              onDelete={() => onDeleteEntry(activeFilePath)}
               onShowCalendar={() => setShowMobileCalendar(true)}
               onShowOverview={showOverview}
               onMarkdownChange={onMarkdownChange}
