@@ -81,6 +81,8 @@ export type FolderSlice = {
   /** Creates a folder at exactly this path (see createFileAtPath for the why). */
   createFolderAtPath: (folderPath: string) => Promise<boolean>;
   renameFolderPath: (folderPath: string, newBaseName: string) => Promise<boolean>;
+  /** Copies a complete folder next to itself, including attachments and empty subfolders. */
+  duplicateFolder: (folderPath: string) => Promise<string | null>;
   deleteFolderPath: (folderPath: string) => Promise<boolean>;
 };
 
