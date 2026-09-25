@@ -556,6 +556,7 @@ p.detail-panel__version {
   overflow: hidden;
 }
 
+.split-workspace__pane--primary-split,
 .split-workspace__pane--secondary {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -586,6 +587,13 @@ p.detail-panel__version {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+.split-workspace__pane-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.1rem;
+  flex: none;
 }
 
 .split-workspace__pane-header button {
