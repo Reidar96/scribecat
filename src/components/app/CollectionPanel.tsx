@@ -505,7 +505,7 @@ export function CollectionPanel({
           ) : (
             <div className="collection-grid">
               {request.kind === "folder" ? (
-                <div className="collection-card collection-card--create" aria-label={t("collection.createHere")}>
+                <div className="collection-card collection-card--create">
                   <button
                     type="button"
                     className="collection-card__create-action"
