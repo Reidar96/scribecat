@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.23.4] - 2026-09-25
+
+### Fixes and improvements
+- Replace the File Viewer multi-selection **Move to…** button with a compact **…** menu containing the relevant batch actions from the right-click menu: Duplicate, Copy, Move to…, Export, Export manuscript, and Delete.
+- Keep **Select all** and **Clear selection** directly visible while leaving single-item right-click behavior unchanged.
+
 ## [0.23.3] - 2026-09-25
 
 ### Fixes and improvements
