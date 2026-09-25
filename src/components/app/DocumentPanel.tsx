@@ -238,6 +238,8 @@ export function DocumentPanel({
   const [splitPickerOpen, setSplitPickerOpen] = useState(false);
   const [splitPickerQuery, setSplitPickerQuery] = useState("");
   const [splitDropPreview, setSplitDropPreview] = useState(false);
+  const documentLocks = useAppStore((state) => state.documentLocks);
+  const setDocumentLocked = useAppStore((state) => state.setDocumentLocked);
   // Bumped by the header menu's "Versions" entry on the phone, where the
   // popover's own trigger button has no room in the header.
   const [versionsRequestId, setVersionsRequestId] = useState(0);
@@ -327,7 +329,7 @@ export function DocumentPanel({
       : null;
   const secondaryDocumentLocked =
     secondaryRelativePath !== null &&
-    getDocumentLocked(useAppStore.getState().documentLocks, secondaryRelativePath);
+    getDocumentLocked(documentLocks, secondaryRelativePath);
   const splitOptions = useMemo(
     () =>
       filterVaultFileOptions(
