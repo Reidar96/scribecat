@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.22.16] - 2026-09-25
+
+### Fixes
+- On mobile, remove the standalone X from the sidebar content and place a dedicated collapse-sidebar button beside Settings instead. Desktop sidebar controls are unchanged.
+- Keep completed subtasks compact while restoring the delete button alongside the checkbox and title.
+
+
 ## [0.22.15] - 2026-09-25
 
 ### Fixes and improvements
