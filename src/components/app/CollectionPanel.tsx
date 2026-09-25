@@ -17,6 +17,7 @@ import {
   Clock,
   Copy,
   Download,
+  Ellipsis,
   ExternalLink,
   FileDown,
   FileText,
@@ -46,6 +47,7 @@ import type { BatchEntry } from "@/components/FileTree";
 import { Button } from "@/components/ui/button";
 import {
   Menu,
+  MenuItem,
   MenuPopup,
   MenuPortal,
   MenuPositioner,
@@ -1009,16 +1011,69 @@ export function CollectionPanel({
               >
                 {t("collection.clearSelection")}
               </Button>
-              <Button
-                type="button"
-                size="sm"
-                disabled={!capabilities.move || selectedCards.length === 0}
-                title={capabilities.move ? undefined : capabilityHint}
-                onClick={() => void moveCards(selectedCards)}
-              >
-                <FolderInput aria-hidden="true" />
-                {t("fileTree.moveTo")}
-              </Button>
+              <Menu>
+                <MenuTrigger
+                  disabled={selectedCards.length === 0}
+                  render={
+                    <Button
+                      type="button"
+                      size="icon-sm"
+                      variant="ghost"
+                      aria-label={t("fileTree.selectionCount", { count: selectedCards.length })}
+                      title={t("fileTree.selectionCount", { count: selectedCards.length })}
+                    >
+                      <Ellipsis />
+                    </Button>
+                  }
+                />
+                <MenuPortal>
+                  <MenuPositioner align="end">
+                    <MenuPopup>
+                      <MenuItem
+                        disabled={!capabilities.create}
+                        title={capabilities.create ? undefined : capabilityHint}
+                        onClick={() => void duplicateCards(selectedCards)}
+                      >
+                        <Copy aria-hidden="true" />
+                        {t("fileTree.duplicate")}
+                      </MenuItem>
+                      <MenuItem onClick={() => void copyCards(selectedCards)}>
+                        <Copy aria-hidden="true" />
+                        {t("fileTree.copy")}
+                      </MenuItem>
+                      <MenuItem
+                        disabled={!capabilities.move}
+                        title={capabilities.move ? undefined : capabilityHint}
+                        onClick={() => void moveCards(selectedCards)}
+                      >
+                        <FolderInput aria-hidden="true" />
+                        {t("fileTree.moveTo")}
+                      </MenuItem>
+                      {offersExport ? (
+                        <>
+                          <MenuItem onClick={() => void exportCards(selectedCards, "standard")}>
+                            <Download aria-hidden="true" />
+                            {t("fileTree.export")}
+                          </MenuItem>
+                          <MenuItem onClick={() => void exportCards(selectedCards, "manuscript")}>
+                            <BookOpen aria-hidden="true" />
+                            {t("fileTree.exportManuscript")}
+                          </MenuItem>
+                        </>
+                      ) : null}
+                      <MenuItem
+                        className="text-destructive"
+                        disabled={!capabilities.delete}
+                        title={capabilities.delete ? undefined : capabilityHint}
+                        onClick={() => void deleteCards(selectedCards)}
+                      >
+                        <Trash2 aria-hidden="true" />
+                        {t("fileTree.delete")}
+                      </MenuItem>
+                    </MenuPopup>
+                  </MenuPositioner>
+                </MenuPortal>
+              </Menu>
             </div>
           </div>
         ) : null}
