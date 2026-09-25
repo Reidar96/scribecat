@@ -1165,6 +1165,7 @@ export function TasksPanel({
     } finally {
       setSaving(false);
       setDragOverCategory(null);
+      setDraggedRootKey(null);
     }
   };
 
@@ -1568,6 +1569,19 @@ export function TasksPanel({
                       candidate.filePath === task.filePath &&
                       candidate.lineIndex === task.parentLineIndex
                   );
+                const key = taskItemKey(task);
+                const rootDropAllowed =
+                  !isSubtask &&
+                  draggedRootTask !== null &&
+                  key !== taskItemKey(draggedRootTask) &&
+                  taskSettings.sortMode === "manual" &&
+                  draggedRootTask.filePath === task.filePath &&
+                  (!timeBasedView || draggedRootTask.deadline === task.deadline);
+                const rootDropBlocked =
+                  !isSubtask &&
+                  draggedRootTask !== null &&
+                  key !== taskItemKey(draggedRootTask) &&
+                  !rootDropAllowed;
 
                 return (
                   <TaskRow
@@ -1600,6 +1614,29 @@ export function TasksPanel({
                             }
                           }
                         : undefined
+                    }
+                    rootDropAllowed={rootDropAllowed}
+                    rootDropBlocked={rootDropBlocked}
+                    isDragSource={
+                      !isSubtask &&
+                      draggedRootTask !== null &&
+                      key === taskItemKey(draggedRootTask)
+                    }
+                    onRootDrop={
+                      rootDropAllowed
+                        ? (event, placement) => {
+                            const source = taskFromDrop(event);
+                            if (source) {
+                              void reorderRootTask(source, task, placement);
+                            }
+                          }
+                        : undefined
+                    }
+                    onDragStartTask={
+                      !isSubtask ? () => setDraggedRootKey(key) : undefined
+                    }
+                    onDragEndTask={
+                      !isSubtask ? () => setDraggedRootKey(null) : undefined
                     }
                     onDelete={() => void mutateTask(task, "delete")}
                   />
@@ -1635,6 +1672,19 @@ export function TasksPanel({
                           candidate.filePath === task.filePath &&
                           candidate.lineIndex === task.parentLineIndex
                       );
+                    const key = taskItemKey(task);
+                    const rootDropAllowed =
+                      !isSubtask &&
+                      draggedRootTask !== null &&
+                      key !== taskItemKey(draggedRootTask) &&
+                      taskSettings.sortMode === "manual" &&
+                      draggedRootTask.filePath === task.filePath &&
+                      (!timeBasedView || draggedRootTask.deadline === task.deadline);
+                    const rootDropBlocked =
+                      !isSubtask &&
+                      draggedRootTask !== null &&
+                      key !== taskItemKey(draggedRootTask) &&
+                      !rootDropAllowed;
 
                     return (
                       <TaskRow
@@ -1660,6 +1710,29 @@ export function TasksPanel({
                                 }
                               }
                             : undefined
+                        }
+                        rootDropAllowed={rootDropAllowed}
+                        rootDropBlocked={rootDropBlocked}
+                        isDragSource={
+                          !isSubtask &&
+                          draggedRootTask !== null &&
+                          key === taskItemKey(draggedRootTask)
+                        }
+                        onRootDrop={
+                          rootDropAllowed
+                            ? (event, placement) => {
+                                const source = taskFromDrop(event);
+                                if (source) {
+                                  void reorderRootTask(source, task, placement);
+                                }
+                              }
+                            : undefined
+                        }
+                        onDragStartTask={
+                          !isSubtask ? () => setDraggedRootKey(key) : undefined
+                        }
+                        onDragEndTask={
+                          !isSubtask ? () => setDraggedRootKey(null) : undefined
                         }
                         onDelete={() => void mutateTask(task, "delete")}
                       />
