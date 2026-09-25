@@ -104,6 +104,10 @@ type EditorProps = {
   deleteEnabled: boolean;
   documentLocked: boolean;
   onDocumentLockToggle: () => void;
+  /** Called when this editor becomes the active split pane. */
+  onEditorFocus?: () => void;
+  /** Suppresses the local toolbar when a shared toolbar is rendered elsewhere. */
+  hideToolbar?: boolean;
   /** Where the toolbar renders instead of inside the editor (the document
    *  panel's slot above the title row on desktop); null keeps it inline. */
   toolbarContainer?: HTMLElement | null;
@@ -189,6 +193,8 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     deleteEnabled,
     documentLocked,
     onDocumentLockToggle,
+    onEditorFocus,
+    hideToolbar = false,
     toolbarContainer = null
   },
   ref
@@ -1394,7 +1400,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         </div>
       ) : null}
 
-      {toolbarContainer ? createPortal(toolbar, toolbarContainer) : toolbar}
+      {hideToolbar ? null : toolbarContainer ? createPortal(toolbar, toolbarContainer) : toolbar}
 
       <EditorFileContext.Provider value={{ folderPath, filePath }}>
         <div className="editor-view__body">
@@ -1410,8 +1416,10 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
               <EditorContent
                 editor={editor}
                 className="editor-view__content"
+                onFocusCapture={onEditorFocus}
                 onPointerDownCapture={(event) => {
                   lastPointerTypeRef.current = event.pointerType;
+                  onEditorFocus?.();
                 }}
                 onContextMenu={handleEditorContextMenu}
                 // The wrapper fills the scroll area below a short document.
