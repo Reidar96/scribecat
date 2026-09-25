@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.24.2] - 2026-09-25
+
+### Fixes and improvements
+- Add **Open selected in split view** and **Open selected as tabs** to the File Viewer selection-mode **…** menu when exactly two Markdown documents are selected.
+- Keep the same two-document and folder-exclusion rules as the existing right-click actions.
+
 ## [0.24.1] - 2026-09-25
 
 ### Improvements
