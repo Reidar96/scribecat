@@ -254,7 +254,13 @@
   font-size: var(--font-ui-xs);
 }
 
-.tasks-main__heading > svg {
+.tasks-main__heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.tasks-main__heading-actions > svg {
   width: 1.1rem;
   height: 1.1rem;
   color: rgba(var(--muted-rgb),0.72);
@@ -307,6 +313,7 @@
 
 .tasks-item--subtask-completed {
   display: grid;
+  cursor: grab;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   min-height: 0;
@@ -371,12 +378,52 @@
   cursor: grabbing;
 }
 
+.tasks-item--drag-source {
+  opacity: 0.34;
+}
+
+.tasks-item--drop-blocked {
+  opacity: 0.3;
+  filter: grayscale(0.75);
+}
+
+.tasks-item--drop-before,
+.tasks-item--drop-after {
+  transition:
+    margin 120ms ease,
+    opacity 120ms ease,
+    filter 120ms ease;
+}
+
 .tasks-item--drop-before {
-  box-shadow: 0 -2px 0 rgba(var(--accent-rgb),0.72);
+  margin-top: 0.8rem;
+  box-shadow: 0 -3px 0 rgba(var(--accent-rgb),0.82);
 }
 
 .tasks-item--drop-after {
-  box-shadow: 0 2px 0 rgba(var(--accent-rgb),0.72);
+  margin-bottom: 0.8rem;
+  box-shadow: 0 3px 0 rgba(var(--accent-rgb),0.82);
+}
+
+.tasks-item--drop-before::after,
+.tasks-item--drop-after::after {
+  position: absolute;
+  left: 0.5rem;
+  width: 0.45rem;
+  height: 0.45rem;
+  border: 2px solid rgb(var(--accent-rgb));
+  border-radius: 999px;
+  background: rgb(var(--surface-rgb));
+  content: "";
+  pointer-events: none;
+}
+
+.tasks-item--drop-before::after {
+  top: -1.05rem;
+}
+
+.tasks-item--drop-after::after {
+  bottom: -1.05rem;
 }
 
 .tasks-item__drag svg {
@@ -493,6 +540,10 @@
   color: rgba(var(--muted-rgb),0.84);
 }
 
+.tasks-item__deadline {
+  position: relative;
+}
+
 .tasks-item__deadline > svg,
 .tasks-item__tags > svg {
   width: 0.82rem;
@@ -509,6 +560,28 @@
   padding: 0;
   font: inherit;
   font-size: var(--font-ui-xs);
+}
+
+.tasks-item__deadline[data-empty="true"] input {
+  width: 5.4rem;
+  color: transparent;
+}
+
+.tasks-item__deadline[data-empty="true"] input::-webkit-datetime-edit {
+  color: transparent;
+}
+
+.tasks-item__deadline[data-empty="true"]::after {
+  position: absolute;
+  left: 1.07rem;
+  max-width: 4.25rem;
+  overflow: hidden;
+  color: rgba(var(--muted-rgb),0.84);
+  font-size: var(--font-ui-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  content: attr(data-placeholder);
+  pointer-events: none;
 }
 
 .tasks-item__tags input {
