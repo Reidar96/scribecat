@@ -782,9 +782,10 @@ export function TasksPanel({
       const directChildren = sourceDocument.tasks
         .filter((candidate) => candidate.parentLineIndex === task.lineIndex)
         .sort((left, right) => left.lineIndex - right.lineIndex);
-      const insertedParent = parseTaskMarkdown(targetMarkdown)
-        .filter((candidate) => candidate.parentLineIndex === null)
-        .at(-1);
+      const insertedParents = parseTaskMarkdown(targetMarkdown).filter(
+        (candidate) => candidate.parentLineIndex === null
+      );
+      const insertedParent = insertedParents[insertedParents.length - 1];
 
       if (insertedParent) {
         for (const child of directChildren) {
