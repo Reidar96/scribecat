@@ -61,6 +61,22 @@ describe("tasks markdown", () => {
     ]);
   });
 
+  it("stores task-level modified time in an invisible Markdown comment", () => {
+    const modifiedAt = "2026-09-25T10:15:30.000Z";
+    const markdown = createTaskDocument("Jobb", {
+      text: "Oppdatert oppgave",
+      modifiedAt
+    });
+
+    expect(markdown).toContain(
+      "<!-- scribecat:modified=2026-09-25T10:15:30.000Z -->"
+    );
+    expect(parseTaskMarkdown(markdown)[0]).toMatchObject({
+      text: "Oppdatert oppgave",
+      modifiedAt
+    });
+  });
+
   it("keeps old checkbox-only markdown compatible", () => {
     expect(parseTaskMarkdown("- [ ] Første\n")).toEqual([
       {
@@ -315,10 +331,21 @@ describe("tasks markdown", () => {
       "- [ ] Neste"
     ].join("\n");
 
-    const completed = setTaskSubtreeCheckedInMarkdown(markdown, 2, true);
-    expect(completed).toContain("- [x] Hovedoppgave");
-    expect(completed).toContain("  - [x] Ferdig fra før");
-    expect(completed).toContain("  - [x] Ikke ferdig");
+    const completed = setTaskSubtreeCheckedInMarkdown(
+      markdown,
+      2,
+      true,
+      "2026-09-25T10:20:00.000Z"
+    );
+    expect(completed).toContain(
+      "- [x] Hovedoppgave <!-- scribecat:modified=2026-09-25T10:20:00.000Z -->"
+    );
+    expect(completed).toContain(
+      "  - [x] Ferdig fra før <!-- scribecat:modified=2026-09-25T10:20:00.000Z -->"
+    );
+    expect(completed).toContain(
+      "  - [x] Ikke ferdig <!-- scribecat:modified=2026-09-25T10:20:00.000Z -->"
+    );
     expect(completed).toContain("- [ ] Neste");
   });
 
