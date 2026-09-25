@@ -1607,7 +1607,6 @@ export function CollectionPanel({
           </button>
         </ContextMenuSurface>
       ) : null}
-      ) : null}
     </section>
   );
 }
