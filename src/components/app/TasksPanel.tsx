@@ -1095,9 +1095,6 @@ export function TasksPanel({
       if (selectedView === categoryView(category)) {
         setSelectedView(categoryView(nextCategory));
       }
-      if (categoryDraft === category) {
-        setCategoryDraft(nextCategory);
-      }
     } finally {
       setSaving(false);
     }
@@ -1129,9 +1126,6 @@ export function TasksPanel({
       if (selectedView === categoryView(categoryDelete)) {
         setSelectedView(ALL_TASKS);
       }
-      if (categoryDraft === categoryDelete) {
-        setCategoryDraft("");
-      }
       setCategoryDelete(null);
     } finally {
       setSaving(false);
@@ -1151,8 +1145,6 @@ export function TasksPanel({
     }
     return t("tasks.all");
   }, [selectedView, t]);
-
-  const categoryDatalistId = "tasks-category-options";
 
   return (
     <section className="tasks-view" aria-label={t("tasks.label")}>
@@ -1209,12 +1201,12 @@ export function TasksPanel({
           <div className="tasks-filter-section">
             <Button
               type="button"
-              variant={createOpen ? "default" : "outline"}
+              variant="outline"
               className="tasks-new-trigger"
-              aria-pressed={createOpen}
               aria-label={t("tasks.newTask")}
               title={t("tasks.newTask")}
-              onClick={() => setCreateOpen((open) => !open)}
+              disabled={saving}
+              onClick={() => void addTask()}
             >
               <Plus />
               <span className="tasks-new-trigger__label">{t("tasks.newTask")}</span>
@@ -1226,10 +1218,7 @@ export function TasksPanel({
                 "tasks-category",
                 selectedView === ALL_TASKS && "tasks-category--active"
               )}
-              onClick={() => {
-                setSelectedView(ALL_TASKS);
-                setCategoryDraft("");
-              }}
+              onClick={() => setSelectedView(ALL_TASKS)}
             >
               <span>{t("tasks.all")}</span>
               <small>{activeRootTasks.length}</small>
@@ -1248,10 +1237,7 @@ export function TasksPanel({
                   "tasks-category",
                   selectedView === view && "tasks-category--active"
                 )}
-                onClick={() => {
-                  setSelectedView(String(view));
-                  setCategoryDraft("");
-                }}
+                onClick={() => setSelectedView(String(view))}
               >
                 <span className="tasks-category__label">
                   <CalendarClock aria-hidden="true" />
@@ -1293,7 +1279,9 @@ export function TasksPanel({
                     event.preventDefault();
                     const task = taskFromDrop(event);
                     setDragOverCategory(null);
-                    if (task) void moveTask(task, category);
+                    if (task?.parentLineIndex === null) {
+                      void moveTask(task, category);
+                    }
                   }}
                 >
                   <button
@@ -1302,12 +1290,7 @@ export function TasksPanel({
                       "tasks-category tasks-category--managed",
                       active && "tasks-category--active"
                     )}
-                    onClick={() => {
-                      setSelectedView(categoryView(category));
-                      setCategoryDraft(
-                        category === UNCATEGORIZED_TASK_CATEGORY ? "" : category
-                      );
-                    }}
+                    onClick={() => setSelectedView(categoryView(category))}
                   >
                     <span>{category}</span>
                     <small>{categoryCounts.get(category) ?? 0}</small>
@@ -1356,10 +1339,7 @@ export function TasksPanel({
                     selectedView === tagView(label.toLocaleLowerCase()) &&
                       "tasks-category--active"
                   )}
-                  onClick={() => {
-                    setSelectedView(tagView(label.toLocaleLowerCase()));
-                    setCategoryDraft("");
-                  }}
+                  onClick={() => setSelectedView(tagView(label.toLocaleLowerCase()))}
                 >
                   <span>#{label}</span>
                   <small>{count}</small>
@@ -1371,90 +1351,6 @@ export function TasksPanel({
         </aside>
 
         <main className="tasks-main">
-          {createOpen ? (
-            <form
-              className="tasks-create"
-              onSubmit={(event) => {
-                event.preventDefault();
-                void addTask();
-              }}
-            >
-            <input
-              className="tasks-create__text"
-              value={textDraft}
-              onChange={(event) => setTextDraft(event.target.value)}
-              placeholder={t("tasks.newTask")}
-              aria-label={t("tasks.newTask")}
-            />
-            <input
-              className="tasks-create__category"
-              value={categoryDraft}
-              list={categoryDatalistId}
-              onChange={(event) => setCategoryDraft(event.target.value)}
-              placeholder={t("tasks.categoryOptional")}
-              aria-label={t("tasks.categoryOptional")}
-            />
-            <datalist id={categoryDatalistId}>
-              {categories
-                .filter((category) => category !== UNCATEGORIZED_TASK_CATEGORY)
-                .map((category) => (
-                  <option key={category} value={category} />
-                ))}
-            </datalist>
-            <input
-              className="tasks-create__deadline"
-              type="date"
-              value={deadlineDraft}
-              onChange={(event) => setDeadlineDraft(event.target.value)}
-              aria-label={t("tasks.deadline")}
-            />
-            <input
-              className="tasks-create__tags"
-              value={tagsDraft}
-              onChange={(event) => setTagsDraft(event.target.value)}
-              placeholder={t("tasks.tagsPlaceholder")}
-              aria-label={t("tasks.tags")}
-            />
-            <textarea
-              className="tasks-create__note"
-              value={noteDraft}
-              rows={1}
-              onChange={(event) => setNoteDraft(event.target.value)}
-              placeholder={t("tasks.notePlaceholder")}
-              aria-label={t("tasks.note")}
-            />
-            <div className="tasks-create__priority" aria-label={t("tasks.priority")}>
-              {(["high", "medium", "low"] as const).map((priority) => (
-                <button
-                  key={priority}
-                  type="button"
-                  className={cn(
-                    "tasks-priority__dot",
-                    `tasks-priority__dot--${priority}`,
-                    priorityDraft === priority && "tasks-priority__dot--active"
-                  )}
-                  aria-pressed={priorityDraft === priority}
-                  aria-label={t(`tasks.priority${priority[0].toUpperCase()}${priority.slice(1)}`)}
-                  title={t(`tasks.priority${priority[0].toUpperCase()}${priority.slice(1)}`)}
-                  onClick={() =>
-                    setPriorityDraft((current) =>
-                      current === priority ? null : priority
-                    )
-                  }
-                />
-              ))}
-            </div>
-            <Button
-              type="submit"
-              disabled={!textDraft.trim() || saving}
-              className="tasks-create__button"
-            >
-              <Plus />
-              {t("tasks.add")}
-            </Button>
-            </form>
-          ) : null}
-
           <div className="tasks-main__heading">
             <div>
               <h3>{heading}</h3>
@@ -1498,9 +1394,21 @@ export function TasksPanel({
                     onPriorityChange={(priority) =>
                       void mutateTask(task, "priority", priority)
                     }
+                    autoFocusText={focusTaskKey === taskItemKey(task)}
+                    onAutoFocusHandled={() => setFocusTaskKey(null)}
                     onAddSubtask={
                       task.parentLineIndex === null
-                        ? (text) => addSubtask(task, text)
+                        ? () => void addSubtask(task)
+                        : undefined
+                    }
+                    onSubtaskDrop={
+                      isSubtask
+                        ? (event, placement) => {
+                            const source = taskFromDrop(event);
+                            if (source) {
+                              void reorderSubtask(source, task, placement);
+                            }
+                          }
                         : undefined
                     }
                     onDelete={() => void mutateTask(task, "delete")}
@@ -1552,6 +1460,16 @@ export function TasksPanel({
                         onTagsChange={(tags) => void mutateTask(task, "tags", tags)}
                         onPriorityChange={(priority) =>
                           void mutateTask(task, "priority", priority)
+                        }
+                        onSubtaskDrop={
+                          isSubtask
+                            ? (event, placement) => {
+                                const source = taskFromDrop(event);
+                                if (source) {
+                                  void reorderSubtask(source, task, placement);
+                                }
+                              }
+                            : undefined
                         }
                         onDelete={() => void mutateTask(task, "delete")}
                       />
