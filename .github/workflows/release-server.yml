@@ -88,7 +88,7 @@ jobs:
         run: |
           {
             echo "value<<EOF"
-            echo "ghcr.io/${{ github.repository_owner }}/scribedog-server:$VERSION"
+            echo "ghcr.io/reidar96/scribedog-server:$VERSION"
             if [ -n "$DOCKERHUB_USERNAME" ] && [ -n "$DOCKERHUB_TOKEN" ]; then
               echo "$DOCKERHUB_USERNAME/scribedog-server:$VERSION"
             fi
