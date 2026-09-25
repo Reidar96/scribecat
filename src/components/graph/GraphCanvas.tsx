@@ -417,8 +417,9 @@ export function GraphCanvas({
       setFrame((value) => value + 1);
       const dragging = nodeDragRef.current !== null;
       if (
-        iterations < 190 &&
-        (dragging || iterations < 70 || movement > nodes.length * 0.014)
+        dragging ||
+        (iterations < 190 &&
+          (iterations < 70 || movement > nodes.length * 0.014))
       ) {
         animationFrame = window.requestAnimationFrame(step);
       }
