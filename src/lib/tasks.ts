@@ -31,6 +31,10 @@ export type MarkdownTask = {
   note: string;
   tags: string[];
   priority: TaskPriority;
+  /** Indentation width of the Markdown task line, normalized to spaces. */
+  indent: number;
+  /** The nearest preceding task with a smaller indent, when this is a subtask. */
+  parentLineIndex: number | null;
 };
 
 export type NewMarkdownTask = {
@@ -47,6 +51,10 @@ const TASK_NOTE_PATTERN = /^\s{2,}>\s?(.*)$/;
 const TAGS_SUFFIX_PATTERN = /^(.*?)(?:\s+🏷️\s+(.+))\s*$/;
 const DEADLINE_SUFFIX_PATTERN = /^(.*?)(?:\s+📅\s+(\d{4}-\d{2}-\d{2}))\s*$/;
 const PRIORITY_SUFFIX_PATTERN = /^(.*?)(?:\s+(🔴|🟡|🟢))\s*$/;
+
+function taskIndentWidth(value: string): number {
+  return value.replace(/\t/g, "  ").length;
+}
 
 const PRIORITY_TO_MARKER: Record<Exclude<TaskPriority, null>, string> = {
   high: "🔴",
@@ -188,13 +196,25 @@ function parseTaskNote(lines: string[], lineIndex: number, endLineIndex: number)
 export function parseTaskMarkdown(markdown: string): MarkdownTask[] {
   const lines = markdown.split(/\r?\n/);
   const tasks: MarkdownTask[] = [];
+  const stack: Array<{ lineIndex: number; indent: number }> = [];
 
   for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
     const match = TASK_LINE_PATTERN.exec(lines[lineIndex]);
-    if (!match) continue;
+    if (!match) {
+      if (lines[lineIndex].trim() && !TASK_NOTE_PATTERN.test(lines[lineIndex])) {
+        stack.length = 0;
+      }
+      continue;
+    }
 
     const parsed = parseTaskContent(match[3]);
     if (!parsed.text) continue;
+
+    const indent = taskIndentWidth(match[1]);
+    while (stack.length > 0 && stack[stack.length - 1].indent >= indent) {
+      stack.pop();
+    }
+    const parentLineIndex = stack.length > 0 ? stack[stack.length - 1].lineIndex : null;
 
     const endLineIndex = taskNoteEndIndex(lines, lineIndex);
     tasks.push({
@@ -205,9 +225,12 @@ export function parseTaskMarkdown(markdown: string): MarkdownTask[] {
       deadline: parsed.deadline,
       note: parseTaskNote(lines, lineIndex, endLineIndex),
       tags: parsed.tags,
-      priority: parsed.priority
+      priority: parsed.priority,
+      indent,
+      parentLineIndex
     });
 
+    stack.push({ lineIndex, indent });
     lineIndex = endLineIndex;
   }
 
@@ -275,11 +298,60 @@ export function updateTaskInMarkdown(
   }
 
   const endLineIndex = taskNoteEndIndex(lines, lineIndex);
-  const replacement = formatTaskBlock(task).split("\n");
-  replacement[0] = `${existing[1]}${replacement[0]}`;
+  const replacement = formatTaskBlock(task)
+    .split("\n")
+    .map((line) => `${existing[1]}${line}`);
 
   lines.splice(lineIndex, endLineIndex - lineIndex + 1, ...replacement);
   return lines.join("\n");
+}
+
+function taskSubtreeEndIndex(lines: string[], lineIndex: number): number {
+  const rootMatch = TASK_LINE_PATTERN.exec(lines[lineIndex] ?? "");
+  if (!rootMatch) return lineIndex;
+
+  const rootIndent = taskIndentWidth(rootMatch[1]);
+  let endLineIndex = taskNoteEndIndex(lines, lineIndex);
+  let index = endLineIndex + 1;
+
+  while (index < lines.length) {
+    const line = lines[index];
+    if (!line.trim()) {
+      index += 1;
+      continue;
+    }
+
+    const taskMatch = TASK_LINE_PATTERN.exec(line);
+    if (!taskMatch) break;
+
+    if (taskIndentWidth(taskMatch[1]) <= rootIndent) {
+      break;
+    }
+
+    endLineIndex = taskNoteEndIndex(lines, index);
+    index = endLineIndex + 1;
+  }
+
+  return endLineIndex;
+}
+
+export function insertSubtaskInMarkdown(
+  markdown: string,
+  parentLineIndex: number,
+  task: NewMarkdownTask
+): string {
+  const lines = markdown.split(/\r?\n/);
+  const parentMatch = TASK_LINE_PATTERN.exec(lines[parentLineIndex] ?? "");
+  if (!parentMatch) return markdown;
+
+  const insertAfter = taskSubtreeEndIndex(lines, parentLineIndex);
+  const childIndent = `${parentMatch[1]}  `;
+  const block = formatTaskBlock(task)
+    .split("\n")
+    .map((line) => `${childIndent}${line}`);
+
+  lines.splice(insertAfter + 1, 0, ...block);
+  return lines.join("\n").replace(/\n?$/, "\n");
 }
 
 export function removeTaskFromMarkdown(
@@ -291,7 +363,7 @@ export function removeTaskFromMarkdown(
     return markdown;
   }
 
-  const endLineIndex = taskNoteEndIndex(lines, lineIndex);
+  const endLineIndex = taskSubtreeEndIndex(lines, lineIndex);
   lines.splice(lineIndex, endLineIndex - lineIndex + 1);
 
   while (lines.length > 1 && lines[lines.length - 1] === "" && lines[lines.length - 2] === "") {
