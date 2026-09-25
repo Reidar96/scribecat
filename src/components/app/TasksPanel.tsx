@@ -33,6 +33,7 @@ import {
   MenuTrigger
 } from "@/components/ui/menu";
 import { useLayoutMode } from "@/hooks/useLayoutMode";
+import { useLongPressContextMenu } from "@/hooks/useLongPressContextMenu";
 import { getRelativeDisplayPath, readMarkdownFile } from "@/lib/fileSystem";
 import {
   UNCATEGORIZED_TASK_CATEGORY,
@@ -570,6 +571,10 @@ export function TasksPanel({
   const [draggedRootKey, setDraggedRootKey] = useState<string | null>(null);
   const { contextMenu: categoryContextMenu, setContextMenu: setCategoryContextMenu } =
     useContextMenuState<{ category: string; x: number; y: number }>();
+  const bindCategoryContextMenu = useLongPressContextMenu<string>(
+    (category, point) =>
+      setCategoryContextMenu({ category, x: point.x, y: point.y })
+  );
   const pendingMarkdownByPathRef = useRef(new Map<string, string>());
 
   useEffect(() => {
@@ -704,7 +709,7 @@ export function TasksPanel({
       map.set(key, current);
     }
     return map;
-  }, [allTasks]);
+  }, [allTasks, fileMtimeMs, rootTasks]);
   const activeRootTasks = useMemo(
     () => rootTasks.filter((task) => !task.checked),
     [rootTasks]
@@ -713,6 +718,14 @@ export function TasksPanel({
   const modifiedAtByRoot = useMemo(() => {
     const result = new Map<string, number>();
     const tasksByFile = new Map<string, Map<number, TaskItem>>();
+
+    // Old task lines do not have ScribeCat's invisible per-task timestamp yet.
+    // Until an individual task is edited, the category file mtime is the best
+    // available approximation. Once any task in the group has task metadata,
+    // that more precise timestamp wins.
+    for (const root of rootTasks) {
+      result.set(taskItemKey(root), fileMtimeMs[root.filePath] ?? 0);
+    }
 
     for (const task of allTasks) {
       const byLine = tasksByFile.get(task.filePath) ?? new Map<number, TaskItem>();
@@ -1507,6 +1520,7 @@ export function TasksPanel({
             {categories.map((category) => {
               const active = selectedView === categoryView(category);
               const dropActive = dragOverCategory === category;
+              const contextMenuHandlers = bindCategoryContextMenu(category);
 
               return (
                 <div
@@ -1515,14 +1529,7 @@ export function TasksPanel({
                     "tasks-category-row",
                     dropActive && "tasks-category-row--drop"
                   )}
-                  onContextMenu={(event) => {
-                    event.preventDefault();
-                    setCategoryContextMenu({
-                      category,
-                      x: event.clientX,
-                      y: event.clientY
-                    });
-                  }}
+                  {...contextMenuHandlers}
                   onDragOver={(event) => {
                     if (!event.dataTransfer.types.includes(TASK_DRAG_MIME)) return;
                     if (event.dataTransfer.types.includes(TASK_SUBTASK_DRAG_MIME)) return;
