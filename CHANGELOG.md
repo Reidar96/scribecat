@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.22.19] - 2026-09-25
+
+### Improvements
+- Add clear drag-and-drop insertion feedback for tasks and subtasks, including a faded source and visible before/after insertion marker.
+- Allow manual reordering of main tasks inside the same Markdown category file. In Today, week, month and next-month views, manual reordering is additionally limited to tasks with the same date; unavailable targets are visibly greyed out.
+- Add task sorting by name, recently modified and manual order, using the same menu pattern as the file sidebar. The task sort preference is stored with the vault.
+- Insert new tasks at the top of their Markdown category and keep a newly created task at the top of the manual view while it is being worked on.
+- Show “Ingen dato” / “No date” when a task has no deadline instead of an empty date field.
+- Add the sidebar sort menu to folder/Start collection views and support manual drag-and-drop reordering of cards when Manual sorting is selected.
+- Create notes from the collection view directly with their final filename, removing the temporary “new note” flash and rename delay.
+- Avoid rewriting the vault manual-order sidecar when an existing Markdown file is merely updated, reducing unnecessary writes during task edits.
+
+
 ## [0.22.18] - 2026-09-25
 
 ### Improvements
