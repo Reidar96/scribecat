@@ -168,9 +168,7 @@
 }
 
 .tasks-category-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
+  display: block;
   border: 1px solid transparent;
   border-radius: 0.7rem;
   transition: border-color 120ms ease, background-color 120ms ease;
@@ -183,30 +181,7 @@
 
 .tasks-category--managed {
   border: 0;
-  border-radius: 0.65rem 0 0 0.65rem;
-}
-
-.tasks-category-row__actions {
-  display: flex;
-  align-items: center;
-  gap: 0.05rem;
-  padding-right: 0.2rem;
-  opacity: 0.45;
-}
-
-.tasks-category-row:hover .tasks-category-row__actions,
-.tasks-category-row:focus-within .tasks-category-row__actions {
-  opacity: 1;
-}
-
-.tasks-category-row__actions button {
-  width: 1.7rem;
-  height: 1.7rem;
-}
-
-.tasks-category-row__actions svg {
-  width: 0.8rem;
-  height: 0.8rem;
+  border-radius: 0.65rem;
 }
 
 .tasks-storage-toggle {
@@ -256,8 +231,24 @@
 
 .tasks-main__heading-actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 0.25rem;
+  justify-content: flex-end;
+  gap: 0.35rem;
+}
+
+.tasks-category-view-action {
+  gap: 0.35rem;
+  white-space: nowrap;
+}
+
+.tasks-category-view-action svg {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+.tasks-category-view-action--danger {
+  color: rgb(205 78 78);
 }
 
 .tasks-main__heading-actions > svg {
