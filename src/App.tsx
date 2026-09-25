@@ -19,7 +19,7 @@ import { ZenMode } from "@/components/app/ZenMode";
 import type { BatchEntry, PendingEntryRename } from "@/components/FileTree";
 import { useAppVersion } from "@/hooks/useAppVersion";
 import { useAutoSave } from "@/hooks/useAutoSave";
-import { useDeleteTarget } from "@/hooks/useDeleteTarget";
+import { useDeleteTarget, type DeleteTarget } from "@/hooks/useDeleteTarget";
 import { useDraftFlush } from "@/hooks/useDraftFlush";
 import { useExportTarget } from "@/hooks/useExportTarget";
 import { useFolderWatcher } from "@/hooks/useFolderWatcher";
@@ -63,7 +63,7 @@ import {
 import { sourceFromPath } from "@/lib/import/convert";
 import { IMPORT_FILE_EXTENSIONS, type ImportSource } from "@/lib/import/importer";
 import { cn } from "@/lib/utils";
-import { normalizePathKey } from "@/store/appStore/pathUtils";
+import { isPathInsideFolder, normalizePathKey } from "@/store/appStore/pathUtils";
 import { isDocumentLocked as getDocumentLocked } from "@/lib/documentLocks";
 import { useAppStore } from "@/store/useAppStore";
 import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
@@ -81,6 +81,31 @@ function getStoredSidebarVisible(): boolean {
   } catch {
     return true;
   }
+}
+
+function deleteTargetEntries(target: DeleteTarget): Array<{ kind: "file" | "folder"; path: string }> {
+  return target.kind === "multiple" ? target.paths : [target];
+}
+
+function deleteTargetContainsFile(target: DeleteTarget, filePath: string): boolean {
+  const normalizedFilePath = normalizePathKey(filePath);
+
+  return deleteTargetEntries(target).some((entry) =>
+    entry.kind === "file"
+      ? normalizePathKey(entry.path) === normalizedFilePath
+      : normalizePathKey(entry.path) === normalizedFilePath ||
+        isPathInsideFolder(filePath, entry.path)
+  );
+}
+
+function deleteTargetContainsFolder(target: DeleteTarget, folderPath: string): boolean {
+  const normalizedFolderPath = normalizePathKey(folderPath);
+
+  return deleteTargetEntries(target).some((entry) =>
+    entry.kind === "folder" &&
+    (normalizePathKey(entry.path) === normalizedFolderPath ||
+      isPathInsideFolder(folderPath, entry.path))
+  );
 }
 
 function App() {
@@ -350,18 +375,52 @@ function App() {
   const {
     deleteTarget,
     isDeleting,
+    pendingDelete,
     requestDeleteFile,
     requestDeleteFolder,
     requestDeleteMultiple,
     cancelDeleteTarget,
-    confirmDeleteTarget
+    confirmDeleteTarget,
+    undoPendingDelete
   } = useDeleteTarget({
     folderPath,
     selectedFilePath,
     fileTreeSelection,
     deleteFilePath,
-    deleteFolderPath
+    deleteFolderPath,
+    onStageDelete: (target) => {
+      setFileTreeSelection([]);
+
+      if (selectedFilePath && deleteTargetContainsFile(target, selectedFilePath)) {
+        clearSelectedFile();
+      }
+    },
+    onUndoDelete: (_target, selectedFilePathBefore) => {
+      if (selectedFilePathBefore) {
+        void selectFilePath(selectedFilePathBefore);
+      }
+    }
   });
+
+  const pendingDeleteTarget = pendingDelete?.target ?? null;
+  const visibleFilePaths = useMemo(
+    () =>
+      pendingDeleteTarget
+        ? filePaths.filter(
+            (filePath) => !deleteTargetContainsFile(pendingDeleteTarget, filePath)
+          )
+        : filePaths,
+    [filePaths, pendingDeleteTarget]
+  );
+  const visibleEmptyFolderPaths = useMemo(
+    () =>
+      pendingDeleteTarget
+        ? emptyFolderPaths.filter(
+            (entryPath) => !deleteTargetContainsFolder(pendingDeleteTarget, entryPath)
+          )
+        : emptyFolderPaths,
+    [emptyFolderPaths, pendingDeleteTarget]
+  );
 
   const { moveRequest, isMoving, requestMove, cancelMove, confirmMove } = useMoveTarget({
     folderPath,
@@ -965,8 +1024,8 @@ function App() {
   const sidebar = (
     <Sidebar
       folderPath={folderPath}
-      filePaths={filePaths}
-      emptyFolderPaths={emptyFolderPaths}
+      filePaths={visibleFilePaths}
+      emptyFolderPaths={visibleEmptyFolderPaths}
       selectedFilePath={selectedFilePath}
       selectedFileContent={selectedFileContent}
       dirtyFilePaths={dirtyFilePaths}
@@ -1138,7 +1197,7 @@ function App() {
           ) : tasksViewOpen && folderPath ? (
             <TasksPanel
               folderPath={folderPath}
-              filePaths={filePaths}
+              filePaths={visibleFilePaths}
               fileMtimeMs={fileMtimeMs}
               sidebarVisible={sidebarVisible}
               onSidebarVisibilityToggle={toggleSidebarVisible}
@@ -1155,7 +1214,7 @@ function App() {
           ) : journalViewOpen && folderPath ? (
             <JournalPanel
               folderPath={folderPath}
-              filePaths={filePaths}
+              filePaths={visibleFilePaths}
               selectedFilePath={selectedFilePath}
               selectedFileContent={selectedFileContent}
               sidebarVisible={sidebarVisible}
@@ -1173,7 +1232,7 @@ function App() {
           ) : graphViewOpen && folderPath ? (
             <GraphPanel
               folderPath={folderPath}
-              filePaths={filePaths}
+              filePaths={visibleFilePaths}
               selectedFilePath={selectedFilePath}
               selectedFileContent={selectedFileContent}
               sidebarVisible={sidebarVisible}
@@ -1194,8 +1253,8 @@ function App() {
             <CollectionPanel
               request={collectionView ?? { kind: "folder", relativePath: "" }}
               folderPath={folderPath}
-              filePaths={filePaths}
-              emptyFolderPaths={emptyFolderPaths}
+              filePaths={visibleFilePaths}
+              emptyFolderPaths={visibleEmptyFolderPaths}
               fileMtimeMs={fileMtimeMs}
               emptyFolderMtimeMs={emptyFolderMtimeMs}
               sortMode={sortMode}
@@ -1334,6 +1393,15 @@ function App() {
       />
 
 
+
+      {pendingDelete ? (
+        <div className="undo-delete-toast" role="status" aria-live="polite">
+          <span>{t("deleteUndo.message")}</span>
+          <button type="button" onClick={undoPendingDelete}>
+            {t("common.undo")}
+          </button>
+        </div>
+      ) : null}
 
       <AppDialogs
         closingFileLabel={
