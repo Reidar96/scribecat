@@ -2,6 +2,10 @@ import { dirname, join } from "@/platform/paths";
 
 import i18n from "@/i18n";
 import {
+  cleanupOrphanedManagedAttachments,
+  copyManagedAttachmentsForMarkdownVariants
+} from "@/lib/attachmentOps";
+import {
   getRelativeDisplayPath,
   markdownFolderExists,
   readMarkdownFile,
@@ -144,6 +148,9 @@ export const createTreeSlice: AppSlice<TreeSlice> = (set, get) => ({
       let nextDocuments = fileDocuments;
       let nextSelectedFilePath = state.selectedFilePath;
       let nextWorkingSet = state.workingSet;
+      let movedFileAttachmentSources: string[] = [];
+      let preparedMovedFileBase: string | null = null;
+      let preparedMovedFileContent: string | null = null;
 
       if (!isSameParent) {
         const affectedFilePaths =
@@ -154,6 +161,20 @@ export const createTreeSlice: AppSlice<TreeSlice> = (set, get) => ({
         for (const path of affectedFilePaths) {
           const baseContent = fileDocuments[path]?.baseContent;
           preMoveContentByPath.set(path, baseContent ?? (await readMarkdownFile(path).catch(() => "")));
+        }
+
+        if (kind === "file") {
+          const baseContent = preMoveContentByPath.get(sourcePath) ?? "";
+          const currentContent = fileDocuments[sourcePath]?.content ?? baseContent;
+          const copied = await copyManagedAttachmentsForMarkdownVariants(
+            folderPath,
+            sourcePath,
+            newPath,
+            [baseContent, currentContent]
+          );
+          preparedMovedFileBase = copied.markdownVariants[0] ?? baseContent;
+          preparedMovedFileContent = copied.markdownVariants[1] ?? currentContent;
+          movedFileAttachmentSources = copied.sourceAttachmentPaths;
         }
 
         if (kind === "folder") {
@@ -184,16 +205,35 @@ export const createTreeSlice: AppSlice<TreeSlice> = (set, get) => ({
 
           if (preMoveContentByPath.has(path)) {
             const oldDirPath = await dirname(path);
+            const movedFolderOptions =
+              kind === "folder"
+                ? { movedFolder: { sourcePath, targetPath: newPath } }
+                : { skipAttachmentLinks: true };
+            const baseForRewrite =
+              kind === "file" && path === sourcePath && preparedMovedFileBase !== null
+                ? preparedMovedFileBase
+                : preMoveContentByPath.get(path) ?? "";
+            const contentForRewrite =
+              kind === "file" && path === sourcePath && preparedMovedFileContent !== null
+                ? preparedMovedFileContent
+                : document.content;
             const correctedBaseContent = await rewriteRelativeImagePaths(
-              preMoveContentByPath.get(path) ?? "",
+              baseForRewrite,
               oldDirPath,
               mappedPath,
-              folderPath
+              folderPath,
+              movedFolderOptions
             );
             const correctedContent =
               document.content === document.baseContent
                 ? correctedBaseContent
-                : await rewriteRelativeImagePaths(document.content, oldDirPath, mappedPath, folderPath);
+                : await rewriteRelativeImagePaths(
+                    contentForRewrite,
+                    oldDirPath,
+                    mappedPath,
+                    folderPath,
+                    movedFolderOptions
+                  );
 
             // A rename keeps the mtime; a rewrite of the image paths below
             // produces a new one nobody looks up here, so it is unknown.
@@ -240,11 +280,18 @@ export const createTreeSlice: AppSlice<TreeSlice> = (set, get) => ({
               const mappedPath = await remapPathUnderRenamedFolder(path, sourcePath, newPath);
               const oldDirPath = await dirname(path);
               const preMoveContent = preMoveContentByPath.get(path) ?? "";
+              const contentForRewrite =
+                kind === "file" && path === sourcePath && preparedMovedFileBase !== null
+                  ? preparedMovedFileBase
+                  : preMoveContent;
               const correctedContent = await rewriteRelativeImagePaths(
-                preMoveContent,
+                contentForRewrite,
                 oldDirPath,
                 mappedPath,
-                folderPath
+                folderPath,
+                kind === "folder"
+                  ? { movedFolder: { sourcePath, targetPath: newPath } }
+                  : { skipAttachmentLinks: true }
               );
 
               if (correctedContent !== preMoveContent) {
@@ -330,6 +377,25 @@ export const createTreeSlice: AppSlice<TreeSlice> = (set, get) => ({
 
       if (nextWorkingSet !== state.workingSet) {
         persistWorkingSet(folderPath, nextWorkingSet);
+      }
+
+      if (
+        !isSameParent &&
+        kind === "file" &&
+        movedFileAttachmentSources.length > 0
+      ) {
+        const markdownOverrides = Object.fromEntries(
+          Object.entries(nextDocuments).map(([path, document]) => [
+            path,
+            document.content
+          ])
+        );
+        await cleanupOrphanedManagedAttachments(
+          folderPath,
+          movedFileAttachmentSources,
+          null,
+          markdownOverrides
+        );
       }
 
       return true;
