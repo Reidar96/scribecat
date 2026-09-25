@@ -1340,9 +1340,5 @@
     "previous": "Previous page",
     "next": "Next page",
     "pageCount": "Page {{page}} of {{count}}"
-  },
-  "deleteUndo": {
-    "message": "Removed from the view. You can undo for a few seconds."
   }
-
 }
