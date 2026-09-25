@@ -41,7 +41,10 @@ export function suggestedImageFileName(src: string, alt = ""): string {
 }
 
 async function imageBlob(src: string): Promise<Blob> {
-  const response = await fetch(src);
+  const response =
+    src.startsWith("blob:") || src.startsWith("data:")
+      ? await fetch(src)
+      : await platform.http.fetch(src);
   if (!response.ok) {
     throw new Error(`Image request failed with status ${response.status}`);
   }
