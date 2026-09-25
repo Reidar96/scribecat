@@ -1057,7 +1057,7 @@ export function TasksPanel({
               }}
             >
               <span>{t("tasks.all")}</span>
-              <small>{activeAllTasks.length}</small>
+              <small>{activeRootTasks.length}</small>
             </button>
 
             {[
