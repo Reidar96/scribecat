@@ -935,9 +935,9 @@ export function TasksPanel({
     const markdown = existing
       ? prependTaskToMarkdown(existing, task)
       : createTaskDocument(category, task);
-    const inserted = [...parseTaskMarkdown(markdown)]
-      .reverse()
-      .find((candidate) => candidate.parentLineIndex === null);
+    const inserted = parseTaskMarkdown(markdown).find(
+      (candidate) => candidate.parentLineIndex === null
+    );
     const filePath = await resolveFilePath(category);
 
     if (inserted) {
