@@ -237,6 +237,20 @@
   gap: 0.35rem;
 }
 
+.tasks-category-actions__desktop {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.tasks-category-actions__mobile-item {
+  display: none;
+}
+
+.tasks-category-actions__danger {
+  color: rgb(205 78 78);
+}
+
 .tasks-category-view-action {
   gap: 0.35rem;
   white-space: nowrap;
@@ -790,6 +804,25 @@
 
   .tasks-main {
     padding: 0.75rem 0.7rem 2rem;
+  }
+
+  .tasks-main__heading {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.55rem;
+  }
+
+  .tasks-main__heading-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .tasks-category-actions__desktop {
+    display: none;
+  }
+
+  .tasks-category-actions__mobile-item {
+    display: flex;
   }
 
   .tasks-categories {
