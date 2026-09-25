@@ -10,6 +10,7 @@ import {
   insertSubtaskInMarkdown,
   removeTaskFromMarkdown,
   renameTaskDocumentHeading,
+  setTaskSubtreeCheckedInMarkdown,
   sanitizeTaskCategory,
   taskCategoryFromRelativePath,
   taskRelativePath,
@@ -211,18 +212,42 @@ describe("tasks markdown", () => {
 
   it("maps categories to one markdown file per category", () => {
     expect(taskRelativePath("Jobb")).toBe("Gjøremål/Jobb.md");
+    expect(taskRelativePath("Jobb", "Oppgaver/Privat")).toBe("Oppgaver/Privat/Jobb.md");
     expect(taskCategoryFromRelativePath("Gjøremål/Fritid.md")).toBe("Fritid");
+    expect(taskCategoryFromRelativePath("Oppgaver/Privat/Fritid.md", "Oppgaver/Privat")).toBe("Fritid");
     expect(taskCategoryFromRelativePath("Notater/Fritid.md")).toBeNull();
     expect(sanitizeTaskCategory("  ")).toBe(UNCATEGORIZED_TASK_CATEGORY);
     expect(taskRelativePath("Kunde / salg")).toBe("Gjøremål/Kunde - salg.md");
     expect(isTasksContainerRelativePath("Gjøremål")).toBe(true);
     expect(isTasksContainerRelativePath("Gjøremål/Jobb.md")).toBe(true);
     expect(isTasksContainerRelativePath("Notater/Gjøremål.md")).toBe(false);
+    expect(isTasksContainerRelativePath("Oppgaver/Privat/Jobb.md", "Oppgaver/Privat")).toBe(true);
   });
 
-  it("normalizes vault task settings with hidden storage as the default", () => {
-    expect(normalizeTaskSettings(undefined)).toEqual({ hideFromSidebar: true });
-    expect(normalizeTaskSettings({ hideFromSidebar: false })).toEqual({
+  it("marks a completed parent and all of its subtasks together", () => {
+    const markdown = [
+      "# Jobb",
+      "",
+      "- [ ] Hovedoppgave",
+      "  - [x] Ferdig fra før",
+      "  - [ ] Ikke ferdig",
+      "- [ ] Neste"
+    ].join("\n");
+
+    const completed = setTaskSubtreeCheckedInMarkdown(markdown, 2, true);
+    expect(completed).toContain("- [x] Hovedoppgave");
+    expect(completed).toContain("  - [x] Ferdig fra før");
+    expect(completed).toContain("  - [x] Ikke ferdig");
+    expect(completed).toContain("- [ ] Neste");
+  });
+
+  it("normalizes vault task settings with folder and hidden storage defaults", () => {
+    expect(normalizeTaskSettings(undefined)).toEqual({
+      folder: "Gjøremål",
+      hideFromSidebar: true
+    });
+    expect(normalizeTaskSettings({ folder: "Oppgaver / Privat", hideFromSidebar: false })).toEqual({
+      folder: "Oppgaver / Privat",
       hideFromSidebar: false
     });
   });
