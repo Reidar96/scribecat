@@ -565,7 +565,10 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
   // logic but anchors the manual-order insert on the source file instead of
   // the current selection, and seeds the content from what's on screen when
   // the source is the open, possibly-unsaved document.
-  duplicateFile: async (filePath: string) => {
+  duplicateFile: async (
+    filePath: string,
+    options: { select?: boolean } = {}
+  ) => {
     const { folderPath, filePaths, fileDocuments, emptyFolderPaths } = get();
 
     if (!folderPath) {
@@ -634,7 +637,7 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
           ...fileDocuments,
           [newFilePath]: { content, baseContent: content }
         },
-        selectedFilePath: newFilePath,
+        ...(options.select === false ? {} : { selectedFilePath: newFilePath }),
         selectedFileContent: content,
         selectedFileBaseContent: content,
         isFileLoading: false,
