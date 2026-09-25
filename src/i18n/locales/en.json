@@ -634,6 +634,7 @@
     "newTask": "New task",
     "categoryOptional": "Category (optional)",
     "deadline": "Deadline",
+    "noDate": "No date",
     "add": "Add",
     "count": "{{count}} tasks",
     "empty": "No tasks here yet.",
