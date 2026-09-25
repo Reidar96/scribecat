@@ -602,6 +602,7 @@ export function GraphCanvas({
   const onNodePointerCancel = (event: ReactPointerEvent<SVGGElement>) => {
     if (nodeDragRef.current?.pointerId === event.pointerId) {
       nodeDragRef.current = null;
+      setSimulationEpoch((value) => value + 1);
     }
   };
 
