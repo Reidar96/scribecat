@@ -1090,8 +1090,11 @@ export function CollectionPanel({
               disabled={!capabilities.create}
               title={capabilities.create ? undefined : capabilityHint}
               onClick={() => {
-                onDuplicateFileRequest(contextMenu.card.filePath);
+                const card = contextMenu.card;
                 setContextMenu(null);
+                if (card.kind === "note") {
+                  onDuplicateFileRequest(card.filePath);
+                }
               }}
             >
               <Copy aria-hidden="true" />
@@ -1164,8 +1167,11 @@ export function CollectionPanel({
               role="menuitem"
               className="file-tree-context-menu__item"
               onClick={() => {
-                onDownloadMarkdownRequest(contextMenu.card.filePath);
+                const card = contextMenu.card;
                 setContextMenu(null);
+                if (card.kind === "note") {
+                  onDownloadMarkdownRequest(card.filePath);
+                }
               }}
             >
               <FileDown aria-hidden="true" />
@@ -1199,8 +1205,11 @@ export function CollectionPanel({
               role="menuitem"
               className="file-tree-context-menu__item"
               onClick={() => {
-                onPrintFileRequest(contextMenu.card.filePath);
+                const card = contextMenu.card;
                 setContextMenu(null);
+                if (card.kind === "note") {
+                  onPrintFileRequest(card.filePath);
+                }
               }}
             >
               <Printer aria-hidden="true" />
