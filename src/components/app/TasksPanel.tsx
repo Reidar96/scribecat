@@ -991,7 +991,8 @@ export function TasksPanel({
       deadline,
       note: "",
       tags,
-      priority: null as TaskPriority
+      priority: null as TaskPriority,
+      modifiedAt: new Date().toISOString()
     };
     const existing = documents[category]?.markdown;
     const markdown = existing
@@ -1032,7 +1033,8 @@ export function TasksPanel({
         deadline: null,
         note: "",
         tags: [],
-        priority: null
+        priority: null,
+        modifiedAt: new Date().toISOString()
       },
       "first"
     );
@@ -1064,30 +1066,64 @@ export function TasksPanel({
     const document = documents[task.category];
     if (!document) return;
 
-    const markdown =
-      mutation === "delete"
-        ? removeTaskFromMarkdown(document.markdown, task.lineIndex)
-        : mutation === "toggle" && task.parentLineIndex === null && !task.checked
-          ? setTaskSubtreeCheckedInMarkdown(document.markdown, task.lineIndex, true)
-          : updateTaskInMarkdown(document.markdown, task.lineIndex, {
-            checked: mutation === "toggle" ? !task.checked : task.checked,
-            text: mutation === "text" ? String(value ?? task.text) : task.text,
-            deadline:
-              mutation === "deadline"
-                ? typeof value === "string" && value
-                  ? value
-                  : null
-                : task.deadline,
-            note: mutation === "note" ? String(value ?? "") : task.note,
-            tags:
-              mutation === "tags" && Array.isArray(value)
-                ? value
-                : task.tags,
-            priority:
-              mutation === "priority"
-                ? (value as TaskPriority)
-                : task.priority
+    const modifiedAt = new Date().toISOString();
+    let markdown: string;
+
+    if (mutation === "delete") {
+      markdown = removeTaskFromMarkdown(document.markdown, task.lineIndex);
+
+      // Removing a child is still a modification of the visible parent group.
+      // Touch the parent in Markdown so "recently modified" also reflects
+      // deleted subtasks instead of only edits to surviving lines.
+      if (task.parentLineIndex !== null) {
+        const parent = document.tasks.find(
+          (candidate) => candidate.lineIndex === task.parentLineIndex
+        );
+        if (parent) {
+          markdown = updateTaskInMarkdown(markdown, parent.lineIndex, {
+            checked: parent.checked,
+            text: parent.text,
+            deadline: parent.deadline,
+            note: parent.note,
+            tags: parent.tags,
+            priority: parent.priority,
+            modifiedAt
           });
+        }
+      }
+    } else if (
+      mutation === "toggle" &&
+      task.parentLineIndex === null &&
+      !task.checked
+    ) {
+      markdown = setTaskSubtreeCheckedInMarkdown(
+        document.markdown,
+        task.lineIndex,
+        true,
+        modifiedAt
+      );
+    } else {
+      markdown = updateTaskInMarkdown(document.markdown, task.lineIndex, {
+        checked: mutation === "toggle" ? !task.checked : task.checked,
+        text: mutation === "text" ? String(value ?? task.text) : task.text,
+        deadline:
+          mutation === "deadline"
+            ? typeof value === "string" && value
+              ? value
+              : null
+            : task.deadline,
+        note: mutation === "note" ? String(value ?? "") : task.note,
+        tags:
+          mutation === "tags" && Array.isArray(value)
+            ? value
+            : task.tags,
+        priority:
+          mutation === "priority"
+            ? (value as TaskPriority)
+            : task.priority,
+        modifiedAt
+      });
+    }
 
     await persistCategory(task.category, markdown);
   };
@@ -1183,7 +1219,8 @@ export function TasksPanel({
       deadline: task.deadline,
       note: task.note,
       tags: task.tags,
-      priority: task.priority
+      priority: task.priority,
+      modifiedAt: task.modifiedAt
     };
 
     let targetMarkdown = targetDocument
@@ -1210,7 +1247,8 @@ export function TasksPanel({
               deadline: child.deadline,
               note: child.note,
               tags: child.tags,
-              priority: child.priority
+              priority: child.priority,
+              modifiedAt: child.modifiedAt
             }
           );
         }
