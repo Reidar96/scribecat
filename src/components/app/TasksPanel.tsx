@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState, type DragEvent } from "react";
 import {
   CalendarClock,
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
   GripVertical,
   Home,
   PanelLeft,
@@ -22,6 +24,7 @@ import {
   UNCATEGORIZED_TASK_CATEGORY,
   appendTaskToMarkdown,
   createTaskDocument,
+  insertSubtaskInMarkdown,
   normalizeTaskTags,
   parseTaskMarkdown,
   removeTaskFromMarkdown,
@@ -88,6 +91,60 @@ function prioritySortValue(priority: TaskPriority): number {
   return 3;
 }
 
+function compareTaskItems(left: TaskItem, right: TaskItem, locale: string): number {
+  const priorityCompare =
+    prioritySortValue(left.priority) - prioritySortValue(right.priority);
+  if (priorityCompare !== 0) return priorityCompare;
+
+  const deadlineCompare = deadlineSortValue(left.deadline).localeCompare(
+    deadlineSortValue(right.deadline)
+  );
+  if (deadlineCompare !== 0) return deadlineCompare;
+
+  return left.text.localeCompare(right.text, locale, { sensitivity: "base" });
+}
+
+function taskItemKey(task: Pick<TaskItem, "filePath" | "lineIndex">): string {
+  return `${task.filePath}:${task.lineIndex}`;
+}
+
+function orderTaskHierarchy(tasks: TaskItem[], locale: string): TaskItem[] {
+  const available = new Set(tasks.map(taskItemKey));
+  const children = new Map<string, TaskItem[]>();
+  const roots: TaskItem[] = [];
+
+  for (const task of tasks) {
+    const parentKey =
+      task.parentLineIndex === null
+        ? null
+        : `${task.filePath}:${task.parentLineIndex}`;
+
+    if (parentKey && available.has(parentKey)) {
+      const current = children.get(parentKey) ?? [];
+      current.push(task);
+      children.set(parentKey, current);
+    } else {
+      roots.push(task);
+    }
+  }
+
+  roots.sort((left, right) => compareTaskItems(left, right, locale));
+  for (const group of children.values()) {
+    group.sort((left, right) => compareTaskItems(left, right, locale));
+  }
+
+  const ordered: TaskItem[] = [];
+  const append = (task: TaskItem) => {
+    ordered.push(task);
+    for (const child of children.get(taskItemKey(task)) ?? []) {
+      append(child);
+    }
+  };
+
+  for (const root of roots) append(root);
+  return ordered;
+}
+
 function dateKey(date: Date): string {
   return [
     date.getFullYear(),
@@ -113,21 +170,25 @@ function tagsFromInput(value: string): string[] {
 
 function TaskRow({
   task,
+  isSubtask,
   onToggle,
   onTextChange,
   onDeadlineChange,
   onNoteChange,
   onTagsChange,
   onPriorityChange,
+  onAddSubtask,
   onDelete
 }: {
   task: TaskItem;
+  isSubtask: boolean;
   onToggle: () => void;
   onTextChange: (text: string) => void;
   onDeadlineChange: (deadline: string | null) => void;
   onNoteChange: (note: string) => void;
   onTagsChange: (tags: string[]) => void;
   onPriorityChange: (priority: TaskPriority) => void;
+  onAddSubtask?: (text: string) => Promise<boolean>;
   onDelete: () => void;
 }) {
   const { t } = useTranslation();
@@ -136,6 +197,9 @@ function TaskRow({
   const [tagsDraft, setTagsDraft] = useState(
     task.tags.map((tag) => `#${tag}`).join(" ")
   );
+  const [subtaskOpen, setSubtaskOpen] = useState(false);
+  const [subtaskDraft, setSubtaskDraft] = useState("");
+  const [addingSubtask, setAddingSubtask] = useState(false);
 
   useEffect(() => {
     setTextDraft(task.text);
@@ -188,10 +252,26 @@ function TaskRow({
     event.dataTransfer.setData("text/plain", task.text);
   };
 
+  const submitSubtask = async () => {
+    const text = subtaskDraft.trim();
+    if (!text || !onAddSubtask || addingSubtask) return;
+
+    setAddingSubtask(true);
+    try {
+      if (await onAddSubtask(text)) {
+        setSubtaskDraft("");
+        setSubtaskOpen(false);
+      }
+    } finally {
+      setAddingSubtask(false);
+    }
+  };
+
   return (
     <article
       className={cn(
         "tasks-item",
+        isSubtask && "tasks-item--subtask",
         task.checked && "tasks-item--checked",
         overdue && "tasks-item--overdue",
         task.priority && `tasks-item--priority-${task.priority}`
@@ -295,19 +375,66 @@ function TaskRow({
             ))}
           </div>
         </div>
+
+        {subtaskOpen && onAddSubtask ? (
+          <form
+            className="tasks-item__subtask-create"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void submitSubtask();
+            }}
+          >
+            <input
+              autoFocus
+              value={subtaskDraft}
+              onChange={(event) => setSubtaskDraft(event.target.value)}
+              placeholder={t("tasks.newSubtask")}
+              aria-label={t("tasks.newSubtask")}
+              onKeyDown={(event) => {
+                if (event.key === "Escape") {
+                  setSubtaskDraft("");
+                  setSubtaskOpen(false);
+                }
+              }}
+            />
+            <Button
+              type="submit"
+              size="sm"
+              disabled={!subtaskDraft.trim() || addingSubtask}
+            >
+              <Plus />
+              {t("tasks.add")}
+            </Button>
+          </form>
+        ) : null}
       </div>
 
-      <Button
-        type="button"
-        size="icon-sm"
-        variant="ghost"
-        className="tasks-item__delete"
-        onClick={onDelete}
-        aria-label={t("tasks.delete")}
-        title={t("tasks.delete")}
-      >
-        <Trash2 />
-      </Button>
+      <div className="tasks-item__actions">
+        {onAddSubtask ? (
+          <Button
+            type="button"
+            size="icon-sm"
+            variant="ghost"
+            onClick={() => setSubtaskOpen((open) => !open)}
+            aria-label={t("tasks.addSubtask")}
+            title={t("tasks.addSubtask")}
+          >
+            <Plus />
+          </Button>
+        ) : null}
+
+        <Button
+          type="button"
+          size="icon-sm"
+          variant="ghost"
+          className="tasks-item__delete"
+          onClick={onDelete}
+          aria-label={t("tasks.delete")}
+          title={t("tasks.delete")}
+        >
+          <Trash2 />
+        </Button>
+      </div>
     </article>
   );
 }
