@@ -710,6 +710,43 @@ export function TasksPanel({
     [rootTasks]
   );
 
+  const modifiedAtByRoot = useMemo(() => {
+    const result = new Map<string, number>();
+    const tasksByFile = new Map<string, Map<number, TaskItem>>();
+
+    for (const task of allTasks) {
+      const byLine = tasksByFile.get(task.filePath) ?? new Map<number, TaskItem>();
+      byLine.set(task.lineIndex, task);
+      tasksByFile.set(task.filePath, byLine);
+    }
+
+    for (const task of allTasks) {
+      if (!task.modifiedAt) continue;
+      const modifiedAt = Date.parse(task.modifiedAt);
+      if (Number.isNaN(modifiedAt)) continue;
+
+      let root = task;
+      const byLine = tasksByFile.get(task.filePath);
+      const visited = new Set<number>();
+
+      while (
+        root.parentLineIndex !== null &&
+        byLine &&
+        !visited.has(root.lineIndex)
+      ) {
+        visited.add(root.lineIndex);
+        const parent = byLine.get(root.parentLineIndex);
+        if (!parent) break;
+        root = parent;
+      }
+
+      const key = taskItemKey(root);
+      result.set(key, Math.max(result.get(key) ?? 0, modifiedAt));
+    }
+
+    return result;
+  }, [allTasks]);
+
   const now = new Date();
   const todayKey = dateKey(now);
   const weekRange = currentWeekRange(now);
@@ -791,14 +828,14 @@ export function TasksPanel({
         left,
         right,
         taskSettings.sortMode,
-        fileMtimeMs,
+        modifiedAtByRoot,
         locale,
         timeBasedView
       );
     },
     [
-      fileMtimeMs,
       locale,
+      modifiedAtByRoot,
       recentlyCreatedRootKey,
       taskSettings.sortMode,
       timeBasedView
