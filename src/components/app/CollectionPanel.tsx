@@ -60,6 +60,8 @@ type CollectionPanelProps = {
   onOpenJournal?: () => void;
   onOpenGraph?: () => void;
   onOpenTasks?: () => void;
+  onCreateFolder?: () => void;
+  onCreateNote?: () => void;
 };
 
 type NoteCard = {
@@ -129,7 +131,9 @@ export function CollectionPanel({
   onOpenFolder,
   onOpenJournal,
   onOpenGraph,
-  onOpenTasks
+  onOpenTasks,
+  onCreateFolder,
+  onCreateNote
 }: CollectionPanelProps) {
   const { t, i18n } = useTranslation();
   const layout = useLayoutMode();
@@ -493,13 +497,38 @@ export function CollectionPanel({
 
           {!vaultSettingsReady ? (
             <div className="collection-panel__loading" aria-busy="true" />
-          ) : cards.length === 0 ? (
+          ) : request.kind === "tag" && cards.length === 0 ? (
             <div className="collection-panel__empty">
               <FileText aria-hidden="true" />
-              <p>{t(request.kind === "tag" ? "collection.emptyTag" : isRootCollection ? "collection.emptyRoot" : "collection.emptyFolder")}</p>
+              <p>{t("collection.emptyTag")}</p>
             </div>
           ) : (
             <div className="collection-grid">
+              {request.kind === "folder" ? (
+                <div className="collection-card collection-card--create">
+                  <button
+                    type="button"
+                    className="collection-card__create-action"
+                    onClick={onCreateFolder}
+                    disabled={!onCreateFolder}
+                    aria-label={t("sidebar.newFolder")}
+                    title={t("sidebar.newFolder")}
+                  >
+                    <Folder aria-hidden="true" />
+                  </button>
+                  <span className="collection-card__create-divider" aria-hidden="true" />
+                  <button
+                    type="button"
+                    className="collection-card__create-action"
+                    onClick={onCreateNote}
+                    disabled={!onCreateNote}
+                    aria-label={t("sidebar.newFile")}
+                    title={t("sidebar.newFile")}
+                  >
+                    <FileText aria-hidden="true" />
+                  </button>
+                </div>
+              ) : null}
               {cards.map((card) => {
                 if (card.kind === "folder") {
                   return (

@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.22.13] - 2026-09-25
+
+### Improvements
+- Show Graph note/folder structure immediately while Markdown metadata is still being scanned.
+- Give graph nodes more natural breathing room while keeping the rounded bubble layout.
+- Keep graph physics active during dragging so nearby nodes move aside like barriers instead of being crossed through.
+- Wake and settle the graph again after drag interactions, with fewer and stronger layout steps for faster stabilization.
+- Make active subtasks visually lighter by hiding deadline, category, tags and priority while preserving all Markdown-backed data.
+- Keep active subtask notes editable without expanding the metadata row.
+- Reduce completed subtasks to a title-only presentation.
+- Restore a small, even amount of space and padding between every task row so compact groups still have air.
+- Add a split create tile to folder collections: folder on the left, note on the right, creating directly inside the currently open folder.
+
+
 ## [0.22.12] - 2026-09-25
 
 ### Improvements

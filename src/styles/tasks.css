@@ -346,14 +346,28 @@
 }
 
 .tasks-item--subtask {
-  margin-top: -0.5rem;
   margin-left: 2.2rem;
-  border-top: 0;
   border-right-color: transparent;
   border-bottom-color: transparent;
   background: rgba(var(--surface-raised-rgb),0.18);
-  padding-top: 0.52rem;
-  padding-bottom: 0.52rem;
+  padding-top: 0.48rem;
+  padding-bottom: 0.48rem;
+}
+
+.tasks-item--subtask-completed {
+  display: block;
+  min-height: 0;
+  border-left-width: 2px;
+  padding: 0.48rem 0.7rem;
+  opacity: 0.62;
+}
+
+.tasks-item__completed-title {
+  display: block;
+  color: rgba(var(--muted-rgb),0.9);
+  font-size: var(--font-ui-sm);
+  line-height: 1.35;
+  text-decoration: line-through;
 }
 
 .tasks-item--subtask::before {
@@ -852,7 +866,6 @@
   }
 
   .tasks-item--subtask {
-    margin-top: -0.5rem;
     margin-left: 1rem;
   }
 
