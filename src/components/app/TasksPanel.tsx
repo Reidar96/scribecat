@@ -561,8 +561,13 @@ export function TasksPanel({
   const [categoryDelete, setCategoryDelete] = useState<string | null>(null);
   const [completedOpen, setCompletedOpen] = useState(false);
   const [focusTaskKey, setFocusTaskKey] = useState<string | null>(null);
+  const [recentlyCreatedRootKey, setRecentlyCreatedRootKey] = useState<string | null>(null);
   const [draggedRootKey, setDraggedRootKey] = useState<string | null>(null);
   const pendingMarkdownByPathRef = useRef(new Map<string, string>());
+
+  useEffect(() => {
+    setRecentlyCreatedRootKey(null);
+  }, [selectedView]);
 
   const taskFiles = useMemo(
     () =>
@@ -768,16 +773,29 @@ export function TasksPanel({
     selectedView === MONTH_TASKS ||
     selectedView === NEXT_MONTH_TASKS;
   const compareVisibleRoots = useMemo(
-    () => (left: TaskItem, right: TaskItem) =>
-      compareRootTasks(
+    () => (left: TaskItem, right: TaskItem) => {
+      if (taskSettings.sortMode === "manual" && recentlyCreatedRootKey) {
+        const leftIsNew = taskItemKey(left) === recentlyCreatedRootKey;
+        const rightIsNew = taskItemKey(right) === recentlyCreatedRootKey;
+        if (leftIsNew !== rightIsNew) return leftIsNew ? -1 : 1;
+      }
+
+      return compareRootTasks(
         left,
         right,
         taskSettings.sortMode,
         fileMtimeMs,
         locale,
         timeBasedView
-      ),
-    [fileMtimeMs, locale, taskSettings.sortMode, timeBasedView]
+      );
+    },
+    [
+      fileMtimeMs,
+      locale,
+      recentlyCreatedRootKey,
+      taskSettings.sortMode,
+      timeBasedView
+    ]
   );
   const visibleActiveTasks = useMemo(
     () => orderTaskGroups(visibleActiveRoots, childrenByParent, compareVisibleRoots),
@@ -941,7 +959,9 @@ export function TasksPanel({
     const filePath = await resolveFilePath(category);
 
     if (inserted) {
-      setFocusTaskKey(`${filePath}:${inserted.lineIndex}`);
+      const key = `${filePath}:${inserted.lineIndex}`;
+      setFocusTaskKey(key);
+      setRecentlyCreatedRootKey(key);
     }
 
     setSaving(true);
