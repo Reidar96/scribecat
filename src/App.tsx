@@ -109,6 +109,7 @@ function App() {
   const [editorFocusRequestId, setEditorFocusRequestId] = useState(0);
   const [sidebarFocusRequestId, setSidebarFocusRequestId] = useState(0);
   const [fileTreeSelection, setFileTreeSelection] = useState<BatchEntry[]>([]);
+  const [entryClipboard, setEntryClipboard] = useState<BatchEntry[]>([]);
   // Phone layout only: the file list is a sheet over the document.
   const [isSidebarSheetOpen, setIsSidebarSheetOpen] = useState(false);
   const [sidebarVisible, setSidebarVisible] = useState(getStoredSidebarVisible);
@@ -162,6 +163,7 @@ function App() {
   const createNamedFile = useAppStore((state) => state.createNamedFile);
   const createFileAtPath = useAppStore((state) => state.createFileAtPath);
   const duplicateFile = useAppStore((state) => state.duplicateFile);
+  const duplicateFolder = useAppStore((state) => state.duplicateFolder);
   const registerImportedFiles = useAppStore((state) => state.registerImportedFiles);
   const createNewFolder = useAppStore((state) => state.createNewFolder);
   const emptyFolderPaths = useAppStore((state) => state.emptyFolderPaths);
@@ -235,6 +237,7 @@ function App() {
     setGraphViewOpen(false);
     setJournalViewOpen(false);
     setTasksViewOpen(false);
+    setEntryClipboard([]);
   }, [folderPath]);
 
 
@@ -367,6 +370,41 @@ function App() {
     folderPath,
     moveTreeEntry
   });
+
+  const copyEntriesToClipboard = (entries: BatchEntry[]) => {
+    setEntryClipboard(entries.map((entry) => ({ ...entry })));
+  };
+
+  const pasteEntriesInto = async (targetDirectory: string) => {
+    for (const entry of entryClipboard) {
+      const copiedPath =
+        entry.kind === "file"
+          ? await duplicateFile(entry.path)
+          : await duplicateFolder(entry.path);
+
+      if (!copiedPath) continue;
+
+      const copiedParent = await dirname(copiedPath);
+      if (normalizePathKey(copiedParent) === normalizePathKey(targetDirectory)) {
+        continue;
+      }
+
+      const moved = await moveTreeEntry({
+        kind: entry.kind,
+        sourcePath: copiedPath,
+        targetParentDirectory: targetDirectory,
+        targetIndex: Number.MAX_SAFE_INTEGER
+      });
+
+      if (!moved) {
+        if (entry.kind === "file") {
+          await deleteFilePath(copiedPath);
+        } else {
+          await deleteFolderPath(copiedPath);
+        }
+      }
+    }
+  };
 
   const {
     exportTarget,
@@ -1055,6 +1093,8 @@ function App() {
       }}
       onDeleteFileRequest={requestDeleteFile}
       onDuplicateFileRequest={(filePath) => void duplicateFile(filePath)}
+      onDuplicateFolderRequest={(targetFolderPath) => void duplicateFolder(targetFolderPath)}
+      onCopyRequest={copyEntriesToClipboard}
       onDeleteFolderRequest={requestDeleteFolder}
       onDeleteMultipleRequest={requestDeleteMultiple}
       onExportFileRequest={requestExportFile}
@@ -1237,11 +1277,17 @@ function App() {
               onRenameFile={renameFilePath}
               onRenameFolder={renameFolderPath}
               onDuplicateFileRequest={(filePath) => void duplicateFile(filePath)}
+              onDuplicateFolderRequest={(targetFolderPath) => void duplicateFolder(targetFolderPath)}
+              onCopyRequest={copyEntriesToClipboard}
+              onPasteRequest={(targetDirectory) => void pasteEntriesInto(targetDirectory)}
+              canPaste={entryClipboard.length > 0}
               onMoveRequest={requestMove}
               onDeleteFileRequest={requestDeleteFile}
               onDeleteFolderRequest={requestDeleteFolder}
+              onDeleteMultipleRequest={requestDeleteMultiple}
               onExportFileRequest={requestExportFile}
               onExportFolderRequest={requestExportFolder}
+              onExportMultipleRequest={requestExportMultiple}
               onDownloadMarkdownRequest={handleDownloadMarkdownRequest}
               onDownloadFolderArchiveRequest={handleDownloadFolderArchiveRequest}
               onPrintFileRequest={handlePrintFileRequest}
