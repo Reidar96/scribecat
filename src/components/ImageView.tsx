@@ -167,7 +167,7 @@ export function ImageView({ node, editor, getPos, updateAttributes, selected }: 
         className="editor-image-wrapper"
         data-drag-handle
         data-scribecat-long-press={longPressProps["data-scribecat-long-press"]}
-        onPointerDown={(event) => {
+        onPointerDown={(event: React.PointerEvent<HTMLElement>) => {
           selectOnTouch(event);
           longPressProps.onPointerDown(event);
         }}
@@ -176,7 +176,7 @@ export function ImageView({ node, editor, getPos, updateAttributes, selected }: 
         onPointerCancel={longPressProps.onPointerCancel}
         onClickCapture={longPressProps.onClickCapture}
         onContextMenuCapture={longPressProps.onContextMenuCapture}
-        onContextMenu={(event) => {
+        onContextMenu={(event: React.MouseEvent<HTMLElement>) => {
           event.preventDefault();
           event.stopPropagation();
           setContextMenu({ x: event.clientX, y: event.clientY });
