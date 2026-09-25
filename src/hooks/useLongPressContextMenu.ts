@@ -1,5 +1,8 @@
 import { useEffect, useRef } from "react";
-import type { MouseEventHandler, PointerEventHandler } from "react";
+import type {
+  MouseEventHandler,
+  PointerEventHandler
+} from "react";
 
 const LONG_PRESS_MS = 520;
 const MOVE_TOLERANCE_PX = 10;
@@ -19,6 +22,8 @@ export type LongPressProps = {
   onPointerUp: PointerEventHandler<HTMLElement>;
   onPointerCancel: PointerEventHandler<HTMLElement>;
   onClickCapture: MouseEventHandler<HTMLElement>;
+  onContextMenuCapture: MouseEventHandler<HTMLElement>;
+  "data-scribecat-long-press": "true";
 };
 
 export function useLongPressContextMenu<T>(
@@ -90,7 +95,21 @@ export function useLongPressContextMenu<T>(
       suppressNextClickRef.current = false;
       event.preventDefault();
       event.stopPropagation();
-    }
+    },
+    onContextMenuCapture: (event) => {
+      const nativeEvent = event.nativeEvent as MouseEvent & {
+        pointerType?: string;
+      };
+      const pointerType = nativeEvent.pointerType ?? "";
+      if (
+        pointerType === "touch" ||
+        pointerType === "pen" ||
+        window.matchMedia("(pointer: coarse)").matches
+      ) {
+        event.preventDefault();
+      }
+    },
+    "data-scribecat-long-press": "true"
   });
 
   return { getLongPressProps };
