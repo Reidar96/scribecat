@@ -632,6 +632,19 @@ function App() {
     setTasksViewOpen(false);
   };
 
+  const closePrimarySplitPane = async () => {
+    if (!secondaryFilePath) {
+      return;
+    }
+
+    const remainingFilePath = secondaryFilePath;
+    setSecondaryFilePath(null);
+    await selectFilePath(remainingFilePath);
+    setOpenTabs((tabs) =>
+      tabs.includes(remainingFilePath) ? tabs : [...tabs, remainingFilePath]
+    );
+  };
+
   // Same for a folder's note (the tree hands over the folder, the store
   // resolves the note inside it).
   const openFolderNoteSafely = async (targetFolderPath: string) => {
@@ -1421,6 +1434,7 @@ function App() {
               onCloseTab={closeDocumentTab}
               onReorderTabs={reorderDocumentTabs}
               onOpenSecondary={(filePath) => void openSecondaryDocument(filePath)}
+              onClosePrimarySplit={() => void closePrimarySplitPane()}
               onCloseSecondary={() => setSecondaryFilePath(null)}
               onSecondaryMarkdownChange={updateFileContent}
               backTargetLabel={historyEntryLabel(backStepIndex)}
