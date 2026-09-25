@@ -29,6 +29,7 @@ import {
   parseTaskMarkdown,
   removeTaskFromMarkdown,
   renameTaskDocumentHeading,
+  setTaskSubtreeCheckedInMarkdown,
   sanitizeTaskCategory,
   taskCategoryFromRelativePath,
   taskRelativePath,
@@ -38,6 +39,7 @@ import {
 } from "@/lib/tasks";
 import { cn } from "@/lib/utils";
 import { join } from "@/platform/paths";
+import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
 
 type TaskDocument = {
   category: string;
@@ -108,41 +110,21 @@ function taskItemKey(task: Pick<TaskItem, "filePath" | "lineIndex">): string {
   return `${task.filePath}:${task.lineIndex}`;
 }
 
-function orderTaskHierarchy(tasks: TaskItem[], locale: string): TaskItem[] {
-  const available = new Set(tasks.map(taskItemKey));
-  const children = new Map<string, TaskItem[]>();
-  const roots: TaskItem[] = [];
+function orderTaskGroups(
+  roots: TaskItem[],
+  childrenByParent: Map<string, TaskItem[]>,
+  locale: string
+): TaskItem[] {
+  const orderedRoots = [...roots].sort((left, right) =>
+    compareTaskItems(left, right, locale)
+  );
 
-  for (const task of tasks) {
-    const parentKey =
-      task.parentLineIndex === null
-        ? null
-        : `${task.filePath}:${task.parentLineIndex}`;
-
-    if (parentKey && available.has(parentKey)) {
-      const current = children.get(parentKey) ?? [];
-      current.push(task);
-      children.set(parentKey, current);
-    } else {
-      roots.push(task);
-    }
-  }
-
-  roots.sort((left, right) => compareTaskItems(left, right, locale));
-  for (const group of children.values()) {
-    group.sort((left, right) => compareTaskItems(left, right, locale));
-  }
-
-  const ordered: TaskItem[] = [];
-  const append = (task: TaskItem) => {
-    ordered.push(task);
-    for (const child of children.get(taskItemKey(task)) ?? []) {
-      append(child);
-    }
-  };
-
-  for (const root of roots) append(root);
-  return ordered;
+  return orderedRoots.flatMap((root) => [
+    root,
+    ...(childrenByParent.get(taskItemKey(root)) ?? [])
+      .slice()
+      .sort((left, right) => left.lineIndex - right.lineIndex)
+  ]);
 }
 
 function dateKey(date: Date): string {
@@ -280,7 +262,8 @@ function TaskRow({
       <button
         type="button"
         className="tasks-item__drag"
-        draggable
+        draggable={!isSubtask}
+        disabled={isSubtask}
         onDragStart={startDrag}
         aria-label={t("tasks.dragTask")}
         title={t("tasks.dragTask")}
@@ -328,15 +311,17 @@ function TaskRow({
         <div className="tasks-item__meta">
           <span className="tasks-item__category">{task.category}</span>
 
-          <label className="tasks-item__deadline">
-            <CalendarClock aria-hidden="true" />
-            <input
-              type="date"
-              value={task.deadline ?? ""}
-              onChange={(event) => onDeadlineChange(event.target.value || null)}
-              aria-label={t("tasks.deadline")}
-            />
-          </label>
+          {!isSubtask ? (
+            <label className="tasks-item__deadline">
+              <CalendarClock aria-hidden="true" />
+              <input
+                type="date"
+                value={task.deadline ?? ""}
+                onChange={(event) => onDeadlineChange(event.target.value || null)}
+                aria-label={t("tasks.deadline")}
+              />
+            </label>
+          ) : null}
 
           <label className="tasks-item__tags">
             <Tag aria-hidden="true" />
@@ -452,6 +437,7 @@ export function TasksPanel({
 }: TasksPanelProps) {
   const { t, i18n } = useTranslation();
   const layout = useLayoutMode();
+  const taskSettings = useEditorSettingsStore((state) => state.taskSettings);
   const [documents, setDocuments] = useState<Record<string, TaskDocument>>({});
   const [selectedView, setSelectedView] = useState(ALL_TASKS);
   const [textDraft, setTextDraft] = useState("");
@@ -471,7 +457,7 @@ export function TasksPanel({
 
     const taskFiles = filePaths.flatMap((filePath) => {
       const relativePath = getRelativeDisplayPath(folderPath, filePath);
-      const category = taskCategoryFromRelativePath(relativePath);
+      const category = taskCategoryFromRelativePath(relativePath, taskSettings.folder);
       return category ? [{ category, filePath }] : [];
     });
 
@@ -502,7 +488,7 @@ export function TasksPanel({
     return () => {
       active = false;
     };
-  }, [filePaths, folderPath]);
+  }, [filePaths, folderPath, taskSettings.folder]);
 
   const categories = useMemo(
     () =>
@@ -529,9 +515,24 @@ export function TasksPanel({
   );
 
   const locale = i18n.resolvedLanguage ?? i18n.language;
-  const activeAllTasks = useMemo(
-    () => allTasks.filter((task) => !task.checked),
+  const rootTasks = useMemo(
+    () => allTasks.filter((task) => task.parentLineIndex === null),
     [allTasks]
+  );
+  const childrenByParent = useMemo(() => {
+    const map = new Map<string, TaskItem[]>();
+    for (const task of allTasks) {
+      if (task.parentLineIndex === null) continue;
+      const key = `${task.filePath}:${task.parentLineIndex}`;
+      const current = map.get(key) ?? [];
+      current.push(task);
+      map.set(key, current);
+    }
+    return map;
+  }, [allTasks]);
+  const activeRootTasks = useMemo(
+    () => rootTasks.filter((task) => !task.checked),
+    [rootTasks]
   );
 
   const now = new Date();
@@ -541,13 +542,13 @@ export function TasksPanel({
   const nextMonthDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
   const nextMonthKey = dateKey(nextMonthDate).slice(0, 7);
 
-  const filteredTasks = useMemo(() => {
+  const filteredRootTasks = useMemo(() => {
     if (selectedView === TODAY_TASKS) {
-      return allTasks.filter((task) => task.deadline === todayKey);
+      return rootTasks.filter((task) => task.deadline === todayKey);
     }
 
     if (selectedView === WEEK_TASKS) {
-      return allTasks.filter(
+      return rootTasks.filter(
         (task) =>
           task.deadline !== null &&
           task.deadline >= weekRange.start &&
@@ -556,56 +557,82 @@ export function TasksPanel({
     }
 
     if (selectedView === MONTH_TASKS) {
-      return allTasks.filter((task) => task.deadline?.startsWith(monthKey));
+      return rootTasks.filter((task) => task.deadline?.startsWith(monthKey));
     }
 
     if (selectedView === NEXT_MONTH_TASKS) {
-      return allTasks.filter((task) => task.deadline?.startsWith(nextMonthKey));
+      return rootTasks.filter((task) => task.deadline?.startsWith(nextMonthKey));
     }
 
     if (selectedView.startsWith(CATEGORY_PREFIX)) {
       const category = selectedView.slice(CATEGORY_PREFIX.length);
-      return allTasks.filter((task) => task.category === category);
+      return rootTasks.filter((task) => task.category === category);
     }
 
     if (selectedView.startsWith(TAG_PREFIX)) {
       const tag = selectedView.slice(TAG_PREFIX.length).toLocaleLowerCase();
-      return allTasks.filter((task) =>
-        task.tags.some((candidate) => candidate.toLocaleLowerCase() === tag)
-      );
+      return rootTasks.filter((task) => {
+        const group = [task, ...(childrenByParent.get(taskItemKey(task)) ?? [])];
+        return group.some((item) =>
+          item.tags.some((candidate) => candidate.toLocaleLowerCase() === tag)
+        );
+      });
     }
 
-    return allTasks;
-  }, [allTasks, monthKey, nextMonthKey, selectedView, todayKey, weekRange.end, weekRange.start]);
+    return rootTasks;
+  }, [
+    childrenByParent,
+    monthKey,
+    nextMonthKey,
+    rootTasks,
+    selectedView,
+    todayKey,
+    weekRange.end,
+    weekRange.start
+  ]);
 
+  const visibleActiveRoots = useMemo(
+    () => filteredRootTasks.filter((task) => !task.checked),
+    [filteredRootTasks]
+  );
+  const visibleCompletedRoots = useMemo(
+    () => filteredRootTasks.filter((task) => task.checked),
+    [filteredRootTasks]
+  );
   const visibleActiveTasks = useMemo(
-    () => orderTaskHierarchy(filteredTasks.filter((task) => !task.checked), locale),
-    [filteredTasks, locale]
+    () => orderTaskGroups(visibleActiveRoots, childrenByParent, locale),
+    [childrenByParent, locale, visibleActiveRoots]
   );
   const visibleCompletedTasks = useMemo(
-    () => orderTaskHierarchy(filteredTasks.filter((task) => task.checked), locale),
-    [filteredTasks, locale]
+    () => orderTaskGroups(visibleCompletedRoots, childrenByParent, locale),
+    [childrenByParent, locale, visibleCompletedRoots]
   );
 
   const categoryCounts = useMemo(() => {
     const result = new Map<string, number>();
-    for (const task of activeAllTasks) {
+    for (const task of activeRootTasks) {
       result.set(task.category, (result.get(task.category) ?? 0) + 1);
     }
     return result;
-  }, [activeAllTasks]);
+  }, [activeRootTasks]);
 
   const tagCounts = useMemo(() => {
     const map = new Map<string, { label: string; count: number }>();
 
-    for (const task of allTasks) {
-      for (const tag of task.tags) {
-        const key = tag.toLocaleLowerCase();
-        const current = map.get(key);
-        if (current) {
-          if (!task.checked) current.count += 1;
-        } else {
-          map.set(key, { label: tag, count: task.checked ? 0 : 1 });
+    for (const root of rootTasks) {
+      const group = [root, ...(childrenByParent.get(taskItemKey(root)) ?? [])];
+      const seen = new Set<string>();
+      for (const task of group) {
+        for (const tag of task.tags) {
+          const key = tag.toLocaleLowerCase();
+          if (seen.has(key)) continue;
+          seen.add(key);
+          const current = map.get(key);
+          if (current) {
+            if (!root.checked) current.count += 1;
+          } else {
+            map.set(key, { label: tag, count: root.checked ? 0 : 1 });
+          }
         }
       }
     }
@@ -617,17 +644,17 @@ export function TasksPanel({
         { sensitivity: "base" }
       )
     );
-  }, [allTasks, i18n.language, i18n.resolvedLanguage]);
+  }, [childrenByParent, i18n.language, i18n.resolvedLanguage, rootTasks]);
 
-  const todayCount = activeAllTasks.filter((task) => task.deadline === todayKey).length;
-  const weekCount = activeAllTasks.filter(
+  const todayCount = activeRootTasks.filter((task) => task.deadline === todayKey).length;
+  const weekCount = activeRootTasks.filter(
     (task) =>
       task.deadline !== null &&
       task.deadline >= weekRange.start &&
       task.deadline <= weekRange.end
   ).length;
-  const monthCount = activeAllTasks.filter((task) => task.deadline?.startsWith(monthKey)).length;
-  const nextMonthCount = activeAllTasks.filter((task) => task.deadline?.startsWith(nextMonthKey)).length;
+  const monthCount = activeRootTasks.filter((task) => task.deadline?.startsWith(monthKey)).length;
+  const nextMonthCount = activeRootTasks.filter((task) => task.deadline?.startsWith(nextMonthKey)).length;
 
   const resolveFilePath = async (category: string): Promise<string> => {
     const existing = documents[category]?.filePath;
@@ -635,7 +662,7 @@ export function TasksPanel({
 
     return join(
       folderPath,
-      ...taskRelativePath(category).split("/").filter(Boolean)
+      ...taskRelativePath(category, taskSettings.folder).split("/").filter(Boolean)
     );
   };
 
@@ -735,7 +762,9 @@ export function TasksPanel({
     const markdown =
       mutation === "delete"
         ? removeTaskFromMarkdown(document.markdown, task.lineIndex)
-        : updateTaskInMarkdown(document.markdown, task.lineIndex, {
+        : mutation === "toggle" && task.parentLineIndex === null && !task.checked
+          ? setTaskSubtreeCheckedInMarkdown(document.markdown, task.lineIndex, true)
+          : updateTaskInMarkdown(document.markdown, task.lineIndex, {
             checked: mutation === "toggle" ? !task.checked : task.checked,
             text: mutation === "text" ? String(value ?? task.text) : task.text,
             deadline:
@@ -867,7 +896,7 @@ export function TasksPanel({
 
       const nextFilePath = await join(
         folderPath,
-        ...taskRelativePath(nextCategory).split("/").filter(Boolean)
+        ...taskRelativePath(nextCategory, taskSettings.folder).split("/").filter(Boolean)
       );
       const nextMarkdown = renameTaskDocumentHeading(
         document.markdown,
@@ -1028,7 +1057,7 @@ export function TasksPanel({
               }}
             >
               <span>{t("tasks.all")}</span>
-              <small>{activeAllTasks.length}</small>
+              <small>{activeRootTasks.length}</small>
             </button>
 
             {[
@@ -1254,7 +1283,7 @@ export function TasksPanel({
           <div className="tasks-main__heading">
             <div>
               <h3>{heading}</h3>
-              <p>{t("tasks.count", { count: visibleActiveTasks.length })}</p>
+              <p>{t("tasks.count", { count: visibleActiveRoots.length })}</p>
             </div>
             <CheckCircle2 aria-hidden="true" />
           </div>
@@ -1320,7 +1349,7 @@ export function TasksPanel({
                   <ChevronRight aria-hidden="true" />
                 )}
                 <span>{t("tasks.completed")}</span>
-                <small>{visibleCompletedTasks.length}</small>
+                <small>{visibleCompletedRoots.length}</small>
               </button>
 
               {completedOpen ? (

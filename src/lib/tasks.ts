@@ -2,20 +2,35 @@ export const TASKS_FOLDER_NAME = "Gjøremål";
 export const UNCATEGORIZED_TASK_CATEGORY = "Uten kategori";
 
 export type TaskSettings = {
+  folder: string;
   hideFromSidebar: boolean;
 };
 
 export const DEFAULT_TASK_SETTINGS: TaskSettings = {
+  folder: TASKS_FOLDER_NAME,
   hideFromSidebar: true
 };
+
+function cleanTaskFolder(value: string): string {
+  return value
+    .trim()
+    .replace(/\\/g, "/")
+    .replace(/^\/+|\/+$/g, "")
+    .replace(/\/{2,}/g, "/");
+}
 
 export function normalizeTaskSettings(value: unknown): TaskSettings {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     return DEFAULT_TASK_SETTINGS;
   }
 
+  const record = value as Record<string, unknown>;
   return {
-    hideFromSidebar: (value as { hideFromSidebar?: unknown }).hideFromSidebar !== false
+    folder:
+      typeof record.folder === "string" && cleanTaskFolder(record.folder)
+        ? cleanTaskFolder(record.folder)
+        : DEFAULT_TASK_SETTINGS.folder,
+    hideFromSidebar: record.hideFromSidebar !== false
   };
 }
 
@@ -106,13 +121,21 @@ export function normalizeTaskTags(tags: string[]): string[] {
   return result;
 }
 
-export function taskRelativePath(category: string): string {
-  return `${TASKS_FOLDER_NAME}/${sanitizeTaskCategory(category)}.md`;
+export function taskRelativePath(
+  category: string,
+  folder = TASKS_FOLDER_NAME
+): string {
+  const normalizedFolder = cleanTaskFolder(folder) || TASKS_FOLDER_NAME;
+  return `${normalizedFolder}/${sanitizeTaskCategory(category)}.md`;
 }
 
-export function taskCategoryFromRelativePath(relativePath: string): string | null {
+export function taskCategoryFromRelativePath(
+  relativePath: string,
+  folder = TASKS_FOLDER_NAME
+): string | null {
   const normalized = normalizeRelativePath(relativePath);
-  const prefix = `${TASKS_FOLDER_NAME}/`;
+  const normalizedFolder = cleanTaskFolder(folder) || TASKS_FOLDER_NAME;
+  const prefix = `${normalizedFolder}/`;
 
   if (!normalized.startsWith(prefix) || !normalized.toLowerCase().endsWith(".md")) {
     return null;
@@ -126,13 +149,20 @@ export function taskCategoryFromRelativePath(relativePath: string): string | nul
   return sanitizeTaskCategory(tail);
 }
 
-export function isTaskRelativePath(relativePath: string): boolean {
-  return taskCategoryFromRelativePath(relativePath) !== null;
+export function isTaskRelativePath(
+  relativePath: string,
+  folder = TASKS_FOLDER_NAME
+): boolean {
+  return taskCategoryFromRelativePath(relativePath, folder) !== null;
 }
 
-export function isTasksContainerRelativePath(relativePath: string): boolean {
+export function isTasksContainerRelativePath(
+  relativePath: string,
+  folder = TASKS_FOLDER_NAME
+): boolean {
   const normalized = normalizeRelativePath(relativePath);
-  return normalized === TASKS_FOLDER_NAME || normalized.startsWith(`${TASKS_FOLDER_NAME}/`);
+  const normalizedFolder = cleanTaskFolder(folder) || TASKS_FOLDER_NAME;
+  return normalized === normalizedFolder || normalized.startsWith(`${normalizedFolder}/`);
 }
 
 function parseTaskContent(rawContent: string): {
@@ -303,6 +333,32 @@ export function updateTaskInMarkdown(
     .map((line) => `${existing[1]}${line}`);
 
   lines.splice(lineIndex, endLineIndex - lineIndex + 1, ...replacement);
+  return lines.join("\n");
+}
+
+export function setTaskSubtreeCheckedInMarkdown(
+  markdown: string,
+  lineIndex: number,
+  checked: boolean
+): string {
+  const lines = markdown.split(/\r?\n/);
+  const rootMatch = TASK_LINE_PATTERN.exec(lines[lineIndex] ?? "");
+  if (!rootMatch) return markdown;
+
+  const rootIndent = taskIndentWidth(rootMatch[1]);
+  const endLineIndex = taskSubtreeEndIndex(lines, lineIndex);
+
+  for (let index = lineIndex; index <= endLineIndex; index += 1) {
+    const match = TASK_LINE_PATTERN.exec(lines[index] ?? "");
+    if (!match) continue;
+    const indent = taskIndentWidth(match[1]);
+    if (index !== lineIndex && indent <= rootIndent) continue;
+    lines[index] = lines[index].replace(
+      /^(\s*[-*+]\s+)\[[ xX]\]/,
+      `$1[${checked ? "x" : " "}]`
+    );
+  }
+
   return lines.join("\n");
 }
 
