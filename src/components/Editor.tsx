@@ -298,6 +298,8 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     }
 
     try {
+      let text: string | null = null;
+
       if (typeof navigator.clipboard?.read === "function") {
         const items = await navigator.clipboard.read();
 
@@ -324,9 +326,15 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
           setSelectionMenu(null);
           return;
         }
+
+        for (const item of items) {
+          if (!item.types.includes("text/plain")) continue;
+          text = await (await item.getType("text/plain")).text();
+          break;
+        }
       }
 
-      const text = await navigator.clipboard.readText();
+      text ??= await navigator.clipboard.readText();
       if (!text) {
         setSelectionMenu(null);
         return;
