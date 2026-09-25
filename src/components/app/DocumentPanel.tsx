@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState, type RefObject } from "react";
+import { Fragment, useEffect, useMemo, useState, type RefObject } from "react";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -10,7 +10,10 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Pencil,
-  Save
+  Plus,
+  Save,
+  Search,
+  X
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -19,6 +22,7 @@ import { Editor, type EditorHandle } from "@/components/Editor";
 import { FindReplacePanel } from "@/components/FindReplacePanel";
 import { VersionsPopover } from "@/components/VersionsPopover";
 import { DocumentMenu } from "@/components/app/DocumentMenu";
+import { DocumentTabs, TAB_DRAG_MIME } from "@/components/app/DocumentTabs";
 import { join } from "@/platform/paths";
 import { EmojiPickerPopover } from "@/components/EmojiPicker";
 import { useBreadcrumbScroll } from "@/hooks/useBreadcrumbScroll";
@@ -29,10 +33,18 @@ import { anchorForTrigger, type PopoverAnchor } from "@/lib/usePopoverOverflowAl
 import type { FileVersion } from "@/lib/fileVersions";
 import { cn } from "@/lib/utils";
 import { replaceBody, splitFrontmatter } from "@/lib/documentFrontmatter";
+import {
+  buildVaultFileOptions,
+  filterVaultFileOptions,
+  getDraggedVaultFilePaths,
+  getFileLinkLabel,
+  FILE_LINK_DRAG_MIME
+} from "@/lib/editor/fileLinks";
 import { getVaultCapabilities, vaultCapabilityHint } from "@/platform";
 import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
 import { useSearchStore } from "@/store/useSearchStore";
 import { useVersioningSettingsStore } from "@/store/useVersioningSettingsStore";
+import type { FileDocumentState } from "@/store/useAppStore";
 
 type DocumentPanelProps = {
   selectedFilePath: string | null;
@@ -46,6 +58,16 @@ type DocumentPanelProps = {
   folderPath: string | null;
   selectedFileContent: string | null;
   appVersion: string | null;
+  filePaths: string[];
+  fileDocuments: Record<string, FileDocumentState>;
+  dirtyFilePaths: string[];
+  openTabs: string[];
+  secondaryFilePath: string | null;
+  onSelectTab: (filePath: string) => void;
+  onCloseTab: (filePath: string) => void;
+  onOpenSecondary: (filePath: string) => void;
+  onCloseSecondary: () => void;
+  onSecondaryMarkdownChange: (filePath: string, markdown: string) => void;
 
   /** Vault-relative label of the note a back/forward step opens, null when there is none. */
   backTargetLabel: string | null;
@@ -155,6 +177,16 @@ export function DocumentPanel({
   folderPath,
   selectedFileContent,
   appVersion,
+  filePaths,
+  fileDocuments,
+  dirtyFilePaths,
+  openTabs,
+  secondaryFilePath,
+  onSelectTab,
+  onCloseTab,
+  onOpenSecondary,
+  onCloseSecondary,
+  onSecondaryMarkdownChange,
   backTargetLabel,
   forwardTargetLabel,
   onNavigateBack,
@@ -197,6 +229,11 @@ export function DocumentPanel({
   // it inside the editor, where responsive.css moves it below the text. A
   // state (not a ref) so the editor re-renders once the slot exists.
   const [toolbarSlot, setToolbarSlot] = useState<HTMLDivElement | null>(null);
+  const [activeEditorPane, setActiveEditorPane] = useState<"primary" | "secondary">("primary");
+  const [splitRatio, setSplitRatio] = useState(50);
+  const [splitPickerOpen, setSplitPickerOpen] = useState(false);
+  const [splitPickerQuery, setSplitPickerQuery] = useState("");
+  const [splitDropPreview, setSplitDropPreview] = useState(false);
   // Bumped by the header menu's "Versions" entry on the phone, where the
   // popover's own trigger button has no room in the header.
   const [versionsRequestId, setVersionsRequestId] = useState(0);
