@@ -5,6 +5,7 @@ import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerE
 
 import { ContextMenuSurface } from "@/components/fileTree/ContextMenuSurface";
 import { useContextMenuState } from "@/components/fileTree/useContextMenuState";
+import { useLongPressContextMenu } from "@/hooks/useLongPressContextMenu";
 import { getRelativeDisplayPath } from "@/lib/fileSystem";
 import { getFolderNoteFolderPath, getNoteDisplayName, isFolderNotePath } from "@/lib/folderNotes";
 import { cn } from "@/lib/utils";
@@ -64,6 +65,10 @@ export function WorkingSetPanel({
 }: WorkingSetPanelProps) {
   const { t } = useTranslation();
   const { contextMenu, setContextMenu } = useContextMenuState<EntryContextMenu>();
+  const bindEntryContextMenu = useLongPressContextMenu<string>(
+    (filePath, point) =>
+      setContextMenu({ filePath, x: point.x, y: point.y })
+  );
   // With pin-only admission every entry is pinned, so the pin/unpin items
   // and "close saved" would say nothing; they show only once edited notes
   // can enter on their own. The pin mark itself always shows: it is what
@@ -176,6 +181,10 @@ export function WorkingSetPanel({
             const { name, folder, relativePath } = describe(entry.filePath);
             const isActive = entry.filePath === selectedFilePath;
             const isDirty = dirtySet.has(entry.filePath);
+            const {
+              onPointerUp: onLongPressPointerUp,
+              ...contextMenuHandlers
+            } = bindEntryContextMenu(entry.filePath);
 
             return (
               <li key={entry.filePath} className="working-set__item">
@@ -192,13 +201,13 @@ export function WorkingSetPanel({
                   title={relativePath}
                   aria-current={isActive ? "true" : undefined}
                   onClick={() => onSelect(entry.filePath)}
-                  onPointerUp={(event) => handleRowPointerUp(event, entry.filePath)}
+                  onPointerUp={(event) => {
+                    onLongPressPointerUp(event);
+                    handleRowPointerUp(event, entry.filePath);
+                  }}
                   onAuxClick={(event) => event.preventDefault()}
                   onKeyDown={(event) => handleRowKeyDown(event, entry.filePath)}
-                  onContextMenu={(event) => {
-                    event.preventDefault();
-                    setContextMenu({ x: event.clientX, y: event.clientY, filePath: entry.filePath });
-                  }}
+                  {...contextMenuHandlers}
                 >
                   <span className="working-set__text">
                     <span className="working-set__name">{name}</span>
