@@ -130,6 +130,12 @@ export type FileSlice = {
   restoreFileVersion: (versionId: string) => Promise<boolean>;
   createNewFile: (targetDirectory?: string, insertAfterBasename?: string | null) => Promise<string | null>;
   /**
+   * Creates a note with its final name in one write, without selecting it.
+   * Collection cards use this so a temporary "New note" never flashes before
+   * the requested title appears.
+   */
+  createNamedFile: (targetDirectory: string, newBaseName: string) => Promise<string | null>;
+  /**
    * Creates a file at exactly this path with this content, without selecting
    * it. What the vault agent's apply path needs and createNewFile cannot do:
    * the agent names the file, and it writes several of them in one batch

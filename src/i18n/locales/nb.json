@@ -479,6 +479,7 @@
     "newTask": "Nytt gjøremål",
     "categoryOptional": "Kategori (valgfritt)",
     "deadline": "Deadline",
+    "noDate": "Ingen dato",
     "add": "Legg til",
     "count": "{{count}} gjøremål",
     "empty": "Ingen gjøremål her ennå.",

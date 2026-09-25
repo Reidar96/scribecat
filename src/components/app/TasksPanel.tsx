@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 import {
+  ArrowDownAZ,
+  ArrowUpDown,
   CalendarClock,
   CheckCircle2,
   ChevronDown,
   ChevronRight,
+  Clock,
   GripVertical,
   Home,
   PanelLeft,
@@ -18,6 +21,16 @@ import { useTranslation } from "react-i18next";
 
 import { DeleteFileDialog } from "@/components/DeleteFileDialog";
 import { Button } from "@/components/ui/button";
+import {
+  Menu,
+  MenuPopup,
+  MenuPortal,
+  MenuPositioner,
+  MenuRadioGroup,
+  MenuRadioItem,
+  MenuRadioItemIndicator,
+  MenuTrigger
+} from "@/components/ui/menu";
 import { useLayoutMode } from "@/hooks/useLayoutMode";
 import { getRelativeDisplayPath, readMarkdownFile } from "@/lib/fileSystem";
 import {
@@ -25,9 +38,11 @@ import {
   appendTaskToMarkdown,
   createTaskDocument,
   insertSubtaskInMarkdown,
+  moveSiblingTaskInMarkdown,
   moveSubtaskInMarkdown,
   normalizeTaskTags,
   parseTaskMarkdown,
+  prependTaskToMarkdown,
   removeTaskFromMarkdown,
   renameTaskDocumentHeading,
   setTaskSubtreeCheckedInMarkdown,
@@ -36,7 +51,8 @@ import {
   taskRelativePath,
   updateTaskInMarkdown,
   type MarkdownTask,
-  type TaskPriority
+  type TaskPriority,
+  type TaskSortMode
 } from "@/lib/tasks";
 import { cn } from "@/lib/utils";
 import { join } from "@/platform/paths";
@@ -89,38 +105,52 @@ function deadlineSortValue(deadline: string | null): string {
   return deadline ?? "9999-99-99";
 }
 
-function prioritySortValue(priority: TaskPriority): number {
-  if (priority === "high") return 0;
-  if (priority === "medium") return 1;
-  if (priority === "low") return 2;
-  return 3;
-}
-
-function compareTaskItems(left: TaskItem, right: TaskItem, locale: string): number {
-  const priorityCompare =
-    prioritySortValue(left.priority) - prioritySortValue(right.priority);
-  if (priorityCompare !== 0) return priorityCompare;
-
-  const deadlineCompare = deadlineSortValue(left.deadline).localeCompare(
-    deadlineSortValue(right.deadline)
-  );
-  if (deadlineCompare !== 0) return deadlineCompare;
-
-  return left.text.localeCompare(right.text, locale, { sensitivity: "base" });
-}
-
 function taskItemKey(task: Pick<TaskItem, "filePath" | "lineIndex">): string {
   return `${task.filePath}:${task.lineIndex}`;
+}
+
+function compareRootTasks(
+  left: TaskItem,
+  right: TaskItem,
+  sortMode: TaskSortMode,
+  fileMtimeMs: Record<string, number>,
+  locale: string,
+  keepDateGroups: boolean
+): number {
+  if (keepDateGroups) {
+    const deadlineCompare = deadlineSortValue(left.deadline).localeCompare(
+      deadlineSortValue(right.deadline)
+    );
+    if (deadlineCompare !== 0) return deadlineCompare;
+  }
+
+  if (sortMode === "name") {
+    const nameCompare = left.text.localeCompare(right.text, locale, {
+      sensitivity: "base",
+      numeric: true
+    });
+    if (nameCompare !== 0) return nameCompare;
+  } else if (sortMode === "modified") {
+    const modifiedCompare =
+      (fileMtimeMs[right.filePath] ?? 0) - (fileMtimeMs[left.filePath] ?? 0);
+    if (modifiedCompare !== 0) return modifiedCompare;
+  }
+
+  const categoryCompare = left.category.localeCompare(right.category, locale, {
+    sensitivity: "base",
+    numeric: true
+  });
+  if (categoryCompare !== 0) return categoryCompare;
+
+  return left.lineIndex - right.lineIndex;
 }
 
 function orderTaskGroups(
   roots: TaskItem[],
   childrenByParent: Map<string, TaskItem[]>,
-  locale: string
+  compareRoots: (left: TaskItem, right: TaskItem) => number
 ): TaskItem[] {
-  const orderedRoots = [...roots].sort((left, right) =>
-    compareTaskItems(left, right, locale)
-  );
+  const orderedRoots = [...roots].sort(compareRoots);
 
   return orderedRoots.flatMap((root) => [
     root,
@@ -166,6 +196,12 @@ function TaskRow({
   onPriorityChange,
   onAddSubtask,
   onSubtaskDrop,
+  rootDropAllowed = false,
+  rootDropBlocked = false,
+  isDragSource = false,
+  onRootDrop,
+  onDragStartTask,
+  onDragEndTask,
   onDelete
 }: {
   task: TaskItem;
@@ -183,6 +219,15 @@ function TaskRow({
     event: DragEvent<HTMLElement>,
     placement: "before" | "after"
   ) => void;
+  rootDropAllowed?: boolean;
+  rootDropBlocked?: boolean;
+  isDragSource?: boolean;
+  onRootDrop?: (
+    event: DragEvent<HTMLElement>,
+    placement: "before" | "after"
+  ) => void;
+  onDragStartTask?: () => void;
+  onDragEndTask?: () => void;
   onDelete: () => void;
 }) {
   const { t } = useTranslation();
@@ -245,7 +290,7 @@ function TaskRow({
     setTagsDraft(next.map((tag) => `#${tag}`).join(" "));
   };
 
-  const startDrag = (event: DragEvent<HTMLButtonElement>) => {
+  const startDrag = (event: DragEvent<HTMLElement>) => {
     event.dataTransfer.effectAllowed = "move";
     event.dataTransfer.setData(
       TASK_DRAG_MIME,
@@ -255,11 +300,17 @@ function TaskRow({
       event.dataTransfer.setData(TASK_SUBTASK_DRAG_MIME, "1");
     }
     event.dataTransfer.setData("text/plain", task.text);
+    onDragStartTask?.();
   };
 
   const updateDropPosition = (event: DragEvent<HTMLElement>) => {
-    if (!isSubtask || !onSubtaskDrop) return null;
-    if (!event.dataTransfer.types.includes(TASK_SUBTASK_DRAG_MIME)) return null;
+    const isSubtaskDrag = event.dataTransfer.types.includes(TASK_SUBTASK_DRAG_MIME);
+
+    if (isSubtask) {
+      if (!onSubtaskDrop || !isSubtaskDrag) return null;
+    } else {
+      if (!onRootDrop || isSubtaskDrag || !rootDropAllowed) return null;
+    }
 
     const rect = event.currentTarget.getBoundingClientRect();
     const placement =
@@ -270,33 +321,44 @@ function TaskRow({
     return placement;
   };
 
-  const subtaskDropProps = isSubtask && onSubtaskDrop
-    ? {
-        onDragOver: (event: DragEvent<HTMLElement>) => {
-          updateDropPosition(event);
-        },
-        onDragLeave: (event: DragEvent<HTMLElement>) => {
-          if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+  const dropProps =
+    (isSubtask && onSubtaskDrop) || (!isSubtask && onRootDrop && rootDropAllowed)
+      ? {
+          onDragOver: (event: DragEvent<HTMLElement>) => {
+            updateDropPosition(event);
+          },
+          onDragLeave: (event: DragEvent<HTMLElement>) => {
+            if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+              setDropPosition(null);
+            }
+          },
+          onDrop: (event: DragEvent<HTMLElement>) => {
+            const placement = updateDropPosition(event);
             setDropPosition(null);
+            if (!placement) return;
+
+            if (isSubtask) {
+              onSubtaskDrop?.(event, placement);
+            } else {
+              onRootDrop?.(event, placement);
+            }
           }
-        },
-        onDrop: (event: DragEvent<HTMLElement>) => {
-          const placement = updateDropPosition(event);
-          setDropPosition(null);
-          if (placement) onSubtaskDrop(event, placement);
         }
-      }
-    : {};
+      : {};
 
   if (isSubtask && task.checked) {
     return (
       <article
         className={cn(
           "tasks-item tasks-item--subtask tasks-item--subtask-completed",
+          isDragSource && "tasks-item--drag-source",
           dropPosition === "before" && "tasks-item--drop-before",
           dropPosition === "after" && "tasks-item--drop-after"
         )}
-        {...subtaskDropProps}
+        draggable
+        onDragStart={startDrag}
+        onDragEnd={onDragEndTask}
+        {...dropProps}
       >
         <label className="tasks-item__check tasks-item__check--compact">
           <input
@@ -331,16 +393,19 @@ function TaskRow({
         task.checked && "tasks-item--checked",
         !isSubtask && overdue && "tasks-item--overdue",
         !isSubtask && task.priority && `tasks-item--priority-${task.priority}`,
+        isDragSource && "tasks-item--drag-source",
+        rootDropBlocked && "tasks-item--drop-blocked",
         dropPosition === "before" && "tasks-item--drop-before",
         dropPosition === "after" && "tasks-item--drop-after"
       )}
-      {...subtaskDropProps}
+      {...dropProps}
     >
       <button
         type="button"
         className="tasks-item__drag"
         draggable
         onDragStart={startDrag}
+        onDragEnd={onDragEndTask}
         aria-label={t("tasks.dragTask")}
         title={t("tasks.dragTask")}
       >
@@ -389,13 +454,17 @@ function TaskRow({
           <div className="tasks-item__meta">
             <span className="tasks-item__category">{task.category}</span>
 
-            <label className="tasks-item__deadline">
+            <label
+              className="tasks-item__deadline"
+              data-empty={task.deadline ? "false" : "true"}
+              data-placeholder={t("tasks.noDate")}
+            >
               <CalendarClock aria-hidden="true" />
               <input
                 type="date"
                 value={task.deadline ?? ""}
                 onChange={(event) => onDeadlineChange(event.target.value || null)}
-                aria-label={t("tasks.deadline")}
+                aria-label={task.deadline ? t("tasks.deadline") : t("tasks.noDate")}
               />
             </label>
 
@@ -484,6 +553,7 @@ export function TasksPanel({
   const { t, i18n } = useTranslation();
   const layout = useLayoutMode();
   const taskSettings = useEditorSettingsStore((state) => state.taskSettings);
+  const setTaskSettings = useEditorSettingsStore((state) => state.setTaskSettings);
   const [documents, setDocuments] = useState<Record<string, TaskDocument>>({});
   const [selectedView, setSelectedView] = useState(ALL_TASKS);
   const [saving, setSaving] = useState(false);
@@ -491,7 +561,13 @@ export function TasksPanel({
   const [categoryDelete, setCategoryDelete] = useState<string | null>(null);
   const [completedOpen, setCompletedOpen] = useState(false);
   const [focusTaskKey, setFocusTaskKey] = useState<string | null>(null);
+  const [recentlyCreatedRootKey, setRecentlyCreatedRootKey] = useState<string | null>(null);
+  const [draggedRootKey, setDraggedRootKey] = useState<string | null>(null);
   const pendingMarkdownByPathRef = useRef(new Map<string, string>());
+
+  useEffect(() => {
+    setRecentlyCreatedRootKey(null);
+  }, [selectedView]);
 
   const taskFiles = useMemo(
     () =>
@@ -691,13 +767,54 @@ export function TasksPanel({
     () => filteredRootTasks.filter((task) => task.checked),
     [filteredRootTasks]
   );
+  const timeBasedView =
+    selectedView === TODAY_TASKS ||
+    selectedView === WEEK_TASKS ||
+    selectedView === MONTH_TASKS ||
+    selectedView === NEXT_MONTH_TASKS;
+  const compareVisibleRoots = useMemo(
+    () => (left: TaskItem, right: TaskItem) => {
+      if (taskSettings.sortMode === "manual" && recentlyCreatedRootKey) {
+        const leftIsNew = taskItemKey(left) === recentlyCreatedRootKey;
+        const rightIsNew = taskItemKey(right) === recentlyCreatedRootKey;
+        if (leftIsNew !== rightIsNew) return leftIsNew ? -1 : 1;
+      }
+
+      return compareRootTasks(
+        left,
+        right,
+        taskSettings.sortMode,
+        fileMtimeMs,
+        locale,
+        timeBasedView
+      );
+    },
+    [
+      fileMtimeMs,
+      locale,
+      recentlyCreatedRootKey,
+      taskSettings.sortMode,
+      timeBasedView
+    ]
+  );
   const visibleActiveTasks = useMemo(
-    () => orderTaskGroups(visibleActiveRoots, childrenByParent, locale),
-    [childrenByParent, locale, visibleActiveRoots]
+    () => orderTaskGroups(visibleActiveRoots, childrenByParent, compareVisibleRoots),
+    [childrenByParent, compareVisibleRoots, visibleActiveRoots]
   );
   const visibleCompletedTasks = useMemo(
-    () => orderTaskGroups(visibleCompletedRoots, childrenByParent, locale),
-    [childrenByParent, locale, visibleCompletedRoots]
+    () => orderTaskGroups(visibleCompletedRoots, childrenByParent, compareVisibleRoots),
+    [childrenByParent, compareVisibleRoots, visibleCompletedRoots]
+  );
+  const draggedRootTask = useMemo(
+    () =>
+      draggedRootKey
+        ? allTasks.find(
+            (task) =>
+              task.parentLineIndex === null &&
+              taskItemKey(task) === draggedRootKey
+          ) ?? null
+        : null,
+    [allTasks, draggedRootKey]
   );
 
   const categoryCounts = useMemo(() => {
@@ -834,15 +951,17 @@ export function TasksPanel({
     };
     const existing = documents[category]?.markdown;
     const markdown = existing
-      ? appendTaskToMarkdown(existing, task)
+      ? prependTaskToMarkdown(existing, task)
       : createTaskDocument(category, task);
-    const inserted = [...parseTaskMarkdown(markdown)]
-      .reverse()
-      .find((candidate) => candidate.parentLineIndex === null);
+    const inserted = parseTaskMarkdown(markdown).find(
+      (candidate) => candidate.parentLineIndex === null
+    );
     const filePath = await resolveFilePath(category);
 
     if (inserted) {
-      setFocusTaskKey(`${filePath}:${inserted.lineIndex}`);
+      const key = `${filePath}:${inserted.lineIndex}`;
+      setFocusTaskKey(key);
+      setRecentlyCreatedRootKey(key);
     }
 
     setSaving(true);
@@ -927,6 +1046,43 @@ export function TasksPanel({
           });
 
     await persistCategory(task.category, markdown);
+  };
+
+  const reorderRootTask = async (
+    source: TaskItem,
+    target: TaskItem,
+    placement: "before" | "after"
+  ) => {
+    if (
+      saving ||
+      taskSettings.sortMode !== "manual" ||
+      source.parentLineIndex !== null ||
+      target.parentLineIndex !== null ||
+      source.filePath !== target.filePath ||
+      source.lineIndex === target.lineIndex ||
+      (timeBasedView && source.deadline !== target.deadline)
+    ) {
+      return;
+    }
+
+    const document = documents[source.category];
+    if (!document) return;
+
+    const markdown = moveSiblingTaskInMarkdown(
+      document.markdown,
+      source.lineIndex,
+      target.lineIndex,
+      placement
+    );
+    if (markdown === document.markdown) return;
+
+    setSaving(true);
+    try {
+      await persistCategory(source.category, markdown);
+    } finally {
+      setSaving(false);
+      setDraggedRootKey(null);
+    }
   };
 
   const reorderSubtask = async (
@@ -1029,6 +1185,7 @@ export function TasksPanel({
     } finally {
       setSaving(false);
       setDragOverCategory(null);
+      setDraggedRootKey(null);
     }
   };
 
@@ -1365,7 +1522,52 @@ export function TasksPanel({
               <h3>{heading}</h3>
               <p>{t("tasks.count", { count: visibleActiveRoots.length })}</p>
             </div>
-            <CheckCircle2 aria-hidden="true" />
+            <div className="tasks-main__heading-actions">
+              <Menu>
+                <MenuTrigger
+                  render={
+                    <Button
+                      type="button"
+                      size="icon-sm"
+                      variant="ghost"
+                      aria-label={t("sidebar.sortMode")}
+                      title={t("sidebar.sortMode")}
+                    >
+                      <ArrowUpDown />
+                    </Button>
+                  }
+                />
+                <MenuPortal>
+                  <MenuPositioner align="end">
+                    <MenuPopup>
+                      <MenuRadioGroup
+                        value={taskSettings.sortMode}
+                        onValueChange={(value) =>
+                          setTaskSettings({ sortMode: value as TaskSortMode })
+                        }
+                      >
+                        <MenuRadioItem value="name">
+                          <ArrowDownAZ className="size-4" aria-hidden="true" />
+                          {t("sidebar.sortModeName")}
+                          <MenuRadioItemIndicator />
+                        </MenuRadioItem>
+                        <MenuRadioItem value="modified">
+                          <Clock className="size-4" aria-hidden="true" />
+                          {t("sidebar.sortModeModified")}
+                          <MenuRadioItemIndicator />
+                        </MenuRadioItem>
+                        <MenuRadioItem value="manual">
+                          <GripVertical className="size-4" aria-hidden="true" />
+                          {t("sidebar.sortModeManual")}
+                          <MenuRadioItemIndicator />
+                        </MenuRadioItem>
+                      </MenuRadioGroup>
+                    </MenuPopup>
+                  </MenuPositioner>
+                </MenuPortal>
+              </Menu>
+              <CheckCircle2 aria-hidden="true" />
+            </div>
           </div>
 
           {visibleActiveTasks.length === 0 ? (
@@ -1387,6 +1589,19 @@ export function TasksPanel({
                       candidate.filePath === task.filePath &&
                       candidate.lineIndex === task.parentLineIndex
                   );
+                const key = taskItemKey(task);
+                const rootDropAllowed =
+                  !isSubtask &&
+                  draggedRootTask !== null &&
+                  key !== taskItemKey(draggedRootTask) &&
+                  taskSettings.sortMode === "manual" &&
+                  draggedRootTask.filePath === task.filePath &&
+                  (!timeBasedView || draggedRootTask.deadline === task.deadline);
+                const rootDropBlocked =
+                  !isSubtask &&
+                  draggedRootTask !== null &&
+                  key !== taskItemKey(draggedRootTask) &&
+                  !rootDropAllowed;
 
                 return (
                   <TaskRow
@@ -1419,6 +1634,29 @@ export function TasksPanel({
                             }
                           }
                         : undefined
+                    }
+                    rootDropAllowed={rootDropAllowed}
+                    rootDropBlocked={rootDropBlocked}
+                    isDragSource={
+                      !isSubtask &&
+                      draggedRootTask !== null &&
+                      key === taskItemKey(draggedRootTask)
+                    }
+                    onRootDrop={
+                      rootDropAllowed
+                        ? (event, placement) => {
+                            const source = taskFromDrop(event);
+                            if (source) {
+                              void reorderRootTask(source, task, placement);
+                            }
+                          }
+                        : undefined
+                    }
+                    onDragStartTask={
+                      !isSubtask ? () => setDraggedRootKey(key) : undefined
+                    }
+                    onDragEndTask={
+                      !isSubtask ? () => setDraggedRootKey(null) : undefined
                     }
                     onDelete={() => void mutateTask(task, "delete")}
                   />
@@ -1454,6 +1692,19 @@ export function TasksPanel({
                           candidate.filePath === task.filePath &&
                           candidate.lineIndex === task.parentLineIndex
                       );
+                    const key = taskItemKey(task);
+                    const rootDropAllowed =
+                      !isSubtask &&
+                      draggedRootTask !== null &&
+                      key !== taskItemKey(draggedRootTask) &&
+                      taskSettings.sortMode === "manual" &&
+                      draggedRootTask.filePath === task.filePath &&
+                      (!timeBasedView || draggedRootTask.deadline === task.deadline);
+                    const rootDropBlocked =
+                      !isSubtask &&
+                      draggedRootTask !== null &&
+                      key !== taskItemKey(draggedRootTask) &&
+                      !rootDropAllowed;
 
                     return (
                       <TaskRow
@@ -1479,6 +1730,29 @@ export function TasksPanel({
                                 }
                               }
                             : undefined
+                        }
+                        rootDropAllowed={rootDropAllowed}
+                        rootDropBlocked={rootDropBlocked}
+                        isDragSource={
+                          !isSubtask &&
+                          draggedRootTask !== null &&
+                          key === taskItemKey(draggedRootTask)
+                        }
+                        onRootDrop={
+                          rootDropAllowed
+                            ? (event, placement) => {
+                                const source = taskFromDrop(event);
+                                if (source) {
+                                  void reorderRootTask(source, task, placement);
+                                }
+                              }
+                            : undefined
+                        }
+                        onDragStartTask={
+                          !isSubtask ? () => setDraggedRootKey(key) : undefined
+                        }
+                        onDragEndTask={
+                          !isSubtask ? () => setDraggedRootKey(null) : undefined
                         }
                         onDelete={() => void mutateTask(task, "delete")}
                       />

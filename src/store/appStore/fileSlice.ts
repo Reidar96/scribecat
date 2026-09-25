@@ -540,6 +540,25 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
       return null;
     }
   },
+  createNamedFile: async (targetDirectory: string, newBaseName: string) => {
+    const { filePaths } = get();
+    const trimmedBaseName = newBaseName.trim().replace(/\.md$/i, "");
+
+    if (!trimmedBaseName || INVALID_FILE_NAME_CHARS.test(trimmedBaseName)) {
+      set({ fileError: i18n.t("store.invalidFileName") });
+      return null;
+    }
+
+    const newFilePath = await join(targetDirectory, `${trimmedBaseName}.md`);
+    const existingPathKeys = new Set(filePaths.map(normalizePathKey));
+
+    if (existingPathKeys.has(normalizePathKey(newFilePath))) {
+      set({ fileError: i18n.t("store.fileAlreadyExists") });
+      return null;
+    }
+
+    return (await get().createFileAtPath(newFilePath, "")) ? newFilePath : null;
+  },
   // Copies a file next to itself, named after it with a localized "(Copy)"
   // suffix and numbered on collision — mirrors createNewFile's placement
   // logic but anchors the manual-order insert on the source file instead of
@@ -647,27 +666,30 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
       // this path would come back dirty on the next open.
       discardDraft(folderPath, filePath);
 
-      const parentRelativePath = getRelativeDisplayPath(folderPath, targetDirectory);
-      const currentManualOrder = get().manualOrder;
-      const seededManualOrder = ensureManualOrderEntry(
-        currentManualOrder,
-        parentRelativePath,
-        currentChildBasenames(folderPath, filePaths, emptyFolderPaths, parentRelativePath)
-      );
-      const nextManualOrder = insertManualOrderEntry(
-        seededManualOrder,
-        parentRelativePath,
-        getBasename(filePath),
-        // At the end: a batch has no meaningful anchor to insert after, and the
-        // user can drag it wherever they want afterwards.
-        (seededManualOrder[parentRelativePath] ?? []).length
-      );
-      persistManualOrderIfChanged(folderPath, currentManualOrder, nextManualOrder);
-
       const currentState = get();
       const alreadyKnown = currentState.filePaths.some(
         (path) => normalizePathKey(path) === normalizePathKey(filePath)
       );
+      const currentManualOrder = currentState.manualOrder;
+      let nextManualOrder = currentManualOrder;
+
+      if (!alreadyKnown) {
+        const parentRelativePath = getRelativeDisplayPath(folderPath, targetDirectory);
+        const seededManualOrder = ensureManualOrderEntry(
+          currentManualOrder,
+          parentRelativePath,
+          currentChildBasenames(folderPath, filePaths, emptyFolderPaths, parentRelativePath)
+        );
+        nextManualOrder = insertManualOrderEntry(
+          seededManualOrder,
+          parentRelativePath,
+          getBasename(filePath),
+          // At the end: a batch has no meaningful anchor to insert after, and the
+          // user can drag it wherever they want afterwards.
+          (seededManualOrder[parentRelativePath] ?? []).length
+        );
+        persistManualOrderIfChanged(folderPath, currentManualOrder, nextManualOrder);
+      }
 
       // The created file can be the one on screen: the agent proposes it, the
       // user opens it to review the proposal, and applies from there. Without
@@ -683,6 +705,10 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
           ? currentState.filePaths
           : insertFilePathSorted(currentState.filePaths, filePath),
         manualOrder: nextManualOrder,
+        fileMtimeMs: {
+          ...currentState.fileMtimeMs,
+          [filePath]: Date.now()
+        },
         fileDocuments: {
           ...currentState.fileDocuments,
           [filePath]: { content, baseContent: content }

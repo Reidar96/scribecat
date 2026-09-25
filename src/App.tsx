@@ -159,6 +159,7 @@ function App() {
   const saveSelectedFile = useAppStore((state) => state.saveSelectedFile);
   const restoreFileVersion = useAppStore((state) => state.restoreFileVersion);
   const createNewFile = useAppStore((state) => state.createNewFile);
+  const createNamedFile = useAppStore((state) => state.createNamedFile);
   const createFileAtPath = useAppStore((state) => state.createFileAtPath);
   const duplicateFile = useAppStore((state) => state.duplicateFile);
   const registerImportedFiles = useAppStore((state) => state.registerImportedFiles);
@@ -747,14 +748,11 @@ function App() {
     const targetDirectory = await resolveCollectionTargetDirectory();
     if (!targetDirectory) return false;
 
-    const newFilePath = await createNewFile(targetDirectory);
+    // Create directly with the requested title. The previous two-step path
+    // briefly exposed "Nytt notat.md" to the folder watcher and collection
+    // before the rename landed, which is the flash/delay visible in the grid.
+    const newFilePath = await createNamedFile(targetDirectory, name);
     if (!newFilePath) return false;
-
-    const renamed = await renameFilePath(newFilePath, name);
-    if (!renamed) {
-      await deleteFilePath(newFilePath);
-      return false;
-    }
 
     // Creating from the collection is an operation on the current folder,
     // not navigation into the new note. Keep the grid as the active view.
@@ -1234,6 +1232,8 @@ function App() {
               }}
               onCreateFolder={createCollectionFolder}
               onCreateNote={createCollectionNote}
+              onSetSortMode={(mode) => void setSortMode(mode)}
+              onMoveEntry={moveTreeEntry}
             />
           ) : (
             <DocumentPanel
