@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.24.1] - 2026-09-25
+
+### Improvements
+- Add **Open selected in split view** when exactly two Markdown documents are selected in the sidebar file tree or File Viewer on desktop.
+- Add **Open selected as tabs** for the same two-document selection in both the sidebar and File Viewer.
+- Keep folder selections out of these actions so the commands only appear for two actual Markdown documents.
+
 ## [0.24.0] - 2026-09-25
 
 ### New features
