@@ -242,6 +242,29 @@
   margin: 0;
 }
 
+@media (min-width: 721px) and (max-width: 920px) {
+  .collection-home-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.45rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .collection-home-actions > button {
+    min-width: 0;
+    min-height: 3rem;
+    justify-content: center;
+    gap: 0.35rem;
+    padding-inline: 0.45rem;
+  }
+
+  .collection-home-actions > button svg {
+    flex: none;
+    width: 1rem;
+    height: 1rem;
+  }
+}
+
 @media (max-width: 720px) {
   .collection-panel__header {
     padding: 0.55rem 0.65rem;

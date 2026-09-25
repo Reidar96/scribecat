@@ -500,7 +500,7 @@ export function CollectionPanel({
         </header>
 
         <div className="collection-panel__body">
-          {isRootCollection && layout === "phone" ? (
+          {isRootCollection ? (
             <div className="collection-home-actions">
               <Button
                 type="button"
@@ -544,88 +544,6 @@ export function CollectionPanel({
             </div>
           ) : (
             <div className="collection-grid">
-              {request.kind === "folder" ? (
-                <div className={cn(
-                  "collection-card",
-                  "collection-card--create",
-                  createKind && "collection-card--create-editing"
-                )}>
-                  {createKind ? (
-                    <form
-                      className="collection-card__create-form"
-                      onSubmit={(event) => {
-                        event.preventDefault();
-                        void submitCreate();
-                      }}
-                    >
-                      {createKind === "folder" ? (
-                        <Folder aria-hidden="true" />
-                      ) : (
-                        <FileText aria-hidden="true" />
-                      )}
-                      <input
-                        autoFocus
-                        value={createDraft}
-                        onChange={(event) => setCreateDraft(event.target.value)}
-                        placeholder={t(createKind === "folder" ? "sidebar.newFolder" : "sidebar.newFile")}
-                        aria-label={t(createKind === "folder" ? "sidebar.newFolder" : "sidebar.newFile")}
-                        disabled={isCreating}
-                        onKeyDown={(event) => {
-                          if (event.key === "Escape") {
-                            event.preventDefault();
-                            cancelCreate();
-                          }
-                        }}
-                      />
-                      <Button
-                        type="submit"
-                        size="icon-sm"
-                        variant="ghost"
-                        disabled={!createDraft.trim() || isCreating}
-                        aria-label={t("common.save")}
-                        title={t("common.save")}
-                      >
-                        <Check />
-                      </Button>
-                      <Button
-                        type="button"
-                        size="icon-sm"
-                        variant="ghost"
-                        disabled={isCreating}
-                        onClick={cancelCreate}
-                        aria-label={t("common.cancel")}
-                        title={t("common.cancel")}
-                      >
-                        <X />
-                      </Button>
-                    </form>
-                  ) : (
-                    <>
-                      <button
-                        type="button"
-                        className="collection-card__create-action"
-                        onClick={() => beginCreate("folder")}
-                        disabled={!onCreateFolder}
-                        aria-label={t("sidebar.newFolder")}
-                        title={t("sidebar.newFolder")}
-                      >
-                        <Folder aria-hidden="true" />
-                      </button>
-                      <span className="collection-card__create-divider" aria-hidden="true" />
-                      <button
-                        type="button"
-                        className="collection-card__create-action"
-                        onClick={() => beginCreate("note")}
-                        disabled={!onCreateNote}
-                        aria-label={t("sidebar.newFile")}
-                        title={t("sidebar.newFile")}
-                      >
-                        <FileText aria-hidden="true" />
-                      </button>
-                    </>
-                  )}
-                </div>
-              ) : null}
               {cards.map((card) => {
                 if (card.kind === "folder") {
                   return (
@@ -722,6 +640,88 @@ export function CollectionPanel({
                   </article>
                 );
               })}
+              {request.kind === "folder" ? (
+                <div className={cn(
+                  "collection-card",
+                  "collection-card--create",
+                  createKind && "collection-card--create-editing"
+                )}>
+                  {createKind ? (
+                    <form
+                      className="collection-card__create-form"
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        void submitCreate();
+                      }}
+                    >
+                      {createKind === "folder" ? (
+                        <Folder aria-hidden="true" />
+                      ) : (
+                        <FileText aria-hidden="true" />
+                      )}
+                      <input
+                        autoFocus
+                        value={createDraft}
+                        onChange={(event) => setCreateDraft(event.target.value)}
+                        placeholder={t(createKind === "folder" ? "sidebar.newFolder" : "sidebar.newFile")}
+                        aria-label={t(createKind === "folder" ? "sidebar.newFolder" : "sidebar.newFile")}
+                        disabled={isCreating}
+                        onKeyDown={(event) => {
+                          if (event.key === "Escape") {
+                            event.preventDefault();
+                            cancelCreate();
+                          }
+                        }}
+                      />
+                      <Button
+                        type="submit"
+                        size="icon-sm"
+                        variant="ghost"
+                        disabled={!createDraft.trim() || isCreating}
+                        aria-label={t("common.save")}
+                        title={t("common.save")}
+                      >
+                        <Check />
+                      </Button>
+                      <Button
+                        type="button"
+                        size="icon-sm"
+                        variant="ghost"
+                        disabled={isCreating}
+                        onClick={cancelCreate}
+                        aria-label={t("common.cancel")}
+                        title={t("common.cancel")}
+                      >
+                        <X />
+                      </Button>
+                    </form>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        className="collection-card__create-action"
+                        onClick={() => beginCreate("folder")}
+                        disabled={!onCreateFolder}
+                        aria-label={t("sidebar.newFolder")}
+                        title={t("sidebar.newFolder")}
+                      >
+                        <Folder aria-hidden="true" />
+                      </button>
+                      <span className="collection-card__create-divider" aria-hidden="true" />
+                      <button
+                        type="button"
+                        className="collection-card__create-action"
+                        onClick={() => beginCreate("note")}
+                        disabled={!onCreateNote}
+                        aria-label={t("sidebar.newFile")}
+                        title={t("sidebar.newFile")}
+                      >
+                        <FileText aria-hidden="true" />
+                      </button>
+                    </>
+                  )}
+                </div>
+              ) : null}
             </div>
           )}
         </div>
