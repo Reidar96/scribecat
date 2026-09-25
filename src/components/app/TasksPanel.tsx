@@ -3,7 +3,6 @@ import {
   ArrowDownAZ,
   ArrowUpDown,
   CalendarClock,
-  CheckCircle2,
   ChevronDown,
   ChevronRight,
   Clock,
@@ -20,6 +19,8 @@ import {
 import { useTranslation } from "react-i18next";
 
 import { DeleteFileDialog } from "@/components/DeleteFileDialog";
+import { ContextMenuSurface } from "@/components/fileTree/ContextMenuSurface";
+import { useContextMenuState } from "@/components/fileTree/useContextMenuState";
 import { Button } from "@/components/ui/button";
 import {
   Menu,
@@ -113,7 +114,7 @@ function compareRootTasks(
   left: TaskItem,
   right: TaskItem,
   sortMode: TaskSortMode,
-  fileMtimeMs: Record<string, number>,
+  modifiedAtByRoot: Map<string, number>,
   locale: string,
   keepDateGroups: boolean
 ): number {
@@ -132,10 +133,14 @@ function compareRootTasks(
     if (nameCompare !== 0) return nameCompare;
   } else if (sortMode === "modified") {
     const modifiedCompare =
-      (fileMtimeMs[right.filePath] ?? 0) - (fileMtimeMs[left.filePath] ?? 0);
+      (modifiedAtByRoot.get(taskItemKey(right)) ?? 0) -
+      (modifiedAtByRoot.get(taskItemKey(left)) ?? 0);
     if (modifiedCompare !== 0) return modifiedCompare;
   }
 
+  // Manual is the Markdown order inside each category file. Across category
+  // files there is no fabricated global order: categories remain stable and
+  // the task lines inside each file are the authoritative order.
   const categoryCompare = left.category.localeCompare(right.category, locale, {
     sensitivity: "base",
     numeric: true
@@ -563,6 +568,8 @@ export function TasksPanel({
   const [focusTaskKey, setFocusTaskKey] = useState<string | null>(null);
   const [recentlyCreatedRootKey, setRecentlyCreatedRootKey] = useState<string | null>(null);
   const [draggedRootKey, setDraggedRootKey] = useState<string | null>(null);
+  const { contextMenu: categoryContextMenu, setContextMenu: setCategoryContextMenu } =
+    useContextMenuState<{ category: string; x: number; y: number }>();
   const pendingMarkdownByPathRef = useRef(new Map<string, string>());
 
   useEffect(() => {
