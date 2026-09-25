@@ -137,6 +137,8 @@ type SidebarProps = {
   onRenameFile: (filePath: string, newBaseName: string) => Promise<boolean>;
   onMoveEntry: (input: MoveTreeEntryInput) => Promise<boolean>;
   onMoveRequest: (entries: BatchEntry[]) => void;
+  onOpenSplitRequest?: (filePaths: [string, string]) => void;
+  onOpenTabsRequest?: (filePaths: [string, string]) => void;
   onSetSortMode: (mode: SortMode) => void;
   onSettingsRequest: () => void;
   onRequestEditorFocus: () => void;
@@ -205,6 +207,8 @@ export function Sidebar({
   onRenameFile,
   onMoveEntry,
   onMoveRequest,
+  onOpenSplitRequest,
+  onOpenTabsRequest,
   onSetSortMode,
   onSettingsRequest,
   onRequestEditorFocus,
@@ -942,6 +946,8 @@ export function Sidebar({
             onRenameFile={onRenameFile}
             onMoveEntry={onMoveEntry}
             onMoveRequest={onMoveRequest}
+            onOpenSplitRequest={onOpenSplitRequest}
+            onOpenTabsRequest={onOpenTabsRequest}
             onRequestEditorFocus={onRequestEditorFocus}
             focusRequestId={sidebarFocusRequestId + treeRevealRequestId}
             collapseAllRequestId={collapseFoldersRequestId}
