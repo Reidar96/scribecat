@@ -24,7 +24,7 @@ on:
 # release.yml): the push is atomic over the digest, so an aborted run leaves
 # nothing half-published behind.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ inputs.version || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -37,6 +37,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.version && format('v{0}', inputs.version) || github.ref }}
 
       - name: Determine version
         id: version
