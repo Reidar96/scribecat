@@ -666,27 +666,30 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
       // this path would come back dirty on the next open.
       discardDraft(folderPath, filePath);
 
-      const parentRelativePath = getRelativeDisplayPath(folderPath, targetDirectory);
-      const currentManualOrder = get().manualOrder;
-      const seededManualOrder = ensureManualOrderEntry(
-        currentManualOrder,
-        parentRelativePath,
-        currentChildBasenames(folderPath, filePaths, emptyFolderPaths, parentRelativePath)
-      );
-      const nextManualOrder = insertManualOrderEntry(
-        seededManualOrder,
-        parentRelativePath,
-        getBasename(filePath),
-        // At the end: a batch has no meaningful anchor to insert after, and the
-        // user can drag it wherever they want afterwards.
-        (seededManualOrder[parentRelativePath] ?? []).length
-      );
-      persistManualOrderIfChanged(folderPath, currentManualOrder, nextManualOrder);
-
       const currentState = get();
       const alreadyKnown = currentState.filePaths.some(
         (path) => normalizePathKey(path) === normalizePathKey(filePath)
       );
+      const currentManualOrder = currentState.manualOrder;
+      let nextManualOrder = currentManualOrder;
+
+      if (!alreadyKnown) {
+        const parentRelativePath = getRelativeDisplayPath(folderPath, targetDirectory);
+        const seededManualOrder = ensureManualOrderEntry(
+          currentManualOrder,
+          parentRelativePath,
+          currentChildBasenames(folderPath, filePaths, emptyFolderPaths, parentRelativePath)
+        );
+        nextManualOrder = insertManualOrderEntry(
+          seededManualOrder,
+          parentRelativePath,
+          getBasename(filePath),
+          // At the end: a batch has no meaningful anchor to insert after, and the
+          // user can drag it wherever they want afterwards.
+          (seededManualOrder[parentRelativePath] ?? []).length
+        );
+        persistManualOrderIfChanged(folderPath, currentManualOrder, nextManualOrder);
+      }
 
       // The created file can be the one on screen: the agent proposes it, the
       // user opens it to review the proposal, and applies from there. Without
