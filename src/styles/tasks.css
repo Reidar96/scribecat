@@ -807,14 +807,26 @@
   }
 
   .tasks-main__heading {
-    flex-direction: column;
     align-items: flex-start;
-    gap: 0.55rem;
+    gap: 0.45rem;
+  }
+
+  .tasks-main__heading > div:first-child {
+    min-width: 0;
+  }
+
+  .tasks-main__heading h3 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .tasks-main__heading-actions {
-    width: 100%;
-    justify-content: flex-start;
+    width: auto;
+    flex: none;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    margin-left: auto;
   }
 
   .tasks-category-actions__desktop {
