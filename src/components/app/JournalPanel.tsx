@@ -16,16 +16,17 @@ import {
   Plus,
   Search,
   Home,
-  Trash2,
   X
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { ImageLightbox } from "@/components/ImageLightbox";
+import { ImageContextMenuItems } from "@/components/ImageContextMenuItems";
 import { ContextMenuSurface } from "@/components/fileTree/ContextMenuSurface";
 import { useContextMenuState } from "@/components/fileTree/useContextMenuState";
 import { Button } from "@/components/ui/button";
 import { useLayoutMode } from "@/hooks/useLayoutMode";
+import { useLongPressContextMenu } from "@/hooks/useLongPressContextMenu";
 import { extractTags, normalizeTag, setTags } from "@/lib/documentFrontmatter";
 import {
   ABSOLUTE_URL_PATTERN,
@@ -45,6 +46,7 @@ import {
   type JournalDate,
   type JournalImage
 } from "@/lib/journal";
+import { suggestedImageFileName } from "@/lib/imageActions";
 import { cn } from "@/lib/utils";
 import { getVaultCapabilities, platform, vaultCapabilityHint } from "@/platform";
 import { dirname, join } from "@/platform/paths";
@@ -278,6 +280,7 @@ function JournalImageLightbox({
     <ImageLightbox
       src={objectUrl}
       alt={image.alt}
+      fileName={suggestedImageFileName(image.src, image.alt)}
       onClose={onClose}
       onPrevious={
         images.length > 1
@@ -325,6 +328,10 @@ function JournalImageCard({
   const { t } = useTranslation();
   const { objectUrl, loadError } = useJournalImageUrl(image, filePath);
   const { contextMenu, setContextMenu } = useContextMenuState<{ x: number; y: number }>();
+  const { getLongPressProps } = useLongPressContextMenu<null>((_target, x, y) =>
+    setContextMenu({ x, y })
+  );
+  const longPressProps = getLongPressProps(null);
   const [ratioClass, setRatioClass] = useState<ImageRatioClass>("landscape");
   const masonryRef = useMasonrySpan<HTMLElement>();
 
@@ -337,7 +344,14 @@ function JournalImageCard({
           isDragging && "journal-entry__image-card--dragging"
         )}
         data-journal-image-key={itemKey}
+        data-scribecat-long-press={longPressProps["data-scribecat-long-press"]}
         draggable
+        onPointerDown={longPressProps.onPointerDown}
+        onPointerMove={longPressProps.onPointerMove}
+        onPointerUp={longPressProps.onPointerUp}
+        onPointerCancel={longPressProps.onPointerCancel}
+        onClickCapture={longPressProps.onClickCapture}
+        onContextMenuCapture={longPressProps.onContextMenuCapture}
         onDragStart={(event) => onDragStart(event, itemKey)}
         onDragEnter={(event) => {
           event.preventDefault();
@@ -396,18 +410,15 @@ function JournalImageCard({
           title={image.alt || t("imageView.preview")}
           onClick={(event) => event.stopPropagation()}
         >
-          <button
-            type="button"
-            role="menuitem"
-            className="file-tree-context-menu__item file-tree-context-menu__item--danger"
-            onClick={() => {
+          <ImageContextMenuItems
+            src={objectUrl}
+            fileName={suggestedImageFileName(image.src, image.alt)}
+            onClose={() => setContextMenu(null)}
+            onDelete={() => {
               setContextMenu(null);
               onDelete(itemKey);
             }}
-          >
-            <Trash2 aria-hidden="true" />
-            {t("imageView.delete")}
-          </button>
+          />
         </ContextMenuSurface>
       ) : null}
     </>
