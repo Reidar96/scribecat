@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 import {
+  ArrowDownAZ,
+  ArrowUpDown,
   CalendarClock,
   CheckCircle2,
   ChevronDown,
   ChevronRight,
+  Clock,
   GripVertical,
   Home,
   PanelLeft,
@@ -18,6 +21,16 @@ import { useTranslation } from "react-i18next";
 
 import { DeleteFileDialog } from "@/components/DeleteFileDialog";
 import { Button } from "@/components/ui/button";
+import {
+  Menu,
+  MenuPopup,
+  MenuPortal,
+  MenuPositioner,
+  MenuRadioGroup,
+  MenuRadioItem,
+  MenuRadioItemIndicator,
+  MenuTrigger
+} from "@/components/ui/menu";
 import { useLayoutMode } from "@/hooks/useLayoutMode";
 import { getRelativeDisplayPath, readMarkdownFile } from "@/lib/fileSystem";
 import {
@@ -25,9 +38,11 @@ import {
   appendTaskToMarkdown,
   createTaskDocument,
   insertSubtaskInMarkdown,
+  moveSiblingTaskInMarkdown,
   moveSubtaskInMarkdown,
   normalizeTaskTags,
   parseTaskMarkdown,
+  prependTaskToMarkdown,
   removeTaskFromMarkdown,
   renameTaskDocumentHeading,
   setTaskSubtreeCheckedInMarkdown,
@@ -36,7 +51,8 @@ import {
   taskRelativePath,
   updateTaskInMarkdown,
   type MarkdownTask,
-  type TaskPriority
+  type TaskPriority,
+  type TaskSortMode
 } from "@/lib/tasks";
 import { cn } from "@/lib/utils";
 import { join } from "@/platform/paths";
@@ -166,6 +182,12 @@ function TaskRow({
   onPriorityChange,
   onAddSubtask,
   onSubtaskDrop,
+  rootDropAllowed = false,
+  rootDropBlocked = false,
+  isDragSource = false,
+  onRootDrop,
+  onDragStartTask,
+  onDragEndTask,
   onDelete
 }: {
   task: TaskItem;
@@ -183,6 +205,15 @@ function TaskRow({
     event: DragEvent<HTMLElement>,
     placement: "before" | "after"
   ) => void;
+  rootDropAllowed?: boolean;
+  rootDropBlocked?: boolean;
+  isDragSource?: boolean;
+  onRootDrop?: (
+    event: DragEvent<HTMLElement>,
+    placement: "before" | "after"
+  ) => void;
+  onDragStartTask?: () => void;
+  onDragEndTask?: () => void;
   onDelete: () => void;
 }) {
   const { t } = useTranslation();
@@ -245,7 +276,7 @@ function TaskRow({
     setTagsDraft(next.map((tag) => `#${tag}`).join(" "));
   };
 
-  const startDrag = (event: DragEvent<HTMLButtonElement>) => {
+  const startDrag = (event: DragEvent<HTMLElement>) => {
     event.dataTransfer.effectAllowed = "move";
     event.dataTransfer.setData(
       TASK_DRAG_MIME,
@@ -255,11 +286,17 @@ function TaskRow({
       event.dataTransfer.setData(TASK_SUBTASK_DRAG_MIME, "1");
     }
     event.dataTransfer.setData("text/plain", task.text);
+    onDragStartTask?.();
   };
 
   const updateDropPosition = (event: DragEvent<HTMLElement>) => {
-    if (!isSubtask || !onSubtaskDrop) return null;
-    if (!event.dataTransfer.types.includes(TASK_SUBTASK_DRAG_MIME)) return null;
+    const isSubtaskDrag = event.dataTransfer.types.includes(TASK_SUBTASK_DRAG_MIME);
+
+    if (isSubtask) {
+      if (!onSubtaskDrop || !isSubtaskDrag) return null;
+    } else {
+      if (!onRootDrop || isSubtaskDrag || !rootDropAllowed) return null;
+    }
 
     const rect = event.currentTarget.getBoundingClientRect();
     const placement =
@@ -270,33 +307,44 @@ function TaskRow({
     return placement;
   };
 
-  const subtaskDropProps = isSubtask && onSubtaskDrop
-    ? {
-        onDragOver: (event: DragEvent<HTMLElement>) => {
-          updateDropPosition(event);
-        },
-        onDragLeave: (event: DragEvent<HTMLElement>) => {
-          if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+  const dropProps =
+    (isSubtask && onSubtaskDrop) || (!isSubtask && onRootDrop && rootDropAllowed)
+      ? {
+          onDragOver: (event: DragEvent<HTMLElement>) => {
+            updateDropPosition(event);
+          },
+          onDragLeave: (event: DragEvent<HTMLElement>) => {
+            if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+              setDropPosition(null);
+            }
+          },
+          onDrop: (event: DragEvent<HTMLElement>) => {
+            const placement = updateDropPosition(event);
             setDropPosition(null);
+            if (!placement) return;
+
+            if (isSubtask) {
+              onSubtaskDrop?.(event, placement);
+            } else {
+              onRootDrop?.(event, placement);
+            }
           }
-        },
-        onDrop: (event: DragEvent<HTMLElement>) => {
-          const placement = updateDropPosition(event);
-          setDropPosition(null);
-          if (placement) onSubtaskDrop(event, placement);
         }
-      }
-    : {};
+      : {};
 
   if (isSubtask && task.checked) {
     return (
       <article
         className={cn(
           "tasks-item tasks-item--subtask tasks-item--subtask-completed",
+          isDragSource && "tasks-item--drag-source",
           dropPosition === "before" && "tasks-item--drop-before",
           dropPosition === "after" && "tasks-item--drop-after"
         )}
-        {...subtaskDropProps}
+        draggable
+        onDragStart={startDrag}
+        onDragEnd={onDragEndTask}
+        {...dropProps}
       >
         <label className="tasks-item__check tasks-item__check--compact">
           <input
@@ -331,16 +379,19 @@ function TaskRow({
         task.checked && "tasks-item--checked",
         !isSubtask && overdue && "tasks-item--overdue",
         !isSubtask && task.priority && `tasks-item--priority-${task.priority}`,
+        isDragSource && "tasks-item--drag-source",
+        rootDropBlocked && "tasks-item--drop-blocked",
         dropPosition === "before" && "tasks-item--drop-before",
         dropPosition === "after" && "tasks-item--drop-after"
       )}
-      {...subtaskDropProps}
+      {...dropProps}
     >
       <button
         type="button"
         className="tasks-item__drag"
         draggable
         onDragStart={startDrag}
+        onDragEnd={onDragEndTask}
         aria-label={t("tasks.dragTask")}
         title={t("tasks.dragTask")}
       >
@@ -389,13 +440,17 @@ function TaskRow({
           <div className="tasks-item__meta">
             <span className="tasks-item__category">{task.category}</span>
 
-            <label className="tasks-item__deadline">
+            <label
+              className="tasks-item__deadline"
+              data-empty={task.deadline ? "false" : "true"}
+              data-placeholder={t("tasks.noDate")}
+            >
               <CalendarClock aria-hidden="true" />
               <input
                 type="date"
                 value={task.deadline ?? ""}
                 onChange={(event) => onDeadlineChange(event.target.value || null)}
-                aria-label={t("tasks.deadline")}
+                aria-label={task.deadline ? t("tasks.deadline") : t("tasks.noDate")}
               />
             </label>
 
