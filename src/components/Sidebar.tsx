@@ -215,9 +215,8 @@ export function Sidebar({
   const [searchQuery, setSearchQuery] = useState("");
   const [collapseFoldersRequestId, setCollapseFoldersRequestId] = useState(0);
   const journalSettings = useEditorSettingsStore((state) => state.journalSettings);
-  const hideTasksFromSidebar = useEditorSettingsStore(
-    (state) => state.taskSettings.hideFromSidebar
-  );
+  const taskSettings = useEditorSettingsStore((state) => state.taskSettings);
+  const hideTasksFromSidebar = taskSettings.hideFromSidebar;
   const vaultSettingsLoadedPath = useEditorSettingsStore(
     (state) => state.headingNumberingVaultPath
   );
@@ -238,13 +237,13 @@ export function Sidebar({
               ) &&
               !(
                 hideTasksFromSidebar &&
-                isTasksContainerRelativePath(relativePath)
+                isTasksContainerRelativePath(relativePath, taskSettings.folder)
               )
             );
           })
           : []
         : filePaths,
-    [filePaths, folderPath, hideTasksFromSidebar, journalSettings, vaultSettingsReady]
+    [filePaths, folderPath, hideTasksFromSidebar, journalSettings, taskSettings.folder, vaultSettingsReady]
   );
   const visibleSidebarEmptyFolderPaths = useMemo(
     () =>
@@ -259,13 +258,13 @@ export function Sidebar({
               ) &&
               !(
                 hideTasksFromSidebar &&
-                isTasksContainerRelativePath(relativePath)
+                isTasksContainerRelativePath(relativePath, taskSettings.folder)
               )
             );
           })
           : []
         : emptyFolderPaths,
-    [emptyFolderPaths, folderPath, hideTasksFromSidebar, journalSettings, vaultSettingsReady]
+    [emptyFolderPaths, folderPath, hideTasksFromSidebar, journalSettings, taskSettings.folder, vaultSettingsReady]
   );
   // Hidden diary/task storage is also excluded from the ordinary tag overview.
   // The underlying Markdown remains searchable and portable.
