@@ -731,6 +731,18 @@ function App() {
     }
   };
 
+  const resolveCollectionTargetDirectory = async (): Promise<string | undefined> => {
+    if (!folderPath) return undefined;
+    if (collectionView?.kind !== "folder" || !collectionView.relativePath) {
+      return folderPath;
+    }
+
+    return join(
+      folderPath,
+      ...collectionView.relativePath.replace(/\\/g, "/").split("/").filter(Boolean)
+    );
+  };
+
   const requestImportFiles = async () => {
     if (!platform.dialogs) {
       return;
@@ -1183,6 +1195,16 @@ function App() {
                 setJournalViewOpen(false);
                 setGraphViewOpen(false);
                 setCollectionView(null);
+              }}
+              onCreateFolder={() => {
+                void resolveCollectionTargetDirectory().then((targetDirectory) =>
+                  handleCreateFolder(targetDirectory)
+                );
+              }}
+              onCreateNote={() => {
+                void resolveCollectionTargetDirectory().then((targetDirectory) =>
+                  handleCreateFile(targetDirectory)
+                );
               }}
             />
           ) : (
