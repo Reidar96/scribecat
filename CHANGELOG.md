@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.22.20] - 2026-09-25
+
+### Fixes and improvements
+- Fix task sorting so “recently modified” is based on the individual task/group rather than the category Markdown file. ScribeCat stores the task edit timestamp as an invisible HTML comment on the Markdown task line, keeping Markdown as the source of truth.
+- Keep alphabetical sorting task-based, while Manual continues to follow the actual Markdown order inside category files. Time-based views keep date groups stable.
+- Keep a newly created task at the top of the current view while it is being edited.
+- Move category rename/delete controls out of the category scroller on both mobile and desktop. When a category is open, labelled “Rename” and “Delete category” actions are shown in the category heading instead of the passive check icon.
+- Add right-click actions to task categories for rename and delete.
+- Add right-click menus to notes and folders in Start/folder collection views with the relevant sidebar actions: rename, duplicate notes, move, export, Markdown/ZIP download where available, print notes, reveal local folders, and delete.
+
+
 ## [0.22.19] - 2026-09-25
 
 ### Improvements
