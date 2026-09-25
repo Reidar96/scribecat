@@ -1369,5 +1369,20 @@
     "previous": "Previous page",
     "next": "Next page",
     "pageCount": "Page {{page}} of {{count}}"
+  },
+  "tabs": {
+    "label": "Open documents",
+    "unsaved": "Unsaved changes",
+    "close": "Close {{name}}"
+  },
+  "split": {
+    "open": "Open another document beside this one",
+    "pickerTitle": "Open in split view",
+    "search": "Search documents…",
+    "noMatches": "No matching documents.",
+    "close": "Close split document",
+    "resize": "Resize split editors",
+    "dropTitle": "Open in split view",
+    "dropHint": "Release to open on the right"
   }
 }
