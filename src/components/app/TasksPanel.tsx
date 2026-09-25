@@ -75,6 +75,7 @@ const NEXT_MONTH_TASKS = "__next-month__";
 const CATEGORY_PREFIX = "category:";
 const TAG_PREFIX = "tag:";
 const TASK_DRAG_MIME = "application/x-scribecat-task";
+const TASK_SUBTASK_DRAG_MIME = "application/x-scribecat-subtask";
 
 function categoryView(category: string): string {
   return `${CATEGORY_PREFIX}${category}`;
@@ -250,12 +251,15 @@ function TaskRow({
       TASK_DRAG_MIME,
       JSON.stringify({ filePath: task.filePath, lineIndex: task.lineIndex })
     );
+    if (isSubtask) {
+      event.dataTransfer.setData(TASK_SUBTASK_DRAG_MIME, "1");
+    }
     event.dataTransfer.setData("text/plain", task.text);
   };
 
   const updateDropPosition = (event: DragEvent<HTMLElement>) => {
     if (!isSubtask || !onSubtaskDrop) return null;
-    if (!event.dataTransfer.types.includes(TASK_DRAG_MIME)) return null;
+    if (!event.dataTransfer.types.includes(TASK_SUBTASK_DRAG_MIME)) return null;
 
     const rect = event.currentTarget.getBoundingClientRect();
     const placement =
@@ -1270,6 +1274,7 @@ export function TasksPanel({
                   )}
                   onDragOver={(event) => {
                     if (!event.dataTransfer.types.includes(TASK_DRAG_MIME)) return;
+                    if (event.dataTransfer.types.includes(TASK_SUBTASK_DRAG_MIME)) return;
                     event.preventDefault();
                     event.dataTransfer.dropEffect = "move";
                     setDragOverCategory(category);
