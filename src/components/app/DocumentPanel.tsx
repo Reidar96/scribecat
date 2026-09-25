@@ -255,6 +255,12 @@ export function DocumentPanel({
       onCancelTitleRename();
     }
   }, [documentLocked, isRenamingTitle, onCancelTitleRename]);
+
+  useEffect(() => {
+    if (!secondaryFilePath || layout !== "desktop") {
+      setActiveEditorPane("primary");
+    }
+  }, [layout, secondaryFilePath]);
   const capabilities = getVaultCapabilities();
   const capabilityHint = vaultCapabilityHint();
   const versioningEnabled = useVersioningSettingsStore((state) => state.versioningEnabled);
@@ -666,6 +672,14 @@ export function DocumentPanel({
             </div>
           </div>
 
+          <DocumentTabs
+            filePaths={openTabs}
+            activeFilePath={selectedFilePath}
+            dirtyFilePaths={dirtyFilePaths}
+            onSelect={onSelectTab}
+            onClose={onCloseTab}
+          />
+
           <div className="detail-panel__body">
             {fileError || saveError ? (
               <div className="detail-panel__message detail-panel__message--error">
@@ -676,26 +690,221 @@ export function DocumentPanel({
                 {t("app.fileLoading")}
               </div>
             ) : (
-              <Editor
-                key={selectedFilePath}
-                ref={editorHandleRef}
-                markdown={editorMarkdown ?? ""}
-                documentMarkdown={selectedFileContent}
-                onMarkdownChange={handleEditorMarkdownChange}
-                onDocumentMarkdownChange={onMarkdownChange}
-                onCanonicalMarkdown={handleCanonicalMarkdown}
-                folderPath={folderPath}
-                filePath={selectedFilePath}
-                editorFocusRequestId={editorFocusRequestId}
-                onRequestSidebarFocus={onRequestSidebarFocus}
-                onRequestFileOpen={onRequestFileOpen}
-                onZenModeRequest={onZenModeRequest}
-                onDeleteRequest={onDeleteRequest}
-                deleteEnabled={capabilities.delete}
-                documentLocked={documentLocked}
-                onDocumentLockToggle={toggleDocumentLocked}
-                toolbarContainer={layout === "desktop" ? toolbarSlot : null}
-              />
+              <div
+                className={cn(
+                  "split-workspace",
+                  layout === "desktop" && secondaryFilePath && "split-workspace--active"
+                )}
+                style={
+                  layout === "desktop" && secondaryFilePath
+                    ? ({ "--split-primary": `${splitRatio}%` } as React.CSSProperties)
+                    : undefined
+                }
+                onDragOverCapture={(event) => {
+                  if (layout !== "desktop" || !hasSplitDragPayload(event.dataTransfer)) {
+                    setSplitDropPreview(false);
+                    return;
+                  }
+
+                  const rect = event.currentTarget.getBoundingClientRect();
+                  const inRightHalf = event.clientX >= rect.left + rect.width / 2;
+                  setSplitDropPreview(inRightHalf);
+                  if (inRightHalf) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    event.dataTransfer.dropEffect = "copy";
+                  }
+                }}
+                onDragLeave={(event) => {
+                  const nextTarget = event.relatedTarget as Node | null;
+                  if (!nextTarget || !event.currentTarget.contains(nextTarget)) {
+                    setSplitDropPreview(false);
+                  }
+                }}
+                onDropCapture={(event) => {
+                  if (layout !== "desktop" || !splitDropPreview) return;
+                  const filePath = splitDropFilePath(event.dataTransfer);
+                  setSplitDropPreview(false);
+                  if (!filePath || filePath === selectedFilePath) return;
+                  event.preventDefault();
+                  event.stopPropagation();
+                  setSplitPickerOpen(false);
+                  onOpenSecondary(filePath);
+                }}
+              >
+                <div className="split-workspace__pane split-workspace__pane--primary">
+                  <Editor
+                    key={selectedFilePath}
+                    ref={editorHandleRef}
+                    markdown={editorMarkdown ?? ""}
+                    documentMarkdown={selectedFileContent}
+                    onMarkdownChange={handleEditorMarkdownChange}
+                    onDocumentMarkdownChange={onMarkdownChange}
+                    onCanonicalMarkdown={handleCanonicalMarkdown}
+                    folderPath={folderPath}
+                    filePath={selectedFilePath}
+                    editorFocusRequestId={editorFocusRequestId}
+                    onRequestSidebarFocus={onRequestSidebarFocus}
+                    onRequestFileOpen={onRequestFileOpen}
+                    onZenModeRequest={onZenModeRequest}
+                    onDeleteRequest={onDeleteRequest}
+                    deleteEnabled={capabilities.delete}
+                    documentLocked={documentLocked}
+                    onDocumentLockToggle={toggleDocumentLocked}
+                    onEditorFocus={() => setActiveEditorPane("primary")}
+                    hideToolbar={
+                      layout === "desktop" &&
+                      Boolean(secondaryFilePath) &&
+                      activeEditorPane !== "primary"
+                    }
+                    toolbarContainer={layout === "desktop" ? toolbarSlot : null}
+                  />
+                </div>
+
+                {layout === "desktop" && secondaryFilePath && secondaryDocument && secondaryMarkdown !== null ? (
+                  <>
+                    <div
+                      className="split-workspace__resizer"
+                      role="separator"
+                      aria-orientation="vertical"
+                      aria-label={t("split.resize")}
+                      aria-valuenow={Math.round(splitRatio)}
+                      tabIndex={0}
+                      onPointerDown={handleSplitResizeStart}
+                      onKeyDown={(event) => {
+                        if (event.key === "ArrowLeft") {
+                          event.preventDefault();
+                          setSplitRatio((value) => Math.max(25, value - 5));
+                        } else if (event.key === "ArrowRight") {
+                          event.preventDefault();
+                          setSplitRatio((value) => Math.min(75, value + 5));
+                        }
+                      }}
+                    />
+                    <div className="split-workspace__pane split-workspace__pane--secondary">
+                      <div className="split-workspace__pane-header">
+                        <span title={secondaryFilePath}>{getFileLinkLabel(secondaryFilePath)}</span>
+                        <button
+                          type="button"
+                          aria-label={t("split.close")}
+                          title={t("split.close")}
+                          onClick={() => {
+                            setActiveEditorPane("primary");
+                            onCloseSecondary();
+                          }}
+                        >
+                          <X aria-hidden="true" />
+                        </button>
+                      </div>
+                      <Editor
+                        key={secondaryFilePath}
+                        markdown={secondaryMarkdown}
+                        documentMarkdown={secondaryDocument.content}
+                        onMarkdownChange={(body) =>
+                          onSecondaryMarkdownChange(
+                            secondaryFilePath,
+                            replaceBody(secondaryDocument.content, body)
+                          )
+                        }
+                        onDocumentMarkdownChange={(markdown) =>
+                          onSecondaryMarkdownChange(secondaryFilePath, markdown)
+                        }
+                        onCanonicalMarkdown={(filePath, body) =>
+                          onCanonicalMarkdown(
+                            filePath,
+                            replaceBody(secondaryDocument.content, body)
+                          )
+                        }
+                        folderPath={folderPath}
+                        filePath={secondaryFilePath}
+                        onRequestSidebarFocus={onRequestSidebarFocus}
+                        onRequestFileOpen={onRequestFileOpen}
+                        onZenModeRequest={onZenModeRequest}
+                        onDeleteRequest={() => onDeleteFileRequest(secondaryFilePath)}
+                        deleteEnabled={capabilities.delete}
+                        documentLocked={secondaryDocumentLocked}
+                        onDocumentLockToggle={() =>
+                          void setDocumentLocked(
+                            secondaryFilePath,
+                            !secondaryDocumentLocked
+                          )
+                        }
+                        onEditorFocus={() => setActiveEditorPane("secondary")}
+                        hideToolbar={activeEditorPane !== "secondary"}
+                        toolbarContainer={toolbarSlot}
+                      />
+                    </div>
+                  </>
+                ) : null}
+
+                {layout === "desktop" ? (
+                  <>
+                    <button
+                      type="button"
+                      className="split-workspace__edge-add"
+                      aria-label={t("split.open")}
+                      title={t("split.open")}
+                      onClick={() => {
+                        setSplitPickerQuery("");
+                        setSplitPickerOpen((open) => !open);
+                      }}
+                    >
+                      <Plus aria-hidden="true" />
+                    </button>
+
+                    {splitPickerOpen ? (
+                      <div className="split-picker" role="dialog" aria-label={t("split.pickerTitle")}>
+                        <label className="split-picker__search">
+                          <Search aria-hidden="true" />
+                          <input
+                            autoFocus
+                            type="search"
+                            value={splitPickerQuery}
+                            placeholder={t("split.search")}
+                            onChange={(event) => setSplitPickerQuery(event.target.value)}
+                            onKeyDown={(event) => {
+                              if (event.key === "Escape") {
+                                setSplitPickerOpen(false);
+                              }
+                            }}
+                          />
+                        </label>
+                        <div className="split-picker__list">
+                          {splitOptions.length > 0 ? (
+                            splitOptions.map((option) => (
+                              <button
+                                key={option.filePath}
+                                type="button"
+                                className="split-picker__item"
+                                title={option.relativePath}
+                                onClick={() => {
+                                  setSplitPickerOpen(false);
+                                  onOpenSecondary(option.filePath);
+                                }}
+                              >
+                                <span>{option.label}</span>
+                                <small>{option.relativePath}</small>
+                              </button>
+                            ))
+                          ) : (
+                            <p className="split-picker__empty">{t("split.noMatches")}</p>
+                          )}
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {splitDropPreview ? (
+                      <div className="split-drop-preview" aria-hidden="true">
+                        <div className="split-drop-preview__content">
+                          <Plus />
+                          <strong>{t("split.dropTitle")}</strong>
+                          <span>{t("split.dropHint")}</span>
+                        </div>
+                      </div>
+                    ) : null}
+                  </>
+                ) : null}
+              </div>
             )}
           </div>
         </div>
