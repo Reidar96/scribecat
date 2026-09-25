@@ -547,6 +547,12 @@ p.detail-panel__version {
     minmax(0, var(--split-left, 50%))
     0.55rem
     minmax(0, calc(100% - var(--split-left, 50%) - 0.55rem));
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.split-workspace--active > .split-workspace__pane,
+.split-workspace--active > .split-workspace__resizer {
+  grid-row: 1;
 }
 
 .split-workspace__pane {
