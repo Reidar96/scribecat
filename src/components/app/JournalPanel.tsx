@@ -16,6 +16,7 @@ import {
   Plus,
   Search,
   Home,
+  Trash2,
   X
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
