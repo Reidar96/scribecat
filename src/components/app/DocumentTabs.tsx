@@ -12,6 +12,7 @@ type DocumentTabsProps = {
   dirtyFilePaths: string[];
   onSelect: (filePath: string) => void;
   onClose: (filePath: string) => void;
+  onReorder: (draggedFilePath: string, targetFilePath: string, position: "before" | "after") => void;
 };
 
 export function DocumentTabs({
@@ -19,7 +20,8 @@ export function DocumentTabs({
   activeFilePath,
   dirtyFilePaths,
   onSelect,
-  onClose
+  onClose,
+  onReorder
 }: DocumentTabsProps) {
   const { t } = useTranslation();
   const dirtySet = new Set(dirtyFilePaths);
@@ -41,9 +43,28 @@ export function DocumentTabs({
             role="presentation"
             draggable
             onDragStart={(event) => {
-              event.dataTransfer.effectAllowed = "copy";
+              event.dataTransfer.effectAllowed = "copyMove";
               event.dataTransfer.setData(TAB_DRAG_MIME, filePath);
               event.dataTransfer.setData("text/plain", filePath);
+            }}
+            onDragOver={(event) => {
+              const draggedFilePath = event.dataTransfer.getData(TAB_DRAG_MIME);
+              if (!draggedFilePath || draggedFilePath === filePath) return;
+
+              event.preventDefault();
+              event.stopPropagation();
+              event.dataTransfer.dropEffect = "move";
+            }}
+            onDrop={(event) => {
+              const draggedFilePath = event.dataTransfer.getData(TAB_DRAG_MIME);
+              if (!draggedFilePath || draggedFilePath === filePath) return;
+
+              event.preventDefault();
+              event.stopPropagation();
+              const rect = event.currentTarget.getBoundingClientRect();
+              const position =
+                event.clientX < rect.left + rect.width / 2 ? "before" : "after";
+              onReorder(draggedFilePath, filePath, position);
             }}
           >
             <button
