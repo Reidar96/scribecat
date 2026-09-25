@@ -482,17 +482,11 @@ export function TasksPanel({
   const taskSettings = useEditorSettingsStore((state) => state.taskSettings);
   const [documents, setDocuments] = useState<Record<string, TaskDocument>>({});
   const [selectedView, setSelectedView] = useState(ALL_TASKS);
-  const [textDraft, setTextDraft] = useState("");
-  const [categoryDraft, setCategoryDraft] = useState("");
-  const [deadlineDraft, setDeadlineDraft] = useState("");
-  const [noteDraft, setNoteDraft] = useState("");
-  const [tagsDraft, setTagsDraft] = useState("");
-  const [priorityDraft, setPriorityDraft] = useState<TaskPriority>(null);
   const [saving, setSaving] = useState(false);
   const [dragOverCategory, setDragOverCategory] = useState<string | null>(null);
-  const [createOpen, setCreateOpen] = useState(false);
   const [categoryDelete, setCategoryDelete] = useState<string | null>(null);
   const [completedOpen, setCompletedOpen] = useState(false);
+  const [focusTaskKey, setFocusTaskKey] = useState<string | null>(null);
   const pendingMarkdownByPathRef = useRef(new Map<string, string>());
 
   const taskFiles = useMemo(
@@ -807,39 +801,47 @@ export function TasksPanel({
   };
 
   const addTask = async () => {
-    const text = textDraft.trim();
-    if (!text || saving) return;
+    if (saving) return;
 
-    const selectedCategory =
-      selectedView.startsWith(CATEGORY_PREFIX)
-        ? selectedView.slice(CATEGORY_PREFIX.length)
-        : "";
+    let category = UNCATEGORIZED_TASK_CATEGORY;
+    let deadline: string | null = null;
+    let tags: string[] = [];
 
-    const category = sanitizeTaskCategory(categoryDraft || selectedCategory);
+    if (selectedView.startsWith(CATEGORY_PREFIX)) {
+      category = sanitizeTaskCategory(
+        selectedView.slice(CATEGORY_PREFIX.length)
+      );
+    } else if (selectedView === TODAY_TASKS || selectedView === WEEK_TASKS) {
+      deadline = todayKey;
+    } else if (selectedView === MONTH_TASKS) {
+      deadline = todayKey;
+    } else if (selectedView === NEXT_MONTH_TASKS) {
+      deadline = dateKey(nextMonthDate);
+    } else if (selectedView.startsWith(TAG_PREFIX)) {
+      tags = [selectedView.slice(TAG_PREFIX.length)];
+    }
+
     const task = {
-      text,
-      deadline: deadlineDraft || null,
-      note: noteDraft.trim(),
-      tags: tagsFromInput(tagsDraft),
-      priority: priorityDraft
+      text: t("tasks.newTask"),
+      deadline,
+      note: "",
+      tags,
+      priority: null as TaskPriority
     };
     const existing = documents[category]?.markdown;
     const markdown = existing
       ? appendTaskToMarkdown(existing, task)
       : createTaskDocument(category, task);
+    const inserted = [...parseTaskMarkdown(markdown)]
+      .reverse()
+      .find((candidate) => candidate.parentLineIndex === null);
+    const filePath = await resolveFilePath(category);
 
     setSaving(true);
     try {
       if (await persistCategory(category, markdown)) {
-        setTextDraft("");
-        setDeadlineDraft("");
-        setNoteDraft("");
-        setTagsDraft("");
-        setPriorityDraft(null);
-        setCreateOpen(false);
-
-        if (selectedView.startsWith(CATEGORY_PREFIX)) {
-          setSelectedView(categoryView(category));
+        if (inserted) {
+          setFocusTaskKey(`${filePath}:${inserted.lineIndex}`);
         }
       }
     } finally {
@@ -847,23 +849,37 @@ export function TasksPanel({
     }
   };
 
-  const addSubtask = async (parent: TaskItem, text: string): Promise<boolean> => {
-    if (parent.parentLineIndex !== null || saving) return false;
+  const addSubtask = async (parent: TaskItem): Promise<void> => {
+    if (parent.parentLineIndex !== null || saving) return;
 
     const document = documents[parent.category];
-    if (!document) return false;
+    if (!document) return;
 
-    const markdown = insertSubtaskInMarkdown(document.markdown, parent.lineIndex, {
-      text,
-      deadline: null,
-      note: "",
-      tags: [],
-      priority: null
-    });
+    const markdown = insertSubtaskInMarkdown(
+      document.markdown,
+      parent.lineIndex,
+      {
+        text: t("tasks.newSubtask"),
+        deadline: null,
+        note: "",
+        tags: [],
+        priority: null
+      },
+      "first"
+    );
+    const inserted = parseTaskMarkdown(markdown).find(
+      (candidate) =>
+        candidate.parentLineIndex === parent.lineIndex &&
+        candidate.lineIndex === parent.endLineIndex + 1
+    );
 
     setSaving(true);
     try {
-      return await persistCategory(parent.category, markdown);
+      if (await persistCategory(parent.category, markdown)) {
+        if (inserted) {
+          setFocusTaskKey(`${parent.filePath}:${inserted.lineIndex}`);
+        }
+      }
     } finally {
       setSaving(false);
     }
@@ -905,8 +921,49 @@ export function TasksPanel({
     await persistCategory(task.category, markdown);
   };
 
+  const reorderSubtask = async (
+    source: TaskItem,
+    target: TaskItem,
+    placement: "before" | "after"
+  ) => {
+    if (
+      saving ||
+      source.filePath !== target.filePath ||
+      source.parentLineIndex === null ||
+      target.parentLineIndex === null ||
+      source.parentLineIndex !== target.parentLineIndex ||
+      source.lineIndex === target.lineIndex
+    ) {
+      return;
+    }
+
+    const document = documents[source.category];
+    if (!document) return;
+
+    const markdown = moveSubtaskInMarkdown(
+      document.markdown,
+      source.lineIndex,
+      target.lineIndex,
+      placement
+    );
+    if (markdown === document.markdown) return;
+
+    setSaving(true);
+    try {
+      await persistCategory(source.category, markdown);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const moveTask = async (task: TaskItem, targetCategory: string) => {
-    if (task.category === targetCategory || saving) return;
+    if (
+      task.parentLineIndex !== null ||
+      task.category === targetCategory ||
+      saving
+    ) {
+      return;
+    }
 
     const sourceDocument = documents[task.category];
     if (!sourceDocument) return;
