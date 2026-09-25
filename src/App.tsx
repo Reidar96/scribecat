@@ -1141,6 +1141,7 @@ function App() {
             <TasksPanel
               folderPath={folderPath}
               filePaths={filePaths}
+              fileMtimeMs={fileMtimeMs}
               sidebarVisible={sidebarVisible}
               onSidebarVisibilityToggle={toggleSidebarVisible}
               onOpenSidebar={() => setIsSidebarSheetOpen(true)}
