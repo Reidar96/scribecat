@@ -598,12 +598,15 @@ export function TasksPanel({
   const tagCounts = useMemo(() => {
     const map = new Map<string, { label: string; count: number }>();
 
-    for (const task of activeAllTasks) {
+    for (const task of allTasks) {
       for (const tag of task.tags) {
         const key = tag.toLocaleLowerCase();
         const current = map.get(key);
-        if (current) current.count += 1;
-        else map.set(key, { label: tag, count: 1 });
+        if (current) {
+          if (!task.checked) current.count += 1;
+        } else {
+          map.set(key, { label: tag, count: task.checked ? 0 : 1 });
+        }
       }
     }
 
@@ -614,7 +617,7 @@ export function TasksPanel({
         { sensitivity: "base" }
       )
     );
-  }, [activeAllTasks, i18n.language, i18n.resolvedLanguage]);
+  }, [allTasks, i18n.language, i18n.resolvedLanguage]);
 
   const todayCount = activeAllTasks.filter((task) => task.deadline === todayKey).length;
   const weekCount = activeAllTasks.filter(
