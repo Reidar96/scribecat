@@ -2,11 +2,18 @@ import { useEffect, useMemo, useState, type DragEvent } from "react";
 import {
   ArrowDownAZ,
   ArrowUpDown,
+  BookOpen,
   CalendarDays,
   Check,
   Clock,
+  Copy,
+  Download,
+  ExternalLink,
+  FileDown,
   FileText,
   Folder,
+  FolderArchive,
+  FolderInput,
   FolderOpen,
   GripVertical,
   Home,
@@ -14,11 +21,18 @@ import {
   Network,
   PanelLeft,
   PanelLeftOpen,
+  Pencil,
+  Printer,
   Tag,
+  Trash2,
   X
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import type { ExportMode } from "@/components/ExportDialog";
+import { ContextMenuSurface } from "@/components/fileTree/ContextMenuSurface";
+import { useContextMenuState } from "@/components/fileTree/useContextMenuState";
+import type { BatchEntry } from "@/components/FileTree";
 import { Button } from "@/components/ui/button";
 import {
   Menu,
@@ -52,8 +66,13 @@ import {
 } from "@/lib/folderNotes";
 import { isJournalRelativePath } from "@/lib/journal";
 import { isTasksContainerRelativePath } from "@/lib/tasks";
+import {
+  canDownloadFolderArchive,
+  canDownloadMarkdown
+} from "@/lib/export/markdownDownload";
 import type { ManualOrderMap, SortMode } from "@/lib/vaultMeta";
 import type { MoveTreeEntryInput } from "@/store/useAppStore";
+import { getVaultCapabilities, platform, vaultCapabilityHint } from "@/platform";
 import { join } from "@/platform/paths";
 import { formatModifiedLabel } from "@/components/fileTree/treeNavigation";
 import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
@@ -82,6 +101,17 @@ type CollectionPanelProps = {
   onCreateNote?: (name: string) => Promise<boolean>;
   onSetSortMode: (mode: SortMode) => void;
   onMoveEntry: (input: MoveTreeEntryInput) => Promise<boolean>;
+  onRenameFile: (filePath: string, newBaseName: string) => Promise<boolean>;
+  onRenameFolder: (folderPath: string, newBaseName: string) => Promise<boolean>;
+  onDuplicateFileRequest: (filePath: string) => void;
+  onMoveRequest: (entries: BatchEntry[]) => void;
+  onDeleteFileRequest: (filePath: string) => void;
+  onDeleteFolderRequest: (folderPath: string) => void;
+  onExportFileRequest: (filePath: string, mode: ExportMode) => void;
+  onExportFolderRequest: (folderPath: string, mode: ExportMode) => void;
+  onDownloadMarkdownRequest: (filePath: string) => void;
+  onDownloadFolderArchiveRequest: (folderPath: string, archiveName: string) => void;
+  onPrintFileRequest: (filePath: string) => void;
 };
 
 type NoteCard = {
@@ -163,10 +193,27 @@ export function CollectionPanel({
   onCreateFolder,
   onCreateNote,
   onSetSortMode,
-  onMoveEntry
+  onMoveEntry,
+  onRenameFile,
+  onRenameFolder,
+  onDuplicateFileRequest,
+  onMoveRequest,
+  onDeleteFileRequest,
+  onDeleteFolderRequest,
+  onExportFileRequest,
+  onExportFolderRequest,
+  onDownloadMarkdownRequest,
+  onDownloadFolderArchiveRequest,
+  onPrintFileRequest
 }: CollectionPanelProps) {
   const { t, i18n } = useTranslation();
   const layout = useLayoutMode();
+  const capabilities = getVaultCapabilities();
+  const capabilityHint = vaultCapabilityHint();
+  const offersExport = platform.features.exportFiles || platform.features.downloads;
+  const offersMarkdownDownload = canDownloadMarkdown(folderPath);
+  const offersFolderArchive = canDownloadFolderArchive(folderPath);
+  const offersRevealInFileManager = platform.shell.openFolderInFileManager !== null;
   const folderNotesEnabled = useEditorSettingsStore((state) => state.folderNotesEnabled);
   const journalSettings = useEditorSettingsStore((state) => state.journalSettings);
   const taskSettings = useEditorSettingsStore((state) => state.taskSettings);
@@ -185,6 +232,11 @@ export function CollectionPanel({
     key: string;
     position: "before" | "after";
   } | null>(null);
+  const { contextMenu, setContextMenu } = useContextMenuState<{
+    card: CollectionCard;
+    x: number;
+    y: number;
+  }>();
 
   const visibleCollectionFilePaths = useMemo(
     () =>
