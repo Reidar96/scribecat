@@ -4,9 +4,11 @@ import {
   useMemo,
   useRef,
   useState,
-  type DragEvent as ReactDragEvent
+  type DragEvent as ReactDragEvent,
+  type PointerEvent as ReactPointerEvent
 } from "react";
 import {
+  ArrowUpDown,
   CalendarDays,
   ChevronLeft,
   ChevronRight,
@@ -16,6 +18,7 @@ import {
   Plus,
   Search,
   Home,
+  GripVertical,
   Trash2,
   X
 } from "lucide-react";
@@ -304,10 +307,15 @@ function JournalImageCard({
   filePath,
   index,
   isDragging,
+  reorderMode,
   onDragStart,
   onDragEnter,
   onDragEnd,
   onDrop,
+  onReorderPointerDown,
+  onReorderPointerMove,
+  onReorderPointerEnd,
+  onStartReorder,
   onOpen,
   onDelete
 }: {
@@ -316,6 +324,7 @@ function JournalImageCard({
   filePath: string;
   index: number;
   isDragging: boolean;
+  reorderMode: boolean;
   onDragStart: (
     event: ReactDragEvent<HTMLElement>,
     itemKey: string
@@ -323,14 +332,25 @@ function JournalImageCard({
   onDragEnter: (itemKey: string) => void;
   onDragEnd: () => void;
   onDrop: () => void;
+  onReorderPointerDown: (
+    event: ReactPointerEvent<HTMLElement>,
+    itemKey: string
+  ) => void;
+  onReorderPointerMove: (event: ReactPointerEvent<HTMLElement>) => void;
+  onReorderPointerEnd: (
+    event: ReactPointerEvent<HTMLElement>,
+    commit: boolean
+  ) => void;
+  onStartReorder?: () => void;
   onOpen: (index: number) => void;
   onDelete: (itemKey: string) => void;
 }) {
   const { t } = useTranslation();
   const { objectUrl, loadError } = useJournalImageUrl(image, filePath);
   const { contextMenu, setContextMenu } = useContextMenuState<{ x: number; y: number }>();
-  const { getLongPressProps } = useLongPressContextMenu<null>((_target, x, y) =>
-    setContextMenu({ x, y })
+  const { getLongPressProps } = useLongPressContextMenu<null>(
+    (_target, x, y) => setContextMenu({ x, y }),
+    { openOnLongPress: !reorderMode }
   );
   const longPressProps = getLongPressProps(null);
   const [ratioClass, setRatioClass] = useState<ImageRatioClass>("landscape");
@@ -342,16 +362,48 @@ function JournalImageCard({
         ref={masonryRef}
         className={cn(
           "journal-entry__image-card",
-          isDragging && "journal-entry__image-card--dragging"
+          isDragging && "journal-entry__image-card--dragging",
+          reorderMode && "journal-entry__image-card--reorder-mode"
         )}
         data-journal-image-key={itemKey}
         data-scribecat-long-press={longPressProps["data-scribecat-long-press"]}
-        draggable
-        onPointerDown={longPressProps.onPointerDown}
-        onPointerMove={longPressProps.onPointerMove}
-        onPointerUp={longPressProps.onPointerUp}
-        onPointerCancel={longPressProps.onPointerCancel}
-        onClickCapture={longPressProps.onClickCapture}
+        draggable={!reorderMode}
+        onPointerDown={(event) => {
+          if (reorderMode) {
+            onReorderPointerDown(event, itemKey);
+            return;
+          }
+          longPressProps.onPointerDown(event);
+        }}
+        onPointerMove={(event) => {
+          if (reorderMode) {
+            onReorderPointerMove(event);
+            return;
+          }
+          longPressProps.onPointerMove(event);
+        }}
+        onPointerUp={(event) => {
+          if (reorderMode) {
+            onReorderPointerEnd(event, true);
+            return;
+          }
+          longPressProps.onPointerUp(event);
+        }}
+        onPointerCancel={(event) => {
+          if (reorderMode) {
+            onReorderPointerEnd(event, false);
+            return;
+          }
+          longPressProps.onPointerCancel(event);
+        }}
+        onClickCapture={(event) => {
+          if (reorderMode) {
+            event.preventDefault();
+            event.stopPropagation();
+            return;
+          }
+          longPressProps.onClickCapture(event);
+        }}
         onContextMenuCapture={longPressProps.onContextMenuCapture}
         onDragStart={(event) => onDragStart(event, itemKey)}
         onDragEnter={(event) => {
@@ -370,38 +422,48 @@ function JournalImageCard({
         onContextMenu={(event) => {
           event.preventDefault();
           event.stopPropagation();
-          setContextMenu({ x: event.clientX, y: event.clientY });
+          if (!reorderMode) {
+            setContextMenu({ x: event.clientX, y: event.clientY });
+          }
         }}
       >
-      {objectUrl ? (
-        <button
-          type="button"
-          className={cn(
-            "journal-entry__image-open",
-            `journal-entry__image-open--${ratioClass}`
-          )}
-          onClick={() => onOpen(index)}
-          aria-label={t("journal.openImage", { name: image.alt || index + 1 })}
-        >
-          <img
-            src={objectUrl}
-            alt={image.alt}
-            onLoad={(event) =>
-              setRatioClass(
-                imageRatioClass(
-                  event.currentTarget.naturalWidth,
-                  event.currentTarget.naturalHeight
-                )
-              )
-            }
-          />
-        </button>
-      ) : (
-        <div className="journal-entry__image-missing">
-          {loadError ? t("journal.imageMissing") : t("imageView.loading")}
-        </div>
-      )}
+        {reorderMode ? (
+          <span className="journal-entry__image-reorder-handle" aria-hidden="true">
+            <GripVertical />
+          </span>
+        ) : null}
 
+        {objectUrl ? (
+          <button
+            type="button"
+            className={cn(
+              "journal-entry__image-open",
+              `journal-entry__image-open--${ratioClass}`
+            )}
+            onClick={() => {
+              if (!reorderMode) onOpen(index);
+            }}
+            aria-label={t("journal.openImage", { name: image.alt || index + 1 })}
+            tabIndex={reorderMode ? -1 : undefined}
+          >
+            <img
+              src={objectUrl}
+              alt={image.alt}
+              onLoad={(event) =>
+                setRatioClass(
+                  imageRatioClass(
+                    event.currentTarget.naturalWidth,
+                    event.currentTarget.naturalHeight
+                  )
+                )
+              }
+            />
+          </button>
+        ) : (
+          <div className="journal-entry__image-missing">
+            {loadError ? t("journal.imageMissing") : t("imageView.loading")}
+          </div>
+        )}
       </article>
 
       {contextMenu ? (
@@ -411,6 +473,20 @@ function JournalImageCard({
           title={image.alt || t("imageView.preview")}
           onClick={(event) => event.stopPropagation()}
         >
+          {onStartReorder ? (
+            <button
+              type="button"
+              role="menuitem"
+              className="file-tree-context-menu__item"
+              onClick={() => {
+                setContextMenu(null);
+                onStartReorder();
+              }}
+            >
+              <ArrowUpDown aria-hidden="true" />
+              {t("journal.reorderImages")}
+            </button>
+          ) : null}
           <ImageContextMenuItems
             src={objectUrl}
             fileName={suggestedImageFileName(image.src, image.alt)}
@@ -533,19 +609,27 @@ function JournalEntryView({
     buildGalleryItems(parsed.images)
   );
   const [draggingKey, setDraggingKey] = useState<string | null>(null);
+  const [reorderMode, setReorderMode] = useState(false);
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
   const [imageDropActive, setImageDropActive] = useState(false);
   const textEditorRef = useRef<HTMLTextAreaElement>(null);
   const galleryRef = useRef<HTMLDivElement>(null);
   const addCardRef = useMasonrySpan<HTMLButtonElement>();
+  const galleryItemsRef = useRef(galleryItems);
   const draggingKeyRef = useRef<string | null>(null);
   const dragCommittedRef = useRef(false);
+  const pointerReorderRef = useRef<{ pointerId: number; itemKey: string } | null>(null);
   const previousGalleryRectsRef = useRef<Map<string, DOMRect> | null>(null);
 
   useEffect(() => {
     setDraftText(parsed.textMarkdown);
   }, [filePath, parsed.textMarkdown]);
+
+  useEffect(() => {
+    setReorderMode(false);
+    pointerReorderRef.current = null;
+  }, [filePath]);
 
   useLayoutEffect(() => {
     const editor = textEditorRef.current;
@@ -586,8 +670,14 @@ function JournalEntryView({
 
   useEffect(() => {
     if (draggingKeyRef.current) return;
-    setGalleryItems(buildGalleryItems(parsed.images));
+    const nextItems = buildGalleryItems(parsed.images);
+    galleryItemsRef.current = nextItems;
+    setGalleryItems(nextItems);
   }, [filePath, parsed.images]);
+
+  useEffect(() => {
+    galleryItemsRef.current = galleryItems;
+  }, [galleryItems]);
 
   useLayoutEffect(() => {
     const previousRects = previousGalleryRectsRef.current;
@@ -670,15 +760,17 @@ function JournalEntryView({
     const draggedKey = draggingKeyRef.current;
     if (!draggedKey || draggedKey === targetKey) return;
 
-    const from = galleryItems.findIndex((item) => item.key === draggedKey);
-    const to = galleryItems.findIndex((item) => item.key === targetKey);
+    const items = galleryItemsRef.current;
+    const from = items.findIndex((item) => item.key === draggedKey);
+    const to = items.findIndex((item) => item.key === targetKey);
     if (from < 0 || to < 0 || from === to) return;
 
     previousGalleryRectsRef.current = captureGalleryRects();
 
-    const next = [...galleryItems];
+    const next = [...items];
     const [item] = next.splice(from, 1);
     next.splice(to, 0, item);
+    galleryItemsRef.current = next;
     setGalleryItems(next);
   };
 
@@ -689,7 +781,7 @@ function JournalEntryView({
         composeJournalMarkdown(
           markdown,
           parsed.textMarkdown,
-          galleryItems.map((item) => item.image)
+          galleryItemsRef.current.map((item) => item.image)
         )
       );
     }
@@ -699,8 +791,89 @@ function JournalEntryView({
 
     if (!commit && !dragCommittedRef.current) {
       previousGalleryRectsRef.current = captureGalleryRects();
-      setGalleryItems(buildGalleryItems(parsed.images));
+      const nextItems = buildGalleryItems(parsed.images);
+      galleryItemsRef.current = nextItems;
+      setGalleryItems(nextItems);
     }
+  };
+
+  const handleReorderPointerDown = (
+    event: ReactPointerEvent<HTMLElement>,
+    itemKey: string
+  ) => {
+    if (!reorderMode || event.button !== 0) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    pointerReorderRef.current = {
+      pointerId: event.pointerId,
+      itemKey
+    };
+    draggingKeyRef.current = itemKey;
+    dragCommittedRef.current = false;
+    setDraggingKey(itemKey);
+
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch {
+      // Pointer capture can fail if the pointer was already cancelled.
+    }
+  };
+
+  const handleReorderPointerMove = (event: ReactPointerEvent<HTMLElement>) => {
+    const pointer = pointerReorderRef.current;
+    if (!pointer || pointer.pointerId !== event.pointerId) return;
+
+    event.preventDefault();
+
+    const target = document
+      .elementFromPoint(event.clientX, event.clientY)
+      ?.closest<HTMLElement>("[data-journal-image-key]");
+    const targetKey = target?.dataset.journalImageKey;
+
+    if (targetKey) {
+      handleImageDragEnter(targetKey);
+    }
+
+    const scrollHost = galleryRef.current?.closest<HTMLElement>(".journal-view__entry-area");
+    if (!scrollHost) return;
+
+    const rect = scrollHost.getBoundingClientRect();
+    const edge = Math.min(96, rect.height * 0.2);
+    let scrollDelta = 0;
+
+    if (event.clientY < rect.top + edge) {
+      scrollDelta = -Math.min(18, Math.ceil((rect.top + edge - event.clientY) / 5));
+    } else if (event.clientY > rect.bottom - edge) {
+      scrollDelta = Math.min(18, Math.ceil((event.clientY - (rect.bottom - edge)) / 5));
+    }
+
+    if (scrollDelta !== 0) {
+      scrollHost.scrollBy({ top: scrollDelta, behavior: "auto" });
+    }
+  };
+
+  const handleReorderPointerEnd = (
+    event: ReactPointerEvent<HTMLElement>,
+    commit: boolean
+  ) => {
+    const pointer = pointerReorderRef.current;
+    if (!pointer || pointer.pointerId !== event.pointerId) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    try {
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+    } catch {
+      // The browser may have released capture already.
+    }
+
+    pointerReorderRef.current = null;
+    finishImageDrag(commit);
   };
 
   const deleteGalleryImage = (itemKey: string) => {
@@ -887,8 +1060,26 @@ function JournalEntryView({
         spellCheck
       />
 
-      <div className="journal-entry__gallery-head">
+      <div
+        className={cn(
+          "journal-entry__gallery-head",
+          reorderMode && "journal-entry__gallery-head--reordering"
+        )}
+      >
         <h3>{t("journal.images")}</h3>
+        {reorderMode ? (
+          <div className="journal-entry__reorder-tools">
+            <span>{t("journal.reorderImagesHint")}</span>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setReorderMode(false)}
+            >
+              {t("journal.doneText")}
+            </Button>
+          </div>
+        ) : null}
       </div>
 
       {imageError ? (
@@ -906,39 +1097,48 @@ function JournalEntryView({
             filePath={filePath}
             index={index}
             isDragging={draggingKey === item.key}
+            reorderMode={reorderMode}
             onDragStart={handleImageDragStart}
             onDragEnter={handleImageDragEnter}
             onDragEnd={() => finishImageDrag(false)}
             onDrop={() => finishImageDrag(true)}
+            onReorderPointerDown={handleReorderPointerDown}
+            onReorderPointerMove={handleReorderPointerMove}
+            onReorderPointerEnd={handleReorderPointerEnd}
+            onStartReorder={
+              galleryItems.length > 1 ? () => setReorderMode(true) : undefined
+            }
             onOpen={setPreviewIndex}
             onDelete={deleteGalleryImage}
           />
         ))}
 
-        <button
-          ref={addCardRef}
-          type="button"
-          className={cn(
-            "journal-entry__add-card",
-            imageDropActive && "journal-entry__add-card--drop-active"
-          )}
-          onClick={() => void handleAddImages()}
-          onDragEnter={(event) => {
-            event.preventDefault();
-            setImageDropActive(true);
-          }}
-          onDragOver={(event) => {
-            event.preventDefault();
-            event.dataTransfer.dropEffect = "copy";
-            setImageDropActive(true);
-          }}
-          onDragLeave={() => setImageDropActive(false)}
-          onDrop={(event) => void handleDroppedImages(event)}
-          aria-label={t("journal.addImages")}
-        >
-          <Plus aria-hidden="true" />
-          <span>{t("journal.addImagesDrop")}</span>
-        </button>
+        {!reorderMode ? (
+          <button
+            ref={addCardRef}
+            type="button"
+            className={cn(
+              "journal-entry__add-card",
+              imageDropActive && "journal-entry__add-card--drop-active"
+            )}
+            onClick={() => void handleAddImages()}
+            onDragEnter={(event) => {
+              event.preventDefault();
+              setImageDropActive(true);
+            }}
+            onDragOver={(event) => {
+              event.preventDefault();
+              event.dataTransfer.dropEffect = "copy";
+              setImageDropActive(true);
+            }}
+            onDragLeave={() => setImageDropActive(false)}
+            onDrop={(event) => void handleDroppedImages(event)}
+            aria-label={t("journal.addImages")}
+          >
+            <Plus aria-hidden="true" />
+            <span>{t("journal.addImagesDrop")}</span>
+          </button>
+        ) : null}
       </div>
 
       {previewIndex !== null && currentGalleryImages[previewIndex] ? (
