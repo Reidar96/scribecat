@@ -249,6 +249,14 @@ function TaskRow({
     }
   };
 
+  if (isSubtask && task.checked) {
+    return (
+      <article className="tasks-item tasks-item--subtask tasks-item--subtask-completed">
+        <span className="tasks-item__completed-title">{task.text}</span>
+      </article>
+    );
+  }
+
   return (
     <article
       className={cn(
