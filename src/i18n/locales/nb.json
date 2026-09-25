@@ -1023,6 +1023,8 @@
     "swap": "Bytt dokumentene mellom venstre og høyre side",
     "dropTitle": "Åpne i delt visning",
     "dropHintLeft": "Slipp for å åpne på venstre side",
-    "dropHintRight": "Slipp for å åpne på høyre side"
+    "dropHintRight": "Slipp for å åpne på høyre side",
+    "replace": "Bytt ut dokumentet i denne delen",
+    "closePane": "Lukk denne delen"
   }
 }
