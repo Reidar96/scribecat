@@ -56,6 +56,7 @@ type TaskItem = MarkdownTask & {
 type TasksPanelProps = {
   folderPath: string;
   filePaths: string[];
+  fileMtimeMs: Record<string, number>;
   sidebarVisible: boolean;
   onSidebarVisibilityToggle: () => void;
   onOpenSidebar: () => void;
@@ -252,6 +253,15 @@ function TaskRow({
   if (isSubtask && task.checked) {
     return (
       <article className="tasks-item tasks-item--subtask tasks-item--subtask-completed">
+        <label className="tasks-item__check tasks-item__check--compact">
+          <input
+            type="checkbox"
+            checked
+            onChange={onToggle}
+            aria-label={t("tasks.toggle", { task: task.text })}
+          />
+          <span aria-hidden="true" />
+        </label>
         <span className="tasks-item__completed-title">{task.text}</span>
       </article>
     );
@@ -435,6 +445,7 @@ function TaskRow({
 export function TasksPanel({
   folderPath,
   filePaths,
+  fileMtimeMs,
   sidebarVisible,
   onSidebarVisibilityToggle,
   onOpenSidebar,
@@ -460,43 +471,89 @@ export function TasksPanel({
   const [categoryDelete, setCategoryDelete] = useState<string | null>(null);
   const [completedOpen, setCompletedOpen] = useState(false);
 
+  const taskFiles = useMemo(
+    () =>
+      filePaths.flatMap((filePath) => {
+        const relativePath = getRelativeDisplayPath(folderPath, filePath);
+        const category = taskCategoryFromRelativePath(
+          relativePath,
+          taskSettings.folder
+        );
+        return category
+          ? [{
+              category,
+              filePath,
+              mtimeMs: fileMtimeMs[filePath] ?? 0
+            }]
+          : [];
+      }),
+    [fileMtimeMs, filePaths, folderPath, taskSettings.folder]
+  );
+
+  const taskFileSignature = useMemo(
+    () =>
+      taskFiles
+        .map(({ filePath, mtimeMs }) => `${filePath}\u0000${mtimeMs}`)
+        .join("\u0001"),
+    [taskFiles]
+  );
+
   useEffect(() => {
     let active = true;
+    const expectedPaths = new Set(taskFiles.map(({ filePath }) => filePath));
 
-    const taskFiles = filePaths.flatMap((filePath) => {
-      const relativePath = getRelativeDisplayPath(folderPath, filePath);
-      const category = taskCategoryFromRelativePath(relativePath, taskSettings.folder);
-      return category ? [{ category, filePath }] : [];
+    // Keep already loaded task documents visible while refreshing them and
+    // only discard categories whose Markdown file no longer exists.
+    setDocuments((current) => {
+      const entries = Object.entries(current).filter(([, document]) =>
+        expectedPaths.has(document.filePath)
+      );
+      if (entries.length === Object.keys(current).length) {
+        return current;
+      }
+      return Object.fromEntries(entries);
     });
 
-    void Promise.all(
-      taskFiles.map(async ({ category, filePath }) => {
-        try {
-          const markdown = await readMarkdownFile(filePath);
-          return {
+    // Load each category independently instead of waiting for the slowest
+    // Markdown file. This makes the Tasks view populate progressively.
+    for (const { category, filePath } of taskFiles) {
+      void readMarkdownFile(filePath)
+        .then((markdown) => {
+          if (!active) return;
+
+          const document = {
             category,
             filePath,
             markdown,
             tasks: parseTaskMarkdown(markdown)
           } satisfies TaskDocument;
-        } catch {
-          return null;
-        }
-      })
-    ).then((loaded) => {
-      if (!active) return;
 
-      const next: Record<string, TaskDocument> = {};
-      for (const document of loaded) {
-        if (document) next[document.category] = document;
-      }
-      setDocuments(next);
-    });
+          setDocuments((current) => {
+            const existing = current[category];
+            if (
+              existing?.filePath === document.filePath &&
+              existing.markdown === document.markdown
+            ) {
+              return current;
+            }
+            return { ...current, [category]: document };
+          });
+        })
+        .catch(() => {
+          if (!active) return;
+          setDocuments((current) => {
+            if (current[category]?.filePath !== filePath) return current;
+            const next = { ...current };
+            delete next[category];
+            return next;
+          });
+        });
+    }
 
     return () => {
       active = false;
     };
-  }, [filePaths, folderPath, taskSettings.folder]);
+  }, [taskFileSignature]);
 
   const categories = useMemo(
     () =>
@@ -679,18 +736,36 @@ export function TasksPanel({
     markdown: string
   ): Promise<boolean> => {
     const filePath = await resolveFilePath(category);
-    const ok = await onPersistTaskFile(filePath, markdown);
+    const previous = documents[category];
+    const nextDocument = {
+      category,
+      filePath,
+      markdown,
+      tasks: parseTaskMarkdown(markdown)
+    } satisfies TaskDocument;
 
-    if (ok) {
-      setDocuments((current) => ({
-        ...current,
-        [category]: {
-          category,
-          filePath,
-          markdown,
-          tasks: parseTaskMarkdown(markdown)
+    // The Markdown file remains the source of truth, but mirror the pending
+    // write immediately so checking/editing a task does not wait on disk I/O.
+    setDocuments((current) => ({
+      ...current,
+      [category]: nextDocument
+    }));
+
+    const ok = await onPersistTaskFile(filePath, markdown);
+    if (!ok) {
+      setDocuments((current) => {
+        if (current[category]?.markdown !== markdown) {
+          return current;
         }
-      }));
+
+        if (previous) {
+          return { ...current, [category]: previous };
+        }
+
+        const next = { ...current };
+        delete next[category];
+        return next;
+      });
     }
 
     return ok;
