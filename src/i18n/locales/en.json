@@ -661,6 +661,8 @@
     "priorityLow": "Low priority",
     "dragTask": "Drag the task to a category",
     "renameCategory": "Rename {{category}}",
+    "renameCategoryAction": "Rename",
+    "deleteCategoryAction": "Delete category",
     "renameCategoryPrompt": "New category name",
     "deleteCategory": "Delete category {{category}}",
     "deleteCategoryConfirm": "Delete category “{{category}}” and {{count}} tasks?",
