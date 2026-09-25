@@ -743,6 +743,41 @@ function App() {
     );
   };
 
+  const createCollectionNote = async (name: string): Promise<boolean> => {
+    const targetDirectory = await resolveCollectionTargetDirectory();
+    if (!targetDirectory) return false;
+
+    const newFilePath = await createNewFile(targetDirectory);
+    if (!newFilePath) return false;
+
+    const renamed = await renameFilePath(newFilePath, name);
+    if (!renamed) {
+      await deleteFilePath(newFilePath);
+      return false;
+    }
+
+    // Creating from the collection is an operation on the current folder,
+    // not navigation into the new note. Keep the grid as the active view.
+    clearSelectedFile();
+    return true;
+  };
+
+  const createCollectionFolder = async (name: string): Promise<boolean> => {
+    const targetDirectory = await resolveCollectionTargetDirectory();
+    if (!targetDirectory) return false;
+
+    const newFolderPath = await createNewFolder(targetDirectory);
+    if (!newFolderPath) return false;
+
+    const renamed = await renameFolderPath(newFolderPath, name);
+    if (!renamed) {
+      await deleteFolderPath(newFolderPath);
+      return false;
+    }
+
+    return true;
+  };
+
   const requestImportFiles = async () => {
     if (!platform.dialogs) {
       return;
@@ -1196,16 +1231,8 @@ function App() {
                 setGraphViewOpen(false);
                 setCollectionView(null);
               }}
-              onCreateFolder={() => {
-                void resolveCollectionTargetDirectory().then((targetDirectory) =>
-                  handleCreateFolder(targetDirectory)
-                );
-              }}
-              onCreateNote={() => {
-                void resolveCollectionTargetDirectory().then((targetDirectory) =>
-                  handleCreateFile(targetDirectory)
-                );
-              }}
+              onCreateFolder={createCollectionFolder}
+              onCreateNote={createCollectionNote}
             />
           ) : (
             <DocumentPanel
