@@ -148,8 +148,4 @@ body.is-resizing-details-panel {
     -webkit-touch-callout: none;
     user-select: none;
   }
-
-  .editor-view__content {
-    -webkit-touch-callout: none;
-  }
 }
