@@ -13,7 +13,7 @@ import { ContextMenuSurface } from "@/components/fileTree/ContextMenuSurface";
 import { useContextMenuState } from "@/components/fileTree/useContextMenuState";
 import { useLongPressContextMenu } from "@/hooks/useLongPressContextMenu";
 import { ABSOLUTE_URL_PATTERN, guessImageMimeType } from "@/lib/fileSystem";
-import { suggestedImageFileName } from "@/lib/imageActions";
+import { suggestedImageFileName } from "@/lib/imageFileName";
 
 const MIN_IMAGE_WIDTH = 48;
 
