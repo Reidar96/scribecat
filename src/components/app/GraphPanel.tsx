@@ -11,9 +11,12 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { GraphCanvas } from "@/components/graph/GraphCanvas";
 import { buildVaultGraph, type GraphNodeKind, type VaultGraphNode } from "@/lib/graphIndex";
-import { readMarkdownFile } from "@/lib/fileSystem";
+import { getRelativeDisplayPath, readMarkdownFile } from "@/lib/fileSystem";
+import { isJournalRelativePath } from "@/lib/journal";
+import { isTasksContainerRelativePath } from "@/lib/tasks";
 import { useLayoutMode } from "@/hooks/useLayoutMode";
 import { useAppStore } from "@/store/useAppStore";
+import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
 import { cn } from "@/lib/utils";
 
 type GraphPanelProps = {
@@ -53,10 +56,25 @@ export function GraphPanel({
 }: GraphPanelProps) {
   const { t } = useTranslation();
   const layout = useLayoutMode();
+  const journalSettings = useEditorSettingsStore((state) => state.journalSettings);
+  const taskSettings = useEditorSettingsStore((state) => state.taskSettings);
   const [visibility, setVisibility] = useState<Visibility>(INITIAL_VISIBILITY);
   const [markdownByPath, setMarkdownByPath] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [refreshId, setRefreshId] = useState(0);
+
+  const graphFilePaths = useMemo(
+    () =>
+      filePaths.filter((filePath) => {
+        const relativePath = getRelativeDisplayPath(folderPath, filePath);
+        return (
+          !isJournalRelativePath(relativePath, journalSettings) &&
+          !isTasksContainerRelativePath(relativePath, taskSettings.folder)
+        );
+      }),
+    [filePaths, folderPath, journalSettings, taskSettings.folder]
+  );
+  const graphFilePathSet = useMemo(() => new Set(graphFilePaths), [graphFilePaths]);
 
   useEffect(() => {
     let active = true;
@@ -65,7 +83,7 @@ export function GraphPanel({
     const scan = async () => {
       const openDocuments = useAppStore.getState().fileDocuments;
       const entries = await Promise.all(
-        filePaths.map(async (filePath) => {
+        graphFilePaths.map(async (filePath) => {
           const openDocument = openDocuments[filePath];
           if (openDocument) {
             return [filePath, openDocument.content] as const;
@@ -88,27 +106,33 @@ export function GraphPanel({
     return () => {
       active = false;
     };
-  }, [filePaths, refreshId]);
+  }, [graphFilePaths, refreshId]);
 
   // The graph follows links/tags typed into the open note immediately. The
   // full vault scan above remains disk-backed and only runs on mount/refresh.
   useEffect(() => {
-    if (!selectedFilePath || selectedFileContent === null) return;
+    if (
+      !selectedFilePath ||
+      selectedFileContent === null ||
+      !graphFilePathSet.has(selectedFilePath)
+    ) {
+      return;
+    }
     setMarkdownByPath((current) => {
       if (current[selectedFilePath] === selectedFileContent) return current;
       return { ...current, [selectedFilePath]: selectedFileContent };
     });
-  }, [selectedFilePath, selectedFileContent]);
+  }, [graphFilePathSet, selectedFilePath, selectedFileContent]);
 
   const graph = useMemo(
     () =>
       buildVaultGraph({
         folderPath,
-        filePaths,
+        filePaths: graphFilePaths,
         markdownByPath,
         rootLabel: t("collection.root")
       }),
-    [folderPath, filePaths, markdownByPath, t]
+    [folderPath, graphFilePaths, markdownByPath, t]
   );
 
   const visibleGraph = useMemo(() => {
