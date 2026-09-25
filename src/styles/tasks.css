@@ -356,7 +356,7 @@
 
 .tasks-item--subtask-completed {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   min-height: 0;
   gap: 0.5rem;
@@ -367,6 +367,10 @@
 
 .tasks-item__check--compact {
   margin-top: 0;
+}
+
+.tasks-item__delete--compact {
+  align-self: center;
 }
 
 .tasks-item__completed-title {
