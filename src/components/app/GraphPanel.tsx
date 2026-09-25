@@ -251,7 +251,7 @@ export function GraphPanel({
         </div>
 
         <div className="graph-view__body">
-          {isLoading ? (
+          {graph.nodes.length === 0 && isLoading ? (
             <div className="graph-view__state">
               <RefreshCw className="animate-spin" aria-hidden="true" />
               <p>{t("graph.loading")}</p>
