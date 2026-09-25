@@ -645,6 +645,44 @@ function App() {
     );
   };
 
+  const openDocumentsAsTabs = async (filePathsToOpen: [string, string]) => {
+    const loaded = await Promise.all(filePathsToOpen.map((filePath) => loadFileDocument(filePath)));
+    if (loaded.some((success) => !success)) {
+      return;
+    }
+
+    setSecondaryFilePath(null);
+    setOpenTabs((tabs) => [
+      ...tabs,
+      ...filePathsToOpen.filter((filePath) => !tabs.includes(filePath))
+    ]);
+    await selectFilePathSafely(filePathsToOpen[0]);
+    setIsSidebarSheetOpen(false);
+  };
+
+  const openDocumentsAsSplit = async (filePathsToOpen: [string, string]) => {
+    if (layout !== "desktop") {
+      return;
+    }
+
+    const loaded = await Promise.all(filePathsToOpen.map((filePath) => loadFileDocument(filePath)));
+    if (loaded.some((success) => !success)) {
+      return;
+    }
+
+    await selectFilePath(filePathsToOpen[0]);
+    setOpenTabs((tabs) => [
+      ...tabs,
+      ...filePathsToOpen.filter((filePath) => !tabs.includes(filePath))
+    ]);
+    setSecondaryFilePath(filePathsToOpen[1]);
+    setCollectionView(null);
+    setGraphViewOpen(false);
+    setJournalViewOpen(false);
+    setTasksViewOpen(false);
+    setIsSidebarSheetOpen(false);
+  };
+
   // Same for a folder's note (the tree hands over the folder, the store
   // resolves the note inside it).
   const openFolderNoteSafely = async (targetFolderPath: string) => {
@@ -1229,6 +1267,12 @@ function App() {
       onRenameFile={renameFilePathFromTree}
       onMoveEntry={moveTreeEntry}
       onMoveRequest={requestMove}
+      onOpenSplitRequest={
+        layout === "desktop"
+          ? (filePathsToOpen) => void openDocumentsAsSplit(filePathsToOpen)
+          : undefined
+      }
+      onOpenTabsRequest={(filePathsToOpen) => void openDocumentsAsTabs(filePathsToOpen)}
       onSetSortMode={(mode) => void setSortMode(mode)}
       onSettingsRequest={() => {
         setSettingsInitialTab("application");
@@ -1404,6 +1448,12 @@ function App() {
               onPasteRequest={(targetDirectory) => void pasteEntriesInto(targetDirectory)}
               canPaste={entryClipboard.length > 0}
               onMoveRequest={requestMove}
+              onOpenSplitRequest={
+                layout === "desktop"
+                  ? (filePathsToOpen) => void openDocumentsAsSplit(filePathsToOpen)
+                  : undefined
+              }
+              onOpenTabsRequest={(filePathsToOpen) => void openDocumentsAsTabs(filePathsToOpen)}
               onDeleteFileRequest={requestDeleteFile}
               onDeleteFolderRequest={requestDeleteFolder}
               onDeleteMultipleRequest={requestDeleteMultiple}
