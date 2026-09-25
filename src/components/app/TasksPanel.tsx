@@ -1393,6 +1393,10 @@ export function TasksPanel({
     return t("tasks.all");
   }, [selectedView, t]);
 
+  const selectedCategory = selectedView.startsWith(CATEGORY_PREFIX)
+    ? selectedView.slice(CATEGORY_PREFIX.length)
+    : null;
+
   return (
     <section className="tasks-view" aria-label={t("tasks.label")}>
       <header className="tasks-view__header">
@@ -1511,6 +1515,14 @@ export function TasksPanel({
                     "tasks-category-row",
                     dropActive && "tasks-category-row--drop"
                   )}
+                  onContextMenu={(event) => {
+                    event.preventDefault();
+                    setCategoryContextMenu({
+                      category,
+                      x: event.clientX,
+                      y: event.clientY
+                    });
+                  }}
                   onDragOver={(event) => {
                     if (!event.dataTransfer.types.includes(TASK_DRAG_MIME)) return;
                     if (event.dataTransfer.types.includes(TASK_SUBTASK_DRAG_MIME)) return;
@@ -1543,29 +1555,6 @@ export function TasksPanel({
                     <span>{category}</span>
                     <small>{categoryCounts.get(category) ?? 0}</small>
                   </button>
-
-                  <div className="tasks-category-row__actions">
-                    <Button
-                      type="button"
-                      size="icon-xs"
-                      variant="ghost"
-                      onClick={() => void renameCategory(category)}
-                      aria-label={t("tasks.renameCategory", { category })}
-                      title={t("tasks.renameCategory", { category })}
-                    >
-                      <Pencil />
-                    </Button>
-                    <Button
-                      type="button"
-                      size="icon-xs"
-                      variant="ghost"
-                      onClick={() => void deleteCategory(category)}
-                      aria-label={t("tasks.deleteCategory", { category })}
-                      title={t("tasks.deleteCategory", { category })}
-                    >
-                      <Trash2 />
-                    </Button>
-                  </div>
                 </div>
               );
             })}
@@ -1648,7 +1637,36 @@ export function TasksPanel({
                   </MenuPositioner>
                 </MenuPortal>
               </Menu>
-              <CheckCircle2 aria-hidden="true" />
+              {selectedCategory ? (
+                <>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="tasks-category-view-action"
+                    onClick={() => void renameCategory(selectedCategory)}
+                    disabled={saving}
+                    aria-label={t("tasks.renameCategory", { category: selectedCategory })}
+                    title={t("tasks.renameCategory", { category: selectedCategory })}
+                  >
+                    <Pencil />
+                    <span>{t("tasks.renameCategoryAction")}</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="tasks-category-view-action tasks-category-view-action--danger"
+                    onClick={() => deleteCategory(selectedCategory)}
+                    disabled={saving}
+                    aria-label={t("tasks.deleteCategory", { category: selectedCategory })}
+                    title={t("tasks.deleteCategory", { category: selectedCategory })}
+                  >
+                    <Trash2 />
+                    <span>{t("tasks.deleteCategoryAction")}</span>
+                  </Button>
+                </>
+              ) : null}
             </div>
           </div>
 
@@ -1846,6 +1864,42 @@ export function TasksPanel({
           ) : null}
         </main>
       </div>
+
+      {categoryContextMenu ? (
+        <ContextMenuSurface
+          x={categoryContextMenu.x}
+          y={categoryContextMenu.y}
+          title={categoryContextMenu.category}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <button
+            type="button"
+            role="menuitem"
+            className="file-tree-context-menu__item"
+            onClick={() => {
+              const category = categoryContextMenu.category;
+              setCategoryContextMenu(null);
+              void renameCategory(category);
+            }}
+          >
+            <Pencil aria-hidden="true" />
+            {t("tasks.renameCategoryAction")}
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            className="file-tree-context-menu__item file-tree-context-menu__item--danger"
+            onClick={() => {
+              const category = categoryContextMenu.category;
+              setCategoryContextMenu(null);
+              deleteCategory(category);
+            }}
+          >
+            <Trash2 aria-hidden="true" />
+            {t("tasks.deleteCategoryAction")}
+          </button>
+        </ContextMenuSurface>
+      ) : null}
 
       <DeleteFileDialog
         open={categoryDelete !== null}
