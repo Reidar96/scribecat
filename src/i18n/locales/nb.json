@@ -1010,7 +1010,8 @@
     "label": "Åpne dokumenter",
     "unsaved": "Ulagrede endringer",
     "close": "Lukk {{name}}",
-    "openSelected": "Åpne valgte som faner"
+    "openSelected": "Åpne valgte som faner",
+    "closeAll": "Lukk alle faner"
   },
   "split": {
     "open": "Åpne et dokument ved siden av dette",
