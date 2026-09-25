@@ -464,6 +464,7 @@ export function TasksPanel({
   const [dragOverCategory, setDragOverCategory] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [categoryDelete, setCategoryDelete] = useState<string | null>(null);
+  const [completedOpen, setCompletedOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -515,34 +516,23 @@ export function TasksPanel({
     [documents, i18n.language, i18n.resolvedLanguage]
   );
 
-  const allTasks = useMemo<TaskItem[]>(() => {
-    return Object.values(documents)
-      .flatMap((document) =>
+  const allTasks = useMemo<TaskItem[]>(
+    () =>
+      Object.values(documents).flatMap((document) =>
         document.tasks.map((task) => ({
           ...task,
           category: document.category,
           filePath: document.filePath
         }))
-      )
-      .sort((left, right) => {
-        if (left.checked !== right.checked) return left.checked ? 1 : -1;
+      ),
+    [documents]
+  );
 
-        const priorityCompare =
-          prioritySortValue(left.priority) - prioritySortValue(right.priority);
-        if (priorityCompare !== 0) return priorityCompare;
-
-        const deadlineCompare = deadlineSortValue(left.deadline).localeCompare(
-          deadlineSortValue(right.deadline)
-        );
-        if (deadlineCompare !== 0) return deadlineCompare;
-
-        return left.text.localeCompare(
-          right.text,
-          i18n.resolvedLanguage ?? i18n.language,
-          { sensitivity: "base" }
-        );
-      });
-  }, [documents, i18n.language, i18n.resolvedLanguage]);
+  const locale = i18n.resolvedLanguage ?? i18n.language;
+  const activeAllTasks = useMemo(
+    () => allTasks.filter((task) => !task.checked),
+    [allTasks]
+  );
 
   const now = new Date();
   const todayKey = dateKey(now);
@@ -551,7 +541,7 @@ export function TasksPanel({
   const nextMonthDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
   const nextMonthKey = dateKey(nextMonthDate).slice(0, 7);
 
-  const visibleTasks = useMemo(() => {
+  const filteredTasks = useMemo(() => {
     if (selectedView === TODAY_TASKS) {
       return allTasks.filter((task) => task.deadline === todayKey);
     }
@@ -588,18 +578,27 @@ export function TasksPanel({
     return allTasks;
   }, [allTasks, monthKey, nextMonthKey, selectedView, todayKey, weekRange.end, weekRange.start]);
 
+  const visibleActiveTasks = useMemo(
+    () => orderTaskHierarchy(filteredTasks.filter((task) => !task.checked), locale),
+    [filteredTasks, locale]
+  );
+  const visibleCompletedTasks = useMemo(
+    () => orderTaskHierarchy(filteredTasks.filter((task) => task.checked), locale),
+    [filteredTasks, locale]
+  );
+
   const categoryCounts = useMemo(() => {
     const result = new Map<string, number>();
-    for (const task of allTasks) {
+    for (const task of activeAllTasks) {
       result.set(task.category, (result.get(task.category) ?? 0) + 1);
     }
     return result;
-  }, [allTasks]);
+  }, [activeAllTasks]);
 
   const tagCounts = useMemo(() => {
     const map = new Map<string, { label: string; count: number }>();
 
-    for (const task of allTasks) {
+    for (const task of activeAllTasks) {
       for (const tag of task.tags) {
         const key = tag.toLocaleLowerCase();
         const current = map.get(key);
@@ -615,17 +614,17 @@ export function TasksPanel({
         { sensitivity: "base" }
       )
     );
-  }, [allTasks, i18n.language, i18n.resolvedLanguage]);
+  }, [activeAllTasks, i18n.language, i18n.resolvedLanguage]);
 
-  const todayCount = allTasks.filter((task) => task.deadline === todayKey).length;
-  const weekCount = allTasks.filter(
+  const todayCount = activeAllTasks.filter((task) => task.deadline === todayKey).length;
+  const weekCount = activeAllTasks.filter(
     (task) =>
       task.deadline !== null &&
       task.deadline >= weekRange.start &&
       task.deadline <= weekRange.end
   ).length;
-  const monthCount = allTasks.filter((task) => task.deadline?.startsWith(monthKey)).length;
-  const nextMonthCount = allTasks.filter((task) => task.deadline?.startsWith(nextMonthKey)).length;
+  const monthCount = activeAllTasks.filter((task) => task.deadline?.startsWith(monthKey)).length;
+  const nextMonthCount = activeAllTasks.filter((task) => task.deadline?.startsWith(nextMonthKey)).length;
 
   const resolveFilePath = async (category: string): Promise<string> => {
     const existing = documents[category]?.filePath;
@@ -700,6 +699,28 @@ export function TasksPanel({
     }
   };
 
+  const addSubtask = async (parent: TaskItem, text: string): Promise<boolean> => {
+    if (parent.parentLineIndex !== null || saving) return false;
+
+    const document = documents[parent.category];
+    if (!document) return false;
+
+    const markdown = insertSubtaskInMarkdown(document.markdown, parent.lineIndex, {
+      text,
+      deadline: null,
+      note: "",
+      tags: [],
+      priority: null
+    });
+
+    setSaving(true);
+    try {
+      return await persistCategory(parent.category, markdown);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const mutateTask = async (
     task: TaskItem,
     mutation: "toggle" | "delete" | "text" | "deadline" | "note" | "tags" | "priority",
@@ -749,9 +770,37 @@ export function TasksPanel({
       tags: task.tags,
       priority: task.priority
     };
-    const targetMarkdown = targetDocument
+
+    let targetMarkdown = targetDocument
       ? appendTaskToMarkdown(targetDocument.markdown, taskData)
       : createTaskDocument(targetCategory, taskData);
+
+    if (task.parentLineIndex === null) {
+      const directChildren = sourceDocument.tasks
+        .filter((candidate) => candidate.parentLineIndex === task.lineIndex)
+        .sort((left, right) => left.lineIndex - right.lineIndex);
+      const insertedParent = parseTaskMarkdown(targetMarkdown)
+        .filter((candidate) => candidate.parentLineIndex === null)
+        .at(-1);
+
+      if (insertedParent) {
+        for (const child of directChildren) {
+          targetMarkdown = insertSubtaskInMarkdown(
+            targetMarkdown,
+            insertedParent.lineIndex,
+            {
+              checked: child.checked,
+              text: child.text,
+              deadline: child.deadline,
+              note: child.note,
+              tags: child.tags,
+              priority: child.priority
+            }
+          );
+        }
+      }
+    }
+
     const sourceMarkdown = removeTaskFromMarkdown(
       sourceDocument.markdown,
       task.lineIndex
@@ -975,7 +1024,7 @@ export function TasksPanel({
               }}
             >
               <span>{t("tasks.all")}</span>
-              <small>{allTasks.length}</small>
+              <small>{activeAllTasks.length}</small>
             </button>
 
             {[
@@ -1201,37 +1250,109 @@ export function TasksPanel({
           <div className="tasks-main__heading">
             <div>
               <h3>{heading}</h3>
-              <p>{t("tasks.count", { count: visibleTasks.length })}</p>
+              <p>{t("tasks.count", { count: visibleActiveTasks.length })}</p>
             </div>
             <CheckCircle2 aria-hidden="true" />
           </div>
 
-          {visibleTasks.length === 0 ? (
-            <div className="tasks-empty">
+          {visibleActiveTasks.length === 0 ? (
+            <div className="tasks-empty tasks-empty--active">
               <SquareCheck aria-hidden="true" />
-              <p>{t("tasks.empty")}</p>
+              <p>
+                {visibleCompletedTasks.length > 0
+                  ? t("tasks.emptyActive")
+                  : t("tasks.empty")}
+              </p>
             </div>
           ) : (
             <div className="tasks-list">
-              {visibleTasks.map((task) => (
-                <TaskRow
-                  key={`${task.filePath}:${task.lineIndex}`}
-                  task={task}
-                  onToggle={() => void mutateTask(task, "toggle")}
-                  onTextChange={(text) => void mutateTask(task, "text", text)}
-                  onDeadlineChange={(deadline) =>
-                    void mutateTask(task, "deadline", deadline ?? "")
-                  }
-                  onNoteChange={(note) => void mutateTask(task, "note", note)}
-                  onTagsChange={(tags) => void mutateTask(task, "tags", tags)}
-                  onPriorityChange={(priority) =>
-                    void mutateTask(task, "priority", priority)
-                  }
-                  onDelete={() => void mutateTask(task, "delete")}
-                />
-              ))}
+              {visibleActiveTasks.map((task) => {
+                const isSubtask =
+                  task.parentLineIndex !== null &&
+                  visibleActiveTasks.some(
+                    (candidate) =>
+                      candidate.filePath === task.filePath &&
+                      candidate.lineIndex === task.parentLineIndex
+                  );
+
+                return (
+                  <TaskRow
+                    key={`${task.filePath}:${task.lineIndex}`}
+                    task={task}
+                    isSubtask={isSubtask}
+                    onToggle={() => void mutateTask(task, "toggle")}
+                    onTextChange={(text) => void mutateTask(task, "text", text)}
+                    onDeadlineChange={(deadline) =>
+                      void mutateTask(task, "deadline", deadline ?? "")
+                    }
+                    onNoteChange={(note) => void mutateTask(task, "note", note)}
+                    onTagsChange={(tags) => void mutateTask(task, "tags", tags)}
+                    onPriorityChange={(priority) =>
+                      void mutateTask(task, "priority", priority)
+                    }
+                    onAddSubtask={
+                      task.parentLineIndex === null
+                        ? (text) => addSubtask(task, text)
+                        : undefined
+                    }
+                    onDelete={() => void mutateTask(task, "delete")}
+                  />
+                );
+              })}
             </div>
           )}
+
+          {visibleCompletedTasks.length > 0 ? (
+            <section className="tasks-completed">
+              <button
+                type="button"
+                className="tasks-completed__trigger"
+                aria-expanded={completedOpen}
+                onClick={() => setCompletedOpen((open) => !open)}
+              >
+                {completedOpen ? (
+                  <ChevronDown aria-hidden="true" />
+                ) : (
+                  <ChevronRight aria-hidden="true" />
+                )}
+                <span>{t("tasks.completed")}</span>
+                <small>{visibleCompletedTasks.length}</small>
+              </button>
+
+              {completedOpen ? (
+                <div className="tasks-list tasks-completed__list">
+                  {visibleCompletedTasks.map((task) => {
+                    const isSubtask =
+                      task.parentLineIndex !== null &&
+                      visibleCompletedTasks.some(
+                        (candidate) =>
+                          candidate.filePath === task.filePath &&
+                          candidate.lineIndex === task.parentLineIndex
+                      );
+
+                    return (
+                      <TaskRow
+                        key={`${task.filePath}:${task.lineIndex}`}
+                        task={task}
+                        isSubtask={isSubtask}
+                        onToggle={() => void mutateTask(task, "toggle")}
+                        onTextChange={(text) => void mutateTask(task, "text", text)}
+                        onDeadlineChange={(deadline) =>
+                          void mutateTask(task, "deadline", deadline ?? "")
+                        }
+                        onNoteChange={(note) => void mutateTask(task, "note", note)}
+                        onTagsChange={(tags) => void mutateTask(task, "tags", tags)}
+                        onPriorityChange={(priority) =>
+                          void mutateTask(task, "priority", priority)
+                        }
+                        onDelete={() => void mutateTask(task, "delete")}
+                      />
+                    );
+                  })}
+                </div>
+              ) : null}
+            </section>
+          ) : null}
         </main>
       </div>
 
