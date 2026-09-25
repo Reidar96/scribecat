@@ -1,14 +1,18 @@
 export const TASKS_FOLDER_NAME = "Gjøremål";
 export const UNCATEGORIZED_TASK_CATEGORY = "Uten kategori";
 
+export type TaskSortMode = "name" | "modified" | "manual";
+
 export type TaskSettings = {
   folder: string;
   hideFromSidebar: boolean;
+  sortMode: TaskSortMode;
 };
 
 export const DEFAULT_TASK_SETTINGS: TaskSettings = {
   folder: TASKS_FOLDER_NAME,
-  hideFromSidebar: true
+  hideFromSidebar: true,
+  sortMode: "manual"
 };
 
 function cleanTaskFolder(value: string): string {
@@ -30,7 +34,13 @@ export function normalizeTaskSettings(value: unknown): TaskSettings {
       typeof record.folder === "string" && cleanTaskFolder(record.folder)
         ? cleanTaskFolder(record.folder)
         : DEFAULT_TASK_SETTINGS.folder,
-    hideFromSidebar: record.hideFromSidebar !== false
+    hideFromSidebar: record.hideFromSidebar !== false,
+    sortMode:
+      record.sortMode === "name" ||
+      record.sortMode === "modified" ||
+      record.sortMode === "manual"
+        ? record.sortMode
+        : DEFAULT_TASK_SETTINGS.sortMode
   };
 }
 
@@ -312,6 +322,22 @@ export function appendTaskToMarkdown(
   return `${trimmedEnd}${separator}${formatTaskBlock(task)}\n`;
 }
 
+export function prependTaskToMarkdown(
+  markdown: string,
+  task: NewMarkdownTask
+): string {
+  const lines = markdown.split(/\r?\n/);
+  const firstTaskLineIndex = lines.findIndex((line) => TASK_LINE_PATTERN.test(line));
+
+  if (firstTaskLineIndex === -1) {
+    return appendTaskToMarkdown(markdown, task);
+  }
+
+  const block = formatTaskBlock(task).split("\n");
+  lines.splice(firstTaskLineIndex, 0, ...block);
+  return lines.join("\n").replace(/\n?$/, "\n");
+}
+
 export function updateTaskInMarkdown(
   markdown: string,
   lineIndex: number,
@@ -414,7 +440,7 @@ export function insertSubtaskInMarkdown(
   return lines.join("\n").replace(/\n?$/, "\n");
 }
 
-export function moveSubtaskInMarkdown(
+export function moveSiblingTaskInMarkdown(
   markdown: string,
   sourceLineIndex: number,
   targetLineIndex: number,
@@ -426,13 +452,7 @@ export function moveSubtaskInMarkdown(
   const source = parsed.find((task) => task.lineIndex === sourceLineIndex);
   const target = parsed.find((task) => task.lineIndex === targetLineIndex);
 
-  if (
-    !source ||
-    !target ||
-    source.parentLineIndex === null ||
-    target.parentLineIndex === null ||
-    source.parentLineIndex !== target.parentLineIndex
-  ) {
+  if (!source || !target || source.parentLineIndex !== target.parentLineIndex) {
     return markdown;
   }
 
@@ -454,6 +474,33 @@ export function moveSubtaskInMarkdown(
 
   lines.splice(insertAt, 0, ...sourceBlock);
   return lines.join("\n").replace(/\n?$/, "\n");
+}
+
+export function moveSubtaskInMarkdown(
+  markdown: string,
+  sourceLineIndex: number,
+  targetLineIndex: number,
+  placement: "before" | "after"
+): string {
+  const parsed = parseTaskMarkdown(markdown);
+  const source = parsed.find((task) => task.lineIndex === sourceLineIndex);
+  const target = parsed.find((task) => task.lineIndex === targetLineIndex);
+
+  if (
+    !source ||
+    !target ||
+    source.parentLineIndex === null ||
+    target.parentLineIndex === null
+  ) {
+    return markdown;
+  }
+
+  return moveSiblingTaskInMarkdown(
+    markdown,
+    sourceLineIndex,
+    targetLineIndex,
+    placement
+  );
 }
 
 export function removeTaskFromMarkdown(
