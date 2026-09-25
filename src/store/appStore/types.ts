@@ -90,6 +90,8 @@ export type SaveOptions = { trigger?: "manual" | "auto"; force?: boolean };
 
 /** Selecting, editing, saving and mutating individual files. */
 export type FileSlice = {
+  /** Loads a note into the document cache without changing the active editor. */
+  loadFileDocument: (filePath: string) => Promise<boolean>;
   selectFilePath: (filePath: string) => Promise<boolean>;
   /**
    * Leaves the current editor selection without discarding its in-memory
@@ -104,6 +106,8 @@ export type FileSlice = {
    * feature never litters a vault with empty files.
    */
   openFolderNote: (folderPath: string) => Promise<boolean>;
+  /** Updates any cached document while preserving its own dirty/draft state. */
+  updateFileContent: (filePath: string, markdown: string) => void;
   updateSelectedFileContent: (markdown: string) => void;
   adoptCanonicalFileContent: (filePath: string, markdown: string) => void;
   discardSelectedFileChanges: () => boolean;

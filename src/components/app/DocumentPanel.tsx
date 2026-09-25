@@ -1,7 +1,8 @@
-import { Fragment, useEffect, useState, type RefObject } from "react";
+import { Fragment, useEffect, useMemo, useState, type RefObject } from "react";
 import {
   AlertTriangle,
   ArrowLeft,
+  ArrowLeftRight,
   ArrowRight,
   Check,
   FolderOpen,
@@ -10,7 +11,10 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Pencil,
-  Save
+  Plus,
+  Save,
+  Search,
+  X
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -19,20 +23,30 @@ import { Editor, type EditorHandle } from "@/components/Editor";
 import { FindReplacePanel } from "@/components/FindReplacePanel";
 import { VersionsPopover } from "@/components/VersionsPopover";
 import { DocumentMenu } from "@/components/app/DocumentMenu";
+import { DocumentTabs, TAB_DRAG_MIME } from "@/components/app/DocumentTabs";
 import { join } from "@/platform/paths";
 import { EmojiPickerPopover } from "@/components/EmojiPicker";
 import { useBreadcrumbScroll } from "@/hooks/useBreadcrumbScroll";
 import { useLayoutMode } from "@/hooks/useLayoutMode";
 import { getPathCrumbs } from "@/lib/breadcrumbPath";
 import { getVaultIcon, type VaultIconMap } from "@/lib/vaultIcons";
+import { isDocumentLocked as getDocumentLocked } from "@/lib/documentLocks";
 import { anchorForTrigger, type PopoverAnchor } from "@/lib/usePopoverOverflowAlign";
 import type { FileVersion } from "@/lib/fileVersions";
 import { cn } from "@/lib/utils";
 import { replaceBody, splitFrontmatter } from "@/lib/documentFrontmatter";
+import {
+  buildVaultFileOptions,
+  filterVaultFileOptions,
+  getDraggedVaultFilePaths,
+  getFileLinkLabel,
+  FILE_LINK_DRAG_MIME
+} from "@/lib/editor/fileLinks";
 import { getVaultCapabilities, vaultCapabilityHint } from "@/platform";
 import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
 import { useSearchStore } from "@/store/useSearchStore";
 import { useVersioningSettingsStore } from "@/store/useVersioningSettingsStore";
+import { useAppStore, type FileDocumentState } from "@/store/useAppStore";
 
 type DocumentPanelProps = {
   selectedFilePath: string | null;
@@ -46,6 +60,22 @@ type DocumentPanelProps = {
   folderPath: string | null;
   selectedFileContent: string | null;
   appVersion: string | null;
+  filePaths: string[];
+  fileDocuments: Record<string, FileDocumentState>;
+  dirtyFilePaths: string[];
+  openTabs: string[];
+  secondaryFilePath: string | null;
+  onSelectTab: (filePath: string) => void;
+  onCloseTab: (filePath: string) => void;
+  onReorderTabs: (
+    draggedFilePath: string,
+    targetFilePath: string,
+    position: "before" | "after"
+  ) => void;
+  onOpenSecondary: (filePath: string) => void;
+  onClosePrimarySplit: () => void;
+  onCloseSecondary: () => void;
+  onSecondaryMarkdownChange: (filePath: string, markdown: string) => void;
 
   /** Vault-relative label of the note a back/forward step opens, null when there is none. */
   backTargetLabel: string | null;
@@ -89,6 +119,8 @@ type DocumentPanelProps = {
   onOpenSidebar: () => void;
   /** Deletes the note currently open in the editor after confirmation. */
   onDeleteRequest: () => void;
+  /** Deletes any visible split document after confirmation. */
+  onDeleteFileRequest: (filePath: string) => void;
   /** Phone and tablet: the status pill doubles as the save button. */
   onSaveRequest: () => void;
 };
@@ -155,6 +187,18 @@ export function DocumentPanel({
   folderPath,
   selectedFileContent,
   appVersion,
+  filePaths,
+  fileDocuments,
+  dirtyFilePaths,
+  openTabs,
+  secondaryFilePath,
+  onSelectTab,
+  onCloseTab,
+  onReorderTabs,
+  onOpenSecondary,
+  onClosePrimarySplit,
+  onCloseSecondary,
+  onSecondaryMarkdownChange,
   backTargetLabel,
   forwardTargetLabel,
   onNavigateBack,
@@ -188,6 +232,7 @@ export function DocumentPanel({
   onVersionRestoreRequest,
   onOpenSidebar,
   onDeleteRequest,
+  onDeleteFileRequest,
   onSaveRequest
 }: DocumentPanelProps) {
   const { t } = useTranslation();
@@ -197,6 +242,15 @@ export function DocumentPanel({
   // it inside the editor, where responsive.css moves it below the text. A
   // state (not a ref) so the editor re-renders once the slot exists.
   const [toolbarSlot, setToolbarSlot] = useState<HTMLDivElement | null>(null);
+  const [activeEditorPane, setActiveEditorPane] = useState<"primary" | "secondary">("primary");
+  const [splitRatio, setSplitRatio] = useState(50);
+  const [secondarySide, setSecondarySide] = useState<"left" | "right">("right");
+  const [splitPickerOpen, setSplitPickerOpen] = useState(false);
+  const [splitPickerSide, setSplitPickerSide] = useState<"left" | "right">("right");
+  const [splitPickerQuery, setSplitPickerQuery] = useState("");
+  const [splitDropPreview, setSplitDropPreview] = useState<"left" | "right" | null>(null);
+  const documentLocks = useAppStore((state) => state.documentLocks);
+  const setDocumentLocked = useAppStore((state) => state.setDocumentLocked);
   // Bumped by the header menu's "Versions" entry on the phone, where the
   // popover's own trigger button has no room in the header.
   const [versionsRequestId, setVersionsRequestId] = useState(0);
@@ -212,6 +266,12 @@ export function DocumentPanel({
       onCancelTitleRename();
     }
   }, [documentLocked, isRenamingTitle, onCancelTitleRename]);
+
+  useEffect(() => {
+    if (!secondaryFilePath || layout !== "desktop") {
+      setActiveEditorPane("primary");
+    }
+  }, [layout, secondaryFilePath]);
   const capabilities = getVaultCapabilities();
   const capabilityHint = vaultCapabilityHint();
   const versioningEnabled = useVersioningSettingsStore((state) => state.versioningEnabled);
@@ -269,6 +329,95 @@ export function DocumentPanel({
     if (selectedFileContent !== null) {
       onCanonicalMarkdown(filePath, replaceBody(selectedFileContent, body));
     }
+  };
+
+  const secondaryDocument = secondaryFilePath ? fileDocuments[secondaryFilePath] ?? null : null;
+  const secondaryMarkdown = secondaryDocument
+    ? splitFrontmatter(secondaryDocument.content).body
+    : null;
+  const secondaryRelativePath =
+    folderPath && secondaryFilePath
+      ? secondaryFilePath.replace(/\\/g, "/").startsWith(folderPath.replace(/\\/g, "/"))
+        ? secondaryFilePath
+            .replace(/\\/g, "/")
+            .slice(folderPath.replace(/\\/g, "/").replace(/\/$/, "").length)
+            .replace(/^\//, "")
+        : secondaryFilePath
+      : null;
+  const secondaryDocumentLocked =
+    secondaryRelativePath !== null &&
+    getDocumentLocked(documentLocks, secondaryRelativePath);
+  const splitOptions = useMemo(
+    () =>
+      filterVaultFileOptions(
+        buildVaultFileOptions(folderPath, filePaths, selectedFilePath).filter(
+          (option) => option.filePath !== secondaryFilePath
+        ),
+        splitPickerQuery,
+        40
+      ),
+    [filePaths, folderPath, secondaryFilePath, selectedFilePath, splitPickerQuery]
+  );
+
+  const hasSplitDragPayload = (dataTransfer: DataTransfer) =>
+    Array.from(dataTransfer.types).some(
+      (type) => type === TAB_DRAG_MIME || type === FILE_LINK_DRAG_MIME
+    );
+
+  const splitDropFilePath = (dataTransfer: DataTransfer): string | null =>
+    dataTransfer.getData(TAB_DRAG_MIME) || getDraggedVaultFilePaths(dataTransfer)[0] || null;
+
+  const openSplitPickerForSide = (side: "left" | "right") => {
+    setSplitPickerSide(side);
+    setSplitPickerQuery("");
+    setSplitPickerOpen(true);
+  };
+
+  const replaceSplitSide = (side: "left" | "right", filePath: string) => {
+    setSplitPickerOpen(false);
+
+    if (!secondaryFilePath) {
+      if (filePath !== selectedFilePath) {
+        setSecondarySide(side);
+        onOpenSecondary(filePath);
+      }
+      return;
+    }
+
+    if (side === secondarySide) {
+      if (filePath === selectedFilePath) {
+        setSecondarySide(side === "left" ? "right" : "left");
+        return;
+      }
+      if (filePath !== secondaryFilePath) {
+        onOpenSecondary(filePath);
+      }
+      return;
+    }
+
+    if (filePath !== selectedFilePath) {
+      onSelectTab(filePath);
+    }
+  };
+
+  const handleSplitResizeStart = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (layout !== "desktop") return;
+    event.preventDefault();
+    const container = event.currentTarget.parentElement;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+
+    const onMove = (moveEvent: PointerEvent) => {
+      const ratio = ((moveEvent.clientX - rect.left) / rect.width) * 100;
+      setSplitRatio(Math.min(75, Math.max(25, ratio)));
+    };
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
   };
 
   const isEditorMounted =
@@ -567,6 +716,15 @@ export function DocumentPanel({
             </div>
           </div>
 
+          <DocumentTabs
+            filePaths={openTabs}
+            activeFilePath={selectedFilePath}
+            dirtyFilePaths={dirtyFilePaths}
+            onSelect={onSelectTab}
+            onClose={onCloseTab}
+            onReorder={onReorderTabs}
+          />
+
           <div className="detail-panel__body">
             {fileError || saveError ? (
               <div className="detail-panel__message detail-panel__message--error">
@@ -577,26 +735,333 @@ export function DocumentPanel({
                 {t("app.fileLoading")}
               </div>
             ) : (
-              <Editor
-                key={selectedFilePath}
-                ref={editorHandleRef}
-                markdown={editorMarkdown ?? ""}
-                documentMarkdown={selectedFileContent}
-                onMarkdownChange={handleEditorMarkdownChange}
-                onDocumentMarkdownChange={onMarkdownChange}
-                onCanonicalMarkdown={handleCanonicalMarkdown}
-                folderPath={folderPath}
-                filePath={selectedFilePath}
-                editorFocusRequestId={editorFocusRequestId}
-                onRequestSidebarFocus={onRequestSidebarFocus}
-                onRequestFileOpen={onRequestFileOpen}
-                onZenModeRequest={onZenModeRequest}
-                onDeleteRequest={onDeleteRequest}
-                deleteEnabled={capabilities.delete}
-                documentLocked={documentLocked}
-                onDocumentLockToggle={toggleDocumentLocked}
-                toolbarContainer={layout === "desktop" ? toolbarSlot : null}
-              />
+              <div
+                className={cn(
+                  "split-workspace",
+                  layout === "desktop" && secondaryFilePath && "split-workspace--active"
+                )}
+                style={
+                  layout === "desktop" && secondaryFilePath
+                    ? ({ "--split-left": `${splitRatio}%` } as React.CSSProperties)
+                    : undefined
+                }
+                onDragOverCapture={(event) => {
+                  if (layout !== "desktop" || !hasSplitDragPayload(event.dataTransfer)) {
+                    setSplitDropPreview(null);
+                    return;
+                  }
+
+                  const rect = event.currentTarget.getBoundingClientRect();
+                  const side =
+                    event.clientX < rect.left + rect.width / 2 ? "left" : "right";
+                  setSplitDropPreview(side);
+                  event.preventDefault();
+                  event.stopPropagation();
+                  event.dataTransfer.dropEffect = "copy";
+                }}
+                onDragLeave={(event) => {
+                  const nextTarget = event.relatedTarget as Node | null;
+                  if (!nextTarget || !event.currentTarget.contains(nextTarget)) {
+                    setSplitDropPreview(null);
+                  }
+                }}
+                onDropCapture={(event) => {
+                  if (layout !== "desktop" || !splitDropPreview) return;
+                  const side = splitDropPreview;
+                  const filePath = splitDropFilePath(event.dataTransfer);
+                  setSplitDropPreview(null);
+                  if (!filePath) return;
+
+                  event.preventDefault();
+                  event.stopPropagation();
+                  setSplitPickerOpen(false);
+
+                  if (filePath === selectedFilePath) {
+                    if (secondaryFilePath) {
+                      setSecondarySide(side === "left" ? "right" : "left");
+                    }
+                    return;
+                  }
+
+                  setSecondarySide(side);
+                  if (filePath !== secondaryFilePath) {
+                    onOpenSecondary(filePath);
+                  }
+                }}
+              >
+                <div
+                  className={cn(
+                    "split-workspace__pane split-workspace__pane--primary",
+                    layout === "desktop" &&
+                      secondaryFilePath &&
+                      "split-workspace__pane--primary-split"
+                  )}
+                  style={
+                    layout === "desktop" && secondaryFilePath
+                      ? { gridColumn: secondarySide === "left" ? 3 : 1 }
+                      : undefined
+                  }
+                >
+                  {layout === "desktop" && secondaryFilePath ? (
+                    <div className="split-workspace__pane-header">
+                      <span title={selectedFilePath}>{getFileLinkLabel(selectedFilePath)}</span>
+                      <div className="split-workspace__pane-actions">
+                        <button
+                          type="button"
+                          aria-label={t("split.replace")}
+                          title={t("split.replace")}
+                          onClick={() =>
+                            openSplitPickerForSide(
+                              secondarySide === "left" ? "right" : "left"
+                            )
+                          }
+                        >
+                          <Plus aria-hidden="true" />
+                        </button>
+                        <button
+                          type="button"
+                          aria-label={t("split.closePane")}
+                          title={t("split.closePane")}
+                          onClick={() => {
+                            setActiveEditorPane("secondary");
+                            onClosePrimarySplit();
+                          }}
+                        >
+                          <X aria-hidden="true" />
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+                  <Editor
+                    key={selectedFilePath}
+                    ref={editorHandleRef}
+                    markdown={editorMarkdown ?? ""}
+                    documentMarkdown={selectedFileContent}
+                    onMarkdownChange={handleEditorMarkdownChange}
+                    onDocumentMarkdownChange={onMarkdownChange}
+                    onCanonicalMarkdown={handleCanonicalMarkdown}
+                    folderPath={folderPath}
+                    filePath={selectedFilePath}
+                    editorFocusRequestId={editorFocusRequestId}
+                    onRequestSidebarFocus={onRequestSidebarFocus}
+                    onRequestFileOpen={onRequestFileOpen}
+                    onZenModeRequest={onZenModeRequest}
+                    onDeleteRequest={onDeleteRequest}
+                    deleteEnabled={capabilities.delete}
+                    documentLocked={documentLocked}
+                    onDocumentLockToggle={toggleDocumentLocked}
+                    onEditorFocus={() => setActiveEditorPane("primary")}
+                    hideToolbar={
+                      layout === "desktop" &&
+                      Boolean(secondaryFilePath) &&
+                      activeEditorPane !== "primary"
+                    }
+                    toolbarContainer={layout === "desktop" ? toolbarSlot : null}
+                  />
+                </div>
+
+                {layout === "desktop" && secondaryFilePath && secondaryDocument && secondaryMarkdown !== null ? (
+                  <>
+                    <div
+                      className="split-workspace__resizer"
+                      style={{ gridColumn: 2 }}
+                      role="separator"
+                      aria-orientation="vertical"
+                      aria-label={t("split.resize")}
+                      aria-valuenow={Math.round(splitRatio)}
+                      tabIndex={0}
+                      onPointerDown={handleSplitResizeStart}
+                      onKeyDown={(event) => {
+                        if (event.key === "ArrowLeft") {
+                          event.preventDefault();
+                          setSplitRatio((value) => Math.max(25, value - 5));
+                        } else if (event.key === "ArrowRight") {
+                          event.preventDefault();
+                          setSplitRatio((value) => Math.min(75, value + 5));
+                        }
+                      }}
+                    >
+                      <button
+                        type="button"
+                        className="split-workspace__swap"
+                        aria-label={t("split.swap")}
+                        title={t("split.swap")}
+                        onPointerDown={(event) => event.stopPropagation()}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setSecondarySide((side) => (side === "left" ? "right" : "left"));
+                        }}
+                      >
+                        <ArrowLeftRight aria-hidden="true" />
+                      </button>
+                    </div>
+                    <div
+                      className={cn(
+                        "split-workspace__pane split-workspace__pane--secondary",
+                        `split-workspace__pane--secondary-${secondarySide}`
+                      )}
+                      style={{ gridColumn: secondarySide === "left" ? 1 : 3 }}
+                    >
+                      <div className="split-workspace__pane-header">
+                        <span title={secondaryFilePath}>{getFileLinkLabel(secondaryFilePath)}</span>
+                        <div className="split-workspace__pane-actions">
+                          <button
+                            type="button"
+                            aria-label={t("split.replace")}
+                            title={t("split.replace")}
+                            onClick={() => openSplitPickerForSide(secondarySide)}
+                          >
+                            <Plus aria-hidden="true" />
+                          </button>
+                          <button
+                            type="button"
+                            aria-label={t("split.closePane")}
+                            title={t("split.closePane")}
+                            onClick={() => {
+                              setActiveEditorPane("primary");
+                              onCloseSecondary();
+                            }}
+                          >
+                            <X aria-hidden="true" />
+                          </button>
+                        </div>
+                      </div>
+                      <Editor
+                        key={secondaryFilePath}
+                        markdown={secondaryMarkdown}
+                        documentMarkdown={secondaryDocument.content}
+                        onMarkdownChange={(body) =>
+                          onSecondaryMarkdownChange(
+                            secondaryFilePath,
+                            replaceBody(secondaryDocument.content, body)
+                          )
+                        }
+                        onDocumentMarkdownChange={(markdown) =>
+                          onSecondaryMarkdownChange(secondaryFilePath, markdown)
+                        }
+                        onCanonicalMarkdown={(filePath, body) =>
+                          onCanonicalMarkdown(
+                            filePath,
+                            replaceBody(secondaryDocument.content, body)
+                          )
+                        }
+                        folderPath={folderPath}
+                        filePath={secondaryFilePath}
+                        onRequestSidebarFocus={onRequestSidebarFocus}
+                        onRequestFileOpen={onRequestFileOpen}
+                        onZenModeRequest={onZenModeRequest}
+                        onDeleteRequest={() => onDeleteFileRequest(secondaryFilePath)}
+                        deleteEnabled={capabilities.delete}
+                        documentLocked={secondaryDocumentLocked}
+                        onDocumentLockToggle={() =>
+                          void setDocumentLocked(
+                            secondaryFilePath,
+                            !secondaryDocumentLocked
+                          )
+                        }
+                        onEditorFocus={() => setActiveEditorPane("secondary")}
+                        hideToolbar={activeEditorPane !== "secondary"}
+                        toolbarContainer={toolbarSlot}
+                      />
+                    </div>
+                  </>
+                ) : null}
+
+                {layout === "desktop" ? (
+                  <>
+                    {(["left", "right"] as const).map((side) => (
+                      <button
+                        key={side}
+                        type="button"
+                        className={cn(
+                          "split-workspace__edge-add",
+                          `split-workspace__edge-add--${side}`
+                        )}
+                        aria-label={t(side === "left" ? "split.openLeft" : "split.openRight")}
+                        title={t(side === "left" ? "split.openLeft" : "split.openRight")}
+                        onClick={() => {
+                          if (splitPickerOpen && splitPickerSide === side) {
+                            setSplitPickerOpen(false);
+                          } else {
+                            openSplitPickerForSide(side);
+                          }
+                        }}
+                      >
+                        <Plus aria-hidden="true" />
+                      </button>
+                    ))}
+
+                    {splitPickerOpen ? (
+                      <div
+                        className={cn(
+                          "split-picker",
+                          `split-picker--${splitPickerSide}`
+                        )}
+                        role="dialog"
+                        aria-label={t("split.pickerTitle")}
+                      >
+                        <label className="split-picker__search">
+                          <Search aria-hidden="true" />
+                          <input
+                            autoFocus
+                            type="search"
+                            value={splitPickerQuery}
+                            placeholder={t("split.search")}
+                            onChange={(event) => setSplitPickerQuery(event.target.value)}
+                            onKeyDown={(event) => {
+                              if (event.key === "Escape") {
+                                setSplitPickerOpen(false);
+                              }
+                            }}
+                          />
+                        </label>
+                        <div className="split-picker__list">
+                          {splitOptions.length > 0 ? (
+                            splitOptions.map((option) => (
+                              <button
+                                key={option.filePath}
+                                type="button"
+                                className="split-picker__item"
+                                title={option.relativePath}
+                                onClick={() =>
+                                  replaceSplitSide(splitPickerSide, option.filePath)
+                                }
+                              >
+                                <span>{option.label}</span>
+                                <small>{option.relativePath}</small>
+                              </button>
+                            ))
+                          ) : (
+                            <p className="split-picker__empty">{t("split.noMatches")}</p>
+                          )}
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {splitDropPreview ? (
+                      <div
+                        className={cn(
+                          "split-drop-preview",
+                          `split-drop-preview--${splitDropPreview}`
+                        )}
+                        aria-hidden="true"
+                      >
+                        <div className="split-drop-preview__content">
+                          <Plus />
+                          <strong>{t("split.dropTitle")}</strong>
+                          <span>
+                            {t(
+                              splitDropPreview === "left"
+                                ? "split.dropHintLeft"
+                                : "split.dropHintRight"
+                            )}
+                          </span>
+                        </div>
+                      </div>
+                    ) : null}
+                  </>
+                ) : null}
+              </div>
             )}
           </div>
         </div>

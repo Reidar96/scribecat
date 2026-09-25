@@ -18,7 +18,7 @@ import { MobileSheet } from "@/components/app/MobileSheet";
 import { ZenMode } from "@/components/app/ZenMode";
 import type { BatchEntry, PendingEntryRename } from "@/components/FileTree";
 import { useAppVersion } from "@/hooks/useAppVersion";
-import { useAutoSave } from "@/hooks/useAutoSave";
+import { AUTO_SAVE_DELAY_MS, useAutoSave } from "@/hooks/useAutoSave";
 import { useDeleteTarget } from "@/hooks/useDeleteTarget";
 import { useDraftFlush } from "@/hooks/useDraftFlush";
 import { useExportTarget } from "@/hooks/useExportTarget";
@@ -117,6 +117,8 @@ function App() {
   const [graphViewOpen, setGraphViewOpen] = useState(false);
   const [journalViewOpen, setJournalViewOpen] = useState(false);
   const [tasksViewOpen, setTasksViewOpen] = useState(false);
+  const [openTabs, setOpenTabs] = useState<string[]>([]);
+  const [secondaryFilePath, setSecondaryFilePath] = useState<string | null>(null);
   const appVersion = useAppVersion();
   const editorHandleRef = useRef<EditorHandle | null>(null);
   const entryRenameRequestIdRef = useRef(0);
@@ -149,6 +151,8 @@ function App() {
   const discardFileChanges = useAppStore((state) => state.discardFileChanges);
   const workingSetActions = useWorkingSetActions();
   const selectFilePath = useAppStore((state) => state.selectFilePath);
+  const loadFileDocument = useAppStore((state) => state.loadFileDocument);
+  const updateFileContent = useAppStore((state) => state.updateFileContent);
   const clearSelectedFile = useAppStore((state) => state.clearSelectedFile);
   const openFolderNote = useAppStore((state) => state.openFolderNote);
   const updateSelectedFileContent = useAppStore(
@@ -237,8 +241,22 @@ function App() {
     setGraphViewOpen(false);
     setJournalViewOpen(false);
     setTasksViewOpen(false);
+    setOpenTabs([]);
+    setSecondaryFilePath(null);
     setEntryClipboard([]);
   }, [folderPath]);
+
+  useEffect(() => {
+    if (!selectedFilePath) return;
+    setOpenTabs((tabs) => (tabs.includes(selectedFilePath) ? tabs : [...tabs, selectedFilePath]));
+  }, [selectedFilePath]);
+
+  useEffect(() => {
+    setOpenTabs((tabs) => tabs.filter((filePath) => filePaths.includes(filePath) || fileDocuments[filePath]));
+    if (secondaryFilePath && !filePaths.includes(secondaryFilePath) && !fileDocuments[secondaryFilePath]) {
+      setSecondaryFilePath(null);
+    }
+  }, [filePaths, fileDocuments, secondaryFilePath]);
 
 
   const toggleSidebarVisible = () => {
@@ -278,6 +296,31 @@ function App() {
 
   useWebviewZoom();
   useAutoSave({ isAiActionPending: false, isSelectedFileStaged: false, isSelectedFileMissing });
+
+  useEffect(() => {
+    if (!autoSaveEnabled || !secondaryFilePath) {
+      return;
+    }
+
+    const document = fileDocuments[secondaryFilePath];
+    if (!document || document.content === document.baseContent) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      const state = useAppStore.getState();
+      const current = state.fileDocuments[secondaryFilePath];
+
+      if (!current || current.content === current.baseContent || state.saveError) {
+        return;
+      }
+
+      void state.saveFilePath(secondaryFilePath, { trigger: "auto" });
+    }, AUTO_SAVE_DELAY_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [autoSaveEnabled, fileDocuments, secondaryFilePath]);
+
   useDraftFlush({
     // Closing the app with auto-save on saves the open note the way leaving
     // it would; without auto-save the draft is what comes back.
@@ -501,6 +544,12 @@ function App() {
   };
 
   const selectFilePathSafely = async (filePath: string) => {
+    if (filePath === secondaryFilePath) {
+      setSecondaryFilePath(
+        selectedFilePath && selectedFilePath !== filePath ? selectedFilePath : null
+      );
+    }
+
     if (filePath === selectedFilePath) {
       setCollectionView(null);
       setGraphViewOpen(false);
@@ -521,6 +570,79 @@ function App() {
     setGraphViewOpen(false);
     setJournalViewOpen(false);
     setTasksViewOpen(false);
+  };
+
+  const closeDocumentTab = (filePath: string) => {
+    const index = openTabs.indexOf(filePath);
+    const next = openTabs.filter((entry) => entry !== filePath);
+    setOpenTabs(next);
+
+    if (secondaryFilePath === filePath) {
+      setSecondaryFilePath(null);
+    }
+
+    if (selectedFilePath === filePath) {
+      const fallback = next[Math.min(index, Math.max(0, next.length - 1))] ?? null;
+      if (fallback) {
+        void selectFilePathSafely(fallback);
+      } else {
+        clearSelectedFile();
+      }
+    }
+  };
+
+  const reorderDocumentTabs = (
+    draggedFilePath: string,
+    targetFilePath: string,
+    position: "before" | "after"
+  ) => {
+    setOpenTabs((tabs) => {
+      if (
+        draggedFilePath === targetFilePath ||
+        !tabs.includes(draggedFilePath) ||
+        !tabs.includes(targetFilePath)
+      ) {
+        return tabs;
+      }
+
+      const withoutDragged = tabs.filter((entry) => entry !== draggedFilePath);
+      const targetIndex = withoutDragged.indexOf(targetFilePath);
+      const insertIndex = position === "before" ? targetIndex : targetIndex + 1;
+      return [
+        ...withoutDragged.slice(0, insertIndex),
+        draggedFilePath,
+        ...withoutDragged.slice(insertIndex)
+      ];
+    });
+  };
+
+  const openSecondaryDocument = async (filePath: string) => {
+    if (layout !== "desktop" || filePath === selectedFilePath) {
+      return;
+    }
+
+    const loaded = await loadFileDocument(filePath);
+    if (!loaded) return;
+
+    setOpenTabs((tabs) => (tabs.includes(filePath) ? tabs : [...tabs, filePath]));
+    setSecondaryFilePath(filePath);
+    setCollectionView(null);
+    setGraphViewOpen(false);
+    setJournalViewOpen(false);
+    setTasksViewOpen(false);
+  };
+
+  const closePrimarySplitPane = async () => {
+    if (!secondaryFilePath) {
+      return;
+    }
+
+    const remainingFilePath = secondaryFilePath;
+    setSecondaryFilePath(null);
+    await selectFilePath(remainingFilePath);
+    setOpenTabs((tabs) =>
+      tabs.includes(remainingFilePath) ? tabs : [...tabs, remainingFilePath]
+    );
   };
 
   // Same for a folder's note (the tree hands over the folder, the store
@@ -1303,6 +1425,18 @@ function App() {
               folderPath={folderPath}
               selectedFileContent={selectedFileContent}
               appVersion={appVersion}
+              filePaths={filePaths}
+              fileDocuments={fileDocuments}
+              dirtyFilePaths={dirtyFilePaths}
+              openTabs={openTabs}
+              secondaryFilePath={secondaryFilePath}
+              onSelectTab={(filePath) => void selectFilePathSafely(filePath)}
+              onCloseTab={closeDocumentTab}
+              onReorderTabs={reorderDocumentTabs}
+              onOpenSecondary={(filePath) => void openSecondaryDocument(filePath)}
+              onClosePrimarySplit={() => void closePrimarySplitPane()}
+              onCloseSecondary={() => setSecondaryFilePath(null)}
+              onSecondaryMarkdownChange={updateFileContent}
               backTargetLabel={historyEntryLabel(backStepIndex)}
               forwardTargetLabel={historyEntryLabel(forwardStepIndex)}
               onNavigateBack={() => navigateHistory(backStepIndex)}
@@ -1353,6 +1487,7 @@ function App() {
                   requestDeleteFile(selectedFilePath);
                 }
               }}
+              onDeleteFileRequest={requestDeleteFile}
               onSaveRequest={() => void saveSelectedFile()}
             />
           )}
