@@ -634,29 +634,164 @@ export function CollectionPanel({
     }
   };
 
-  const moveCard = async (card: CollectionCard) => {
-    if (!capabilities.move) return;
+  const resolveCardEntry = async (
+    card: CollectionCard
+  ): Promise<BatchEntry> => ({
+    kind: card.kind === "folder" ? "folder" : "file",
+    path:
+      card.kind === "folder"
+        ? await absoluteFolderPath(card.relativePath)
+        : card.filePath
+  });
 
-    onMoveRequest([
-      {
-        kind: card.kind === "folder" ? "folder" : "file",
-        path:
-          card.kind === "folder"
-            ? await absoluteFolderPath(card.relativePath)
-            : card.filePath
-      }
-    ]);
+  const resolveCardEntries = (items: readonly CollectionCard[]) =>
+    Promise.all(items.map(resolveCardEntry));
+
+  const copyCards = async (items: readonly CollectionCard[]) => {
+    onCopyRequest(await resolveCardEntries(items));
   };
 
-  const deleteCard = async (card: CollectionCard) => {
-    if (!capabilities.delete) return;
+  const moveCards = async (items: readonly CollectionCard[]) => {
+    if (!capabilities.move || items.length === 0) return;
+    onMoveRequest(await resolveCardEntries(items));
+  };
 
+  const duplicateCards = async (items: readonly CollectionCard[]) => {
+    if (!capabilities.create) return;
+
+    for (const card of items) {
+      if (card.kind === "folder") {
+        onDuplicateFolderRequest(await absoluteFolderPath(card.relativePath));
+      } else {
+        onDuplicateFileRequest(card.filePath);
+      }
+    }
+  };
+
+  const deleteCards = async (items: readonly CollectionCard[]) => {
+    if (!capabilities.delete || items.length === 0) return;
+
+    if (items.length > 1) {
+      onDeleteMultipleRequest(await resolveCardEntries(items));
+      return;
+    }
+
+    const card = items[0];
     if (card.kind === "folder") {
       onDeleteFolderRequest(await absoluteFolderPath(card.relativePath));
     } else {
       onDeleteFileRequest(card.filePath);
     }
   };
+
+  const exportCards = async (
+    items: readonly CollectionCard[],
+    mode: ExportMode
+  ) => {
+    if (items.length === 0) return;
+
+    if (items.length > 1) {
+      onExportMultipleRequest(await resolveCardEntries(items), mode);
+      return;
+    }
+
+    const card = items[0];
+    if (card.kind === "folder") {
+      onExportFolderRequest(
+        await absoluteFolderPath(card.relativePath),
+        mode
+      );
+    } else {
+      onExportFileRequest(card.filePath, mode);
+    }
+  };
+
+  const toggleCardSelection = (card: CollectionCard) => {
+    const key = collectionCardKey(card);
+    setSelectedKeys((current) => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const handleCardActivation = (
+    event: MouseEvent<HTMLElement>,
+    card: CollectionCard
+  ) => {
+    if (selectionMode || event.ctrlKey || event.metaKey) {
+      event.preventDefault();
+      event.stopPropagation();
+      toggleCardSelection(card);
+      return;
+    }
+
+    setSelectedKeys(new Set());
+    if (card.kind === "folder") {
+      onOpenFolder(card.relativePath);
+    } else {
+      onOpenFile(card.filePath);
+    }
+  };
+
+  const openCardContextMenu = (
+    card: CollectionCard,
+    x: number,
+    y: number
+  ) => {
+    const key = collectionCardKey(card);
+    const items =
+      selectedKeys.has(key) && selectedCards.length > 1
+        ? selectedCards
+        : [card];
+
+    if (items.length === 1) {
+      setSelectedKeys(new Set([key]));
+    }
+    setBackgroundContextMenu(null);
+    setContextMenu({ cards: items, x, y });
+  };
+
+  const { getLongPressProps: getCardLongPressProps } =
+    useLongPressContextMenu<CollectionCard>(openCardContextMenu);
+
+  const handlePanelKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+    const target = event.target as HTMLElement;
+    if (
+      target instanceof HTMLInputElement ||
+      target instanceof HTMLTextAreaElement ||
+      target instanceof HTMLSelectElement ||
+      target.isContentEditable
+    ) {
+      return;
+    }
+
+    if (selectedCards.length === 0) return;
+
+    if (event.key === "Delete" || event.key === "Backspace") {
+      event.preventDefault();
+      void deleteCards(selectedCards);
+      return;
+    }
+
+    if (event.key === "F2" && selectedCards.length === 1) {
+      event.preventDefault();
+      void renameCard(selectedCards[0]);
+      return;
+    }
+
+    if (
+      (event.ctrlKey || event.metaKey) &&
+      event.key.toLocaleLowerCase() === "d"
+    ) {
+      event.preventDefault();
+      void duplicateCards(selectedCards);
+    }
+  };
+
+  const contextCards = contextMenu?.cards ?? [];
+  const contextCard = contextCards.length === 1 ? contextCards[0] : null;
 
   const beginCreate = (kind: "folder" | "note") => {
     setCreateKind(kind);
@@ -686,7 +821,11 @@ export function CollectionPanel({
   };
 
   return (
-    <section className="collection-panel" aria-label={t("collection.label")}>
+    <section
+      className="collection-panel"
+      aria-label={t("collection.label")}
+      onKeyDown={handlePanelKeyDown}
+    >
       <div className="collection-panel__card">
         <header className="collection-panel__header">
           <div className="collection-panel__header-leading">
