@@ -1,10 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  ArrowDownAZ,
+  ArrowUpDown,
   CalendarDays,
   Check,
+  Clock,
   FileText,
   Folder,
   FolderOpen,
+  GripVertical,
   Home,
   SquareCheck,
   Network,
@@ -16,6 +20,16 @@ import {
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
+import {
+  Menu,
+  MenuPopup,
+  MenuPortal,
+  MenuPositioner,
+  MenuRadioGroup,
+  MenuRadioItem,
+  MenuRadioItemIndicator,
+  MenuTrigger
+} from "@/components/ui/menu";
 import { cn } from "@/lib/utils";
 import type { CollectionViewRequest } from "@/components/app/collectionTypes";
 import { useLayoutMode } from "@/hooks/useLayoutMode";
@@ -39,6 +53,8 @@ import {
 import { isJournalRelativePath } from "@/lib/journal";
 import { isTasksContainerRelativePath } from "@/lib/tasks";
 import type { ManualOrderMap, SortMode } from "@/lib/vaultMeta";
+import type { MoveTreeEntryInput } from "@/store/useAppStore";
+import { join } from "@/platform/paths";
 import { formatModifiedLabel } from "@/components/fileTree/treeNavigation";
 import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
 
@@ -64,6 +80,8 @@ type CollectionPanelProps = {
   onOpenTasks?: () => void;
   onCreateFolder?: (name: string) => Promise<boolean>;
   onCreateNote?: (name: string) => Promise<boolean>;
+  onSetSortMode: (mode: SortMode) => void;
+  onMoveEntry: (input: MoveTreeEntryInput) => Promise<boolean>;
 };
 
 type NoteCard = {
@@ -83,6 +101,14 @@ type FolderCard = {
 };
 
 type CollectionCard = NoteCard | FolderCard;
+
+const COLLECTION_DRAG_MIME = "application/x-scribecat-collection-card";
+
+function collectionCardKey(card: CollectionCard): string {
+  return card.kind === "folder"
+    ? `folder:${card.relativePath}`
+    : `note:${card.filePath}`;
+}
 
 function findFolder(nodes: FileTreeNode[], relativePath: string): FileTreeFolderNode | null {
   for (const node of nodes) {
@@ -135,7 +161,9 @@ export function CollectionPanel({
   onOpenGraph,
   onOpenTasks,
   onCreateFolder,
-  onCreateNote
+  onCreateNote,
+  onSetSortMode,
+  onMoveEntry
 }: CollectionPanelProps) {
   const { t, i18n } = useTranslation();
   const layout = useLayoutMode();
@@ -152,6 +180,11 @@ export function CollectionPanel({
   const [createKind, setCreateKind] = useState<"folder" | "note" | null>(null);
   const [createDraft, setCreateDraft] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  const [draggedCardKey, setDraggedCardKey] = useState<string | null>(null);
+  const [dropIndicator, setDropIndicator] = useState<{
+    key: string;
+    position: "before" | "after";
+  } | null>(null);
 
   const visibleCollectionFilePaths = useMemo(
     () =>
@@ -230,13 +263,18 @@ export function CollectionPanel({
           };
         })
         .sort((left, right) => {
-          if (left.mtimeMs !== right.mtimeMs) {
+          if (sortMode === "modified" && left.mtimeMs !== right.mtimeMs) {
             return right.mtimeMs - left.mtimeMs;
           }
-          return left.title.localeCompare(right.title, undefined, {
-            sensitivity: "base",
-            numeric: true
-          });
+
+          return left.title.localeCompare(
+            right.title,
+            i18n.resolvedLanguage ?? i18n.language,
+            {
+              sensitivity: "base",
+              numeric: true
+            }
+          );
         });
     }
 
@@ -295,7 +333,10 @@ export function CollectionPanel({
     fileMtimeMs,
     folderNotesEnabled,
     folderPath,
+    i18n.language,
+    i18n.resolvedLanguage,
     request,
+    sortMode,
     treeNodes,
     visibleCollectionFilePathSet
   ]);
@@ -373,6 +414,101 @@ export function CollectionPanel({
     setCreateDraft("");
     setIsCreating(false);
   }, [request.kind, request.kind === "folder" ? request.relativePath : request.tag]);
+
+  useEffect(() => {
+    setDraggedCardKey(null);
+    setDropIndicator(null);
+  }, [request.kind, request.kind === "folder" ? request.relativePath : request.tag, sortMode]);
+
+  const manualReorderEnabled = request.kind === "folder" && sortMode === "manual";
+
+  const handleCardDragStart = (
+    event: React.DragEvent<HTMLElement>,
+    card: CollectionCard
+  ) => {
+    if (!manualReorderEnabled) return;
+    const key = collectionCardKey(card);
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData(COLLECTION_DRAG_MIME, key);
+    event.dataTransfer.setData("text/plain", card.title);
+    setDraggedCardKey(key);
+  };
+
+  const handleCardDragOver = (
+    event: React.DragEvent<HTMLElement>,
+    card: CollectionCard
+  ) => {
+    if (
+      !manualReorderEnabled ||
+      !draggedCardKey ||
+      collectionCardKey(card) === draggedCardKey ||
+      !event.dataTransfer.types.includes(COLLECTION_DRAG_MIME)
+    ) {
+      return;
+    }
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    const position =
+      event.clientY < rect.top + rect.height / 2 ? "before" : "after";
+
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    setDropIndicator({ key: collectionCardKey(card), position });
+  };
+
+  const handleCardDrop = async (
+    event: React.DragEvent<HTMLElement>,
+    targetCard: CollectionCard
+  ) => {
+    if (!manualReorderEnabled || !draggedCardKey || request.kind !== "folder") {
+      return;
+    }
+
+    event.preventDefault();
+    const sourceIndex = cards.findIndex(
+      (card) => collectionCardKey(card) === draggedCardKey
+    );
+    const targetIndex = cards.findIndex(
+      (card) => collectionCardKey(card) === collectionCardKey(targetCard)
+    );
+    const position = dropIndicator?.key === collectionCardKey(targetCard)
+      ? dropIndicator.position
+      : "after";
+
+    if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) {
+      setDraggedCardKey(null);
+      setDropIndicator(null);
+      return;
+    }
+
+    const sourceCard = cards[sourceIndex];
+    let insertionIndex = targetIndex + (position === "after" ? 1 : 0);
+    if (sourceIndex < insertionIndex) insertionIndex -= 1;
+
+    const targetParentDirectory = request.relativePath
+      ? await join(
+          folderPath,
+          ...request.relativePath.split("/").filter(Boolean)
+        )
+      : folderPath;
+    const sourcePath =
+      sourceCard.kind === "folder"
+        ? await join(
+            folderPath,
+            ...sourceCard.relativePath.split("/").filter(Boolean)
+          )
+        : sourceCard.filePath;
+
+    await onMoveEntry({
+      kind: sourceCard.kind === "folder" ? "folder" : "file",
+      sourcePath,
+      targetParentDirectory,
+      targetIndex: insertionIndex
+    });
+
+    setDraggedCardKey(null);
+    setDropIndicator(null);
+  };
 
   const beginCreate = (kind: "folder" | "note") => {
     setCreateKind(kind);
