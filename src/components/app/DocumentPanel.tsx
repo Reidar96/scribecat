@@ -67,6 +67,7 @@ type DocumentPanelProps = {
   secondaryFilePath: string | null;
   onSelectTab: (filePath: string) => void;
   onCloseTab: (filePath: string) => void;
+  onCloseAllTabs: () => void;
   onReorderTabs: (
     draggedFilePath: string,
     targetFilePath: string,
@@ -194,6 +195,7 @@ export function DocumentPanel({
   secondaryFilePath,
   onSelectTab,
   onCloseTab,
+  onCloseAllTabs,
   onReorderTabs,
   onOpenSecondary,
   onClosePrimarySplit,
@@ -722,6 +724,7 @@ export function DocumentPanel({
             dirtyFilePaths={dirtyFilePaths}
             onSelect={onSelectTab}
             onClose={onCloseTab}
+            onCloseAll={onCloseAllTabs}
             onReorder={onReorderTabs}
           />
 
