@@ -21,6 +21,7 @@ import {
   SquareCheck,
   Move,
   Network,
+  PanelLeftClose,
   Plus,
   Search,
   Server,
@@ -605,6 +606,20 @@ export function Sidebar({
             <Settings2 />
           </Button>
 
+          {onClose ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onClose}
+              aria-label={t("sidebar.close")}
+              title={t("sidebar.close")}
+              data-testid="sidebar-close"
+            >
+              <PanelLeftClose />
+            </Button>
+          ) : null}
+
         </div>
         {folderPath !== null ? (
           <label className="sidebar-search">
@@ -636,25 +651,9 @@ export function Sidebar({
           </label>
         ) : null}
 
-        {onClose || !isServerVault ? (
+        {!isServerVault ? (
           <div className="sidebar-panel__folder-wrap">
-            {onClose ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                className="sidebar-panel__close"
-                onClick={onClose}
-                aria-label={t("sidebar.close")}
-                title={t("sidebar.close")}
-                data-testid="sidebar-close"
-              >
-                <X />
-              </Button>
-            ) : null}
-
-            {!isServerVault ? (
-              platform.features.localFolders ? (
+            {platform.features.localFolders ? (
                 <Menu>
                   <MenuTrigger
                     render={
@@ -714,8 +713,7 @@ export function Sidebar({
                 >
                   {folderLabelContent}
                 </div>
-              )
-            ) : null}
+              )}
           </div>
         ) : null}
       </div>

@@ -263,6 +263,17 @@ function TaskRow({
           <span aria-hidden="true" />
         </label>
         <span className="tasks-item__completed-title">{task.text}</span>
+        <Button
+          type="button"
+          size="icon-xs"
+          variant="ghost"
+          className="tasks-item__delete tasks-item__delete--compact"
+          onClick={onDelete}
+          aria-label={t("tasks.delete")}
+          title={t("tasks.delete")}
+        >
+          <Trash2 />
+        </Button>
       </article>
     );
   }
