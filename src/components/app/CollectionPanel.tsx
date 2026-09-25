@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type DragEvent } from "react";
 import {
   ArrowDownAZ,
   ArrowUpDown,
@@ -423,7 +423,7 @@ export function CollectionPanel({
   const manualReorderEnabled = request.kind === "folder" && sortMode === "manual";
 
   const handleCardDragStart = (
-    event: React.DragEvent<HTMLElement>,
+    event: DragEvent<HTMLElement>,
     card: CollectionCard
   ) => {
     if (!manualReorderEnabled) return;
@@ -435,7 +435,7 @@ export function CollectionPanel({
   };
 
   const handleCardDragOver = (
-    event: React.DragEvent<HTMLElement>,
+    event: DragEvent<HTMLElement>,
     card: CollectionCard
   ) => {
     if (
@@ -457,7 +457,7 @@ export function CollectionPanel({
   };
 
   const handleCardDrop = async (
-    event: React.DragEvent<HTMLElement>,
+    event: DragEvent<HTMLElement>,
     targetCard: CollectionCard
   ) => {
     if (!manualReorderEnabled || !draggedCardKey || request.kind !== "folder") {
@@ -621,18 +621,62 @@ export function CollectionPanel({
             </div>
           </div>
 
-          {!isRootCollection ? (
-            <Button
-              type="button"
-              size="icon-sm"
-              variant="ghost"
-              aria-label={t("common.goHome")}
-              title={t("common.goHome")}
-              onClick={onClose}
-            >
-              <Home />
-            </Button>
-          ) : null}
+          <div className="collection-panel__header-actions">
+            <Menu>
+              <MenuTrigger
+                render={
+                  <Button
+                    type="button"
+                    size="icon-sm"
+                    variant="ghost"
+                    aria-label={t("sidebar.sortMode")}
+                    title={t("sidebar.sortMode")}
+                  >
+                    <ArrowUpDown />
+                  </Button>
+                }
+              />
+              <MenuPortal>
+                <MenuPositioner align="end">
+                  <MenuPopup>
+                    <MenuRadioGroup
+                      value={sortMode}
+                      onValueChange={(value) => onSetSortMode(value as SortMode)}
+                    >
+                      <MenuRadioItem value="name">
+                        <ArrowDownAZ className="size-4" aria-hidden="true" />
+                        {t("sidebar.sortModeName")}
+                        <MenuRadioItemIndicator />
+                      </MenuRadioItem>
+                      <MenuRadioItem value="modified">
+                        <Clock className="size-4" aria-hidden="true" />
+                        {t("sidebar.sortModeModified")}
+                        <MenuRadioItemIndicator />
+                      </MenuRadioItem>
+                      <MenuRadioItem value="manual">
+                        <GripVertical className="size-4" aria-hidden="true" />
+                        {t("sidebar.sortModeManual")}
+                        <MenuRadioItemIndicator />
+                      </MenuRadioItem>
+                    </MenuRadioGroup>
+                  </MenuPopup>
+                </MenuPositioner>
+              </MenuPortal>
+            </Menu>
+
+            {!isRootCollection ? (
+              <Button
+                type="button"
+                size="icon-sm"
+                variant="ghost"
+                aria-label={t("common.goHome")}
+                title={t("common.goHome")}
+                onClick={onClose}
+              >
+                <Home />
+              </Button>
+            ) : null}
+          </div>
         </header>
 
         <div className="collection-panel__body">
@@ -681,17 +725,50 @@ export function CollectionPanel({
           ) : (
             <div className="collection-grid">
               {cards.map((card) => {
+                const key = collectionCardKey(card);
+                const cardDropPosition =
+                  dropIndicator?.key === key ? dropIndicator.position : null;
+                const dragProps = manualReorderEnabled
+                  ? {
+                      draggable: true,
+                      onDragStart: (event: DragEvent<HTMLElement>) =>
+                        handleCardDragStart(event, card),
+                      onDragOver: (event: DragEvent<HTMLElement>) =>
+                        handleCardDragOver(event, card),
+                      onDragLeave: () => {
+                        if (dropIndicator?.key === key) {
+                          setDropIndicator(null);
+                        }
+                      },
+                      onDrop: (event: DragEvent<HTMLElement>) =>
+                        void handleCardDrop(event, card),
+                      onDragEnd: () => {
+                        setDraggedCardKey(null);
+                        setDropIndicator(null);
+                      }
+                    }
+                  : {};
+
                 if (card.kind === "folder") {
                   return (
                     <button
                       key={`folder:${card.relativePath}`}
                       type="button"
-                      className="collection-card collection-card--folder"
+                      className={cn(
+                        "collection-card collection-card--folder",
+                        draggedCardKey === key && "collection-card--drag-source",
+                        cardDropPosition === "before" && "collection-card--drop-before",
+                        cardDropPosition === "after" && "collection-card--drop-after"
+                      )}
                       onClick={() => onOpenFolder(card.relativePath)}
+                      {...dragProps}
                     >
                       <div className="collection-card__top">
                         <Folder aria-hidden="true" />
                         <span className="collection-card__kind">{t("collection.folder")}</span>
+                        {manualReorderEnabled ? (
+                          <GripVertical className="collection-card__drag-icon" aria-hidden="true" />
+                        ) : null}
                       </div>
                       <h3>{card.title}</h3>
                       {card.mtimeMs > 0 ? (
@@ -723,7 +800,13 @@ export function CollectionPanel({
                 return (
                   <article
                     key={`note:${card.filePath}`}
-                    className="collection-card collection-card--note"
+                    className={cn(
+                      "collection-card collection-card--note",
+                      draggedCardKey === key && "collection-card--drag-source",
+                      cardDropPosition === "before" && "collection-card--drop-before",
+                      cardDropPosition === "after" && "collection-card--drop-after"
+                    )}
+                    {...dragProps}
                   >
                     <button
                       type="button"
@@ -736,6 +819,9 @@ export function CollectionPanel({
                       <span className="collection-card__kind">
                         {t(card.folderNote ? "app.folderNoteBadge" : "collection.note")}
                       </span>
+                      {manualReorderEnabled ? (
+                        <GripVertical className="collection-card__drag-icon" aria-hidden="true" />
+                      ) : null}
                     </div>
                     <h3>{card.title}</h3>
                     {request.kind === "tag" ? (
