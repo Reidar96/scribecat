@@ -1058,6 +1058,193 @@ export function CollectionPanel({
           )}
         </div>
       </div>
+
+      {contextMenu ? (
+        <ContextMenuSurface
+          x={contextMenu.x}
+          y={contextMenu.y}
+          title={contextMenu.card.title}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <button
+            type="button"
+            role="menuitem"
+            className="file-tree-context-menu__item"
+            disabled={!capabilities.rename}
+            title={capabilities.rename ? undefined : capabilityHint}
+            onClick={() => {
+              const card = contextMenu.card;
+              setContextMenu(null);
+              void renameCard(card);
+            }}
+          >
+            <Pencil aria-hidden="true" />
+            {t("fileTree.rename")}
+          </button>
+
+          {contextMenu.card.kind === "note" ? (
+            <button
+              type="button"
+              role="menuitem"
+              className="file-tree-context-menu__item"
+              disabled={!capabilities.create}
+              title={capabilities.create ? undefined : capabilityHint}
+              onClick={() => {
+                onDuplicateFileRequest(contextMenu.card.filePath);
+                setContextMenu(null);
+              }}
+            >
+              <Copy aria-hidden="true" />
+              {t("fileTree.duplicate")}
+            </button>
+          ) : null}
+
+          <button
+            type="button"
+            role="menuitem"
+            className="file-tree-context-menu__item"
+            disabled={!capabilities.move}
+            title={capabilities.move ? undefined : capabilityHint}
+            onClick={() => {
+              const card = contextMenu.card;
+              setContextMenu(null);
+              void moveCard(card);
+            }}
+          >
+            <FolderInput aria-hidden="true" />
+            {t("fileTree.moveTo")}
+          </button>
+
+          {offersExport ? (
+            <>
+              <button
+                type="button"
+                role="menuitem"
+                className="file-tree-context-menu__item"
+                onClick={() => {
+                  const card = contextMenu.card;
+                  setContextMenu(null);
+                  if (card.kind === "folder") {
+                    void absoluteFolderPath(card.relativePath).then((path) =>
+                      onExportFolderRequest(path, "standard")
+                    );
+                  } else {
+                    onExportFileRequest(card.filePath, "standard");
+                  }
+                }}
+              >
+                <Download aria-hidden="true" />
+                {t("fileTree.export")}
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                className="file-tree-context-menu__item"
+                onClick={() => {
+                  const card = contextMenu.card;
+                  setContextMenu(null);
+                  if (card.kind === "folder") {
+                    void absoluteFolderPath(card.relativePath).then((path) =>
+                      onExportFolderRequest(path, "manuscript")
+                    );
+                  } else {
+                    onExportFileRequest(card.filePath, "manuscript");
+                  }
+                }}
+              >
+                <BookOpen aria-hidden="true" />
+                {t("fileTree.exportManuscript")}
+              </button>
+            </>
+          ) : null}
+
+          {contextMenu.card.kind === "note" && offersMarkdownDownload ? (
+            <button
+              type="button"
+              role="menuitem"
+              className="file-tree-context-menu__item"
+              onClick={() => {
+                onDownloadMarkdownRequest(contextMenu.card.filePath);
+                setContextMenu(null);
+              }}
+            >
+              <FileDown aria-hidden="true" />
+              {t("fileTree.downloadMarkdown")}
+            </button>
+          ) : null}
+
+          {contextMenu.card.kind === "folder" && offersFolderArchive ? (
+            <button
+              type="button"
+              role="menuitem"
+              className="file-tree-context-menu__item"
+              onClick={() => {
+                const card = contextMenu.card;
+                setContextMenu(null);
+                if (card.kind === "folder") {
+                  void absoluteFolderPath(card.relativePath).then((path) =>
+                    onDownloadFolderArchiveRequest(path, card.title)
+                  );
+                }
+              }}
+            >
+              <FolderArchive aria-hidden="true" />
+              {t("fileTree.downloadFolderArchive")}
+            </button>
+          ) : null}
+
+          {contextMenu.card.kind === "note" ? (
+            <button
+              type="button"
+              role="menuitem"
+              className="file-tree-context-menu__item"
+              onClick={() => {
+                onPrintFileRequest(contextMenu.card.filePath);
+                setContextMenu(null);
+              }}
+            >
+              <Printer aria-hidden="true" />
+              {t("fileTree.print")}
+            </button>
+          ) : null}
+
+          {contextMenu.card.kind === "folder" && offersRevealInFileManager ? (
+            <button
+              type="button"
+              role="menuitem"
+              className="file-tree-context-menu__item"
+              onClick={() => {
+                const card = contextMenu.card;
+                setContextMenu(null);
+                if (card.kind === "folder") {
+                  void absoluteFolderPath(card.relativePath).then((path) =>
+                    platform.shell.openFolderInFileManager?.(path)
+                  );
+                }
+              }}
+            >
+              <ExternalLink aria-hidden="true" />
+              {t("fileTree.revealInFileManager")}
+            </button>
+          ) : null}
+
+          <button
+            type="button"
+            role="menuitem"
+            className="file-tree-context-menu__item file-tree-context-menu__item--danger"
+            disabled={!capabilities.delete}
+            title={capabilities.delete ? undefined : capabilityHint}
+            onClick={() => {
+              const card = contextMenu.card;
+              setContextMenu(null);
+              void deleteCard(card);
+            }}
+          >
+            <Trash2 aria-hidden="true" />
+            {t("fileTree.delete")}
+          </button>
+        </ContextMenuSurface>
+      ) : null}
     </section>
   );
 }
