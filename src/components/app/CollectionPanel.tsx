@@ -582,8 +582,8 @@ export function CollectionPanel({
                         size="icon-sm"
                         variant="ghost"
                         disabled={!createDraft.trim() || isCreating}
-                        aria-label={t("common.confirm")}
-                        title={t("common.confirm")}
+                        aria-label={t("common.save")}
+                        title={t("common.save")}
                       >
                         <Check />
                       </Button>
