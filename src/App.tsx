@@ -117,6 +117,8 @@ function App() {
   const [graphViewOpen, setGraphViewOpen] = useState(false);
   const [journalViewOpen, setJournalViewOpen] = useState(false);
   const [tasksViewOpen, setTasksViewOpen] = useState(false);
+  const [openTabs, setOpenTabs] = useState<string[]>([]);
+  const [secondaryFilePath, setSecondaryFilePath] = useState<string | null>(null);
   const appVersion = useAppVersion();
   const editorHandleRef = useRef<EditorHandle | null>(null);
   const entryRenameRequestIdRef = useRef(0);
@@ -149,6 +151,8 @@ function App() {
   const discardFileChanges = useAppStore((state) => state.discardFileChanges);
   const workingSetActions = useWorkingSetActions();
   const selectFilePath = useAppStore((state) => state.selectFilePath);
+  const loadFileDocument = useAppStore((state) => state.loadFileDocument);
+  const updateFileContent = useAppStore((state) => state.updateFileContent);
   const clearSelectedFile = useAppStore((state) => state.clearSelectedFile);
   const openFolderNote = useAppStore((state) => state.openFolderNote);
   const updateSelectedFileContent = useAppStore(
@@ -237,8 +241,22 @@ function App() {
     setGraphViewOpen(false);
     setJournalViewOpen(false);
     setTasksViewOpen(false);
+    setOpenTabs([]);
+    setSecondaryFilePath(null);
     setEntryClipboard([]);
   }, [folderPath]);
+
+  useEffect(() => {
+    if (!selectedFilePath) return;
+    setOpenTabs((tabs) => (tabs.includes(selectedFilePath) ? tabs : [...tabs, selectedFilePath]));
+  }, [selectedFilePath]);
+
+  useEffect(() => {
+    setOpenTabs((tabs) => tabs.filter((filePath) => filePaths.includes(filePath) || fileDocuments[filePath]));
+    if (secondaryFilePath && !filePaths.includes(secondaryFilePath) && !fileDocuments[secondaryFilePath]) {
+      setSecondaryFilePath(null);
+    }
+  }, [filePaths, fileDocuments, secondaryFilePath]);
 
 
   const toggleSidebarVisible = () => {
@@ -517,6 +535,44 @@ function App() {
     // gives it an in-memory document so opening it shows the proposal instead
     // of a read error.
     await selectFilePath(filePath);
+    setCollectionView(null);
+    setGraphViewOpen(false);
+    setJournalViewOpen(false);
+    setTasksViewOpen(false);
+  };
+
+  const closeDocumentTab = (filePath: string) => {
+    setOpenTabs((tabs) => {
+      const index = tabs.indexOf(filePath);
+      const next = tabs.filter((entry) => entry !== filePath);
+
+      if (secondaryFilePath === filePath) {
+        setSecondaryFilePath(null);
+      }
+
+      if (selectedFilePath === filePath) {
+        const fallback = next[Math.min(index, Math.max(0, next.length - 1))] ?? null;
+        if (fallback) {
+          void selectFilePathSafely(fallback);
+        } else {
+          clearSelectedFile();
+        }
+      }
+
+      return next;
+    });
+  };
+
+  const openSecondaryDocument = async (filePath: string) => {
+    if (layout !== "desktop" || filePath === selectedFilePath) {
+      return;
+    }
+
+    const loaded = await loadFileDocument(filePath);
+    if (!loaded) return;
+
+    setOpenTabs((tabs) => (tabs.includes(filePath) ? tabs : [...tabs, filePath]));
+    setSecondaryFilePath(filePath);
     setCollectionView(null);
     setGraphViewOpen(false);
     setJournalViewOpen(false);
@@ -1303,6 +1359,16 @@ function App() {
               folderPath={folderPath}
               selectedFileContent={selectedFileContent}
               appVersion={appVersion}
+              filePaths={filePaths}
+              fileDocuments={fileDocuments}
+              dirtyFilePaths={dirtyFilePaths}
+              openTabs={openTabs}
+              secondaryFilePath={secondaryFilePath}
+              onSelectTab={(filePath) => void selectFilePathSafely(filePath)}
+              onCloseTab={closeDocumentTab}
+              onOpenSecondary={(filePath) => void openSecondaryDocument(filePath)}
+              onCloseSecondary={() => setSecondaryFilePath(null)}
+              onSecondaryMarkdownChange={updateFileContent}
               backTargetLabel={historyEntryLabel(backStepIndex)}
               forwardTargetLabel={historyEntryLabel(forwardStepIndex)}
               onNavigateBack={() => navigateHistory(backStepIndex)}
