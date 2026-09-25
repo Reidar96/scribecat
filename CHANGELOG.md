@@ -8,6 +8,8 @@
 - Keep folder selections out of these actions so the commands only appear for two actual Markdown documents.
 - Fix split layout corruption after swapping the left/right panes and then opening or replacing a document on either side.
 - Hide the left/right split **+** controls until the pointer is actually over the corresponding editor edge.
+- Stabilize the mobile tab bar so it stays a fixed horizontal row under the header instead of expanding into the document area.
+- Add **Close all tabs** on both desktop and mobile without discarding cached drafts.
 
 ## [0.24.0] - 2026-09-25
 
