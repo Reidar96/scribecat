@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.23.1] - 2026-09-25
+
+### Fixes and improvements
+- Prevent ScribeCat long-press menus from appearing together with the browser/OS touch callout on mobile file, folder, category and image targets.
+- Add **Copy image** and **Download image** to image context menus in notes, Calendar entries and the full-screen image preview. The same compact ScribeCat menu is used across these views.
+- Replace the editor's native right-click menu with a limited ScribeCat copy/paste menu. Selected text keeps the formatted, Markdown and plain-text copy choices; Paste is available without exposing the platform-specific browser menu.
+- Keep task category actions and sorting beside the category heading on narrow screens instead of wrapping them below the title.
+
+
 ## [0.23.0] - 2026-09-25
 
 ### Improvements
