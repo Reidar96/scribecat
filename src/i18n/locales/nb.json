@@ -1009,7 +1009,8 @@
   "tabs": {
     "label": "Åpne dokumenter",
     "unsaved": "Ulagrede endringer",
-    "close": "Lukk {{name}}"
+    "close": "Lukk {{name}}",
+    "openSelected": "Åpne valgte som faner"
   },
   "split": {
     "open": "Åpne et dokument ved siden av dette",
@@ -1025,6 +1026,7 @@
     "dropHintLeft": "Slipp for å åpne på venstre side",
     "dropHintRight": "Slipp for å åpne på høyre side",
     "replace": "Bytt ut dokumentet i denne delen",
-    "closePane": "Lukk denne delen"
+    "closePane": "Lukk denne delen",
+    "openSelected": "Åpne valgte i delt visning"
   }
 }
