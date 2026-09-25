@@ -592,7 +592,7 @@
 
 .journal-entry__delete-button:hover,
 .journal-entry__delete-button:focus-visible {
-  background: rgba(var(--error-rgb),0.08);
+  background: rgba(var(--overlay-rgb),0.07);
   outline: none;
 }
 
