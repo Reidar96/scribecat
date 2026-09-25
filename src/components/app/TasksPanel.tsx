@@ -298,68 +298,72 @@ function TaskRow({
           aria-label={t("tasks.taskText")}
         />
 
-        <textarea
-          className="tasks-item__note"
-          value={noteDraft}
-          rows={noteDraft ? 2 : 1}
-          onChange={(event) => setNoteDraft(event.target.value)}
-          onBlur={commitNote}
-          placeholder={t("tasks.notePlaceholder")}
-          aria-label={t("tasks.note")}
-        />
-
-        <div className="tasks-item__meta">
-          <span className="tasks-item__category">{task.category}</span>
-
-          {!isSubtask ? (
-            <label className="tasks-item__deadline">
-              <CalendarClock aria-hidden="true" />
-              <input
-                type="date"
-                value={task.deadline ?? ""}
-                onChange={(event) => onDeadlineChange(event.target.value || null)}
-                aria-label={t("tasks.deadline")}
+        {!isSubtask || !task.checked ? (
+          !isSubtask ? (
+            <>
+              <textarea
+                className="tasks-item__note"
+                value={noteDraft}
+                rows={noteDraft ? 2 : 1}
+                onChange={(event) => setNoteDraft(event.target.value)}
+                onBlur={commitNote}
+                placeholder={t("tasks.notePlaceholder")}
+                aria-label={t("tasks.note")}
               />
-            </label>
-          ) : null}
 
-          <label className="tasks-item__tags">
-            <Tag aria-hidden="true" />
-            <input
-              value={tagsDraft}
-              onChange={(event) => setTagsDraft(event.target.value)}
-              onBlur={commitTags}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  event.currentTarget.blur();
-                }
-              }}
-              placeholder={t("tasks.tagsPlaceholder")}
-              aria-label={t("tasks.tags")}
-            />
-          </label>
+              <div className="tasks-item__meta">
+                <span className="tasks-item__category">{task.category}</span>
 
-          <div className="tasks-priority" aria-label={t("tasks.priority")}>
-            {(["high", "medium", "low"] as const).map((priority) => (
-              <button
-                key={priority}
-                type="button"
-                className={cn(
-                  "tasks-priority__dot",
-                  `tasks-priority__dot--${priority}`,
-                  task.priority === priority && "tasks-priority__dot--active"
-                )}
-                aria-pressed={task.priority === priority}
-                aria-label={t(`tasks.priority${priority[0].toUpperCase()}${priority.slice(1)}`)}
-                title={t(`tasks.priority${priority[0].toUpperCase()}${priority.slice(1)}`)}
-                onClick={() =>
-                  onPriorityChange(task.priority === priority ? null : priority)
-                }
-              />
-            ))}
-          </div>
-        </div>
+                <label className="tasks-item__deadline">
+                  <CalendarClock aria-hidden="true" />
+                  <input
+                    type="date"
+                    value={task.deadline ?? ""}
+                    onChange={(event) => onDeadlineChange(event.target.value || null)}
+                    aria-label={t("tasks.deadline")}
+                  />
+                </label>
+
+                <label className="tasks-item__tags">
+                  <Tag aria-hidden="true" />
+                  <input
+                    value={tagsDraft}
+                    onChange={(event) => setTagsDraft(event.target.value)}
+                    onBlur={commitTags}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        event.currentTarget.blur();
+                      }
+                    }}
+                    placeholder={t("tasks.tagsPlaceholder")}
+                    aria-label={t("tasks.tags")}
+                  />
+                </label>
+
+                <div className="tasks-priority" aria-label={t("tasks.priority")}>
+                  {(["high", "medium", "low"] as const).map((priority) => (
+                    <button
+                      key={priority}
+                      type="button"
+                      className={cn(
+                        "tasks-priority__dot",
+                        `tasks-priority__dot--${priority}`,
+                        task.priority === priority && "tasks-priority__dot--active"
+                      )}
+                      aria-pressed={task.priority === priority}
+                      aria-label={t(`tasks.priority${priority[0].toUpperCase()}${priority.slice(1)}`)}
+                      title={t(`tasks.priority${priority[0].toUpperCase()}${priority.slice(1)}`)}
+                      onClick={() =>
+                        onPriorityChange(task.priority === priority ? null : priority)
+                      }
+                    />
+                  ))}
+                </div>
+              </div>
+            </>
+          ) : null
+        ) : null}
 
         {subtaskOpen && onAddSubtask ? (
           <form
