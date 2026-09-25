@@ -40,14 +40,14 @@ jobs:
         uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: v0.23.3
           releaseName: 'ScribeCat v0.23.3'
           releaseBody: 'See the assets below to download and install this version.'
           releaseDraft: false
           prerelease: false
+          uploadUpdaterJson: false
+          uploadUpdaterSignatures: false
 
       - name: Package portable build
         shell: pwsh
