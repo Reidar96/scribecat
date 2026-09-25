@@ -1,10 +1,18 @@
-import { useEffect, useMemo, useState, type DragEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type DragEvent,
+  type KeyboardEvent,
+  type MouseEvent
+} from "react";
 import {
   ArrowDownAZ,
   ArrowUpDown,
   BookOpen,
   CalendarDays,
   Check,
+  ClipboardPaste,
   Clock,
   Copy,
   Download,
@@ -17,6 +25,7 @@ import {
   FolderOpen,
   GripVertical,
   Home,
+  ListChecks,
   SquareCheck,
   Network,
   PanelLeft,
@@ -31,6 +40,7 @@ import { useTranslation } from "react-i18next";
 
 import type { ExportMode } from "@/components/ExportDialog";
 import { ContextMenuSurface } from "@/components/fileTree/ContextMenuSurface";
+import { EntryActionMenuItems } from "@/components/fileTree/EntryActionMenuItems";
 import { useContextMenuState } from "@/components/fileTree/useContextMenuState";
 import type { BatchEntry } from "@/components/FileTree";
 import { Button } from "@/components/ui/button";
@@ -47,6 +57,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { CollectionViewRequest } from "@/components/app/collectionTypes";
 import { useLayoutMode } from "@/hooks/useLayoutMode";
+import { useLongPressContextMenu } from "@/hooks/useLongPressContextMenu";
 import { useBreadcrumbScroll } from "@/hooks/useBreadcrumbScroll";
 import { extractTags } from "@/lib/documentFrontmatter";
 import {
@@ -104,11 +115,17 @@ type CollectionPanelProps = {
   onRenameFile: (filePath: string, newBaseName: string) => Promise<boolean>;
   onRenameFolder: (folderPath: string, newBaseName: string) => Promise<boolean>;
   onDuplicateFileRequest: (filePath: string) => void;
+  onDuplicateFolderRequest: (folderPath: string) => void;
+  onCopyRequest: (entries: BatchEntry[]) => void;
+  onPasteRequest: (targetDirectory: string) => void;
+  canPaste: boolean;
   onMoveRequest: (entries: BatchEntry[]) => void;
   onDeleteFileRequest: (filePath: string) => void;
   onDeleteFolderRequest: (folderPath: string) => void;
+  onDeleteMultipleRequest: (entries: BatchEntry[]) => void;
   onExportFileRequest: (filePath: string, mode: ExportMode) => void;
   onExportFolderRequest: (folderPath: string, mode: ExportMode) => void;
+  onExportMultipleRequest: (entries: BatchEntry[], mode: ExportMode) => void;
   onDownloadMarkdownRequest: (filePath: string) => void;
   onDownloadFolderArchiveRequest: (folderPath: string, archiveName: string) => void;
   onPrintFileRequest: (filePath: string) => void;
@@ -197,11 +214,17 @@ export function CollectionPanel({
   onRenameFile,
   onRenameFolder,
   onDuplicateFileRequest,
+  onDuplicateFolderRequest,
+  onCopyRequest,
+  onPasteRequest,
+  canPaste,
   onMoveRequest,
   onDeleteFileRequest,
   onDeleteFolderRequest,
+  onDeleteMultipleRequest,
   onExportFileRequest,
   onExportFolderRequest,
+  onExportMultipleRequest,
   onDownloadMarkdownRequest,
   onDownloadFolderArchiveRequest,
   onPrintFileRequest
@@ -232,11 +255,17 @@ export function CollectionPanel({
     key: string;
     position: "before" | "after";
   } | null>(null);
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(() => new Set());
+  const [selectionMode, setSelectionMode] = useState(false);
   const { contextMenu, setContextMenu } = useContextMenuState<{
-    card: CollectionCard;
+    cards: CollectionCard[];
     x: number;
     y: number;
   }>();
+  const {
+    contextMenu: backgroundContextMenu,
+    setContextMenu: setBackgroundContextMenu
+  } = useContextMenuState<{ x: number; y: number }>();
 
   const visibleCollectionFilePaths = useMemo(
     () =>
@@ -393,6 +422,25 @@ export function CollectionPanel({
     visibleCollectionFilePathSet
   ]);
 
+  const selectedCards = useMemo(
+    () => cards.filter((card) => selectedKeys.has(collectionCardKey(card))),
+    [cards, selectedKeys]
+  );
+
+  useEffect(() => {
+    const available = new Set(cards.map(collectionCardKey));
+    setSelectedKeys((current) => {
+      const next = new Set([...current].filter((key) => available.has(key)));
+      if (
+        next.size === current.size &&
+        [...next].every((key) => current.has(key))
+      ) {
+        return current;
+      }
+      return next;
+    });
+  }, [cards]);
+
   const notePaths = useMemo(
     () => cards.flatMap((card) => (card.kind === "note" ? [card.filePath] : [])),
     [cards]
@@ -465,6 +513,8 @@ export function CollectionPanel({
     setCreateKind(null);
     setCreateDraft("");
     setIsCreating(false);
+    setSelectedKeys(new Set());
+    setSelectionMode(false);
   }, [request.kind, request.kind === "folder" ? request.relativePath : request.tag]);
 
   useEffect(() => {
@@ -472,7 +522,11 @@ export function CollectionPanel({
     setDropIndicator(null);
   }, [request.kind, request.kind === "folder" ? request.relativePath : request.tag, sortMode]);
 
-  const manualReorderEnabled = request.kind === "folder" && sortMode === "manual";
+  const manualReorderEnabled =
+    request.kind === "folder" &&
+    sortMode === "manual" &&
+    !selectionMode &&
+    selectedKeys.size <= 1;
 
   const handleCardDragStart = (
     event: DragEvent<HTMLElement>,
