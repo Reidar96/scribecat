@@ -8,6 +8,7 @@ import {
   normalizeTaskSettings,
   parseTaskMarkdown,
   insertSubtaskInMarkdown,
+  moveSubtaskInMarkdown,
   removeTaskFromMarkdown,
   renameTaskDocumentHeading,
   setTaskSubtreeCheckedInMarkdown,
@@ -142,10 +143,50 @@ describe("tasks markdown", () => {
     });
 
     expect(inserted).toContain("  - [ ] Tredje underoppgave\n    > Kort notat");
+
+    const insertedFirst = insertSubtaskInMarkdown(
+      markdown,
+      2,
+      { text: "Ny først" },
+      "first"
+    );
+    expect(insertedFirst.indexOf("Ny først")).toBeLessThan(
+      insertedFirst.indexOf("Første underoppgave")
+    );
     expect(
       parseTaskMarkdown(inserted).find((task) => task.text === "Tredje underoppgave")
         ?.parentLineIndex
     ).toBe(2);
+  });
+
+  it("reorders sibling subtasks while keeping their Markdown blocks intact", () => {
+    const markdown = [
+      "# Jobb",
+      "",
+      "- [ ] Hovedoppgave",
+      "  - [ ] Første",
+      "    > Notat til første",
+      "  - [ ] Andre",
+      "  - [ ] Tredje",
+      "- [ ] Neste"
+    ].join("\n");
+
+    const parsed = parseTaskMarkdown(markdown);
+    const first = parsed.find((task) => task.text === "Første");
+    const third = parsed.find((task) => task.text === "Tredje");
+    expect(first).toBeDefined();
+    expect(third).toBeDefined();
+
+    const moved = moveSubtaskInMarkdown(
+      markdown,
+      first?.lineIndex ?? -1,
+      third?.lineIndex ?? -1,
+      "after"
+    );
+
+    expect(moved.indexOf("Andre")).toBeLessThan(moved.indexOf("Tredje"));
+    expect(moved.indexOf("Tredje")).toBeLessThan(moved.indexOf("Første"));
+    expect(moved).toContain("    > Notat til første");
   });
 
   it("updates and removes task blocks without replacing unrelated markdown", () => {
