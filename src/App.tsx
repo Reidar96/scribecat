@@ -18,7 +18,7 @@ import { MobileSheet } from "@/components/app/MobileSheet";
 import { ZenMode } from "@/components/app/ZenMode";
 import type { BatchEntry, PendingEntryRename } from "@/components/FileTree";
 import { useAppVersion } from "@/hooks/useAppVersion";
-import { useAutoSave } from "@/hooks/useAutoSave";
+import { AUTO_SAVE_DELAY_MS, useAutoSave } from "@/hooks/useAutoSave";
 import { useDeleteTarget } from "@/hooks/useDeleteTarget";
 import { useDraftFlush } from "@/hooks/useDraftFlush";
 import { useExportTarget } from "@/hooks/useExportTarget";
@@ -296,6 +296,31 @@ function App() {
 
   useWebviewZoom();
   useAutoSave({ isAiActionPending: false, isSelectedFileStaged: false, isSelectedFileMissing });
+
+  useEffect(() => {
+    if (!autoSaveEnabled || !secondaryFilePath) {
+      return;
+    }
+
+    const document = fileDocuments[secondaryFilePath];
+    if (!document || document.content === document.baseContent) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      const state = useAppStore.getState();
+      const current = state.fileDocuments[secondaryFilePath];
+
+      if (!current || current.content === current.baseContent || state.saveError) {
+        return;
+      }
+
+      void state.saveFilePath(secondaryFilePath, { trigger: "auto" });
+    }, AUTO_SAVE_DELAY_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [autoSaveEnabled, fileDocuments, secondaryFilePath]);
+
   useDraftFlush({
     // Closing the app with auto-save on saves the open note the way leaving
     // it would; without auto-save the draft is what comes back.
@@ -542,25 +567,22 @@ function App() {
   };
 
   const closeDocumentTab = (filePath: string) => {
-    setOpenTabs((tabs) => {
-      const index = tabs.indexOf(filePath);
-      const next = tabs.filter((entry) => entry !== filePath);
+    const index = openTabs.indexOf(filePath);
+    const next = openTabs.filter((entry) => entry !== filePath);
+    setOpenTabs(next);
 
-      if (secondaryFilePath === filePath) {
-        setSecondaryFilePath(null);
+    if (secondaryFilePath === filePath) {
+      setSecondaryFilePath(null);
+    }
+
+    if (selectedFilePath === filePath) {
+      const fallback = next[Math.min(index, Math.max(0, next.length - 1))] ?? null;
+      if (fallback) {
+        void selectFilePathSafely(fallback);
+      } else {
+        clearSelectedFile();
       }
-
-      if (selectedFilePath === filePath) {
-        const fallback = next[Math.min(index, Math.max(0, next.length - 1))] ?? null;
-        if (fallback) {
-          void selectFilePathSafely(fallback);
-        } else {
-          clearSelectedFile();
-        }
-      }
-
-      return next;
-    });
+    }
   };
 
   const openSecondaryDocument = async (filePath: string) => {
