@@ -26,6 +26,7 @@ import { ContextMenuSurface } from "@/components/fileTree/ContextMenuSurface";
 import { useContextMenuState } from "@/components/fileTree/useContextMenuState";
 import { Button } from "@/components/ui/button";
 import { useLayoutMode } from "@/hooks/useLayoutMode";
+import { useLongPressContextMenu } from "@/hooks/useLongPressContextMenu";
 import { extractTags, normalizeTag, setTags } from "@/lib/documentFrontmatter";
 import {
   ABSOLUTE_URL_PATTERN,
@@ -325,6 +326,10 @@ function JournalImageCard({
   const { t } = useTranslation();
   const { objectUrl, loadError } = useJournalImageUrl(image, filePath);
   const { contextMenu, setContextMenu } = useContextMenuState<{ x: number; y: number }>();
+  const bindImageContextMenu = useLongPressContextMenu<string>((_key, point) =>
+    setContextMenu({ x: point.x, y: point.y })
+  );
+  const imageContextMenuHandlers = bindImageContextMenu(itemKey);
   const [ratioClass, setRatioClass] = useState<ImageRatioClass>("landscape");
   const masonryRef = useMasonrySpan<HTMLElement>();
 
@@ -352,11 +357,7 @@ function JournalImageCard({
           event.preventDefault();
           onDrop();
         }}
-        onContextMenu={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          setContextMenu({ x: event.clientX, y: event.clientY });
-        }}
+        {...imageContextMenuHandlers}
       >
       {objectUrl ? (
         <button
