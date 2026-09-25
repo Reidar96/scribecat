@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { BookOpen, Copy, Download, Eraser, ExternalLink, FileDown, FilePlus, FolderArchive, FolderInput, FolderPlus, Pin, PinOff, Printer, Smile, Trash2, Undo2, X } from "lucide-react";
+import { BookOpen, Columns2, Copy, Download, Eraser, ExternalLink, FileDown, FilePlus, Files, FolderArchive, FolderInput, FolderPlus, Pin, PinOff, Printer, Smile, Trash2, Undo2, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { getVaultCapabilities, platform, vaultCapabilityHint } from "@/platform";
 import { dirname, join } from "@/platform/paths";
@@ -88,6 +88,8 @@ type FileTreeProps = {
   onMoveEntry: (input: MoveTreeEntryInput) => Promise<boolean>;
   /** "Move to…" from the context menu; entries carry absolute paths. */
   onMoveRequest: (entries: BatchEntry[]) => void;
+  onOpenSplitRequest?: (filePaths: [string, string]) => void;
+  onOpenTabsRequest?: (filePaths: [string, string]) => void;
   onDeleteMultipleRequest: (entries: BatchEntry[]) => void;
   onExportMultipleRequest: (entries: BatchEntry[], mode: ExportMode) => void;
   onRequestEditorFocus?: () => void;
@@ -156,6 +158,8 @@ export function FileTree({
   onRenameFile,
   onMoveEntry,
   onMoveRequest,
+  onOpenSplitRequest,
+  onOpenTabsRequest,
   onDeleteMultipleRequest,
   onExportMultipleRequest,
   onRequestEditorFocus,
@@ -778,6 +782,54 @@ export function FileTree({
         >
           {contextMenu.kind === "multiple" ? (
             <>
+              {(() => {
+                const selectedFiles = getTopLevelSelection(contextMenu.keys, flatNodes).flatMap(
+                  (node) => (node.kind === "file" ? [node.filePath] : [])
+                );
+                const exactlyTwoDocuments =
+                  selectedFiles.length === 2 &&
+                  getTopLevelSelection(contextMenu.keys, flatNodes).length === 2;
+
+                return exactlyTwoDocuments ? (
+                  <>
+                    {onOpenSplitRequest ? (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="file-tree-context-menu__item"
+                        onClick={() => {
+                          onOpenSplitRequest([
+                            selectedFiles[0],
+                            selectedFiles[1]
+                          ]);
+                          setContextMenu(null);
+                        }}
+                      >
+                        <Columns2 aria-hidden="true" />
+                        {t("split.openSelected")}
+                      </button>
+                    ) : null}
+                    {onOpenTabsRequest ? (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="file-tree-context-menu__item"
+                        onClick={() => {
+                          onOpenTabsRequest([
+                            selectedFiles[0],
+                            selectedFiles[1]
+                          ]);
+                          setContextMenu(null);
+                        }}
+                      >
+                        <Files aria-hidden="true" />
+                        {t("tabs.openSelected")}
+                      </button>
+                    ) : null}
+                  </>
+                ) : null;
+              })()}
+
               {offersExport ? (["standard", "manuscript"] as const).map((mode) => (
                 <button
                   key={mode}

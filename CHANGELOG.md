@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.24.1] - 2026-09-25
+
+### Improvements
+- Add **Open selected in split view** when exactly two Markdown documents are selected in the sidebar file tree or File Viewer on desktop.
+- Add **Open selected as tabs** for the same two-document selection in both the sidebar and File Viewer.
+- Keep folder selections out of these actions so the commands only appear for two actual Markdown documents.
+- Fix split layout corruption after swapping the left/right panes and then opening or replacing a document on either side.
+- Hide the left/right split **+** controls until the pointer is actually over the corresponding editor edge.
+- Stabilize the mobile tab bar so it stays a fixed horizontal row under the header instead of expanding into the document area.
+- Add **Close all tabs** on both desktop and mobile without discarding cached drafts.
+
 ## [0.24.0] - 2026-09-25
 
 ### New features

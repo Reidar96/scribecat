@@ -1373,7 +1373,9 @@
   "tabs": {
     "label": "Open documents",
     "unsaved": "Unsaved changes",
-    "close": "Close {{name}}"
+    "close": "Close {{name}}",
+    "openSelected": "Open selected as tabs",
+    "closeAll": "Close all tabs"
   },
   "split": {
     "open": "Open another document beside this one",
@@ -1389,6 +1391,7 @@
     "dropHintLeft": "Release to open on the left",
     "dropHintRight": "Release to open on the right",
     "replace": "Replace this split document",
-    "closePane": "Close this split pane"
+    "closePane": "Close this split pane",
+    "openSelected": "Open selected in split view"
   }
 }

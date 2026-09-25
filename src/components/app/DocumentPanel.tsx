@@ -67,6 +67,7 @@ type DocumentPanelProps = {
   secondaryFilePath: string | null;
   onSelectTab: (filePath: string) => void;
   onCloseTab: (filePath: string) => void;
+  onCloseAllTabs: () => void;
   onReorderTabs: (
     draggedFilePath: string,
     targetFilePath: string,
@@ -194,6 +195,7 @@ export function DocumentPanel({
   secondaryFilePath,
   onSelectTab,
   onCloseTab,
+  onCloseAllTabs,
   onReorderTabs,
   onOpenSecondary,
   onClosePrimarySplit,
@@ -722,6 +724,7 @@ export function DocumentPanel({
             dirtyFilePaths={dirtyFilePaths}
             onSelect={onSelectTab}
             onClose={onCloseTab}
+            onCloseAll={onCloseAllTabs}
             onReorder={onReorderTabs}
           />
 
@@ -970,25 +973,32 @@ export function DocumentPanel({
                 {layout === "desktop" ? (
                   <>
                     {(["left", "right"] as const).map((side) => (
-                      <button
+                      <div
                         key={side}
-                        type="button"
                         className={cn(
-                          "split-workspace__edge-add",
-                          `split-workspace__edge-add--${side}`
+                          "split-workspace__edge-zone",
+                          `split-workspace__edge-zone--${side}`
                         )}
-                        aria-label={t(side === "left" ? "split.openLeft" : "split.openRight")}
-                        title={t(side === "left" ? "split.openLeft" : "split.openRight")}
-                        onClick={() => {
-                          if (splitPickerOpen && splitPickerSide === side) {
-                            setSplitPickerOpen(false);
-                          } else {
-                            openSplitPickerForSide(side);
-                          }
-                        }}
                       >
-                        <Plus aria-hidden="true" />
-                      </button>
+                        <button
+                          type="button"
+                          className={cn(
+                            "split-workspace__edge-add",
+                            `split-workspace__edge-add--${side}`
+                          )}
+                          aria-label={t(side === "left" ? "split.openLeft" : "split.openRight")}
+                          title={t(side === "left" ? "split.openLeft" : "split.openRight")}
+                          onClick={() => {
+                            if (splitPickerOpen && splitPickerSide === side) {
+                              setSplitPickerOpen(false);
+                            } else {
+                              openSplitPickerForSide(side);
+                            }
+                          }}
+                        >
+                          <Plus aria-hidden="true" />
+                        </button>
+                      </div>
                     ))}
 
                     {splitPickerOpen ? (
