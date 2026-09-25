@@ -479,23 +479,20 @@ export function TasksPanel({
           relativePath,
           taskSettings.folder
         );
-        return category
-          ? [{
-              category,
-              filePath,
-              mtimeMs: fileMtimeMs[filePath] ?? 0
-            }]
-          : [];
+        return category ? [{ category, filePath }] : [];
       }),
-    [fileMtimeMs, filePaths, folderPath, taskSettings.folder]
+    [filePaths, folderPath, taskSettings.folder]
   );
 
   const taskFileSignature = useMemo(
     () =>
       taskFiles
-        .map(({ filePath, mtimeMs }) => `${filePath}\u0000${mtimeMs}`)
+        .map(
+          ({ filePath }) =>
+            `${filePath}\u0000${fileMtimeMs[filePath] ?? 0}`
+        )
         .join("\u0001"),
-    [taskFiles]
+    [fileMtimeMs, taskFiles]
   );
 
   useEffect(() => {
