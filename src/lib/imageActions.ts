@@ -1,4 +1,5 @@
 import { platform } from "@/platform";
+import { sanitizeImageFileName } from "@/lib/imageFileName";
 
 const EXTENSION_BY_MIME: Record<string, string> = {
   "image/png": "png",
@@ -9,36 +10,6 @@ const EXTENSION_BY_MIME: Record<string, string> = {
   "image/bmp": "bmp",
   "image/avif": "avif"
 };
-
-function safeBaseName(value: string): string {
-  return value
-    .trim()
-    .replace(/[\\/:*?"<>|]+/g, "-")
-    .replace(/\s+/g, " ")
-    .replace(/^\.+|\.+$/g, "")
-    .trim();
-}
-
-function sourceBaseName(src: string): string {
-  const withoutQuery = src.split(/[?#]/)[0] ?? src;
-  const tail = withoutQuery.replace(/\\/g, "/").split("/").pop() ?? "";
-
-  try {
-    return decodeURIComponent(tail);
-  } catch {
-    return tail;
-  }
-}
-
-export function suggestedImageFileName(src: string, alt = ""): string {
-  const sourceName = safeBaseName(sourceBaseName(src));
-
-  if (sourceName && /\.[a-z0-9]{2,6}$/i.test(sourceName)) {
-    return sourceName;
-  }
-
-  return safeBaseName(alt) || "image";
-}
 
 async function imageBlob(src: string): Promise<Blob> {
   const response =
@@ -129,7 +100,7 @@ export async function downloadImage(
 
   try {
     const blob = await imageBlob(src);
-    let fileName = safeBaseName(preferredFileName) || "image";
+    let fileName = sanitizeImageFileName(preferredFileName) || "image";
 
     if (!/\.[a-z0-9]{2,6}$/i.test(fileName)) {
       fileName += `.${EXTENSION_BY_MIME[blob.type] ?? "png"}`;
