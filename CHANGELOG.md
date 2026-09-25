@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.22.12] - 2026-09-25
+
+### Improvements
+- Extend Graph folder relationships through every ancestor folder all the way to Start/root, instead of linking notes only to their immediate folder.
+- Add a configurable Tasks storage folder under Open folder settings, matching the existing configurable Diary folder.
+- Keep subtasks attached to their main task in Today, week and month views; subtasks no longer need or show their own deadline.
+- Keep completed subtasks compactly beneath an active main task instead of moving them into the separate Completed section.
+- Completing a main task now completes all of its subtasks and moves the whole group together into Completed.
+- Prevent subtasks from being dragged independently away from their main task.
+- Tighten subtask styling and remove the extra lower divider so a task group reads as one compact block.
+
+
 ## [0.22.11] - 2026-09-25
 
 ### Improvements
