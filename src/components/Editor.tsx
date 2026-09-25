@@ -383,6 +383,19 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       pointerType === "pen" ||
       (pointerType === "" && window.matchMedia("(pointer: coarse)").matches);
 
+    if (!fromTouch && !documentLockedRef.current) {
+      const currentEditor = editorRef.current;
+      const position = currentEditor.view.posAtCoords({ left: x, top: y })?.pos;
+      const { from, to, empty } = currentEditor.state.selection;
+
+      if (
+        position !== undefined &&
+        (empty || position < from || position > to)
+      ) {
+        currentEditor.commands.setTextSelection(position);
+      }
+    }
+
     const openMenu = () => {
       const currentEditor = editorRef.current;
       if (!currentEditor) return;
