@@ -159,6 +159,24 @@ function collectionCardKey(card: CollectionCard): string {
     : `note:${card.filePath}`;
 }
 
+function collectionGridHasMultipleColumns(cardElement: HTMLElement): boolean {
+  const grid = cardElement.parentElement;
+  if (!grid) return false;
+
+  const cardRect = cardElement.getBoundingClientRect();
+  const gridRect = grid.getBoundingClientRect();
+  if (cardRect.width <= 0 || gridRect.width <= 0) return false;
+
+  const columnGap =
+    Number.parseFloat(window.getComputedStyle(grid).columnGap) || 0;
+  const estimatedColumns = Math.max(
+    1,
+    Math.round((gridRect.width + columnGap) / (cardRect.width + columnGap))
+  );
+
+  return estimatedColumns > 1;
+}
+
 function findFolder(nodes: FileTreeNode[], relativePath: string): FileTreeFolderNode | null {
   for (const node of nodes) {
     if (node.kind !== "folder") {
@@ -256,6 +274,7 @@ export function CollectionPanel({
   const [dropIndicator, setDropIndicator] = useState<{
     key: string;
     position: "before" | "after";
+    axis: "horizontal" | "vertical";
   } | null>(null);
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(() => new Set());
   const [selectionMode, setSelectionMode] = useState(false);
@@ -553,12 +572,21 @@ export function CollectionPanel({
     }
 
     const rect = event.currentTarget.getBoundingClientRect();
+    const axis = collectionGridHasMultipleColumns(event.currentTarget)
+      ? "horizontal"
+      : "vertical";
     const position =
-      event.clientY < rect.top + rect.height / 2 ? "before" : "after";
+      axis === "horizontal"
+        ? event.clientX < rect.left + rect.width / 2
+          ? "before"
+          : "after"
+        : event.clientY < rect.top + rect.height / 2
+          ? "before"
+          : "after";
 
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
-    setDropIndicator({ key: collectionCardKey(card), position });
+    setDropIndicator({ key: collectionCardKey(card), position, axis });
   };
 
   const handleCardDrop = async (
@@ -1142,6 +1170,8 @@ export function CollectionPanel({
                 const key = collectionCardKey(card);
                 const cardDropPosition =
                   dropIndicator?.key === key ? dropIndicator.position : null;
+                const cardDropAxis =
+                  dropIndicator?.key === key ? dropIndicator.axis : null;
                 const dropTargetProps = manualReorderEnabled
                   ? {
                       onDragOver: (event: DragEvent<HTMLElement>) =>
@@ -1183,7 +1213,8 @@ export function CollectionPanel({
                         selectedKeys.has(key) && "collection-card--selected",
                         draggedCardKey === key && "collection-card--drag-source",
                         cardDropPosition === "before" && "collection-card--drop-before",
-                        cardDropPosition === "after" && "collection-card--drop-after"
+                        cardDropPosition === "after" && "collection-card--drop-after",
+                        cardDropAxis === "horizontal" && "collection-card--drop-horizontal"
                       )}
                       onContextMenu={(event) => {
                         event.preventDefault();
@@ -1270,7 +1301,8 @@ export function CollectionPanel({
                       selectedKeys.has(key) && "collection-card--selected",
                       draggedCardKey === key && "collection-card--drag-source",
                       cardDropPosition === "before" && "collection-card--drop-before",
-                      cardDropPosition === "after" && "collection-card--drop-after"
+                      cardDropPosition === "after" && "collection-card--drop-after",
+                      cardDropAxis === "horizontal" && "collection-card--drop-horizontal"
                     )}
                     onContextMenu={(event) => {
                       event.preventDefault();
