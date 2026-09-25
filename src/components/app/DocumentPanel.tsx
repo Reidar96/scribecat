@@ -2,6 +2,7 @@ import { Fragment, useEffect, useMemo, useState, type RefObject } from "react";
 import {
   AlertTriangle,
   ArrowLeft,
+  ArrowLeftRight,
   ArrowRight,
   Check,
   FolderOpen,
@@ -66,6 +67,11 @@ type DocumentPanelProps = {
   secondaryFilePath: string | null;
   onSelectTab: (filePath: string) => void;
   onCloseTab: (filePath: string) => void;
+  onReorderTabs: (
+    draggedFilePath: string,
+    targetFilePath: string,
+    position: "before" | "after"
+  ) => void;
   onOpenSecondary: (filePath: string) => void;
   onCloseSecondary: () => void;
   onSecondaryMarkdownChange: (filePath: string, markdown: string) => void;
@@ -187,6 +193,7 @@ export function DocumentPanel({
   secondaryFilePath,
   onSelectTab,
   onCloseTab,
+  onReorderTabs,
   onOpenSecondary,
   onCloseSecondary,
   onSecondaryMarkdownChange,
@@ -235,9 +242,11 @@ export function DocumentPanel({
   const [toolbarSlot, setToolbarSlot] = useState<HTMLDivElement | null>(null);
   const [activeEditorPane, setActiveEditorPane] = useState<"primary" | "secondary">("primary");
   const [splitRatio, setSplitRatio] = useState(50);
+  const [secondarySide, setSecondarySide] = useState<"left" | "right">("right");
   const [splitPickerOpen, setSplitPickerOpen] = useState(false);
+  const [splitPickerSide, setSplitPickerSide] = useState<"left" | "right">("right");
   const [splitPickerQuery, setSplitPickerQuery] = useState("");
-  const [splitDropPreview, setSplitDropPreview] = useState(false);
+  const [splitDropPreview, setSplitDropPreview] = useState<"left" | "right" | null>(null);
   const documentLocks = useAppStore((state) => state.documentLocks);
   const setDocumentLocked = useAppStore((state) => state.setDocumentLocked);
   // Bumped by the header menu's "Versions" entry on the phone, where the
@@ -678,6 +687,7 @@ export function DocumentPanel({
             dirtyFilePaths={dirtyFilePaths}
             onSelect={onSelectTab}
             onClose={onCloseTab}
+            onReorder={onReorderTabs}
           />
 
           <div className="detail-panel__body">
@@ -697,42 +707,61 @@ export function DocumentPanel({
                 )}
                 style={
                   layout === "desktop" && secondaryFilePath
-                    ? ({ "--split-primary": `${splitRatio}%` } as React.CSSProperties)
+                    ? ({ "--split-left": `${splitRatio}%` } as React.CSSProperties)
                     : undefined
                 }
                 onDragOverCapture={(event) => {
                   if (layout !== "desktop" || !hasSplitDragPayload(event.dataTransfer)) {
-                    setSplitDropPreview(false);
+                    setSplitDropPreview(null);
                     return;
                   }
 
                   const rect = event.currentTarget.getBoundingClientRect();
-                  const inRightHalf = event.clientX >= rect.left + rect.width / 2;
-                  setSplitDropPreview(inRightHalf);
-                  if (inRightHalf) {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    event.dataTransfer.dropEffect = "copy";
-                  }
+                  const side =
+                    event.clientX < rect.left + rect.width / 2 ? "left" : "right";
+                  setSplitDropPreview(side);
+                  event.preventDefault();
+                  event.stopPropagation();
+                  event.dataTransfer.dropEffect = "copy";
                 }}
                 onDragLeave={(event) => {
                   const nextTarget = event.relatedTarget as Node | null;
                   if (!nextTarget || !event.currentTarget.contains(nextTarget)) {
-                    setSplitDropPreview(false);
+                    setSplitDropPreview(null);
                   }
                 }}
                 onDropCapture={(event) => {
                   if (layout !== "desktop" || !splitDropPreview) return;
+                  const side = splitDropPreview;
                   const filePath = splitDropFilePath(event.dataTransfer);
-                  setSplitDropPreview(false);
-                  if (!filePath || filePath === selectedFilePath) return;
+                  setSplitDropPreview(null);
+                  if (!filePath) return;
+
                   event.preventDefault();
                   event.stopPropagation();
                   setSplitPickerOpen(false);
-                  onOpenSecondary(filePath);
+
+                  if (filePath === selectedFilePath) {
+                    if (secondaryFilePath) {
+                      setSecondarySide(side === "left" ? "right" : "left");
+                    }
+                    return;
+                  }
+
+                  setSecondarySide(side);
+                  if (filePath !== secondaryFilePath) {
+                    onOpenSecondary(filePath);
+                  }
                 }}
               >
-                <div className="split-workspace__pane split-workspace__pane--primary">
+                <div
+                  className="split-workspace__pane split-workspace__pane--primary"
+                  style={
+                    layout === "desktop" && secondaryFilePath
+                      ? { gridColumn: secondarySide === "left" ? 3 : 1 }
+                      : undefined
+                  }
+                >
                   <Editor
                     key={selectedFilePath}
                     ref={editorHandleRef}
@@ -765,6 +794,7 @@ export function DocumentPanel({
                   <>
                     <div
                       className="split-workspace__resizer"
+                      style={{ gridColumn: 2 }}
                       role="separator"
                       aria-orientation="vertical"
                       aria-label={t("split.resize")}
@@ -780,8 +810,28 @@ export function DocumentPanel({
                           setSplitRatio((value) => Math.min(75, value + 5));
                         }
                       }}
-                    />
-                    <div className="split-workspace__pane split-workspace__pane--secondary">
+                    >
+                      <button
+                        type="button"
+                        className="split-workspace__swap"
+                        aria-label={t("split.swap")}
+                        title={t("split.swap")}
+                        onPointerDown={(event) => event.stopPropagation()}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setSecondarySide((side) => (side === "left" ? "right" : "left"));
+                        }}
+                      >
+                        <ArrowLeftRight aria-hidden="true" />
+                      </button>
+                    </div>
+                    <div
+                      className={cn(
+                        "split-workspace__pane split-workspace__pane--secondary",
+                        `split-workspace__pane--secondary-${secondarySide}`
+                      )}
+                      style={{ gridColumn: secondarySide === "left" ? 1 : 3 }}
+                    >
                       <div className="split-workspace__pane-header">
                         <span title={secondaryFilePath}>{getFileLinkLabel(secondaryFilePath)}</span>
                         <button
@@ -839,21 +889,37 @@ export function DocumentPanel({
 
                 {layout === "desktop" ? (
                   <>
-                    <button
-                      type="button"
-                      className="split-workspace__edge-add"
-                      aria-label={t("split.open")}
-                      title={t("split.open")}
-                      onClick={() => {
-                        setSplitPickerQuery("");
-                        setSplitPickerOpen((open) => !open);
-                      }}
-                    >
-                      <Plus aria-hidden="true" />
-                    </button>
+                    {(["left", "right"] as const).map((side) => (
+                      <button
+                        key={side}
+                        type="button"
+                        className={cn(
+                          "split-workspace__edge-add",
+                          `split-workspace__edge-add--${side}`
+                        )}
+                        aria-label={t(side === "left" ? "split.openLeft" : "split.openRight")}
+                        title={t(side === "left" ? "split.openLeft" : "split.openRight")}
+                        onClick={() => {
+                          setSplitPickerSide(side);
+                          setSplitPickerQuery("");
+                          setSplitPickerOpen(
+                            (open) => !(open && splitPickerSide === side)
+                          );
+                        }}
+                      >
+                        <Plus aria-hidden="true" />
+                      </button>
+                    ))}
 
                     {splitPickerOpen ? (
-                      <div className="split-picker" role="dialog" aria-label={t("split.pickerTitle")}>
+                      <div
+                        className={cn(
+                          "split-picker",
+                          `split-picker--${splitPickerSide}`
+                        )}
+                        role="dialog"
+                        aria-label={t("split.pickerTitle")}
+                      >
                         <label className="split-picker__search">
                           <Search aria-hidden="true" />
                           <input
@@ -879,7 +945,16 @@ export function DocumentPanel({
                                 title={option.relativePath}
                                 onClick={() => {
                                   setSplitPickerOpen(false);
-                                  onOpenSecondary(option.filePath);
+                                  setSecondarySide(splitPickerSide);
+                                  if (option.filePath === selectedFilePath) {
+                                    if (secondaryFilePath) {
+                                      setSecondarySide(
+                                        splitPickerSide === "left" ? "right" : "left"
+                                      );
+                                    }
+                                  } else if (option.filePath !== secondaryFilePath) {
+                                    onOpenSecondary(option.filePath);
+                                  }
                                 }}
                               >
                                 <span>{option.label}</span>
@@ -894,11 +969,23 @@ export function DocumentPanel({
                     ) : null}
 
                     {splitDropPreview ? (
-                      <div className="split-drop-preview" aria-hidden="true">
+                      <div
+                        className={cn(
+                          "split-drop-preview",
+                          `split-drop-preview--${splitDropPreview}`
+                        )}
+                        aria-hidden="true"
+                      >
                         <div className="split-drop-preview__content">
                           <Plus />
                           <strong>{t("split.dropTitle")}</strong>
-                          <span>{t("split.dropHint")}</span>
+                          <span>
+                            {t(
+                              splitDropPreview === "left"
+                                ? "split.dropHintLeft"
+                                : "split.dropHintRight"
+                            )}
+                          </span>
                         </div>
                       </div>
                     ) : null}
