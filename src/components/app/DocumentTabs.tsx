@@ -48,8 +48,7 @@ export function DocumentTabs({
               event.dataTransfer.setData("text/plain", filePath);
             }}
             onDragOver={(event) => {
-              const draggedFilePath = event.dataTransfer.getData(TAB_DRAG_MIME);
-              if (!draggedFilePath || draggedFilePath === filePath) return;
+              if (!Array.from(event.dataTransfer.types).includes(TAB_DRAG_MIME)) return;
 
               event.preventDefault();
               event.stopPropagation();
