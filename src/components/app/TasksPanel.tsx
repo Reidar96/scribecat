@@ -263,8 +263,8 @@ function TaskRow({
         "tasks-item",
         isSubtask && "tasks-item--subtask",
         task.checked && "tasks-item--checked",
-        overdue && "tasks-item--overdue",
-        task.priority && `tasks-item--priority-${task.priority}`
+        !isSubtask && overdue && "tasks-item--overdue",
+        !isSubtask && task.priority && `tasks-item--priority-${task.priority}`
       )}
     >
       <button
@@ -306,20 +306,18 @@ function TaskRow({
           aria-label={t("tasks.taskText")}
         />
 
-        {!isSubtask || !task.checked ? (
-          !isSubtask ? (
-            <>
-              <textarea
-                className="tasks-item__note"
-                value={noteDraft}
-                rows={noteDraft ? 2 : 1}
-                onChange={(event) => setNoteDraft(event.target.value)}
-                onBlur={commitNote}
-                placeholder={t("tasks.notePlaceholder")}
-                aria-label={t("tasks.note")}
-              />
+        <textarea
+          className="tasks-item__note"
+          value={noteDraft}
+          rows={noteDraft ? 2 : 1}
+          onChange={(event) => setNoteDraft(event.target.value)}
+          onBlur={commitNote}
+          placeholder={t("tasks.notePlaceholder")}
+          aria-label={t("tasks.note")}
+        />
 
-              <div className="tasks-item__meta">
+        {!isSubtask ? (
+          <div className="tasks-item__meta">
                 <span className="tasks-item__category">{task.category}</span>
 
                 <label className="tasks-item__deadline">
@@ -368,9 +366,7 @@ function TaskRow({
                     />
                   ))}
                 </div>
-              </div>
-            </>
-          ) : null
+          </div>
         ) : null}
 
         {subtaskOpen && onAddSubtask ? (
