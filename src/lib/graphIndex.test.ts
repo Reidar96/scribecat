@@ -3,16 +3,16 @@ import { describe, expect, it } from "vitest";
 import { buildVaultGraph } from "./graphIndex";
 
 describe("buildVaultGraph", () => {
-  it("connects notes through markdown links, tags and their immediate folders", () => {
+  it("connects notes through markdown links, tags and full folder ancestry", () => {
     const folderPath = "/vault";
     const filePaths = [
       "/vault/alpha.md",
-      "/vault/projects/beta.md",
+      "/vault/projects/client/beta.md",
       "/vault/projects/gamma.md"
     ];
     const markdownByPath = {
-      "/vault/alpha.md": "---\ntags: [shared]\n---\n[Beta](projects/beta.md)",
-      "/vault/projects/beta.md": "---\ntags:\n  - shared\n  - work\n---\n[Alpha](../alpha.md)",
+      "/vault/alpha.md": "---\ntags: [shared]\n---\n[Beta](projects/client/beta.md)",
+      "/vault/projects/client/beta.md": "---\ntags:\n  - shared\n  - work\n---\n[Alpha](../../alpha.md)",
       "/vault/projects/gamma.md": "No links"
     };
 
@@ -33,6 +33,12 @@ describe("buildVaultGraph", () => {
           label: "projects",
           relativePath: "projects"
         }),
+        expect.objectContaining({
+          id: "folder:projects/client",
+          kind: "folder",
+          label: "client",
+          relativePath: "projects/client"
+        }),
         expect.objectContaining({ id: "tag:shared", kind: "tag", label: "#shared" }),
         expect.objectContaining({ id: "tag:work", kind: "tag", label: "#work" })
       ])
@@ -40,7 +46,21 @@ describe("buildVaultGraph", () => {
 
     // The reciprocal Alpha/Beta links are one visual connection.
     expect(graph.edges.filter((edge) => edge.kind === "link")).toHaveLength(1);
-    expect(graph.edges.filter((edge) => edge.kind === "folder")).toHaveLength(3);
+    expect(graph.edges.filter((edge) => edge.kind === "folder")).toHaveLength(5);
+    expect(graph.edges).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "folder",
+          source: "folder:projects/client",
+          target: "folder:projects"
+        }),
+        expect.objectContaining({
+          kind: "folder",
+          source: "folder:projects",
+          target: "folder:"
+        })
+      ])
+    );
     expect(graph.edges.filter((edge) => edge.kind === "tag")).toHaveLength(3);
   });
 
