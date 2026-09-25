@@ -73,6 +73,7 @@ type DocumentPanelProps = {
     position: "before" | "after"
   ) => void;
   onOpenSecondary: (filePath: string) => void;
+  onClosePrimarySplit: () => void;
   onCloseSecondary: () => void;
   onSecondaryMarkdownChange: (filePath: string, markdown: string) => void;
 
@@ -195,6 +196,7 @@ export function DocumentPanel({
   onCloseTab,
   onReorderTabs,
   onOpenSecondary,
+  onClosePrimarySplit,
   onCloseSecondary,
   onSecondaryMarkdownChange,
   backTargetLabel,
@@ -364,6 +366,39 @@ export function DocumentPanel({
 
   const splitDropFilePath = (dataTransfer: DataTransfer): string | null =>
     dataTransfer.getData(TAB_DRAG_MIME) || getDraggedVaultFilePaths(dataTransfer)[0] || null;
+
+  const openSplitPickerForSide = (side: "left" | "right") => {
+    setSplitPickerSide(side);
+    setSplitPickerQuery("");
+    setSplitPickerOpen(true);
+  };
+
+  const replaceSplitSide = (side: "left" | "right", filePath: string) => {
+    setSplitPickerOpen(false);
+
+    if (!secondaryFilePath) {
+      if (filePath !== selectedFilePath) {
+        setSecondarySide(side);
+        onOpenSecondary(filePath);
+      }
+      return;
+    }
+
+    if (side === secondarySide) {
+      if (filePath === selectedFilePath) {
+        setSecondarySide(side === "left" ? "right" : "left");
+        return;
+      }
+      if (filePath !== secondaryFilePath) {
+        onOpenSecondary(filePath);
+      }
+      return;
+    }
+
+    if (filePath !== selectedFilePath) {
+      onSelectTab(filePath);
+    }
+  };
 
   const handleSplitResizeStart = (event: React.PointerEvent<HTMLDivElement>) => {
     if (layout !== "desktop") return;
@@ -755,13 +790,48 @@ export function DocumentPanel({
                 }}
               >
                 <div
-                  className="split-workspace__pane split-workspace__pane--primary"
+                  className={cn(
+                    "split-workspace__pane split-workspace__pane--primary",
+                    layout === "desktop" &&
+                      secondaryFilePath &&
+                      "split-workspace__pane--primary-split"
+                  )}
                   style={
                     layout === "desktop" && secondaryFilePath
                       ? { gridColumn: secondarySide === "left" ? 3 : 1 }
                       : undefined
                   }
                 >
+                  {layout === "desktop" && secondaryFilePath ? (
+                    <div className="split-workspace__pane-header">
+                      <span title={selectedFilePath}>{getFileLinkLabel(selectedFilePath)}</span>
+                      <div className="split-workspace__pane-actions">
+                        <button
+                          type="button"
+                          aria-label={t("split.replace")}
+                          title={t("split.replace")}
+                          onClick={() =>
+                            openSplitPickerForSide(
+                              secondarySide === "left" ? "right" : "left"
+                            )
+                          }
+                        >
+                          <Plus aria-hidden="true" />
+                        </button>
+                        <button
+                          type="button"
+                          aria-label={t("split.closePane")}
+                          title={t("split.closePane")}
+                          onClick={() => {
+                            setActiveEditorPane("secondary");
+                            onClosePrimarySplit();
+                          }}
+                        >
+                          <X aria-hidden="true" />
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
                   <Editor
                     key={selectedFilePath}
                     ref={editorHandleRef}
@@ -834,17 +904,27 @@ export function DocumentPanel({
                     >
                       <div className="split-workspace__pane-header">
                         <span title={secondaryFilePath}>{getFileLinkLabel(secondaryFilePath)}</span>
-                        <button
-                          type="button"
-                          aria-label={t("split.close")}
-                          title={t("split.close")}
-                          onClick={() => {
-                            setActiveEditorPane("primary");
-                            onCloseSecondary();
-                          }}
-                        >
-                          <X aria-hidden="true" />
-                        </button>
+                        <div className="split-workspace__pane-actions">
+                          <button
+                            type="button"
+                            aria-label={t("split.replace")}
+                            title={t("split.replace")}
+                            onClick={() => openSplitPickerForSide(secondarySide)}
+                          >
+                            <Plus aria-hidden="true" />
+                          </button>
+                          <button
+                            type="button"
+                            aria-label={t("split.closePane")}
+                            title={t("split.closePane")}
+                            onClick={() => {
+                              setActiveEditorPane("primary");
+                              onCloseSecondary();
+                            }}
+                          >
+                            <X aria-hidden="true" />
+                          </button>
+                        </div>
                       </div>
                       <Editor
                         key={secondaryFilePath}
@@ -900,11 +980,11 @@ export function DocumentPanel({
                         aria-label={t(side === "left" ? "split.openLeft" : "split.openRight")}
                         title={t(side === "left" ? "split.openLeft" : "split.openRight")}
                         onClick={() => {
-                          setSplitPickerSide(side);
-                          setSplitPickerQuery("");
-                          setSplitPickerOpen(
-                            (open) => !(open && splitPickerSide === side)
-                          );
+                          if (splitPickerOpen && splitPickerSide === side) {
+                            setSplitPickerOpen(false);
+                          } else {
+                            openSplitPickerForSide(side);
+                          }
                         }}
                       >
                         <Plus aria-hidden="true" />
@@ -943,19 +1023,9 @@ export function DocumentPanel({
                                 type="button"
                                 className="split-picker__item"
                                 title={option.relativePath}
-                                onClick={() => {
-                                  setSplitPickerOpen(false);
-                                  setSecondarySide(splitPickerSide);
-                                  if (option.filePath === selectedFilePath) {
-                                    if (secondaryFilePath) {
-                                      setSecondarySide(
-                                        splitPickerSide === "left" ? "right" : "left"
-                                      );
-                                    }
-                                  } else if (option.filePath !== secondaryFilePath) {
-                                    onOpenSecondary(option.filePath);
-                                  }
-                                }}
+                                onClick={() =>
+                                  replaceSplitSide(splitPickerSide, option.filePath)
+                                }
                               >
                                 <span>{option.label}</span>
                                 <small>{option.relativePath}</small>
