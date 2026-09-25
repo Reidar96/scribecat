@@ -544,6 +544,12 @@ function App() {
   };
 
   const selectFilePathSafely = async (filePath: string) => {
+    if (filePath === secondaryFilePath) {
+      setSecondaryFilePath(
+        selectedFilePath && selectedFilePath !== filePath ? selectedFilePath : null
+      );
+    }
+
     if (filePath === selectedFilePath) {
       setCollectionView(null);
       setGraphViewOpen(false);
