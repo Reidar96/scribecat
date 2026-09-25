@@ -591,6 +591,31 @@ function App() {
     }
   };
 
+  const reorderDocumentTabs = (
+    draggedFilePath: string,
+    targetFilePath: string,
+    position: "before" | "after"
+  ) => {
+    setOpenTabs((tabs) => {
+      if (
+        draggedFilePath === targetFilePath ||
+        !tabs.includes(draggedFilePath) ||
+        !tabs.includes(targetFilePath)
+      ) {
+        return tabs;
+      }
+
+      const withoutDragged = tabs.filter((entry) => entry !== draggedFilePath);
+      const targetIndex = withoutDragged.indexOf(targetFilePath);
+      const insertIndex = position === "before" ? targetIndex : targetIndex + 1;
+      return [
+        ...withoutDragged.slice(0, insertIndex),
+        draggedFilePath,
+        ...withoutDragged.slice(insertIndex)
+      ];
+    });
+  };
+
   const openSecondaryDocument = async (filePath: string) => {
     if (layout !== "desktop" || filePath === selectedFilePath) {
       return;
@@ -1394,6 +1419,7 @@ function App() {
               secondaryFilePath={secondaryFilePath}
               onSelectTab={(filePath) => void selectFilePathSafely(filePath)}
               onCloseTab={closeDocumentTab}
+              onReorderTabs={reorderDocumentTabs}
               onOpenSecondary={(filePath) => void openSecondaryDocument(filePath)}
               onCloseSecondary={() => setSecondaryFilePath(null)}
               onSecondaryMarkdownChange={updateFileContent}
