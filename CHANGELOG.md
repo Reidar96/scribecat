@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.22.18] - 2026-09-25
+
+### Improvements
+- Create a new task directly as a normal Markdown-backed task row and focus/select its title instead of opening a separate creation form.
+- Create a new subtask as a real subtask row directly below its parent, then focus/select its title for immediate editing.
+- Insert new subtasks first under their parent and allow active sibling subtasks to be reordered with the existing drag handle.
+- Keep subtask reordering inside the same parent and separate from dragging main tasks between categories.
+- Apply contextual defaults when creating tasks from Today, week, month, next month, category and tag views so the new task stays visible in the current view.
+- Align the mobile editor header height, spacing and sidebar/title position with Start, Calendar, Graph and Tasks.
+- Remove the obsolete task-creation form styles now that task creation happens inline.
+
+
 ## [0.22.17] - 2026-09-25
 
 ### Fixes and improvements
