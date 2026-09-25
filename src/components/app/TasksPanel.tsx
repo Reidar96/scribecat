@@ -105,38 +105,52 @@ function deadlineSortValue(deadline: string | null): string {
   return deadline ?? "9999-99-99";
 }
 
-function prioritySortValue(priority: TaskPriority): number {
-  if (priority === "high") return 0;
-  if (priority === "medium") return 1;
-  if (priority === "low") return 2;
-  return 3;
-}
-
-function compareTaskItems(left: TaskItem, right: TaskItem, locale: string): number {
-  const priorityCompare =
-    prioritySortValue(left.priority) - prioritySortValue(right.priority);
-  if (priorityCompare !== 0) return priorityCompare;
-
-  const deadlineCompare = deadlineSortValue(left.deadline).localeCompare(
-    deadlineSortValue(right.deadline)
-  );
-  if (deadlineCompare !== 0) return deadlineCompare;
-
-  return left.text.localeCompare(right.text, locale, { sensitivity: "base" });
-}
-
 function taskItemKey(task: Pick<TaskItem, "filePath" | "lineIndex">): string {
   return `${task.filePath}:${task.lineIndex}`;
+}
+
+function compareRootTasks(
+  left: TaskItem,
+  right: TaskItem,
+  sortMode: TaskSortMode,
+  fileMtimeMs: Record<string, number>,
+  locale: string,
+  keepDateGroups: boolean
+): number {
+  if (keepDateGroups) {
+    const deadlineCompare = deadlineSortValue(left.deadline).localeCompare(
+      deadlineSortValue(right.deadline)
+    );
+    if (deadlineCompare !== 0) return deadlineCompare;
+  }
+
+  if (sortMode === "name") {
+    const nameCompare = left.text.localeCompare(right.text, locale, {
+      sensitivity: "base",
+      numeric: true
+    });
+    if (nameCompare !== 0) return nameCompare;
+  } else if (sortMode === "modified") {
+    const modifiedCompare =
+      (fileMtimeMs[right.filePath] ?? 0) - (fileMtimeMs[left.filePath] ?? 0);
+    if (modifiedCompare !== 0) return modifiedCompare;
+  }
+
+  const categoryCompare = left.category.localeCompare(right.category, locale, {
+    sensitivity: "base",
+    numeric: true
+  });
+  if (categoryCompare !== 0) return categoryCompare;
+
+  return left.lineIndex - right.lineIndex;
 }
 
 function orderTaskGroups(
   roots: TaskItem[],
   childrenByParent: Map<string, TaskItem[]>,
-  locale: string
+  compareRoots: (left: TaskItem, right: TaskItem) => number
 ): TaskItem[] {
-  const orderedRoots = [...roots].sort((left, right) =>
-    compareTaskItems(left, right, locale)
-  );
+  const orderedRoots = [...roots].sort(compareRoots);
 
   return orderedRoots.flatMap((root) => [
     root,
@@ -539,6 +553,7 @@ export function TasksPanel({
   const { t, i18n } = useTranslation();
   const layout = useLayoutMode();
   const taskSettings = useEditorSettingsStore((state) => state.taskSettings);
+  const setTaskSettings = useEditorSettingsStore((state) => state.setTaskSettings);
   const [documents, setDocuments] = useState<Record<string, TaskDocument>>({});
   const [selectedView, setSelectedView] = useState(ALL_TASKS);
   const [saving, setSaving] = useState(false);
@@ -546,6 +561,7 @@ export function TasksPanel({
   const [categoryDelete, setCategoryDelete] = useState<string | null>(null);
   const [completedOpen, setCompletedOpen] = useState(false);
   const [focusTaskKey, setFocusTaskKey] = useState<string | null>(null);
+  const [draggedRootKey, setDraggedRootKey] = useState<string | null>(null);
   const pendingMarkdownByPathRef = useRef(new Map<string, string>());
 
   const taskFiles = useMemo(
@@ -746,13 +762,41 @@ export function TasksPanel({
     () => filteredRootTasks.filter((task) => task.checked),
     [filteredRootTasks]
   );
+  const timeBasedView =
+    selectedView === TODAY_TASKS ||
+    selectedView === WEEK_TASKS ||
+    selectedView === MONTH_TASKS ||
+    selectedView === NEXT_MONTH_TASKS;
+  const compareVisibleRoots = useMemo(
+    () => (left: TaskItem, right: TaskItem) =>
+      compareRootTasks(
+        left,
+        right,
+        taskSettings.sortMode,
+        fileMtimeMs,
+        locale,
+        timeBasedView
+      ),
+    [fileMtimeMs, locale, taskSettings.sortMode, timeBasedView]
+  );
   const visibleActiveTasks = useMemo(
-    () => orderTaskGroups(visibleActiveRoots, childrenByParent, locale),
-    [childrenByParent, locale, visibleActiveRoots]
+    () => orderTaskGroups(visibleActiveRoots, childrenByParent, compareVisibleRoots),
+    [childrenByParent, compareVisibleRoots, visibleActiveRoots]
   );
   const visibleCompletedTasks = useMemo(
-    () => orderTaskGroups(visibleCompletedRoots, childrenByParent, locale),
-    [childrenByParent, locale, visibleCompletedRoots]
+    () => orderTaskGroups(visibleCompletedRoots, childrenByParent, compareVisibleRoots),
+    [childrenByParent, compareVisibleRoots, visibleCompletedRoots]
+  );
+  const draggedRootTask = useMemo(
+    () =>
+      draggedRootKey
+        ? allTasks.find(
+            (task) =>
+              task.parentLineIndex === null &&
+              taskItemKey(task) === draggedRootKey
+          ) ?? null
+        : null,
+    [allTasks, draggedRootKey]
   );
 
   const categoryCounts = useMemo(() => {
@@ -889,7 +933,7 @@ export function TasksPanel({
     };
     const existing = documents[category]?.markdown;
     const markdown = existing
-      ? appendTaskToMarkdown(existing, task)
+      ? prependTaskToMarkdown(existing, task)
       : createTaskDocument(category, task);
     const inserted = [...parseTaskMarkdown(markdown)]
       .reverse()
@@ -982,6 +1026,43 @@ export function TasksPanel({
           });
 
     await persistCategory(task.category, markdown);
+  };
+
+  const reorderRootTask = async (
+    source: TaskItem,
+    target: TaskItem,
+    placement: "before" | "after"
+  ) => {
+    if (
+      saving ||
+      taskSettings.sortMode !== "manual" ||
+      source.parentLineIndex !== null ||
+      target.parentLineIndex !== null ||
+      source.filePath !== target.filePath ||
+      source.lineIndex === target.lineIndex ||
+      (timeBasedView && source.deadline !== target.deadline)
+    ) {
+      return;
+    }
+
+    const document = documents[source.category];
+    if (!document) return;
+
+    const markdown = moveSiblingTaskInMarkdown(
+      document.markdown,
+      source.lineIndex,
+      target.lineIndex,
+      placement
+    );
+    if (markdown === document.markdown) return;
+
+    setSaving(true);
+    try {
+      await persistCategory(source.category, markdown);
+    } finally {
+      setSaving(false);
+      setDraggedRootKey(null);
+    }
   };
 
   const reorderSubtask = async (
@@ -1420,7 +1501,52 @@ export function TasksPanel({
               <h3>{heading}</h3>
               <p>{t("tasks.count", { count: visibleActiveRoots.length })}</p>
             </div>
-            <CheckCircle2 aria-hidden="true" />
+            <div className="tasks-main__heading-actions">
+              <Menu>
+                <MenuTrigger
+                  render={
+                    <Button
+                      type="button"
+                      size="icon-sm"
+                      variant="ghost"
+                      aria-label={t("sidebar.sortMode")}
+                      title={t("sidebar.sortMode")}
+                    >
+                      <ArrowUpDown />
+                    </Button>
+                  }
+                />
+                <MenuPortal>
+                  <MenuPositioner align="end">
+                    <MenuPopup>
+                      <MenuRadioGroup
+                        value={taskSettings.sortMode}
+                        onValueChange={(value) =>
+                          setTaskSettings({ sortMode: value as TaskSortMode })
+                        }
+                      >
+                        <MenuRadioItem value="name">
+                          <ArrowDownAZ className="size-4" aria-hidden="true" />
+                          {t("sidebar.sortModeName")}
+                          <MenuRadioItemIndicator />
+                        </MenuRadioItem>
+                        <MenuRadioItem value="modified">
+                          <Clock className="size-4" aria-hidden="true" />
+                          {t("sidebar.sortModeModified")}
+                          <MenuRadioItemIndicator />
+                        </MenuRadioItem>
+                        <MenuRadioItem value="manual">
+                          <GripVertical className="size-4" aria-hidden="true" />
+                          {t("sidebar.sortModeManual")}
+                          <MenuRadioItemIndicator />
+                        </MenuRadioItem>
+                      </MenuRadioGroup>
+                    </MenuPopup>
+                  </MenuPositioner>
+                </MenuPortal>
+              </Menu>
+              <CheckCircle2 aria-hidden="true" />
+            </div>
           </div>
 
           {visibleActiveTasks.length === 0 ? (
