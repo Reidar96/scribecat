@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { useLongPressContextMenu } from "@/hooks/useLongPressContextMenu";
 import { cn } from "@/lib/utils";
 import { carriesExternalFiles } from "@/lib/dragDrop/droppedSources";
 import { FILE_LINK_DRAG_MIME } from "@/lib/editor/fileLinks";
@@ -200,6 +201,9 @@ export function TreeNodeRow({
   resolveDragFilePaths
 }: TreeNodeRowProps) {
   const { t, i18n } = useTranslation();
+  const { getLongPressProps } = useLongPressContextMenu<FileTreeNode>(
+    (target, x, y) => onRowContextMenu(target, x, y)
+  );
   // Badge for the currently active project-wide search: number of matches
   // in this file (0 hides the badge and the row highlight).
   const searchMatchCount = useSearchStore((state) =>
@@ -390,7 +394,8 @@ export function TreeNodeRow({
               event.preventDefault();
               onRowContextMenu(node, event.clientX, event.clientY);
             }}
-            {...dragHandlers}
+                        {...getLongPressProps(node)}
+{...dragHandlers}
           >
             {selectionMode ? (
               <span className="file-tree__select-box" aria-hidden="true">
@@ -558,7 +563,8 @@ export function TreeNodeRow({
             event.preventDefault();
             onRowContextMenu(node, event.clientX, event.clientY);
           }}
-          {...dragHandlers}
+                    {...getLongPressProps(node)}
+{...dragHandlers}
         >
           {selectionMode ? (
             <span className="file-tree__select-box" aria-hidden="true">
