@@ -35,7 +35,15 @@ export function useLongPressContextMenu<T>(
     }
   };
 
-  useEffect(() => clear, []);
+  useEffect(
+    () => () => {
+      const state = stateRef.current;
+      if (state) {
+        window.clearTimeout(state.timer);
+      }
+    },
+    []
+  );
 
   const getLongPressProps = (target: T): LongPressProps => ({
     onPointerDown: (event) => {
