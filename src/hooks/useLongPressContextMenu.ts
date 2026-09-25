@@ -26,8 +26,13 @@ export type LongPressProps = {
   "data-scribecat-long-press": "true";
 };
 
+type LongPressContextMenuOptions = {
+  openOnLongPress?: boolean;
+};
+
 export function useLongPressContextMenu<T>(
-  onOpen: (target: T, x: number, y: number) => void
+  onOpen: (target: T, x: number, y: number) => void,
+  { openOnLongPress = true }: LongPressContextMenuOptions = {}
 ) {
   const stateRef = useRef<LongPressState<T> | null>(null);
   const suppressNextClickRef = useRef(false);
@@ -52,7 +57,7 @@ export function useLongPressContextMenu<T>(
 
   const getLongPressProps = (target: T): LongPressProps => ({
     onPointerDown: (event) => {
-      if (event.pointerType === "mouse" || event.button !== 0) return;
+      if (!openOnLongPress || event.pointerType === "mouse" || event.button !== 0) return;
 
       clear();
       const state: LongPressState<T> = {
@@ -107,6 +112,7 @@ export function useLongPressContextMenu<T>(
         window.matchMedia("(pointer: coarse)").matches
       ) {
         event.preventDefault();
+        event.stopPropagation();
       }
     },
     "data-scribecat-long-press": "true"
