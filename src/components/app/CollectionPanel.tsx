@@ -12,6 +12,7 @@ import {
   ArrowUpDown,
   BookOpen,
   CalendarDays,
+  Columns2,
   Check,
   ClipboardPaste,
   Clock,
@@ -21,6 +22,7 @@ import {
   ExternalLink,
   FileDown,
   FileText,
+  Files,
   Folder,
   FolderArchive,
   FolderInput,
@@ -122,6 +124,8 @@ type CollectionPanelProps = {
   onPasteRequest: (targetDirectory: string) => void;
   canPaste: boolean;
   onMoveRequest: (entries: BatchEntry[]) => void;
+  onOpenSplitRequest?: (filePaths: [string, string]) => void;
+  onOpenTabsRequest?: (filePaths: [string, string]) => void;
   onDeleteFileRequest: (filePath: string) => void;
   onDeleteFolderRequest: (folderPath: string) => void;
   onDeleteMultipleRequest: (entries: BatchEntry[]) => void;
@@ -239,6 +243,8 @@ export function CollectionPanel({
   onPasteRequest,
   canPaste,
   onMoveRequest,
+  onOpenSplitRequest,
+  onOpenTabsRequest,
   onDeleteFileRequest,
   onDeleteFolderRequest,
   onDeleteMultipleRequest,
@@ -1495,6 +1501,46 @@ export function CollectionPanel({
         >
           {contextCards.length > 1 ? (
             <>
+              {contextCards.length === 2 &&
+              contextCards.every((card) => card.kind === "note") ? (
+                <>
+                  {onOpenSplitRequest ? (
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="file-tree-context-menu__item"
+                      onClick={() => {
+                        onOpenSplitRequest([
+                          (contextCards[0] as NoteCard).filePath,
+                          (contextCards[1] as NoteCard).filePath
+                        ]);
+                        setContextMenu(null);
+                      }}
+                    >
+                      <Columns2 aria-hidden="true" />
+                      {t("split.openSelected")}
+                    </button>
+                  ) : null}
+                  {onOpenTabsRequest ? (
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="file-tree-context-menu__item"
+                      onClick={() => {
+                        onOpenTabsRequest([
+                          (contextCards[0] as NoteCard).filePath,
+                          (contextCards[1] as NoteCard).filePath
+                        ]);
+                        setContextMenu(null);
+                      }}
+                    >
+                      <Files aria-hidden="true" />
+                      {t("tabs.openSelected")}
+                    </button>
+                  ) : null}
+                </>
+              ) : null}
+
               <button
                 type="button"
                 role="menuitem"
