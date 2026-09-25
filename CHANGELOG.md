@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.22.14] - 2026-09-25
+
+### Fixes and improvements
+- Finish the split create tile in Start/folder collections with inline naming for folders and notes, so creation stays in the view where it was started.
+- Create new collection entries inside the folder currently being viewed and keep the collection open after creating a note.
+- Respect the configured custom Tasks folder when hidden task storage is filtered from Start and folder collections.
+- Preserve the 0.22.13 graph-physics and compact-subtask changes while shipping them through a verified release build.
+
+
 ## [0.22.13] - 2026-09-25
 
 ### Improvements
