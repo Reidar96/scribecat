@@ -1009,6 +1009,16 @@ export function CollectionPanel({
               >
                 {t("collection.clearSelection")}
               </Button>
+              <Button
+                type="button"
+                size="sm"
+                disabled={!capabilities.move || selectedCards.length === 0}
+                title={capabilities.move ? undefined : capabilityHint}
+                onClick={() => void moveCards(selectedCards)}
+              >
+                <FolderInput aria-hidden="true" />
+                {t("fileTree.moveTo")}
+              </Button>
             </div>
           </div>
         ) : null}
