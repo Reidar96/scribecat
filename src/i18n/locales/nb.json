@@ -1005,5 +1005,20 @@
     "previous": "Forrige side",
     "next": "Neste side",
     "pageCount": "Side {{page}} av {{count}}"
+  },
+  "tabs": {
+    "label": "Åpne dokumenter",
+    "unsaved": "Ulagrede endringer",
+    "close": "Lukk {{name}}"
+  },
+  "split": {
+    "open": "Åpne et dokument ved siden av dette",
+    "pickerTitle": "Åpne i delt visning",
+    "search": "Søk i dokumenter…",
+    "noMatches": "Ingen dokumenter passer.",
+    "close": "Lukk delt dokument",
+    "resize": "Juster bredden på de delte editorene",
+    "dropTitle": "Åpne i delt visning",
+    "dropHint": "Slipp for å åpne på høyre side"
   }
 }
