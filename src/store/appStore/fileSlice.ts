@@ -1,6 +1,7 @@
 import { dirname, join } from "@/platform/paths";
 
 import i18n from "@/i18n";
+import { copyManagedAttachmentsForMarkdownVariants } from "@/lib/attachmentOps";
 import {
   cleanupOrphanedImages,
   createMarkdownFolderAtPath,
@@ -592,7 +593,16 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
         suffix += 1;
       }
 
-      const content = fileDocuments[filePath]?.content ?? (await readMarkdownFile(filePath));
+      const sourceContent =
+        fileDocuments[filePath]?.content ?? (await readMarkdownFile(filePath));
+      const { markdownVariants } =
+        await copyManagedAttachmentsForMarkdownVariants(
+          folderPath,
+          filePath,
+          newFilePath,
+          [sourceContent]
+        );
+      const content = markdownVariants[0] ?? sourceContent;
 
       await writeMarkdownFile(newFilePath, content);
       snapshotFileVersion(folderPath, newFilePath, content);
