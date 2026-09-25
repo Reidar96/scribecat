@@ -394,19 +394,65 @@ function taskSubtreeEndIndex(lines: string[], lineIndex: number): number {
 export function insertSubtaskInMarkdown(
   markdown: string,
   parentLineIndex: number,
-  task: NewMarkdownTask
+  task: NewMarkdownTask,
+  placement: "first" | "last" = "last"
 ): string {
   const lines = markdown.split(/\r?\n/);
   const parentMatch = TASK_LINE_PATTERN.exec(lines[parentLineIndex] ?? "");
   if (!parentMatch) return markdown;
 
-  const insertAfter = taskSubtreeEndIndex(lines, parentLineIndex);
+  const insertAfter =
+    placement === "first"
+      ? taskNoteEndIndex(lines, parentLineIndex)
+      : taskSubtreeEndIndex(lines, parentLineIndex);
   const childIndent = `${parentMatch[1]}  `;
   const block = formatTaskBlock(task)
     .split("\n")
     .map((line) => `${childIndent}${line}`);
 
   lines.splice(insertAfter + 1, 0, ...block);
+  return lines.join("\n").replace(/\n?$/, "\n");
+}
+
+export function moveSubtaskInMarkdown(
+  markdown: string,
+  sourceLineIndex: number,
+  targetLineIndex: number,
+  placement: "before" | "after"
+): string {
+  if (sourceLineIndex === targetLineIndex) return markdown;
+
+  const parsed = parseTaskMarkdown(markdown);
+  const source = parsed.find((task) => task.lineIndex === sourceLineIndex);
+  const target = parsed.find((task) => task.lineIndex === targetLineIndex);
+
+  if (
+    !source ||
+    !target ||
+    source.parentLineIndex === null ||
+    target.parentLineIndex === null ||
+    source.parentLineIndex !== target.parentLineIndex
+  ) {
+    return markdown;
+  }
+
+  const lines = markdown.split(/\r?\n/);
+  const sourceEnd = taskSubtreeEndIndex(lines, sourceLineIndex);
+  const sourceBlock = lines.slice(sourceLineIndex, sourceEnd + 1);
+
+  lines.splice(sourceLineIndex, sourceBlock.length);
+
+  const adjustedTargetLineIndex =
+    sourceLineIndex < targetLineIndex
+      ? targetLineIndex - sourceBlock.length
+      : targetLineIndex;
+
+  const insertAt =
+    placement === "before"
+      ? adjustedTargetLineIndex
+      : taskSubtreeEndIndex(lines, adjustedTargetLineIndex) + 1;
+
+  lines.splice(insertAt, 0, ...sourceBlock);
   return lines.join("\n").replace(/\n?$/, "\n");
 }
 
