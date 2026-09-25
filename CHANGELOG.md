@@ -8,6 +8,7 @@
 - Open another document on either the left or right side from edge **+** pickers, by dragging a Markdown file from the sidebar, or by dragging an open tab.
 - Show a clear half-width drop preview on the side where a dragged document will open.
 - Add a center-divider swap control to exchange the left and right documents.
+- Add close and replace controls to both split panes; closing either side leaves the other document open as a normal single editor.
 - Keep each open document's unsaved content in the existing document cache while switching tabs or editing the second pane.
 
 ## [0.23.7] - 2026-09-25
