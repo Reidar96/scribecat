@@ -388,7 +388,7 @@
     height: 3.5rem;
     min-height: 3.5rem;
     box-sizing: border-box;
-    padding: 0.8rem 1rem;
+    padding: 0.55rem 0.65rem;
     border-bottom: 1px solid rgba(var(--overlay-rgb), 0.1);
   }
 
