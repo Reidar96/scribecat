@@ -200,28 +200,23 @@ export async function copyManagedAttachmentsForMarkdownVariants(
   const copiedSourcePaths: string[] = [];
 
   for (const sourceRootPath of sourceRootPaths) {
-    try {
-      const sourceAbsolutePath = await join(folderPath, sourceRootPath);
-      if (!(await exists(sourceAbsolutePath))) continue;
+    const sourceAbsolutePath = await join(folderPath, sourceRootPath);
+    if (!(await exists(sourceAbsolutePath))) continue;
 
-      const fileName = normalizeDisplayPath(sourceRootPath).split("/").pop();
-      if (!fileName) continue;
+    const fileName = normalizeDisplayPath(sourceRootPath).split("/").pop();
+    if (!fileName) continue;
 
-      const targetAbsolutePath = await uniqueAttachmentPath(
-        targetAttachmentsDirectory,
-        fileName
-      );
-      await writeFile(targetAbsolutePath, await readFile(sourceAbsolutePath));
+    const targetAbsolutePath = await uniqueAttachmentPath(
+      targetAttachmentsDirectory,
+      fileName
+    );
+    await writeFile(targetAbsolutePath, await readFile(sourceAbsolutePath));
 
-      copiedRootPaths.set(
-        sourceRootPath,
-        normalizeDisplayPath(getRelativeDisplayPath(folderPath, targetAbsolutePath))
-      );
-      copiedSourcePaths.push(sourceRootPath);
-    } catch {
-      // A missing/unreadable attachment must not make the Markdown itself
-      // impossible to move. Its original link is retained below.
-    }
+    copiedRootPaths.set(
+      sourceRootPath,
+      normalizeDisplayPath(getRelativeDisplayPath(folderPath, targetAbsolutePath))
+    );
+    copiedSourcePaths.push(sourceRootPath);
   }
 
   const variantsToRewrite = rewriteOptions?.markdownVariants ?? markdownVariants;
