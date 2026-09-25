@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { useLongPressContextMenu } from "@/hooks/useLongPressContextMenu";
 import { cn } from "@/lib/utils";
 import { carriesExternalFiles } from "@/lib/dragDrop/droppedSources";
 import { FILE_LINK_DRAG_MIME } from "@/lib/editor/fileLinks";
@@ -249,6 +250,10 @@ export function TreeNodeRow({
   const isDragSource = dragSourceKeys.includes(key);
   const isMultiSelected = selectedKeys.has(key);
   const activeDropPosition = dropIndicator?.key === key ? dropIndicator.position : null;
+  const bindContextMenu = useLongPressContextMenu<FileTreeNode>(
+    (target, point) => onRowContextMenu(target, point.x, point.y)
+  );
+  const contextMenuHandlers = bindContextMenu(node);
 
   const dragOutHandlers = isDragEnabled
     ? {
@@ -386,10 +391,7 @@ export function TreeNodeRow({
             tabIndex={tabIndex}
             ref={(element) => registerItemRef(key, element)}
             onClick={(event) => onRowClick(node, event)}
-            onContextMenu={(event) => {
-              event.preventDefault();
-              onRowContextMenu(node, event.clientX, event.clientY);
-            }}
+            {...contextMenuHandlers}
             {...dragHandlers}
           >
             {selectionMode ? (
@@ -554,10 +556,7 @@ export function TreeNodeRow({
           ref={(element) => registerItemRef(key, element)}
           onClick={(event) => onRowClick(node, event)}
           onDoubleClick={() => onRowDoubleClick(node)}
-          onContextMenu={(event) => {
-            event.preventDefault();
-            onRowContextMenu(node, event.clientX, event.clientY);
-          }}
+          {...contextMenuHandlers}
           {...dragHandlers}
         >
           {selectionMode ? (
