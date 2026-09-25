@@ -99,9 +99,12 @@ jobs:
           fi
 
           SERVER_IMAGE=ghcr.io/reidar96/scribecat-server
-          if docker manifest inspect "$SERVER_IMAGE:$VERSION" >/dev/null 2>&1; then
+          SERVER_MANIFEST=$(docker manifest inspect "$SERVER_IMAGE:$VERSION" 2>/dev/null || true)
+          if printf '%s' "$SERVER_MANIFEST" | grep -q '"manifests"'; then
             echo "server_dispatch=false" >> "$GITHUB_OUTPUT"
           else
+            # Missing tags and legacy single-architecture tags both need the
+            # versioned multi-arch release workflow.
             echo "server_dispatch=true" >> "$GITHUB_OUTPUT"
           fi
 
