@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.22.15] - 2026-09-25
+
+### Fixes and improvements
+- Restore the Calendar, Graph and Tasks shortcuts on the mobile Start view, including wider mobile/tablet layouts where the previous React and CSS breakpoints could disagree.
+- Place the split new-folder/new-note tile after all existing folders and notes in folder collections.
+- Keep completed subtasks compact while restoring their checkbox so an individual subtask can be marked incomplete again.
+- Keep subtask deadline, category, tags and priority hidden as a presentation choice only; the Markdown task data remains unchanged on disk.
+- Make Tasks feel faster by refreshing task Markdown only when task files change, progressively showing categories instead of waiting for every category file, and reflecting pending Markdown writes immediately in the view.
+
+
 ## [0.22.14] - 2026-09-25
 
 ### Fixes and improvements
