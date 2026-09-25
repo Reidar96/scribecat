@@ -540,6 +540,25 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
       return null;
     }
   },
+  createNamedFile: async (targetDirectory: string, newBaseName: string) => {
+    const { filePaths } = get();
+    const trimmedBaseName = newBaseName.trim().replace(/\.md$/i, "");
+
+    if (!trimmedBaseName || INVALID_FILE_NAME_CHARS.test(trimmedBaseName)) {
+      set({ fileError: i18n.t("store.invalidFileName") });
+      return null;
+    }
+
+    const newFilePath = await join(targetDirectory, `${trimmedBaseName}.md`);
+    const existingPathKeys = new Set(filePaths.map(normalizePathKey));
+
+    if (existingPathKeys.has(normalizePathKey(newFilePath))) {
+      set({ fileError: i18n.t("store.fileAlreadyExists") });
+      return null;
+    }
+
+    return (await get().createFileAtPath(newFilePath, "")) ? newFilePath : null;
+  },
   // Copies a file next to itself, named after it with a localized "(Copy)"
   // suffix and numbered on collision — mirrors createNewFile's placement
   // logic but anchors the manual-order insert on the source file instead of
@@ -683,6 +702,10 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
           ? currentState.filePaths
           : insertFilePathSorted(currentState.filePaths, filePath),
         manualOrder: nextManualOrder,
+        fileMtimeMs: {
+          ...currentState.fileMtimeMs,
+          [filePath]: Date.now()
+        },
         fileDocuments: {
           ...currentState.fileDocuments,
           [filePath]: { content, baseContent: content }
