@@ -81,6 +81,8 @@ export type FolderSlice = {
   /** Creates a folder at exactly this path (see createFileAtPath for the why). */
   createFolderAtPath: (folderPath: string) => Promise<boolean>;
   renameFolderPath: (folderPath: string, newBaseName: string) => Promise<boolean>;
+  /** Copies a complete folder next to itself, including attachments and empty subfolders. */
+  duplicateFolder: (folderPath: string) => Promise<string | null>;
   deleteFolderPath: (folderPath: string) => Promise<boolean>;
 };
 
@@ -142,8 +144,11 @@ export type FileSlice = {
    * without the editor jumping to each in turn.
    */
   createFileAtPath: (filePath: string, content: string) => Promise<boolean>;
-  /** Copies filePath to a sibling named after it plus a localized "(Copy)" suffix, and selects it. */
-  duplicateFile: (filePath: string) => Promise<string | null>;
+  /** Copies filePath to a sibling named after it plus a localized "(Copy)" suffix. */
+  duplicateFile: (
+    filePath: string,
+    options?: { select?: boolean }
+  ) => Promise<string | null>;
   registerImportedFiles: (
     importedFilePaths: string[],
     parentRelativePath: string,

@@ -1,7 +1,9 @@
+import { parseTaskMetadataSuffix, setTaskMetadataValue, taskMetadataIsoDate } from "@/lib/taskMetadata";
+
 export const TASKS_FOLDER_NAME = "Gjøremål";
 export const UNCATEGORIZED_TASK_CATEGORY = "Uten kategori";
 
-export type TaskSortMode = "name" | "modified" | "manual";
+export type TaskSortMode = "name" | "date" | "manual";
 
 export type TaskSettings = {
   folder: string;
@@ -36,11 +38,11 @@ export function normalizeTaskSettings(value: unknown): TaskSettings {
         : DEFAULT_TASK_SETTINGS.folder,
     hideFromSidebar: record.hideFromSidebar !== false,
     sortMode:
-      record.sortMode === "name" ||
-      record.sortMode === "modified" ||
-      record.sortMode === "manual"
+      record.sortMode === "name" || record.sortMode === "date" || record.sortMode === "manual"
         ? record.sortMode
-        : DEFAULT_TASK_SETTINGS.sortMode
+        : record.sortMode === "modified"
+          ? "date"
+          : DEFAULT_TASK_SETTINGS.sortMode
   };
 }
 
@@ -79,11 +81,6 @@ const TASK_NOTE_PATTERN = /^\s{2,}>\s?(.*)$/;
 const TAGS_SUFFIX_PATTERN = /^(.*?)(?:\s+🏷️\s+(.+))\s*$/;
 const DEADLINE_SUFFIX_PATTERN = /^(.*?)(?:\s+📅\s+(\d{4}-\d{2}-\d{2}))\s*$/;
 const PRIORITY_SUFFIX_PATTERN = /^(.*?)(?:\s+(🔴|🟡|🟢))\s*$/;
-const MODIFIED_SUFFIX_PATTERN =
-  /^(.*?)(?:\s+<!--\s*scribecat:modified=([^>]+?)\s*-->)\s*$/i;
-const MODIFIED_COMMENT_PATTERN =
-  /\s*<!--\s*scribecat:modified=[^>]+?\s*-->\s*$/i;
-
 function taskIndentWidth(value: string): number {
   return value.replace(/\t/g, "  ").length;
 }
@@ -189,20 +186,12 @@ function parseTaskContent(rawContent: string): {
   priority: TaskPriority;
   modifiedAt?: string;
 } {
-  let remainder = rawContent.trim();
+  const parsedMetadata = parseTaskMetadataSuffix(rawContent);
+  let remainder = parsedMetadata.content.trim();
   let tags: string[] = [];
   let deadline: TaskDeadline = null;
   let priority: TaskPriority = null;
-  let modifiedAt: string | undefined;
-
-  const modifiedMatch = MODIFIED_SUFFIX_PATTERN.exec(remainder);
-  if (modifiedMatch) {
-    remainder = modifiedMatch[1].trim();
-    const parsedTime = Date.parse(modifiedMatch[2].trim());
-    if (!Number.isNaN(parsedTime)) {
-      modifiedAt = new Date(parsedTime).toISOString();
-    }
-  }
+  const modifiedAt = taskMetadataIsoDate(parsedMetadata.metadata, "modified");
 
   const tagsMatch = TAGS_SUFFIX_PATTERN.exec(remainder);
   if (tagsMatch) {
@@ -232,14 +221,14 @@ function parseTaskContent(rawContent: string): {
 }
 
 function withTaskModifiedAt(line: string, modifiedAt: string | null | undefined): string {
-  if (!modifiedAt) return line.replace(MODIFIED_COMMENT_PATTERN, "").trimEnd();
+  if (!modifiedAt) return setTaskMetadataValue(line, "modified", null);
 
   const parsedTime = Date.parse(modifiedAt);
-  if (Number.isNaN(parsedTime)) {
-    return line.replace(MODIFIED_COMMENT_PATTERN, "").trimEnd();
-  }
-
-  return `${line.replace(MODIFIED_COMMENT_PATTERN, "").trimEnd()} <!-- scribecat:modified=${new Date(parsedTime).toISOString()} -->`;
+  return setTaskMetadataValue(
+    line,
+    "modified",
+    Number.isNaN(parsedTime) ? null : new Date(parsedTime).toISOString()
+  );
 }
 
 function taskNoteEndIndex(lines: string[], lineIndex: number): number {
@@ -572,4 +561,26 @@ export function renameTaskDocumentHeading(markdown: string, category: string): s
 
   const trimmedStart = markdown.replace(/^\s+/, "");
   return `${heading}\n\n${trimmedStart}`;
+}
+
+function taskDocumentBody(markdown: string): string {
+  return markdown
+    .replace(/^\s*#\s+.*(?:\r?\n|$)/, "")
+    .trim();
+}
+
+export function mergeTaskDocuments(
+  category: string,
+  targetMarkdown: string | null | undefined,
+  sourceMarkdown: string
+): string {
+  const heading = `# ${sanitizeTaskCategory(category)}`;
+  const bodies = [
+    targetMarkdown ? taskDocumentBody(targetMarkdown) : "",
+    taskDocumentBody(sourceMarkdown)
+  ].filter(Boolean);
+
+  return bodies.length > 0
+    ? `${heading}\n\n${bodies.join("\n\n")}\n`
+    : `${heading}\n`;
 }

@@ -1,6 +1,7 @@
 import { dirname, join } from "@/platform/paths";
 
 import i18n from "@/i18n";
+import { copyManagedAttachmentsForMarkdownVariants } from "@/lib/attachmentOps";
 import {
   cleanupOrphanedImages,
   createMarkdownFolderAtPath,
@@ -564,7 +565,10 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
   // logic but anchors the manual-order insert on the source file instead of
   // the current selection, and seeds the content from what's on screen when
   // the source is the open, possibly-unsaved document.
-  duplicateFile: async (filePath: string) => {
+  duplicateFile: async (
+    filePath: string,
+    options: { select?: boolean } = {}
+  ) => {
     const { folderPath, filePaths, fileDocuments, emptyFolderPaths } = get();
 
     if (!folderPath) {
@@ -592,7 +596,16 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
         suffix += 1;
       }
 
-      const content = fileDocuments[filePath]?.content ?? (await readMarkdownFile(filePath));
+      const sourceContent =
+        fileDocuments[filePath]?.content ?? (await readMarkdownFile(filePath));
+      const { markdownVariants } =
+        await copyManagedAttachmentsForMarkdownVariants(
+          folderPath,
+          filePath,
+          newFilePath,
+          [sourceContent]
+        );
+      const content = markdownVariants[0] ?? sourceContent;
 
       await writeMarkdownFile(newFilePath, content);
       snapshotFileVersion(folderPath, newFilePath, content);
@@ -624,14 +637,18 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
           ...fileDocuments,
           [newFilePath]: { content, baseContent: content }
         },
-        selectedFilePath: newFilePath,
-        selectedFileContent: content,
-        selectedFileBaseContent: content,
-        isFileLoading: false,
-        isSaving: false,
-        isDirty: false,
-        fileError: null,
-        saveError: null
+        ...(options.select === false
+          ? {}
+          : {
+              selectedFilePath: newFilePath,
+              selectedFileContent: content,
+              selectedFileBaseContent: content,
+              isFileLoading: false,
+              isSaving: false,
+              isDirty: false,
+              saveError: null
+            }),
+        fileError: null
       });
 
       return newFilePath;

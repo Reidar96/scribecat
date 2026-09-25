@@ -5,6 +5,7 @@ import {
   appendTaskToMarkdown,
   createTaskDocument,
   isTasksContainerRelativePath,
+  mergeTaskDocuments,
   normalizeTaskSettings,
   parseTaskMarkdown,
   insertSubtaskInMarkdown,
@@ -359,18 +360,42 @@ describe("tasks markdown", () => {
       normalizeTaskSettings({
         folder: "Oppgaver / Privat",
         hideFromSidebar: false,
+        sortMode: "date"
+      })
+    ).toEqual({
+      folder: "Oppgaver / Privat",
+      hideFromSidebar: false,
+      sortMode: "date"
+    });
+
+    expect(
+      normalizeTaskSettings({
+        folder: "Oppgaver / Privat",
+        hideFromSidebar: false,
         sortMode: "modified"
       })
     ).toEqual({
       folder: "Oppgaver / Privat",
       hideFromSidebar: false,
-      sortMode: "modified"
+      sortMode: "date"
     });
   });
 
   it("renames the category heading without changing the task body", () => {
     expect(renameTaskDocumentHeading("# Jobb\n\n- [ ] Lever\n", "Kunder")).toBe(
       "# Kunder\n\n- [ ] Lever\n"
+    );
+  });
+
+  it("merges category bodies without losing task markdown", () => {
+    expect(
+      mergeTaskDocuments(
+        "Uten kategori",
+        "# Uten kategori\n\n- [ ] Fra før\n",
+        "# Jobb\n\n- [ ] Flyttes\n  - [ ] Underoppgave\n"
+      )
+    ).toBe(
+      "# Uten kategori\n\n- [ ] Fra før\n\n- [ ] Flyttes\n  - [ ] Underoppgave\n"
     );
   });
 });

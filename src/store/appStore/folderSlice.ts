@@ -3,6 +3,7 @@ import { dirname, join } from "@/platform/paths";
 import { isRemoteVaultPath } from "@/platform/remote/vaultRoot";
 
 import i18n from "@/i18n";
+import { copyVaultDirectory } from "@/lib/attachmentOps";
 import {
   addRecentFolderPath,
   allowMarkdownFolderAccess,
@@ -13,14 +14,17 @@ import {
   deleteMarkdownFolder,
   getRelativeDisplayPath,
   listMarkdownFiles,
+  readMarkdownFile,
   markdownFolderExists,
   removeRecentFolderPath,
   renameMarkdownFolder,
   setLastOpenedFolderPath,
+  writeMarkdownFile,
   watchMarkdownFolder
 } from "@/lib/fileSystem";
 
 import { readDocumentLocks, writeDocumentLocks } from "@/lib/vaultMeta";
+import { iconPathKey } from "@/lib/vaultIcons";
 import { removeDocumentLockPath, renameDocumentLockPath } from "@/lib/documentLocks";
 
 import {
@@ -31,7 +35,7 @@ import {
 import { deleteFolderDraftsFor, flushDrafts, moveFolderDraftsFor } from "./drafts";
 import { toErrorMessage } from "./errors";
 import { buildFileMtimeMap, createLoadedFolderState } from "./folderState";
-import { dropVaultIcons, moveVaultIcons } from "./icons";
+import { dropVaultIcons, moveVaultIcons, persistVaultIconsIfChanged } from "./icons";
 import { initialAppData } from "./initialState";
 import {
   currentChildBasenames,
@@ -47,13 +51,18 @@ import {
 } from "./manualOrder";
 import {
   getBasename,
+  insertFilePathSorted,
   INVALID_FILE_NAME_CHARS,
   isPathInsideFolder,
   normalizePathKey,
   remapPathUnderRenamedFolder
 } from "./pathUtils";
 import type { AppSlice, FileDocumentState, FolderSlice } from "./types";
-import { deleteFolderVersionHistory, moveFolderVersionHistory } from "./versioning";
+import {
+  deleteFolderVersionHistory,
+  moveFolderVersionHistory,
+  snapshotFileVersion
+} from "./versioning";
 import { pruneWorkingSet } from "./workingSet";
 import { persistWorkingSet } from "./workingSetSlice";
 
@@ -467,6 +476,183 @@ export const createFolderSlice: AppSlice<FolderSlice> = (set, get) => ({
       });
 
       return false;
+    }
+  },
+  duplicateFolder: async (sourceFolderPath: string) => {
+    const state = get();
+    const vaultRootPath = state.folderPath;
+    if (!vaultRootPath) return null;
+
+    try {
+      const parentDirectory = await dirname(sourceFolderPath);
+      const sourceName = getBasename(sourceFolderPath);
+      const copySuffix = i18n.t("store.duplicateSuffix");
+      let candidateName = `${sourceName} (${copySuffix})`;
+      let targetFolderPath = await join(parentDirectory, candidateName);
+      let suffix = 2;
+
+      while (await markdownFolderExists(targetFolderPath)) {
+        candidateName = `${sourceName} (${copySuffix} ${suffix})`;
+        targetFolderPath = await join(parentDirectory, candidateName);
+        suffix += 1;
+      }
+
+      await copyVaultDirectory(sourceFolderPath, targetFolderPath);
+
+      const sourceFilePaths = state.filePaths.filter((path) =>
+        isPathInsideFolder(path, sourceFolderPath)
+      );
+      const copiedFilePaths: string[] = [];
+      const copiedDocuments: Record<string, FileDocumentState> = {};
+      const nextFileMtimeMs = { ...state.fileMtimeMs };
+
+      for (const sourceFilePath of sourceFilePaths) {
+        const targetFilePath = await remapPathUnderRenamedFolder(
+          sourceFilePath,
+          sourceFolderPath,
+          targetFolderPath
+        );
+        const sourceDocument = state.fileDocuments[sourceFilePath];
+        const content =
+          sourceDocument?.content ?? (await readMarkdownFile(targetFilePath));
+
+        if (sourceDocument?.content !== undefined) {
+          await writeMarkdownFile(targetFilePath, content);
+        }
+
+        snapshotFileVersion(vaultRootPath, targetFilePath, content);
+        copiedFilePaths.push(targetFilePath);
+        copiedDocuments[targetFilePath] = {
+          content,
+          baseContent: content
+        };
+        nextFileMtimeMs[targetFilePath] = Date.now();
+      }
+
+      const copiedEmptyFolderPaths = await Promise.all(
+        state.emptyFolderPaths
+          .filter(
+            (path) =>
+              normalizePathKey(path) === normalizePathKey(sourceFolderPath) ||
+              isPathInsideFolder(path, sourceFolderPath)
+          )
+          .map((path) =>
+            remapPathUnderRenamedFolder(
+              path,
+              sourceFolderPath,
+              targetFolderPath
+            )
+          )
+      );
+
+      let nextFilePaths = state.filePaths;
+      for (const path of copiedFilePaths) {
+        nextFilePaths = insertFilePathSorted(nextFilePaths, path);
+      }
+
+      const sourceRelativePath = getRelativeDisplayPath(
+        vaultRootPath,
+        sourceFolderPath
+      );
+      const targetRelativePath = getRelativeDisplayPath(
+        vaultRootPath,
+        targetFolderPath
+      );
+      const parentRelativePath = getRelativeDisplayPath(
+        vaultRootPath,
+        parentDirectory
+      );
+
+      let nextManualOrder = { ...state.manualOrder };
+      for (const [relativePath, order] of Object.entries(state.manualOrder)) {
+        if (
+          relativePath === sourceRelativePath ||
+          relativePath.startsWith(`${sourceRelativePath}/`)
+        ) {
+          const mappedRelativePath = `${targetRelativePath}${relativePath.slice(
+            sourceRelativePath.length
+          )}`;
+          nextManualOrder[mappedRelativePath] = [...order];
+        }
+      }
+
+      nextManualOrder = ensureManualOrderEntry(
+        nextManualOrder,
+        parentRelativePath,
+        currentChildBasenames(
+          vaultRootPath,
+          state.filePaths,
+          state.emptyFolderPaths,
+          parentRelativePath
+        )
+      );
+      const insertIndex = resolveManualOrderInsertIndex(
+        nextManualOrder,
+        parentRelativePath,
+        sourceName
+      );
+      nextManualOrder = insertManualOrderEntry(
+        nextManualOrder,
+        parentRelativePath,
+        candidateName,
+        insertIndex
+      );
+      persistManualOrderIfChanged(
+        vaultRootPath,
+        state.manualOrder,
+        nextManualOrder
+      );
+
+      const sourceIconKey = iconPathKey(sourceRelativePath);
+      const targetIconKey = iconPathKey(targetRelativePath);
+      const nextVaultIcons = { ...state.vaultIcons };
+      for (const [relativePath, icon] of Object.entries(state.vaultIcons)) {
+        if (
+          relativePath === sourceIconKey ||
+          relativePath.startsWith(`${sourceIconKey}/`)
+        ) {
+          nextVaultIcons[
+            `${targetIconKey}${relativePath.slice(sourceIconKey.length)}`
+          ] = icon;
+        }
+      }
+      persistVaultIconsIfChanged(
+        vaultRootPath,
+        state.vaultIcons,
+        nextVaultIcons
+      );
+
+      set({
+        filePaths: nextFilePaths,
+        emptyFolderPaths: [
+          ...state.emptyFolderPaths,
+          ...copiedEmptyFolderPaths.filter(
+            (path) =>
+              !state.emptyFolderPaths.some(
+                (existing) =>
+                  normalizePathKey(existing) === normalizePathKey(path)
+              )
+          )
+        ],
+        fileDocuments: {
+          ...state.fileDocuments,
+          ...copiedDocuments
+        },
+        fileMtimeMs: nextFileMtimeMs,
+        manualOrder: nextManualOrder,
+        vaultIcons: nextVaultIcons,
+        fileError: null
+      });
+
+      return targetFolderPath;
+    } catch (error) {
+      set({
+        fileError: toErrorMessage(
+          error,
+          i18n.t("store.folderDuplicateError")
+        )
+      });
+      return null;
     }
   },
   deleteFolderPath: async (folderPath: string) => {

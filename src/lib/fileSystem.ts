@@ -429,7 +429,11 @@ export async function rewriteRelativeImagePaths(
   markdown: string,
   oldFileDirPath: string,
   newFilePath: string,
-  folderPath: string
+  folderPath: string,
+  options?: {
+    movedFolder?: { sourcePath: string; targetPath: string };
+    skipAttachmentLinks?: boolean;
+  }
 ): Promise<string> {
   const matches = Array.from(markdown.matchAll(IMAGE_MARKDOWN_PATTERN));
 
@@ -447,6 +451,13 @@ export async function rewriteRelativeImagePaths(
       continue;
     }
 
+    if (
+      options?.skipAttachmentLinks &&
+      rawSrc.replace(/\\/g, "/").split("/").includes(ATTACHMENTS_FOLDER_NAME)
+    ) {
+      continue;
+    }
+
     const srcStart = matchIndex + match[0].indexOf("(") + 1;
     const srcEnd = srcStart + rawSrc.length;
 
@@ -461,7 +472,19 @@ export async function rewriteRelativeImagePaths(
         continue;
       }
 
-      const rootRelativePath = getRelativeDisplayPath(folderPath, absolutePath);
+      let targetAbsolutePath = absolutePath;
+
+      if (
+        options?.movedFolder &&
+        isPathInsideVault(options.movedFolder.sourcePath, absolutePath)
+      ) {
+        targetAbsolutePath = await join(
+          options.movedFolder.targetPath,
+          getRelativeDisplayPath(options.movedFolder.sourcePath, absolutePath)
+        );
+      }
+
+      const rootRelativePath = getRelativeDisplayPath(folderPath, targetAbsolutePath);
       const newRelativeSrc = await getRelativeImageMarkdownPath(folderPath, newFilePath, rootRelativePath);
 
       if (newRelativeSrc !== rawSrc) {

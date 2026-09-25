@@ -5,7 +5,9 @@ import {
   CalendarClock,
   ChevronDown,
   ChevronRight,
-  Clock,
+  Copy,
+  Ellipsis,
+  FolderInput,
   GripVertical,
   Home,
   PanelLeft,
@@ -24,6 +26,7 @@ import { useContextMenuState } from "@/components/fileTree/useContextMenuState";
 import { Button } from "@/components/ui/button";
 import {
   Menu,
+  MenuItem,
   MenuPopup,
   MenuPortal,
   MenuPositioner,
@@ -33,12 +36,14 @@ import {
   MenuTrigger
 } from "@/components/ui/menu";
 import { useLayoutMode } from "@/hooks/useLayoutMode";
+import { useLongPressContextMenu } from "@/hooks/useLongPressContextMenu";
 import { getRelativeDisplayPath, readMarkdownFile } from "@/lib/fileSystem";
 import {
   UNCATEGORIZED_TASK_CATEGORY,
   appendTaskToMarkdown,
   createTaskDocument,
   insertSubtaskInMarkdown,
+  mergeTaskDocuments,
   moveSiblingTaskInMarkdown,
   moveSubtaskInMarkdown,
   normalizeTaskTags,
@@ -114,11 +119,10 @@ function compareRootTasks(
   left: TaskItem,
   right: TaskItem,
   sortMode: TaskSortMode,
-  modifiedAtByRoot: Map<string, number>,
   locale: string,
   keepDateGroups: boolean
 ): number {
-  if (keepDateGroups) {
+  if (keepDateGroups || sortMode === "date") {
     const deadlineCompare = deadlineSortValue(left.deadline).localeCompare(
       deadlineSortValue(right.deadline)
     );
@@ -131,16 +135,11 @@ function compareRootTasks(
       numeric: true
     });
     if (nameCompare !== 0) return nameCompare;
-  } else if (sortMode === "modified") {
-    const modifiedCompare =
-      (modifiedAtByRoot.get(taskItemKey(right)) ?? 0) -
-      (modifiedAtByRoot.get(taskItemKey(left)) ?? 0);
-    if (modifiedCompare !== 0) return modifiedCompare;
   }
 
-  // Manual is the Markdown order inside each category file. Across category
-  // files there is no fabricated global order: categories remain stable and
-  // the task lines inside each file are the authoritative order.
+  // Date ties and Manual both fall back to the actual Markdown order inside
+  // each category. Across category files categories stay stable; this avoids
+  // inventing a global manual order that cannot be represented in Markdown.
   const categoryCompare = left.category.localeCompare(right.category, locale, {
     sensitivity: "base",
     numeric: true
@@ -570,6 +569,10 @@ export function TasksPanel({
   const [draggedRootKey, setDraggedRootKey] = useState<string | null>(null);
   const { contextMenu: categoryContextMenu, setContextMenu: setCategoryContextMenu } =
     useContextMenuState<{ category: string; x: number; y: number }>();
+  const { getLongPressProps: getCategoryLongPressProps } =
+    useLongPressContextMenu<string>((category, x, y) =>
+      setCategoryContextMenu({ category, x, y })
+    );
   const pendingMarkdownByPathRef = useRef(new Map<string, string>());
 
   useEffect(() => {
@@ -710,43 +713,6 @@ export function TasksPanel({
     [rootTasks]
   );
 
-  const modifiedAtByRoot = useMemo(() => {
-    const result = new Map<string, number>();
-    const tasksByFile = new Map<string, Map<number, TaskItem>>();
-
-    for (const task of allTasks) {
-      const byLine = tasksByFile.get(task.filePath) ?? new Map<number, TaskItem>();
-      byLine.set(task.lineIndex, task);
-      tasksByFile.set(task.filePath, byLine);
-    }
-
-    for (const task of allTasks) {
-      if (!task.modifiedAt) continue;
-      const modifiedAt = Date.parse(task.modifiedAt);
-      if (Number.isNaN(modifiedAt)) continue;
-
-      let root = task;
-      const byLine = tasksByFile.get(task.filePath);
-      const visited = new Set<number>();
-
-      while (
-        root.parentLineIndex !== null &&
-        byLine &&
-        !visited.has(root.lineIndex)
-      ) {
-        visited.add(root.lineIndex);
-        const parent = byLine.get(root.parentLineIndex);
-        if (!parent) break;
-        root = parent;
-      }
-
-      const key = taskItemKey(root);
-      result.set(key, Math.max(result.get(key) ?? 0, modifiedAt));
-    }
-
-    return result;
-  }, [allTasks]);
-
   const now = new Date();
   const todayKey = dateKey(now);
   const weekRange = currentWeekRange(now);
@@ -828,14 +794,12 @@ export function TasksPanel({
         left,
         right,
         taskSettings.sortMode,
-        modifiedAtByRoot,
         locale,
         timeBasedView
       );
     },
     [
       locale,
-      modifiedAtByRoot,
       recentlyCreatedRootKey,
       taskSettings.sortMode,
       timeBasedView
@@ -1347,33 +1311,121 @@ export function TasksPanel({
     }
   };
 
-  const deleteCategory = (category: string) => {
+  const duplicateCategory = async (category: string) => {
+    const source = documents[category];
+    if (!source || saving) return;
+
+    const suffix = t("tasks.categoryCopySuffix");
+    let candidate = sanitizeTaskCategory(`${category} (${suffix})`);
+    let number = 2;
+
+    while (documents[candidate]) {
+      candidate = sanitizeTaskCategory(`${category} (${suffix} ${number})`);
+      number += 1;
+    }
+
+    const markdown = renameTaskDocumentHeading(source.markdown, candidate);
+
+    setSaving(true);
+    try {
+      await persistCategory(candidate, markdown);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const moveCategoryTasks = async (
+    sourceCategory: string,
+    targetCategory: string
+  ): Promise<boolean> => {
+    const source = documents[sourceCategory];
+    const normalizedTarget = sanitizeTaskCategory(targetCategory);
+    if (!source || normalizedTarget === sourceCategory) return false;
+
+    const previousTarget = documents[normalizedTarget];
+    const targetPath = await resolveFilePath(normalizedTarget);
+    const mergedMarkdown = mergeTaskDocuments(
+      normalizedTarget,
+      previousTarget?.markdown,
+      source.markdown
+    );
+
+    if (!(await persistCategory(normalizedTarget, mergedMarkdown))) {
+      return false;
+    }
+
+    if (!(await onDeleteTaskFile(source.filePath))) {
+      if (previousTarget) {
+        await persistCategory(normalizedTarget, previousTarget.markdown);
+      } else {
+        await onDeleteTaskFile(targetPath);
+        setDocuments((current) => {
+          const next = { ...current };
+          delete next[normalizedTarget];
+          return next;
+        });
+      }
+      return false;
+    }
+
+    pendingMarkdownByPathRef.current.delete(source.filePath);
+    setDocuments((current) => {
+      const next = { ...current };
+      delete next[sourceCategory];
+      return next;
+    });
+
+    if (selectedView === categoryView(sourceCategory)) {
+      setSelectedView(categoryView(normalizedTarget));
+    }
+
+    return true;
+  };
+
+  const moveCategoryTasksPrompt = async (category: string) => {
     if (!documents[category] || saving) return;
+
+    const entered = window.prompt(
+      t("tasks.moveCategoryTasksPrompt", { category }),
+      category === UNCATEGORIZED_TASK_CATEGORY ? "" : UNCATEGORIZED_TASK_CATEGORY
+    );
+    if (entered === null || !entered.trim()) return;
+
+    const target = sanitizeTaskCategory(entered);
+    if (target === category) return;
+
+    setSaving(true);
+    try {
+      await moveCategoryTasks(category, target);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const deleteCategory = (category: string) => {
+    if (
+      category === UNCATEGORIZED_TASK_CATEGORY ||
+      !documents[category] ||
+      saving
+    ) {
+      return;
+    }
     setCategoryDelete(category);
   };
 
   const confirmDeleteCategory = async () => {
     if (!categoryDelete || saving) return;
-    const document = documents[categoryDelete];
-    if (!document) {
-      setCategoryDelete(null);
-      return;
-    }
 
     setSaving(true);
     try {
-      if (!(await onDeleteTaskFile(document.filePath))) return;
-
-      setDocuments((current) => {
-        const next = { ...current };
-        delete next[categoryDelete];
-        return next;
-      });
-
-      if (selectedView === categoryView(categoryDelete)) {
-        setSelectedView(ALL_TASKS);
+      if (
+        await moveCategoryTasks(
+          categoryDelete,
+          UNCATEGORIZED_TASK_CATEGORY
+        )
+      ) {
+        setCategoryDelete(null);
       }
-      setCategoryDelete(null);
     } finally {
       setSaving(false);
     }
@@ -1523,6 +1575,7 @@ export function TasksPanel({
                       y: event.clientY
                     });
                   }}
+                  {...getCategoryLongPressProps(category)}
                   onDragOver={(event) => {
                     if (!event.dataTransfer.types.includes(TASK_DRAG_MIME)) return;
                     if (event.dataTransfer.types.includes(TASK_SUBTASK_DRAG_MIME)) return;
@@ -1619,17 +1672,17 @@ export function TasksPanel({
                       >
                         <MenuRadioItem value="name">
                           <ArrowDownAZ className="size-4" aria-hidden="true" />
-                          {t("sidebar.sortModeName")}
+                          {t("tasks.sortName")}
                           <MenuRadioItemIndicator />
                         </MenuRadioItem>
-                        <MenuRadioItem value="modified">
-                          <Clock className="size-4" aria-hidden="true" />
-                          {t("sidebar.sortModeModified")}
+                        <MenuRadioItem value="date">
+                          <CalendarClock className="size-4" aria-hidden="true" />
+                          {t("tasks.sortDate")}
                           <MenuRadioItemIndicator />
                         </MenuRadioItem>
                         <MenuRadioItem value="manual">
                           <GripVertical className="size-4" aria-hidden="true" />
-                          {t("sidebar.sortModeManual")}
+                          {t("tasks.sortManual")}
                           <MenuRadioItemIndicator />
                         </MenuRadioItem>
                       </MenuRadioGroup>
@@ -1639,32 +1692,83 @@ export function TasksPanel({
               </Menu>
               {selectedCategory ? (
                 <>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="tasks-category-view-action"
-                    onClick={() => void renameCategory(selectedCategory)}
-                    disabled={saving}
-                    aria-label={t("tasks.renameCategory", { category: selectedCategory })}
-                    title={t("tasks.renameCategory", { category: selectedCategory })}
-                  >
-                    <Pencil />
-                    <span>{t("tasks.renameCategoryAction")}</span>
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="tasks-category-view-action tasks-category-view-action--danger"
-                    onClick={() => deleteCategory(selectedCategory)}
-                    disabled={saving}
-                    aria-label={t("tasks.deleteCategory", { category: selectedCategory })}
-                    title={t("tasks.deleteCategory", { category: selectedCategory })}
-                  >
-                    <Trash2 />
-                    <span>{t("tasks.deleteCategoryAction")}</span>
-                  </Button>
+                  <div className="tasks-category-actions__desktop">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="tasks-category-view-action"
+                      onClick={() => void renameCategory(selectedCategory)}
+                      disabled={saving}
+                      aria-label={t("tasks.renameCategory", { category: selectedCategory })}
+                      title={t("tasks.renameCategory", { category: selectedCategory })}
+                    >
+                      <Pencil />
+                      <span>{t("tasks.renameCategoryAction")}</span>
+                    </Button>
+                    {selectedCategory !== UNCATEGORIZED_TASK_CATEGORY ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="tasks-category-view-action tasks-category-view-action--danger"
+                        onClick={() => deleteCategory(selectedCategory)}
+                        disabled={saving}
+                        aria-label={t("tasks.deleteCategory", { category: selectedCategory })}
+                        title={t("tasks.deleteCategory", { category: selectedCategory })}
+                      >
+                        <Trash2 />
+                        <span>{t("tasks.deleteCategoryAction")}</span>
+                      </Button>
+                    ) : null}
+                  </div>
+                  <Menu>
+                    <MenuTrigger
+                      render={
+                        <Button
+                          type="button"
+                          size="icon-sm"
+                          variant="ghost"
+                          className="tasks-category-actions__more"
+                          disabled={saving}
+                          aria-label={t("tasks.categoryMoreActions")}
+                          title={t("tasks.categoryMoreActions")}
+                        >
+                          <Ellipsis />
+                        </Button>
+                      }
+                    />
+                    <MenuPortal>
+                      <MenuPositioner align="end">
+                        <MenuPopup>
+                          <MenuItem
+                            className="tasks-category-actions__mobile-item"
+                            onClick={() => void renameCategory(selectedCategory)}
+                          >
+                            <Pencil className="size-4" aria-hidden="true" />
+                            {t("tasks.renameCategoryAction")}
+                          </MenuItem>
+                          <MenuItem onClick={() => void duplicateCategory(selectedCategory)}>
+                            <Copy className="size-4" aria-hidden="true" />
+                            {t("tasks.duplicateCategoryAction")}
+                          </MenuItem>
+                          <MenuItem onClick={() => void moveCategoryTasksPrompt(selectedCategory)}>
+                            <FolderInput className="size-4" aria-hidden="true" />
+                            {t("tasks.moveCategoryTasksAction")}
+                          </MenuItem>
+                          {selectedCategory !== UNCATEGORIZED_TASK_CATEGORY ? (
+                            <MenuItem
+                              className="tasks-category-actions__mobile-item tasks-category-actions__danger"
+                              onClick={() => deleteCategory(selectedCategory)}
+                            >
+                              <Trash2 className="size-4" aria-hidden="true" />
+                              {t("tasks.deleteCategoryAction")}
+                            </MenuItem>
+                          ) : null}
+                        </MenuPopup>
+                      </MenuPositioner>
+                    </MenuPortal>
+                  </Menu>
                 </>
               ) : null}
             </div>
@@ -1888,16 +1992,44 @@ export function TasksPanel({
           <button
             type="button"
             role="menuitem"
-            className="file-tree-context-menu__item file-tree-context-menu__item--danger"
+            className="file-tree-context-menu__item"
             onClick={() => {
               const category = categoryContextMenu.category;
               setCategoryContextMenu(null);
-              deleteCategory(category);
+              void duplicateCategory(category);
             }}
           >
-            <Trash2 aria-hidden="true" />
-            {t("tasks.deleteCategoryAction")}
+            <Copy aria-hidden="true" />
+            {t("tasks.duplicateCategoryAction")}
           </button>
+          <button
+            type="button"
+            role="menuitem"
+            className="file-tree-context-menu__item"
+            onClick={() => {
+              const category = categoryContextMenu.category;
+              setCategoryContextMenu(null);
+              void moveCategoryTasksPrompt(category);
+            }}
+          >
+            <FolderInput aria-hidden="true" />
+            {t("tasks.moveCategoryTasksAction")}
+          </button>
+          {categoryContextMenu.category !== UNCATEGORIZED_TASK_CATEGORY ? (
+            <button
+              type="button"
+              role="menuitem"
+              className="file-tree-context-menu__item file-tree-context-menu__item--danger"
+              onClick={() => {
+                const category = categoryContextMenu.category;
+                setCategoryContextMenu(null);
+                deleteCategory(category);
+              }}
+            >
+              <Trash2 aria-hidden="true" />
+              {t("tasks.deleteCategoryAction")}
+            </button>
+          ) : null}
         </ContextMenuSurface>
       ) : null}
 

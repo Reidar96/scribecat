@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.23.0] - 2026-09-25
+
+### Improvements
+- Replace Tasks category sorting by recently modified with **Name, Date and Manual**. Date sorting puts undated tasks last, and existing vault settings that used the old recently-modified option migrate to Date.
+- Centralize internal `scribecat:*` task metadata parsing and serialization so invisible Markdown metadata has one implementation and remains extensible.
+- Move category actions into a compact `…` menu on small screens while keeping the main rename/delete controls visible on desktop.
+- Add long-press context menus on touch devices for task categories, files and folders, matching desktop right-click behavior.
+- Add category duplication and “Move all tasks…” actions. Deleting a category now moves its tasks to **Uncategorized** instead of deleting the tasks, while keeping the user in the resulting category context.
+- Share the core file/folder context-action model between the sidebar and Start/folder File Viewer: rename, duplicate, copy, move, export and delete use the same action surface.
+- Make note copy/move attachment-aware. Referenced images and document links under `_attachments` follow the Markdown file; moving a note only removes the old attachment copy when no other Markdown file still references it.
+- Make folder copy/move preserve the full folder tree, including nested `_attachments`, empty subfolders, manual ordering and folder/file icons.
+- Add File Viewer multi-selection with Ctrl/Cmd-click or selection mode. Selected entries can be duplicated, copied, moved, exported or deleted together; Delete/Backspace deletes, F2 renames one selected entry, and Ctrl/Cmd+D duplicates the selection.
+- Add a folder-background context menu in File Viewer with New note, New folder, Paste and sort choices.
+
+
 ## [0.22.20] - 2026-09-25
 
 ### Fixes and improvements
