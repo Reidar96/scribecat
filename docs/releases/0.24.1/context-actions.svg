@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675" role="img" aria-labelledby="title desc">
+<title id="title">ScribeCat 0.24.1 two-file context actions preview</title>
+<desc id="desc">Illustrative preview of two selected Markdown files and context menu actions to open them as a split view or as tabs.</desc>
+<rect width="1200" height="675" rx="28" fill="#111418"/>
+<text x="60" y="66" fill="#f1f5f9" font-family="system-ui, sans-serif" font-size="30" font-weight="760">Two selected notes, one action</text>
+<text x="60" y="98" fill="#8f9aa7" font-family="system-ui, sans-serif" font-size="16">Available from the sidebar and File Viewer when exactly two Markdown documents are selected</text>
+<rect x="55" y="133" width="515" height="472" rx="20" fill="#171b20" stroke="#303842"/>
+<rect x="55" y="133" width="515" height="49" rx="20" fill="#20262d"/><rect x="55" y="164" width="515" height="18" fill="#20262d"/>
+<text x="78" y="164" fill="#dce5ee" font-family="system-ui, sans-serif" font-size="15" font-weight="650">Files</text>
+<g font-family="system-ui, sans-serif" font-size="14">
+<rect x="77" y="204" width="470" height="44" rx="9" fill="#1d2329"/><text x="96" y="231" fill="#aeb8c3">▾  Projects</text>
+<rect x="96" y="258" width="437" height="44" rx="9" fill="#26344d" stroke="#7198ff"/><rect x="111" y="272" width="15" height="15" rx="4" fill="#7198ff"/><path d="M114 280l4 4 6-8" fill="none" stroke="#111418" stroke-width="2"/><text x="139" y="285" fill="#e7edff">Launch plan.md</text>
+<rect x="96" y="310" width="437" height="44" rx="9" fill="#26344d" stroke="#7198ff"/><rect x="111" y="324" width="15" height="15" rx="4" fill="#7198ff"/><path d="M114 332l4 4 6-8" fill="none" stroke="#111418" stroke-width="2"/><text x="139" y="337" fill="#e7edff">Research notes.md</text>
+<rect x="96" y="362" width="437" height="44" rx="9" fill="#1d2329"/><rect x="111" y="376" width="15" height="15" rx="4" fill="none" stroke="#586574"/><text x="139" y="389" fill="#b0bac5">Archive.md</text>
+</g>
+<rect x="601" y="172" width="463" height="302" rx="16" fill="#20262d" stroke="#3a4551"/>
+<text x="627" y="207" fill="#ecf1f6" font-family="system-ui, sans-serif" font-size="15" font-weight="700">2 documents selected</text>
+<line x1="620" y1="224" x2="1045" y2="224" stroke="#343e48"/>
+<rect x="620" y="241" width="425" height="54" rx="9" fill="#26344d" stroke="#7198ff"/>
+<rect x="639" y="257" width="23" height="22" rx="4" fill="#7198ff"/><path d="M645 263v10M656 263v10M645 268h11" stroke="#111418" stroke-width="2"/>
+<text x="679" y="273" fill="#edf2ff" font-family="system-ui, sans-serif" font-size="15" font-weight="650">Open selected in split view</text>
+<rect x="620" y="303" width="425" height="54" rx="9" fill="#272e36"/>
+<rect x="639" y="319" width="24" height="19" rx="3" fill="none" stroke="#b8c4d0" stroke-width="2"/><path d="M646 314h24v19" fill="none" stroke="#b8c4d0" stroke-width="2"/>
+<text x="679" y="335" fill="#dce4ec" font-family="system-ui, sans-serif" font-size="15" font-weight="650">Open selected as tabs</text>
+<line x1="620" y1="374" x2="1045" y2="374" stroke="#343e48"/>
+<text x="639" y="408" fill="#aab5c0" font-family="system-ui, sans-serif" font-size="14">Move to…</text>
+<text x="639" y="440" fill="#aab5c0" font-family="system-ui, sans-serif" font-size="14">Export…</text>
+<path d="M530 331C588 331 589 270 620 270" fill="none" stroke="#7198ff" stroke-width="2.5" stroke-dasharray="7 6"/>
+<path d="M612 264l10 6-10 6" fill="none" stroke="#7198ff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="602" y="501" width="460" height="67" rx="13" fill="#171b20" stroke="#303842"/>
+<text x="623" y="529" fill="#dce4ec" font-family="system-ui, sans-serif" font-size="14" font-weight="650">Folders are intentionally excluded</text>
+<text x="623" y="551" fill="#8f9aa7" font-family="system-ui, sans-serif" font-size="13">These actions appear only for two actual Markdown documents.</text>
+<text x="600" y="639" text-anchor="middle" fill="#7f8b98" font-family="system-ui, sans-serif" font-size="13">Illustrative UI preview — ScribeCat 0.24.1</text>
+</svg>
