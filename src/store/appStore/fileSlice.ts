@@ -637,14 +637,18 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
           ...fileDocuments,
           [newFilePath]: { content, baseContent: content }
         },
-        ...(options.select === false ? {} : { selectedFilePath: newFilePath }),
-        selectedFileContent: content,
-        selectedFileBaseContent: content,
-        isFileLoading: false,
-        isSaving: false,
-        isDirty: false,
-        fileError: null,
-        saveError: null
+        ...(options.select === false
+          ? {}
+          : {
+              selectedFilePath: newFilePath,
+              selectedFileContent: content,
+              selectedFileBaseContent: content,
+              isFileLoading: false,
+              isSaving: false,
+              isDirty: false,
+              saveError: null
+            }),
+        fileError: null
       });
 
       return newFilePath;
