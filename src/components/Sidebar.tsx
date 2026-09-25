@@ -50,6 +50,7 @@ import { WorkingSetPanel } from "@/components/sidebar/WorkingSetPanel";
 import { TagsOverview } from "@/components/sidebar/TagsOverview";
 import { SidebarSearchResults } from "@/components/sidebar/SidebarSearchResults";
 import { useTagIndex } from "@/hooks/useTagIndex";
+import { useLongPressContextMenu } from "@/hooks/useLongPressContextMenu";
 import { useVaultSearch } from "@/hooks/useVaultSearch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useStoredCollapsed, useWorkingSetHeight } from "@/hooks/useWorkingSetHeight";
@@ -341,14 +342,16 @@ export function Sidebar({
   const offersExport = platform.features.exportFiles || platform.features.downloads;
   const offersVaultArchive = canDownloadFolderArchive(folderPath);
 
-  const openRootContextMenu = (event: React.MouseEvent) => {
-    if (folderPath === null || !(offersExport || offersVaultArchive)) {
-      return;
-    }
+  const bindRootContextMenu = useLongPressContextMenu<"root">(
+    (_target, point) => {
+      if (folderPath === null || !(offersExport || offersVaultArchive)) {
+        return;
+      }
 
-    event.preventDefault();
-    setRootContextMenu({ x: event.clientX, y: event.clientY });
-  };
+      setRootContextMenu({ x: point.x, y: point.y });
+    }
+  );
+  const rootContextMenuHandlers = bindRootContextMenu("root");
 
   // Files dragged in from outside the app land as imported notes. Drags that
   // start inside the tree (reordering, or dragging a note into the editor) are
@@ -663,7 +666,7 @@ export function Sidebar({
                         disabled={isLoading}
                         title={folderPath ?? t("sidebar.openFolder")}
                         aria-label={t("sidebar.openRecentFolder")}
-                        onContextMenu={openRootContextMenu}
+                        {...rootContextMenuHandlers}
                       />
                     }
                   >
@@ -708,7 +711,7 @@ export function Sidebar({
                 <div
                   className="sidebar-panel__folder sidebar-panel__folder--static"
                   title={folderLabel}
-                  onContextMenu={openRootContextMenu}
+                  {...rootContextMenuHandlers}
                   data-testid="vault-name"
                 >
                   {folderLabelContent}
