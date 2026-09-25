@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.24.0] - 2026-09-25
+
+### New features
+- Add open-document tabs with a close button for every Markdown document. Tabs appear below the header on mobile and along the bottom of the desktop document panel.
+- Add a desktop-only two-document split editor with one shared formatting toolbar and an adjustable divider.
+- Open the second document from the right-edge **+** picker, by dragging a Markdown file from the sidebar, or by dragging an open tab toward the right side.
+- Show a clear half-width drop preview over the right side before a dragged document opens in split view.
+- Keep each open document's unsaved content in the existing document cache while switching tabs or editing the second pane.
+
 ## [0.23.7] - 2026-09-25
 
 ### Fixes and improvements
