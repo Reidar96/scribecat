@@ -123,6 +123,8 @@ type SidebarProps = {
   onTasksViewToggle: () => void;
   onDeleteFileRequest: (filePath: string) => void;
   onDuplicateFileRequest: (filePath: string) => void;
+  onDuplicateFolderRequest: (folderPath: string) => void;
+  onCopyRequest: (entries: BatchEntry[]) => void;
   onDeleteFolderRequest: (folderPath: string) => void;
   onDeleteMultipleRequest: (entries: BatchEntry[]) => void;
   onExportFileRequest: (filePath: string, mode: ExportMode) => void;
@@ -189,6 +191,8 @@ export function Sidebar({
   onTasksViewToggle,
   onDeleteFileRequest,
   onDuplicateFileRequest,
+  onDuplicateFolderRequest,
+  onCopyRequest,
   onDeleteFolderRequest,
   onDeleteMultipleRequest,
   onExportFileRequest,
@@ -924,6 +928,8 @@ export function Sidebar({
             onCreateFolderRequest={onCreateFolderRequest}
             onDeleteFileRequest={onDeleteFileRequest}
             onDuplicateFileRequest={onDuplicateFileRequest}
+            onDuplicateFolderRequest={onDuplicateFolderRequest}
+            onCopyRequest={onCopyRequest}
             onDeleteFolderRequest={onDeleteFolderRequest}
             onDeleteMultipleRequest={onDeleteMultipleRequest}
             onExportFileRequest={onExportFileRequest}
