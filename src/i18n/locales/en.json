@@ -1374,7 +1374,8 @@
     "label": "Open documents",
     "unsaved": "Unsaved changes",
     "close": "Close {{name}}",
-    "openSelected": "Open selected as tabs"
+    "openSelected": "Open selected as tabs",
+    "closeAll": "Close all tabs"
   },
   "split": {
     "open": "Open another document beside this one",
