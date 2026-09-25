@@ -46,7 +46,7 @@ import {
   type JournalDate,
   type JournalImage
 } from "@/lib/journal";
-import { suggestedImageFileName } from "@/lib/imageActions";
+import { suggestedImageFileName } from "@/lib/imageFileName";
 import { cn } from "@/lib/utils";
 import { getVaultCapabilities, platform, vaultCapabilityHint } from "@/platform";
 import { dirname, join } from "@/platform/paths";
