@@ -59,6 +59,21 @@ function parentFolderOf(relativeFilePath: string): string {
   return slash < 0 ? "" : normalized.slice(0, slash);
 }
 
+function folderAncestors(relativePath: string): string[] {
+  const segments = relativePath.replace(/\\/g, "/").split("/").filter(Boolean);
+  const ancestors = [""];
+  for (let length = 1; length <= segments.length; length += 1) {
+    ancestors.push(segments.slice(0, length).join("/"));
+  }
+  return ancestors;
+}
+
+function parentFolderPath(relativePath: string): string | null {
+  if (!relativePath) return null;
+  const slash = relativePath.lastIndexOf("/");
+  return slash < 0 ? "" : relativePath.slice(0, slash);
+}
+
 function folderLabel(relativePath: string, rootLabel: string): string {
   if (!relativePath) {
     return rootLabel;
@@ -122,9 +137,11 @@ export function buildVaultGraph({
     });
 
     const parentFolder = parentFolderOf(relativePath);
-    const key = folderKey(parentFolder);
-    if (!folderPathsByKey.has(key)) {
-      folderPathsByKey.set(key, parentFolder);
+    for (const folderPath of folderAncestors(parentFolder)) {
+      const key = folderKey(folderPath);
+      if (!folderPathsByKey.has(key)) {
+        folderPathsByKey.set(key, folderPath);
+      }
     }
 
     for (const tag of extractTags(markdownByPath[filePath] ?? "")) {
@@ -151,6 +168,13 @@ export function buildVaultGraph({
       label: `#${tag}`,
       tag
     });
+  }
+
+  for (const relativePath of folderPathsByKey.values()) {
+    const parentPath = parentFolderPath(relativePath);
+    if (parentPath !== null) {
+      addEdge("folder", folderId(relativePath), folderId(parentPath));
+    }
   }
 
   for (const filePath of filePaths) {
