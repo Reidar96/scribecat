@@ -562,6 +562,48 @@ export function CollectionPanel({
     setDropIndicator(null);
   };
 
+  const absoluteFolderPath = (relativePath: string) =>
+    join(folderPath, ...relativePath.split("/").filter(Boolean));
+
+  const renameCard = async (card: CollectionCard) => {
+    if (!capabilities.rename) return;
+
+    const entered = window.prompt(t("fileTree.rename"), card.title);
+    if (entered === null || !entered.trim() || entered.trim() === card.title) {
+      return;
+    }
+
+    if (card.kind === "folder") {
+      await onRenameFolder(await absoluteFolderPath(card.relativePath), entered.trim());
+    } else {
+      await onRenameFile(card.filePath, entered.trim());
+    }
+  };
+
+  const moveCard = async (card: CollectionCard) => {
+    if (!capabilities.move) return;
+
+    onMoveRequest([
+      {
+        kind: card.kind === "folder" ? "folder" : "file",
+        path:
+          card.kind === "folder"
+            ? await absoluteFolderPath(card.relativePath)
+            : card.filePath
+      }
+    ]);
+  };
+
+  const deleteCard = async (card: CollectionCard) => {
+    if (!capabilities.delete) return;
+
+    if (card.kind === "folder") {
+      onDeleteFolderRequest(await absoluteFolderPath(card.relativePath));
+    } else {
+      onDeleteFileRequest(card.filePath);
+    }
+  };
+
   const beginCreate = (kind: "folder" | "note") => {
     setCreateKind(kind);
     setCreateDraft("");
@@ -813,6 +855,14 @@ export function CollectionPanel({
                         cardDropPosition === "after" && "collection-card--drop-after"
                       )}
                       onClick={() => onOpenFolder(card.relativePath)}
+                      onContextMenu={(event) => {
+                        event.preventDefault();
+                        setContextMenu({
+                          card,
+                          x: event.clientX,
+                          y: event.clientY
+                        });
+                      }}
                       {...dragProps}
                     >
                       <div className="collection-card__top">
@@ -858,6 +908,14 @@ export function CollectionPanel({
                       cardDropPosition === "before" && "collection-card--drop-before",
                       cardDropPosition === "after" && "collection-card--drop-after"
                     )}
+                    onContextMenu={(event) => {
+                      event.preventDefault();
+                      setContextMenu({
+                        card,
+                        x: event.clientX,
+                        y: event.clientY
+                      });
+                    }}
                     {...dragProps}
                   >
                     <button
