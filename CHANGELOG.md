@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.23.7] - 2026-09-25
+
+### Fixes and improvements
+- Fix File Viewer manual reordering so multi-column grids use left/right hover and drop indicators, while single-column layouts keep the existing top/bottom behavior.
+- Keep Journal and Tasks storage out of Graph View: their Markdown files and folders are excluded, tags originating only from those files disappear, and links to those hidden files are not added to the graph.
+
 ## [0.23.6] - 2026-09-25
 
 ### Fixes and improvements
