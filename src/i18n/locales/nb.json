@@ -506,6 +506,8 @@
     "priorityLow": "Lav prioritet",
     "dragTask": "Dra gjøremålet til en kategori",
     "renameCategory": "Endre navn på {{category}}",
+    "renameCategoryAction": "Endre navn",
+    "deleteCategoryAction": "Slett kategori",
     "renameCategoryPrompt": "Nytt kategorinavn",
     "deleteCategory": "Slett kategorien {{category}}",
     "deleteCategoryConfirm": "Slette kategorien «{{category}}» og {{count}} gjøremål?",
