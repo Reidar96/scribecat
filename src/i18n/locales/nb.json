@@ -461,6 +461,8 @@
     "moveImageRight": "Flytt bildet senere",
     "previousDay": "Forrige dag",
     "nextDay": "Neste dag",
+    "createPreviousDay": "Opprett forrige dag",
+    "createNextDay": "Opprett neste dag",
     "showCalendar": "Kalender",
     "search": "Søk i dagboken",
     "searchPlaceholder": "Søk i dagboken…",
@@ -471,7 +473,8 @@
     "overview": "Oversikt",
     "closeResults": "Lukk resultatlisten",
     "reorderImages": "Endre rekkefølge",
-    "reorderImagesHint": "Dra bildene for å endre rekkefølgen."
+    "reorderImagesHint": "Dra bildene for å endre rekkefølgen.",
+    "deleteEntry": "Slett oppføringen"
   },
   "tasks": {
     "label": "Gjøremål",
