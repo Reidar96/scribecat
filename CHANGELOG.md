@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.23.3] - 2026-09-25
+
+### Fixes and improvements
+- Add a visible **Move to…** action to File Viewer multi-selection, so selected files and folders can be moved directly after marking them without first opening a right-click menu.
+- Keep single-item right-click behavior unchanged while making the multi-selection action bar wrap cleanly on narrow and mobile layouts.
+
 ## [0.23.2] - 2026-09-25
 
 ### Fixes and improvements
