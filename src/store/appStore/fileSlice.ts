@@ -48,6 +48,34 @@ import {
 } from "./versioning";
 
 export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
+  loadFileDocument: async (filePath: string) => {
+    if (get().fileDocuments[filePath]) {
+      return true;
+    }
+
+    try {
+      const [markdown, baseMtimeMs] = await Promise.all([
+        readMarkdownFile(filePath),
+        readMarkdownFileMtime(filePath)
+      ]);
+
+      const currentState = get();
+      set({
+        fileDocuments: {
+          ...currentState.fileDocuments,
+          [filePath]: {
+            content: markdown,
+            baseContent: markdown,
+            baseMtimeMs
+          }
+        }
+      });
+      return true;
+    } catch (error) {
+      set({ fileError: toErrorMessage(error, i18n.t("store.fileLoadError")) });
+      return false;
+    }
+  },
   clearSelectedFile: () => {
     // Keep the document map and draft intact: Start is navigation, not a close
     // or discard operation. Only the active editor mirror is cleared.
@@ -178,34 +206,43 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
 
     return get().selectFilePath(notePath);
   },
-  updateSelectedFileContent: (markdown: string) => {
-    const { selectedFilePath, selectedFileBaseContent, fileDocuments, folderPath, workingSet } = get();
+  updateFileContent: (filePath: string, markdown: string) => {
+    const {
+      selectedFilePath,
+      selectedFileBaseContent,
+      fileDocuments,
+      folderPath,
+      workingSet
+    } = get();
+    const currentDocument = fileDocuments[filePath];
 
-    if (!selectedFilePath) {
+    if (!currentDocument && filePath !== selectedFilePath) {
       return;
     }
 
-    const currentDocument = fileDocuments[selectedFilePath];
-    const baseContent = currentDocument?.baseContent ?? selectedFileBaseContent ?? markdown;
-    // Carried, never looked up here: the mtime belongs to the moment the
-    // baseline was read, and only the reader of the file knows it.
+    const baseContent =
+      currentDocument?.baseContent ??
+      (filePath === selectedFilePath ? selectedFileBaseContent : null) ??
+      markdown;
     const baseMtimeMs = currentDocument?.baseMtimeMs;
     const isDirty = markdown !== baseContent;
-    // Becoming dirty is the one automatic way into the "In progress" list,
-    // and only when the user has asked for that; by default pinning is the
-    // only way in.
     const nextWorkingSet =
-      isDirty && shouldAutoAdmitWorkingSet() && !hasWorkingSetEntry(workingSet, selectedFilePath)
-        ? addWorkingSetEntry(workingSet, selectedFilePath)
+      isDirty && shouldAutoAdmitWorkingSet() && !hasWorkingSetEntry(workingSet, filePath)
+        ? addWorkingSetEntry(workingSet, filePath)
         : workingSet;
+    const isSelected = filePath === selectedFilePath;
 
     set({
-      selectedFileContent: markdown,
-      selectedFileBaseContent: baseContent,
-      isDirty,
+      ...(isSelected
+        ? {
+            selectedFileContent: markdown,
+            selectedFileBaseContent: baseContent,
+            isDirty
+          }
+        : {}),
       fileDocuments: {
         ...fileDocuments,
-        [selectedFilePath]: {
+        [filePath]: {
           content: markdown,
           baseContent,
           baseMtimeMs
@@ -219,12 +256,16 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
       persistWorkingSet(folderPath, nextWorkingSet);
     }
 
-    // The draft follows the dirty state: typed back to the baseline means
-    // there is nothing to keep.
     if (markdown === baseContent) {
-      discardDraft(folderPath, selectedFilePath);
+      discardDraft(folderPath, filePath);
     } else {
-      scheduleDraft(folderPath, selectedFilePath, markdown, baseMtimeMs ?? null);
+      scheduleDraft(folderPath, filePath, markdown, baseMtimeMs ?? null);
+    }
+  },
+  updateSelectedFileContent: (markdown: string) => {
+    const { selectedFilePath } = get();
+    if (selectedFilePath) {
+      get().updateFileContent(selectedFilePath, markdown);
     }
   },
   // A markdown file can be written in more than one way for the same document
