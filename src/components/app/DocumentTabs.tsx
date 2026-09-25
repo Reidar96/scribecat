@@ -12,6 +12,7 @@ type DocumentTabsProps = {
   dirtyFilePaths: string[];
   onSelect: (filePath: string) => void;
   onClose: (filePath: string) => void;
+  onCloseAll: () => void;
   onReorder: (draggedFilePath: string, targetFilePath: string, position: "before" | "after") => void;
 };
 
@@ -21,6 +22,7 @@ export function DocumentTabs({
   dirtyFilePaths,
   onSelect,
   onClose,
+  onCloseAll,
   onReorder
 }: DocumentTabsProps) {
   const { t } = useTranslation();
@@ -31,8 +33,9 @@ export function DocumentTabs({
   }
 
   return (
-    <div className="document-tabs" role="tablist" aria-label={t("tabs.label")}>
-      {filePaths.map((filePath) => {
+    <div className="document-tabs-bar">
+      <div className="document-tabs" role="tablist" aria-label={t("tabs.label")}>
+        {filePaths.map((filePath) => {
         const active = filePath === activeFilePath;
         const label = getFileLinkLabel(filePath);
 
@@ -90,7 +93,18 @@ export function DocumentTabs({
             </button>
           </div>
         );
-      })}
+        })}
+      </div>
+      <button
+        type="button"
+        className="document-tabs__close-all"
+        aria-label={t("tabs.closeAll")}
+        title={t("tabs.closeAll")}
+        onClick={onCloseAll}
+      >
+        <X aria-hidden="true" />
+        <span>{t("tabs.closeAll")}</span>
+      </button>
     </div>
   );
 }
