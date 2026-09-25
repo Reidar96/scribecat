@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.23.2] - 2026-09-25
+
+### Fixes and improvements
+- Keep File Viewer manual drag-and-drop reordering available while multi-selection mode is active. Reordering now starts from the visible drag handle, so selecting cards and sorting them no longer disable each other.
+- Show a clickable checkbox on every File Viewer card while selection mode is active, with **Select all** and **Clear selection** actions above the grid.
+- Keep right-click and long-press context menus independent from selection state: opening a menu no longer silently selects the clicked card.
+- Reserve the File Viewer drag handle and manual-sorted file-tree rows for drag gestures on touch devices, while suppressing the synthesized touch context-menu event that previously competed with dragging.
+- Remove the unavailable **Copy image** action from image menus; **Download image** remains available.
+
 ## [0.23.1] - 2026-09-25
 
 ### Fixes and improvements

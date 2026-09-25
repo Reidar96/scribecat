@@ -965,6 +965,11 @@
   "collection": {
     "label": "Notatsamling",
     "selectionMode": "Velg flere",
+    "selectAll": "Velg alle",
+    "clearSelection": "Fjern markering",
+    "selectItem": "Velg {{title}}",
+    "deselectItem": "Fjern markering av {{title}}",
+    "dragToReorder": "Dra for å endre rekkefølge",
     "root": "Start",
     "close": "Lukk samlingsvisning",
     "noteCount_one": "{{count}} notat",

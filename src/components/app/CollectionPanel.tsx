@@ -4,7 +4,8 @@ import {
   useState,
   type DragEvent,
   type KeyboardEvent,
-  type MouseEvent
+  type MouseEvent,
+  type PointerEvent
 } from "react";
 import {
   ArrowDownAZ,
@@ -522,10 +523,7 @@ export function CollectionPanel({
   }, [request.kind, request.kind === "folder" ? request.relativePath : request.tag, sortMode]);
 
   const manualReorderEnabled =
-    request.kind === "folder" &&
-    sortMode === "manual" &&
-    !selectionMode &&
-    selectedKeys.size <= 1;
+    request.kind === "folder" && sortMode === "manual";
 
   const handleCardDragStart = (
     event: DragEvent<HTMLElement>,
@@ -715,6 +713,14 @@ export function CollectionPanel({
     });
   };
 
+  const selectAllCards = () => {
+    setSelectedKeys(new Set(cards.map(collectionCardKey)));
+  };
+
+  const clearCardSelection = () => {
+    setSelectedKeys(new Set());
+  };
+
   const handleCardActivation = (
     event: MouseEvent<HTMLElement>,
     card: CollectionCard
@@ -745,9 +751,6 @@ export function CollectionPanel({
         ? selectedCards
         : [card];
 
-    if (items.length === 1) {
-      setSelectedKeys(new Set([key]));
-    }
     setBackgroundContextMenu(null);
     setContextMenu({ cards: items, x, y });
   };
@@ -984,6 +987,32 @@ export function CollectionPanel({
           </div>
         </header>
 
+        {selectionMode ? (
+          <div className="collection-panel__selection-bar">
+            <span>{t("fileTree.selectionCount", { count: selectedCards.length })}</span>
+            <div className="collection-panel__selection-actions">
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                disabled={cards.length === 0 || selectedKeys.size === cards.length}
+                onClick={selectAllCards}
+              >
+                {t("collection.selectAll")}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                disabled={selectedKeys.size === 0}
+                onClick={clearCardSelection}
+              >
+                {t("collection.clearSelection")}
+              </Button>
+            </div>
+          </div>
+        ) : null}
+
         <div
           className="collection-panel__body"
           onContextMenu={(event) => {
@@ -1048,11 +1077,8 @@ export function CollectionPanel({
                 const key = collectionCardKey(card);
                 const cardDropPosition =
                   dropIndicator?.key === key ? dropIndicator.position : null;
-                const dragProps = manualReorderEnabled
+                const dropTargetProps = manualReorderEnabled
                   ? {
-                      draggable: true,
-                      onDragStart: (event: DragEvent<HTMLElement>) =>
-                        handleCardDragStart(event, card),
                       onDragOver: (event: DragEvent<HTMLElement>) =>
                         handleCardDragOver(event, card),
                       onDragLeave: () => {
@@ -1061,19 +1087,32 @@ export function CollectionPanel({
                         }
                       },
                       onDrop: (event: DragEvent<HTMLElement>) =>
-                        void handleCardDrop(event, card),
+                        void handleCardDrop(event, card)
+                    }
+                  : {};
+                const dragHandleProps = manualReorderEnabled
+                  ? {
+                      draggable: true,
+                      onDragStart: (event: DragEvent<HTMLElement>) =>
+                        handleCardDragStart(event, card),
                       onDragEnd: () => {
                         setDraggedCardKey(null);
                         setDropIndicator(null);
+                      },
+                      onPointerDown: (event: PointerEvent<HTMLElement>) => {
+                        event.stopPropagation();
+                      },
+                      onClick: (event: MouseEvent<HTMLElement>) => {
+                        event.preventDefault();
+                        event.stopPropagation();
                       }
                     }
                   : {};
 
                 if (card.kind === "folder") {
                   return (
-                    <button
+                    <article
                       key={`folder:${card.relativePath}`}
-                      type="button"
                       className={cn(
                         "collection-card collection-card--folder",
                         selectedKeys.has(key) && "collection-card--selected",
@@ -1081,26 +1120,54 @@ export function CollectionPanel({
                         cardDropPosition === "before" && "collection-card--drop-before",
                         cardDropPosition === "after" && "collection-card--drop-after"
                       )}
-                      aria-pressed={selectedKeys.has(key)}
-                      onClick={(event) => handleCardActivation(event, card)}
                       onContextMenu={(event) => {
                         event.preventDefault();
                         event.stopPropagation();
                         openCardContextMenu(card, event.clientX, event.clientY);
                       }}
                       {...getCardLongPressProps(card)}
-                      {...dragProps}
+                      {...dropTargetProps}
                     >
+                      <button
+                        type="button"
+                        className="collection-card__click-target"
+                        aria-label={t("fileTree.openFolderCollection", { path: card.relativePath })}
+                        aria-pressed={selectedKeys.has(key)}
+                        onClick={(event) => handleCardActivation(event, card)}
+                      />
                       <div className="collection-card__top">
                         <Folder aria-hidden="true" />
                         <span className="collection-card__kind">{t("collection.folder")}</span>
-                        {selectedKeys.has(key) ? (
-                          <span className="collection-card__selection" aria-hidden="true">
-                            <Check />
-                          </span>
+                        {selectionMode ? (
+                          <button
+                            type="button"
+                            className="collection-card__selection-checkbox"
+                            role="checkbox"
+                            aria-checked={selectedKeys.has(key)}
+                            aria-label={t(
+                              selectedKeys.has(key)
+                                ? "collection.deselectItem"
+                                : "collection.selectItem",
+                              { title: card.title }
+                            )}
+                            onPointerDown={(event) => event.stopPropagation()}
+                            onClick={(event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                              toggleCardSelection(card);
+                            }}
+                          >
+                            {selectedKeys.has(key) ? <Check /> : null}
+                          </button>
                         ) : null}
                         {manualReorderEnabled ? (
-                          <GripVertical className="collection-card__drag-icon" aria-hidden="true" />
+                          <span
+                            className="collection-card__drag-handle"
+                            title={t("collection.dragToReorder")}
+                            {...dragHandleProps}
+                          >
+                            <GripVertical aria-hidden="true" />
+                          </span>
                         ) : null}
                       </div>
                       <h3>{card.title}</h3>
@@ -1109,7 +1176,7 @@ export function CollectionPanel({
                           {formatModifiedLabel(card.mtimeMs, i18n.resolvedLanguage ?? i18n.language)}
                         </span>
                       ) : null}
-                    </button>
+                    </article>
                   );
                 }
 
@@ -1146,7 +1213,7 @@ export function CollectionPanel({
                       openCardContextMenu(card, event.clientX, event.clientY);
                     }}
                     {...getCardLongPressProps(card)}
-                    {...dragProps}
+                    {...dropTargetProps}
                   >
                     <button
                       type="button"
@@ -1160,13 +1227,36 @@ export function CollectionPanel({
                       <span className="collection-card__kind">
                         {t(card.folderNote ? "app.folderNoteBadge" : "collection.note")}
                       </span>
-                      {selectedKeys.has(key) ? (
-                        <span className="collection-card__selection" aria-hidden="true">
-                          <Check />
-                        </span>
+                      {selectionMode ? (
+                        <button
+                          type="button"
+                          className="collection-card__selection-checkbox"
+                          role="checkbox"
+                          aria-checked={selectedKeys.has(key)}
+                          aria-label={t(
+                            selectedKeys.has(key)
+                              ? "collection.deselectItem"
+                              : "collection.selectItem",
+                            { title: card.title }
+                          )}
+                          onPointerDown={(event) => event.stopPropagation()}
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            toggleCardSelection(card);
+                          }}
+                        >
+                          {selectedKeys.has(key) ? <Check /> : null}
+                        </button>
                       ) : null}
                       {manualReorderEnabled ? (
-                        <GripVertical className="collection-card__drag-icon" aria-hidden="true" />
+                        <span
+                          className="collection-card__drag-handle"
+                          title={t("collection.dragToReorder")}
+                          {...dragHandleProps}
+                        >
+                          <GripVertical aria-hidden="true" />
+                        </span>
                       ) : null}
                     </div>
                     <h3>{card.title}</h3>

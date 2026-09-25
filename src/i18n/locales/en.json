@@ -1329,6 +1329,11 @@
   "collection": {
     "label": "Note collection",
     "selectionMode": "Select multiple",
+    "selectAll": "Select all",
+    "clearSelection": "Clear selection",
+    "selectItem": "Select {{title}}",
+    "deselectItem": "Deselect {{title}}",
+    "dragToReorder": "Drag to reorder",
     "root": "Home",
     "close": "Close collection view",
     "noteCount_one": "{{count}} note",

@@ -77,6 +77,25 @@
   font-size: var(--font-ui-sm);
 }
 
+.collection-panel__selection-bar {
+  display: flex;
+  min-height: 2.6rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-bottom: 1px solid rgba(var(--overlay-rgb),0.1);
+  background: rgba(var(--accent-rgb),0.045);
+  padding: 0.35rem 1rem;
+  color: rgba(var(--muted-rgb),0.95);
+  font-size: var(--font-ui-sm);
+}
+
+.collection-panel__selection-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
 .collection-panel__body {
   min-height: 0;
   flex: 1;
@@ -199,30 +218,73 @@
   color: rgba(var(--muted-rgb),0.95);
 }
 
-.collection-card__drag-icon {
-  width: 0.9rem !important;
-  height: 0.9rem !important;
-  margin-left: auto;
-  color: rgba(var(--muted-rgb),0.48);
-}
-
-.collection-card__selection {
+.collection-card__selection-checkbox {
+  position: relative;
+  z-index: 2;
   display: grid;
   width: 1.15rem;
   height: 1.15rem;
   margin-left: auto;
   place-items: center;
+  border: 1px solid rgba(var(--overlay-rgb),0.3);
   border-radius: 0.32rem;
-  background: rgb(var(--accent-rgb));
+  background: rgba(var(--surface-rgb),0.92);
+  padding: 0;
   color: white;
+  cursor: pointer;
 }
 
-.collection-card__selection > svg {
+.collection-card__selection-checkbox:hover,
+.collection-card__selection-checkbox:focus-visible {
+  border-color: rgba(var(--accent-rgb),0.62);
+  outline: none;
+}
+
+.collection-card__selection-checkbox:focus-visible {
+  box-shadow: 0 0 0 2px rgba(var(--accent-rgb),0.18);
+}
+
+.collection-card__selection-checkbox[aria-checked="true"] {
+  border-color: rgb(var(--accent-rgb));
+  background: rgb(var(--accent-rgb));
+}
+
+.collection-card__selection-checkbox > svg {
   width: 0.72rem;
   height: 0.72rem;
 }
 
-.collection-card__selection + .collection-card__drag-icon {
+.collection-card__drag-handle {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  width: 1.35rem;
+  height: 1.35rem;
+  margin-left: auto;
+  flex: none;
+  place-items: center;
+  border-radius: 0.35rem;
+  color: rgba(var(--muted-rgb),0.58);
+  cursor: grab;
+  user-select: none;
+  -webkit-user-drag: element;
+}
+
+.collection-card__drag-handle:hover {
+  background: rgba(var(--overlay-rgb),0.07);
+  color: rgba(var(--text-rgb),0.82);
+}
+
+.collection-card__drag-handle:active {
+  cursor: grabbing;
+}
+
+.collection-card__drag-handle > svg {
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+.collection-card__selection-checkbox + .collection-card__drag-handle {
   margin-left: 0;
 }
 
@@ -353,6 +415,10 @@
 @media (max-width: 720px) {
   .collection-panel__header {
     padding: 0.55rem 0.65rem;
+  }
+
+  .collection-panel__selection-bar {
+    padding-inline: 0.65rem;
   }
 
   .collection-panel__body {

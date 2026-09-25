@@ -1,12 +1,8 @@
 import { useState } from "react";
-import { Copy, Download, Trash2 } from "lucide-react";
+import { Download, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-import {
-  canCopyImageToClipboard,
-  copyImageToClipboard,
-  downloadImage
-} from "@/lib/imageActions";
+import { downloadImage } from "@/lib/imageActions";
 
 type ImageContextMenuItemsProps = {
   src: string | null;
@@ -22,27 +18,12 @@ export function ImageContextMenuItems({
   onDelete
 }: ImageContextMenuItemsProps) {
   const { t } = useTranslation();
-  const [busy, setBusy] = useState<"copy" | "download" | null>(null);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const copyAvailable = Boolean(src) && canCopyImageToClipboard();
-
-  const copy = async () => {
-    if (!src || busy) return;
-    setBusy("copy");
-    setError(null);
-
-    if (await copyImageToClipboard(src)) {
-      onClose();
-      return;
-    }
-
-    setBusy(null);
-    setError(t("imageView.copyFailed"));
-  };
 
   const download = async () => {
     if (!src || busy) return;
-    setBusy("download");
+    setBusy(true);
     setError(null);
 
     if (await downloadImage(src, fileName)) {
@@ -50,7 +31,7 @@ export function ImageContextMenuItems({
       return;
     }
 
-    setBusy(null);
+    setBusy(false);
     setError(t("imageView.downloadFailed"));
   };
 
@@ -60,18 +41,7 @@ export function ImageContextMenuItems({
         type="button"
         role="menuitem"
         className="file-tree-context-menu__item"
-        disabled={!copyAvailable || busy !== null}
-        title={copyAvailable ? undefined : t("imageView.copyUnavailable")}
-        onClick={() => void copy()}
-      >
-        <Copy aria-hidden="true" />
-        {t("imageView.copy")}
-      </button>
-      <button
-        type="button"
-        role="menuitem"
-        className="file-tree-context-menu__item"
-        disabled={!src || busy !== null}
+        disabled={!src || busy}
         onClick={() => void download()}
       >
         <Download aria-hidden="true" />
@@ -82,7 +52,7 @@ export function ImageContextMenuItems({
           type="button"
           role="menuitem"
           className="file-tree-context-menu__item file-tree-context-menu__item--danger"
-          disabled={busy !== null}
+          disabled={busy}
           onClick={onDelete}
         >
           <Trash2 aria-hidden="true" />
