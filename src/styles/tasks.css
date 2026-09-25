@@ -346,14 +346,22 @@
 }
 
 .tasks-item--subtask {
-  margin-top: -0.5rem;
   margin-left: 2.2rem;
-  border-top: 0;
   border-right-color: transparent;
   border-bottom-color: transparent;
   background: rgba(var(--surface-raised-rgb),0.18);
-  padding-top: 0.52rem;
-  padding-bottom: 0.52rem;
+  padding-top: 0.48rem;
+  padding-bottom: 0.48rem;
+}
+
+.tasks-item--subtask.tasks-item--checked {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  padding-top: 0.42rem;
+  padding-bottom: 0.42rem;
+}
+
+.tasks-item--subtask.tasks-item--checked .tasks-item__drag {
+  display: none;
 }
 
 .tasks-item--subtask::before {
@@ -852,7 +860,6 @@
   }
 
   .tasks-item--subtask {
-    margin-top: -0.5rem;
     margin-left: 1rem;
   }
 
