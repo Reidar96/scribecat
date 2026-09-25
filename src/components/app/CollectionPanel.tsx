@@ -2,11 +2,18 @@ import { useEffect, useMemo, useState, type DragEvent } from "react";
 import {
   ArrowDownAZ,
   ArrowUpDown,
+  BookOpen,
   CalendarDays,
   Check,
   Clock,
+  Copy,
+  Download,
+  ExternalLink,
+  FileDown,
   FileText,
   Folder,
+  FolderArchive,
+  FolderInput,
   FolderOpen,
   GripVertical,
   Home,
@@ -14,11 +21,18 @@ import {
   Network,
   PanelLeft,
   PanelLeftOpen,
+  Pencil,
+  Printer,
   Tag,
+  Trash2,
   X
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import type { ExportMode } from "@/components/ExportDialog";
+import { ContextMenuSurface } from "@/components/fileTree/ContextMenuSurface";
+import { useContextMenuState } from "@/components/fileTree/useContextMenuState";
+import type { BatchEntry } from "@/components/FileTree";
 import { Button } from "@/components/ui/button";
 import {
   Menu,
@@ -52,8 +66,13 @@ import {
 } from "@/lib/folderNotes";
 import { isJournalRelativePath } from "@/lib/journal";
 import { isTasksContainerRelativePath } from "@/lib/tasks";
+import {
+  canDownloadFolderArchive,
+  canDownloadMarkdown
+} from "@/lib/export/markdownDownload";
 import type { ManualOrderMap, SortMode } from "@/lib/vaultMeta";
 import type { MoveTreeEntryInput } from "@/store/useAppStore";
+import { getVaultCapabilities, platform, vaultCapabilityHint } from "@/platform";
 import { join } from "@/platform/paths";
 import { formatModifiedLabel } from "@/components/fileTree/treeNavigation";
 import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
@@ -82,6 +101,17 @@ type CollectionPanelProps = {
   onCreateNote?: (name: string) => Promise<boolean>;
   onSetSortMode: (mode: SortMode) => void;
   onMoveEntry: (input: MoveTreeEntryInput) => Promise<boolean>;
+  onRenameFile: (filePath: string, newBaseName: string) => Promise<boolean>;
+  onRenameFolder: (folderPath: string, newBaseName: string) => Promise<boolean>;
+  onDuplicateFileRequest: (filePath: string) => void;
+  onMoveRequest: (entries: BatchEntry[]) => void;
+  onDeleteFileRequest: (filePath: string) => void;
+  onDeleteFolderRequest: (folderPath: string) => void;
+  onExportFileRequest: (filePath: string, mode: ExportMode) => void;
+  onExportFolderRequest: (folderPath: string, mode: ExportMode) => void;
+  onDownloadMarkdownRequest: (filePath: string) => void;
+  onDownloadFolderArchiveRequest: (folderPath: string, archiveName: string) => void;
+  onPrintFileRequest: (filePath: string) => void;
 };
 
 type NoteCard = {
@@ -163,10 +193,27 @@ export function CollectionPanel({
   onCreateFolder,
   onCreateNote,
   onSetSortMode,
-  onMoveEntry
+  onMoveEntry,
+  onRenameFile,
+  onRenameFolder,
+  onDuplicateFileRequest,
+  onMoveRequest,
+  onDeleteFileRequest,
+  onDeleteFolderRequest,
+  onExportFileRequest,
+  onExportFolderRequest,
+  onDownloadMarkdownRequest,
+  onDownloadFolderArchiveRequest,
+  onPrintFileRequest
 }: CollectionPanelProps) {
   const { t, i18n } = useTranslation();
   const layout = useLayoutMode();
+  const capabilities = getVaultCapabilities();
+  const capabilityHint = vaultCapabilityHint();
+  const offersExport = platform.features.exportFiles || platform.features.downloads;
+  const offersMarkdownDownload = canDownloadMarkdown(folderPath);
+  const offersFolderArchive = canDownloadFolderArchive(folderPath);
+  const offersRevealInFileManager = platform.shell.openFolderInFileManager !== null;
   const folderNotesEnabled = useEditorSettingsStore((state) => state.folderNotesEnabled);
   const journalSettings = useEditorSettingsStore((state) => state.journalSettings);
   const taskSettings = useEditorSettingsStore((state) => state.taskSettings);
@@ -185,6 +232,11 @@ export function CollectionPanel({
     key: string;
     position: "before" | "after";
   } | null>(null);
+  const { contextMenu, setContextMenu } = useContextMenuState<{
+    card: CollectionCard;
+    x: number;
+    y: number;
+  }>();
 
   const visibleCollectionFilePaths = useMemo(
     () =>
@@ -510,6 +562,48 @@ export function CollectionPanel({
     setDropIndicator(null);
   };
 
+  const absoluteFolderPath = (relativePath: string) =>
+    join(folderPath, ...relativePath.split("/").filter(Boolean));
+
+  const renameCard = async (card: CollectionCard) => {
+    if (!capabilities.rename) return;
+
+    const entered = window.prompt(t("fileTree.rename"), card.title);
+    if (entered === null || !entered.trim() || entered.trim() === card.title) {
+      return;
+    }
+
+    if (card.kind === "folder") {
+      await onRenameFolder(await absoluteFolderPath(card.relativePath), entered.trim());
+    } else {
+      await onRenameFile(card.filePath, entered.trim());
+    }
+  };
+
+  const moveCard = async (card: CollectionCard) => {
+    if (!capabilities.move) return;
+
+    onMoveRequest([
+      {
+        kind: card.kind === "folder" ? "folder" : "file",
+        path:
+          card.kind === "folder"
+            ? await absoluteFolderPath(card.relativePath)
+            : card.filePath
+      }
+    ]);
+  };
+
+  const deleteCard = async (card: CollectionCard) => {
+    if (!capabilities.delete) return;
+
+    if (card.kind === "folder") {
+      onDeleteFolderRequest(await absoluteFolderPath(card.relativePath));
+    } else {
+      onDeleteFileRequest(card.filePath);
+    }
+  };
+
   const beginCreate = (kind: "folder" | "note") => {
     setCreateKind(kind);
     setCreateDraft("");
@@ -761,6 +855,14 @@ export function CollectionPanel({
                         cardDropPosition === "after" && "collection-card--drop-after"
                       )}
                       onClick={() => onOpenFolder(card.relativePath)}
+                      onContextMenu={(event) => {
+                        event.preventDefault();
+                        setContextMenu({
+                          card,
+                          x: event.clientX,
+                          y: event.clientY
+                        });
+                      }}
                       {...dragProps}
                     >
                       <div className="collection-card__top">
@@ -806,6 +908,14 @@ export function CollectionPanel({
                       cardDropPosition === "before" && "collection-card--drop-before",
                       cardDropPosition === "after" && "collection-card--drop-after"
                     )}
+                    onContextMenu={(event) => {
+                      event.preventDefault();
+                      setContextMenu({
+                        card,
+                        x: event.clientX,
+                        y: event.clientY
+                      });
+                    }}
                     {...dragProps}
                   >
                     <button
@@ -948,6 +1058,202 @@ export function CollectionPanel({
           )}
         </div>
       </div>
+
+      {contextMenu ? (
+        <ContextMenuSurface
+          x={contextMenu.x}
+          y={contextMenu.y}
+          title={contextMenu.card.title}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <button
+            type="button"
+            role="menuitem"
+            className="file-tree-context-menu__item"
+            disabled={!capabilities.rename}
+            title={capabilities.rename ? undefined : capabilityHint}
+            onClick={() => {
+              const card = contextMenu.card;
+              setContextMenu(null);
+              void renameCard(card);
+            }}
+          >
+            <Pencil aria-hidden="true" />
+            {t("fileTree.rename")}
+          </button>
+
+          {contextMenu.card.kind === "note" ? (
+            <button
+              type="button"
+              role="menuitem"
+              className="file-tree-context-menu__item"
+              disabled={!capabilities.create}
+              title={capabilities.create ? undefined : capabilityHint}
+              onClick={() => {
+                const card = contextMenu.card;
+                setContextMenu(null);
+                if (card.kind === "note") {
+                  onDuplicateFileRequest(card.filePath);
+                }
+              }}
+            >
+              <Copy aria-hidden="true" />
+              {t("fileTree.duplicate")}
+            </button>
+          ) : null}
+
+          <button
+            type="button"
+            role="menuitem"
+            className="file-tree-context-menu__item"
+            disabled={!capabilities.move}
+            title={capabilities.move ? undefined : capabilityHint}
+            onClick={() => {
+              const card = contextMenu.card;
+              setContextMenu(null);
+              void moveCard(card);
+            }}
+          >
+            <FolderInput aria-hidden="true" />
+            {t("fileTree.moveTo")}
+          </button>
+
+          {offersExport ? (
+            <>
+              <button
+                type="button"
+                role="menuitem"
+                className="file-tree-context-menu__item"
+                onClick={() => {
+                  const card = contextMenu.card;
+                  setContextMenu(null);
+                  if (card.kind === "folder") {
+                    void absoluteFolderPath(card.relativePath).then((path) =>
+                      onExportFolderRequest(path, "standard")
+                    );
+                  } else {
+                    onExportFileRequest(card.filePath, "standard");
+                  }
+                }}
+              >
+                <Download aria-hidden="true" />
+                {t("fileTree.export")}
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                className="file-tree-context-menu__item"
+                onClick={() => {
+                  const card = contextMenu.card;
+                  setContextMenu(null);
+                  if (card.kind === "folder") {
+                    void absoluteFolderPath(card.relativePath).then((path) =>
+                      onExportFolderRequest(path, "manuscript")
+                    );
+                  } else {
+                    onExportFileRequest(card.filePath, "manuscript");
+                  }
+                }}
+              >
+                <BookOpen aria-hidden="true" />
+                {t("fileTree.exportManuscript")}
+              </button>
+            </>
+          ) : null}
+
+          {contextMenu.card.kind === "note" && offersMarkdownDownload ? (
+            <button
+              type="button"
+              role="menuitem"
+              className="file-tree-context-menu__item"
+              onClick={() => {
+                const card = contextMenu.card;
+                setContextMenu(null);
+                if (card.kind === "note") {
+                  onDownloadMarkdownRequest(card.filePath);
+                }
+              }}
+            >
+              <FileDown aria-hidden="true" />
+              {t("fileTree.downloadMarkdown")}
+            </button>
+          ) : null}
+
+          {contextMenu.card.kind === "folder" && offersFolderArchive ? (
+            <button
+              type="button"
+              role="menuitem"
+              className="file-tree-context-menu__item"
+              onClick={() => {
+                const card = contextMenu.card;
+                setContextMenu(null);
+                if (card.kind === "folder") {
+                  void absoluteFolderPath(card.relativePath).then((path) =>
+                    onDownloadFolderArchiveRequest(path, card.title)
+                  );
+                }
+              }}
+            >
+              <FolderArchive aria-hidden="true" />
+              {t("fileTree.downloadFolderArchive")}
+            </button>
+          ) : null}
+
+          {contextMenu.card.kind === "note" ? (
+            <button
+              type="button"
+              role="menuitem"
+              className="file-tree-context-menu__item"
+              onClick={() => {
+                const card = contextMenu.card;
+                setContextMenu(null);
+                if (card.kind === "note") {
+                  onPrintFileRequest(card.filePath);
+                }
+              }}
+            >
+              <Printer aria-hidden="true" />
+              {t("fileTree.print")}
+            </button>
+          ) : null}
+
+          {contextMenu.card.kind === "folder" && offersRevealInFileManager ? (
+            <button
+              type="button"
+              role="menuitem"
+              className="file-tree-context-menu__item"
+              onClick={() => {
+                const card = contextMenu.card;
+                setContextMenu(null);
+                if (card.kind === "folder") {
+                  void absoluteFolderPath(card.relativePath).then((path) =>
+                    platform.shell.openFolderInFileManager?.(path)
+                  );
+                }
+              }}
+            >
+              <ExternalLink aria-hidden="true" />
+              {t("fileTree.revealInFileManager")}
+            </button>
+          ) : null}
+
+          <button
+            type="button"
+            role="menuitem"
+            className="file-tree-context-menu__item file-tree-context-menu__item--danger"
+            disabled={!capabilities.delete}
+            title={capabilities.delete ? undefined : capabilityHint}
+            onClick={() => {
+              const card = contextMenu.card;
+              setContextMenu(null);
+              void deleteCard(card);
+            }}
+          >
+            <Trash2 aria-hidden="true" />
+            {t("fileTree.delete")}
+          </button>
+        </ContextMenuSurface>
+      ) : null}
     </section>
   );
 }

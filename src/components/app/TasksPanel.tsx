@@ -3,7 +3,6 @@ import {
   ArrowDownAZ,
   ArrowUpDown,
   CalendarClock,
-  CheckCircle2,
   ChevronDown,
   ChevronRight,
   Clock,
@@ -20,6 +19,8 @@ import {
 import { useTranslation } from "react-i18next";
 
 import { DeleteFileDialog } from "@/components/DeleteFileDialog";
+import { ContextMenuSurface } from "@/components/fileTree/ContextMenuSurface";
+import { useContextMenuState } from "@/components/fileTree/useContextMenuState";
 import { Button } from "@/components/ui/button";
 import {
   Menu,
@@ -113,7 +114,7 @@ function compareRootTasks(
   left: TaskItem,
   right: TaskItem,
   sortMode: TaskSortMode,
-  fileMtimeMs: Record<string, number>,
+  modifiedAtByRoot: Map<string, number>,
   locale: string,
   keepDateGroups: boolean
 ): number {
@@ -132,10 +133,14 @@ function compareRootTasks(
     if (nameCompare !== 0) return nameCompare;
   } else if (sortMode === "modified") {
     const modifiedCompare =
-      (fileMtimeMs[right.filePath] ?? 0) - (fileMtimeMs[left.filePath] ?? 0);
+      (modifiedAtByRoot.get(taskItemKey(right)) ?? 0) -
+      (modifiedAtByRoot.get(taskItemKey(left)) ?? 0);
     if (modifiedCompare !== 0) return modifiedCompare;
   }
 
+  // Manual is the Markdown order inside each category file. Across category
+  // files there is no fabricated global order: categories remain stable and
+  // the task lines inside each file are the authoritative order.
   const categoryCompare = left.category.localeCompare(right.category, locale, {
     sensitivity: "base",
     numeric: true
@@ -563,6 +568,8 @@ export function TasksPanel({
   const [focusTaskKey, setFocusTaskKey] = useState<string | null>(null);
   const [recentlyCreatedRootKey, setRecentlyCreatedRootKey] = useState<string | null>(null);
   const [draggedRootKey, setDraggedRootKey] = useState<string | null>(null);
+  const { contextMenu: categoryContextMenu, setContextMenu: setCategoryContextMenu } =
+    useContextMenuState<{ category: string; x: number; y: number }>();
   const pendingMarkdownByPathRef = useRef(new Map<string, string>());
 
   useEffect(() => {
@@ -703,6 +710,43 @@ export function TasksPanel({
     [rootTasks]
   );
 
+  const modifiedAtByRoot = useMemo(() => {
+    const result = new Map<string, number>();
+    const tasksByFile = new Map<string, Map<number, TaskItem>>();
+
+    for (const task of allTasks) {
+      const byLine = tasksByFile.get(task.filePath) ?? new Map<number, TaskItem>();
+      byLine.set(task.lineIndex, task);
+      tasksByFile.set(task.filePath, byLine);
+    }
+
+    for (const task of allTasks) {
+      if (!task.modifiedAt) continue;
+      const modifiedAt = Date.parse(task.modifiedAt);
+      if (Number.isNaN(modifiedAt)) continue;
+
+      let root = task;
+      const byLine = tasksByFile.get(task.filePath);
+      const visited = new Set<number>();
+
+      while (
+        root.parentLineIndex !== null &&
+        byLine &&
+        !visited.has(root.lineIndex)
+      ) {
+        visited.add(root.lineIndex);
+        const parent = byLine.get(root.parentLineIndex);
+        if (!parent) break;
+        root = parent;
+      }
+
+      const key = taskItemKey(root);
+      result.set(key, Math.max(result.get(key) ?? 0, modifiedAt));
+    }
+
+    return result;
+  }, [allTasks]);
+
   const now = new Date();
   const todayKey = dateKey(now);
   const weekRange = currentWeekRange(now);
@@ -774,7 +818,7 @@ export function TasksPanel({
     selectedView === NEXT_MONTH_TASKS;
   const compareVisibleRoots = useMemo(
     () => (left: TaskItem, right: TaskItem) => {
-      if (taskSettings.sortMode === "manual" && recentlyCreatedRootKey) {
+      if (recentlyCreatedRootKey) {
         const leftIsNew = taskItemKey(left) === recentlyCreatedRootKey;
         const rightIsNew = taskItemKey(right) === recentlyCreatedRootKey;
         if (leftIsNew !== rightIsNew) return leftIsNew ? -1 : 1;
@@ -784,14 +828,14 @@ export function TasksPanel({
         left,
         right,
         taskSettings.sortMode,
-        fileMtimeMs,
+        modifiedAtByRoot,
         locale,
         timeBasedView
       );
     },
     [
-      fileMtimeMs,
       locale,
+      modifiedAtByRoot,
       recentlyCreatedRootKey,
       taskSettings.sortMode,
       timeBasedView
@@ -947,7 +991,8 @@ export function TasksPanel({
       deadline,
       note: "",
       tags,
-      priority: null as TaskPriority
+      priority: null as TaskPriority,
+      modifiedAt: new Date().toISOString()
     };
     const existing = documents[category]?.markdown;
     const markdown = existing
@@ -988,7 +1033,8 @@ export function TasksPanel({
         deadline: null,
         note: "",
         tags: [],
-        priority: null
+        priority: null,
+        modifiedAt: new Date().toISOString()
       },
       "first"
     );
@@ -1020,30 +1066,64 @@ export function TasksPanel({
     const document = documents[task.category];
     if (!document) return;
 
-    const markdown =
-      mutation === "delete"
-        ? removeTaskFromMarkdown(document.markdown, task.lineIndex)
-        : mutation === "toggle" && task.parentLineIndex === null && !task.checked
-          ? setTaskSubtreeCheckedInMarkdown(document.markdown, task.lineIndex, true)
-          : updateTaskInMarkdown(document.markdown, task.lineIndex, {
-            checked: mutation === "toggle" ? !task.checked : task.checked,
-            text: mutation === "text" ? String(value ?? task.text) : task.text,
-            deadline:
-              mutation === "deadline"
-                ? typeof value === "string" && value
-                  ? value
-                  : null
-                : task.deadline,
-            note: mutation === "note" ? String(value ?? "") : task.note,
-            tags:
-              mutation === "tags" && Array.isArray(value)
-                ? value
-                : task.tags,
-            priority:
-              mutation === "priority"
-                ? (value as TaskPriority)
-                : task.priority
+    const modifiedAt = new Date().toISOString();
+    let markdown: string;
+
+    if (mutation === "delete") {
+      markdown = removeTaskFromMarkdown(document.markdown, task.lineIndex);
+
+      // Removing a child is still a modification of the visible parent group.
+      // Touch the parent in Markdown so "recently modified" also reflects
+      // deleted subtasks instead of only edits to surviving lines.
+      if (task.parentLineIndex !== null) {
+        const parent = document.tasks.find(
+          (candidate) => candidate.lineIndex === task.parentLineIndex
+        );
+        if (parent) {
+          markdown = updateTaskInMarkdown(markdown, parent.lineIndex, {
+            checked: parent.checked,
+            text: parent.text,
+            deadline: parent.deadline,
+            note: parent.note,
+            tags: parent.tags,
+            priority: parent.priority,
+            modifiedAt
           });
+        }
+      }
+    } else if (
+      mutation === "toggle" &&
+      task.parentLineIndex === null &&
+      !task.checked
+    ) {
+      markdown = setTaskSubtreeCheckedInMarkdown(
+        document.markdown,
+        task.lineIndex,
+        true,
+        modifiedAt
+      );
+    } else {
+      markdown = updateTaskInMarkdown(document.markdown, task.lineIndex, {
+        checked: mutation === "toggle" ? !task.checked : task.checked,
+        text: mutation === "text" ? String(value ?? task.text) : task.text,
+        deadline:
+          mutation === "deadline"
+            ? typeof value === "string" && value
+              ? value
+              : null
+            : task.deadline,
+        note: mutation === "note" ? String(value ?? "") : task.note,
+        tags:
+          mutation === "tags" && Array.isArray(value)
+            ? value
+            : task.tags,
+        priority:
+          mutation === "priority"
+            ? (value as TaskPriority)
+            : task.priority,
+        modifiedAt
+      });
+    }
 
     await persistCategory(task.category, markdown);
   };
@@ -1139,7 +1219,8 @@ export function TasksPanel({
       deadline: task.deadline,
       note: task.note,
       tags: task.tags,
-      priority: task.priority
+      priority: task.priority,
+      modifiedAt: task.modifiedAt
     };
 
     let targetMarkdown = targetDocument
@@ -1166,7 +1247,8 @@ export function TasksPanel({
               deadline: child.deadline,
               note: child.note,
               tags: child.tags,
-              priority: child.priority
+              priority: child.priority,
+              modifiedAt: child.modifiedAt
             }
           );
         }
@@ -1311,6 +1393,10 @@ export function TasksPanel({
     return t("tasks.all");
   }, [selectedView, t]);
 
+  const selectedCategory = selectedView.startsWith(CATEGORY_PREFIX)
+    ? selectedView.slice(CATEGORY_PREFIX.length)
+    : null;
+
   return (
     <section className="tasks-view" aria-label={t("tasks.label")}>
       <header className="tasks-view__header">
@@ -1429,6 +1515,14 @@ export function TasksPanel({
                     "tasks-category-row",
                     dropActive && "tasks-category-row--drop"
                   )}
+                  onContextMenu={(event) => {
+                    event.preventDefault();
+                    setCategoryContextMenu({
+                      category,
+                      x: event.clientX,
+                      y: event.clientY
+                    });
+                  }}
                   onDragOver={(event) => {
                     if (!event.dataTransfer.types.includes(TASK_DRAG_MIME)) return;
                     if (event.dataTransfer.types.includes(TASK_SUBTASK_DRAG_MIME)) return;
@@ -1461,29 +1555,6 @@ export function TasksPanel({
                     <span>{category}</span>
                     <small>{categoryCounts.get(category) ?? 0}</small>
                   </button>
-
-                  <div className="tasks-category-row__actions">
-                    <Button
-                      type="button"
-                      size="icon-xs"
-                      variant="ghost"
-                      onClick={() => void renameCategory(category)}
-                      aria-label={t("tasks.renameCategory", { category })}
-                      title={t("tasks.renameCategory", { category })}
-                    >
-                      <Pencil />
-                    </Button>
-                    <Button
-                      type="button"
-                      size="icon-xs"
-                      variant="ghost"
-                      onClick={() => void deleteCategory(category)}
-                      aria-label={t("tasks.deleteCategory", { category })}
-                      title={t("tasks.deleteCategory", { category })}
-                    >
-                      <Trash2 />
-                    </Button>
-                  </div>
                 </div>
               );
             })}
@@ -1566,7 +1637,36 @@ export function TasksPanel({
                   </MenuPositioner>
                 </MenuPortal>
               </Menu>
-              <CheckCircle2 aria-hidden="true" />
+              {selectedCategory ? (
+                <>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="tasks-category-view-action"
+                    onClick={() => void renameCategory(selectedCategory)}
+                    disabled={saving}
+                    aria-label={t("tasks.renameCategory", { category: selectedCategory })}
+                    title={t("tasks.renameCategory", { category: selectedCategory })}
+                  >
+                    <Pencil />
+                    <span>{t("tasks.renameCategoryAction")}</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="tasks-category-view-action tasks-category-view-action--danger"
+                    onClick={() => deleteCategory(selectedCategory)}
+                    disabled={saving}
+                    aria-label={t("tasks.deleteCategory", { category: selectedCategory })}
+                    title={t("tasks.deleteCategory", { category: selectedCategory })}
+                  >
+                    <Trash2 />
+                    <span>{t("tasks.deleteCategoryAction")}</span>
+                  </Button>
+                </>
+              ) : null}
             </div>
           </div>
 
@@ -1764,6 +1864,42 @@ export function TasksPanel({
           ) : null}
         </main>
       </div>
+
+      {categoryContextMenu ? (
+        <ContextMenuSurface
+          x={categoryContextMenu.x}
+          y={categoryContextMenu.y}
+          title={categoryContextMenu.category}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <button
+            type="button"
+            role="menuitem"
+            className="file-tree-context-menu__item"
+            onClick={() => {
+              const category = categoryContextMenu.category;
+              setCategoryContextMenu(null);
+              void renameCategory(category);
+            }}
+          >
+            <Pencil aria-hidden="true" />
+            {t("tasks.renameCategoryAction")}
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            className="file-tree-context-menu__item file-tree-context-menu__item--danger"
+            onClick={() => {
+              const category = categoryContextMenu.category;
+              setCategoryContextMenu(null);
+              deleteCategory(category);
+            }}
+          >
+            <Trash2 aria-hidden="true" />
+            {t("tasks.deleteCategoryAction")}
+          </button>
+        </ContextMenuSurface>
+      ) : null}
 
       <DeleteFileDialog
         open={categoryDelete !== null}

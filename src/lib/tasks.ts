@@ -56,6 +56,8 @@ export type MarkdownTask = {
   note: string;
   tags: string[];
   priority: TaskPriority;
+  /** Last user-visible edit, stored as an invisible Markdown HTML comment. */
+  modifiedAt?: string;
   /** Indentation width of the Markdown task line, normalized to spaces. */
   indent: number;
   /** The nearest preceding task with a smaller indent, when this is a subtask. */
@@ -69,6 +71,7 @@ export type NewMarkdownTask = {
   note?: string;
   tags?: string[];
   priority?: TaskPriority;
+  modifiedAt?: string | null;
 };
 
 const TASK_LINE_PATTERN = /^(\s*)[-*+]\s+\[([ xX])\]\s+(.*)$/;
@@ -76,6 +79,10 @@ const TASK_NOTE_PATTERN = /^\s{2,}>\s?(.*)$/;
 const TAGS_SUFFIX_PATTERN = /^(.*?)(?:\s+🏷️\s+(.+))\s*$/;
 const DEADLINE_SUFFIX_PATTERN = /^(.*?)(?:\s+📅\s+(\d{4}-\d{2}-\d{2}))\s*$/;
 const PRIORITY_SUFFIX_PATTERN = /^(.*?)(?:\s+(🔴|🟡|🟢))\s*$/;
+const MODIFIED_SUFFIX_PATTERN =
+  /^(.*?)(?:\s+<!--\s*scribecat:modified=([^>]+?)\s*-->)\s*$/i;
+const MODIFIED_COMMENT_PATTERN =
+  /\s*<!--\s*scribecat:modified=[^>]+?\s*-->\s*$/i;
 
 function taskIndentWidth(value: string): number {
   return value.replace(/\t/g, "  ").length;
@@ -180,11 +187,22 @@ function parseTaskContent(rawContent: string): {
   deadline: TaskDeadline;
   tags: string[];
   priority: TaskPriority;
+  modifiedAt?: string;
 } {
   let remainder = rawContent.trim();
   let tags: string[] = [];
   let deadline: TaskDeadline = null;
   let priority: TaskPriority = null;
+  let modifiedAt: string | undefined;
+
+  const modifiedMatch = MODIFIED_SUFFIX_PATTERN.exec(remainder);
+  if (modifiedMatch) {
+    remainder = modifiedMatch[1].trim();
+    const parsedTime = Date.parse(modifiedMatch[2].trim());
+    if (!Number.isNaN(parsedTime)) {
+      modifiedAt = new Date(parsedTime).toISOString();
+    }
+  }
 
   const tagsMatch = TAGS_SUFFIX_PATTERN.exec(remainder);
   if (tagsMatch) {
@@ -208,8 +226,20 @@ function parseTaskContent(rawContent: string): {
     text: remainder,
     deadline,
     tags,
-    priority
+    priority,
+    ...(modifiedAt ? { modifiedAt } : {})
   };
+}
+
+function withTaskModifiedAt(line: string, modifiedAt: string | null | undefined): string {
+  if (!modifiedAt) return line.replace(MODIFIED_COMMENT_PATTERN, "").trimEnd();
+
+  const parsedTime = Date.parse(modifiedAt);
+  if (Number.isNaN(parsedTime)) {
+    return line.replace(MODIFIED_COMMENT_PATTERN, "").trimEnd();
+  }
+
+  return `${line.replace(MODIFIED_COMMENT_PATTERN, "").trimEnd()} <!-- scribecat:modified=${new Date(parsedTime).toISOString()} -->`;
 }
 
 function taskNoteEndIndex(lines: string[], lineIndex: number): number {
@@ -266,6 +296,7 @@ export function parseTaskMarkdown(markdown: string): MarkdownTask[] {
       note: parseTaskNote(lines, lineIndex, endLineIndex),
       tags: parsed.tags,
       priority: parsed.priority,
+      ...(parsed.modifiedAt ? { modifiedAt: parsed.modifiedAt } : {}),
       indent,
       parentLineIndex
     });
@@ -283,7 +314,7 @@ export function formatTaskLine(task: NewMarkdownTask): string {
   const tags = normalizeTaskTags(task.tags ?? []);
   const priority = task.priority ? PRIORITY_TO_MARKER[task.priority] : "";
 
-  return [
+  const line = [
     `- [${task.checked ? "x" : " "}] ${text}`,
     priority,
     deadline ? `📅 ${deadline}` : "",
@@ -291,6 +322,8 @@ export function formatTaskLine(task: NewMarkdownTask): string {
   ]
     .filter(Boolean)
     .join(" ");
+
+  return withTaskModifiedAt(line, task.modifiedAt);
 }
 
 function formatTaskBlock(task: NewMarkdownTask): string {
@@ -354,7 +387,12 @@ export function updateTaskInMarkdown(
   }
 
   const endLineIndex = taskNoteEndIndex(lines, lineIndex);
-  const replacement = formatTaskBlock(task)
+  const current = parseTaskContent(existing[3]);
+  const replacement = formatTaskBlock({
+    ...task,
+    modifiedAt:
+      task.modifiedAt === undefined ? current.modifiedAt : task.modifiedAt
+  })
     .split("\n")
     .map((line) => `${existing[1]}${line}`);
 
@@ -365,7 +403,8 @@ export function updateTaskInMarkdown(
 export function setTaskSubtreeCheckedInMarkdown(
   markdown: string,
   lineIndex: number,
-  checked: boolean
+  checked: boolean,
+  modifiedAt?: string
 ): string {
   const lines = markdown.split(/\r?\n/);
   const rootMatch = TASK_LINE_PATTERN.exec(lines[lineIndex] ?? "");
@@ -383,6 +422,9 @@ export function setTaskSubtreeCheckedInMarkdown(
       /^(\s*[-*+]\s+)\[[ xX]\]/,
       `$1[${checked ? "x" : " "}]`
     );
+    if (modifiedAt) {
+      lines[index] = withTaskModifiedAt(lines[index], modifiedAt);
+    }
   }
 
   return lines.join("\n");

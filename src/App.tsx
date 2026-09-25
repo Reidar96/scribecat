@@ -1234,6 +1234,17 @@ function App() {
               onCreateNote={createCollectionNote}
               onSetSortMode={(mode) => void setSortMode(mode)}
               onMoveEntry={moveTreeEntry}
+              onRenameFile={renameFilePath}
+              onRenameFolder={renameFolderPath}
+              onDuplicateFileRequest={(filePath) => void duplicateFile(filePath)}
+              onMoveRequest={requestMove}
+              onDeleteFileRequest={requestDeleteFile}
+              onDeleteFolderRequest={requestDeleteFolder}
+              onExportFileRequest={requestExportFile}
+              onExportFolderRequest={requestExportFolder}
+              onDownloadMarkdownRequest={handleDownloadMarkdownRequest}
+              onDownloadFolderArchiveRequest={handleDownloadFolderArchiveRequest}
+              onPrintFileRequest={handlePrintFileRequest}
             />
           ) : (
             <DocumentPanel
