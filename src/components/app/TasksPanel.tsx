@@ -818,7 +818,7 @@ export function TasksPanel({
     selectedView === NEXT_MONTH_TASKS;
   const compareVisibleRoots = useMemo(
     () => (left: TaskItem, right: TaskItem) => {
-      if (taskSettings.sortMode === "manual" && recentlyCreatedRootKey) {
+      if (recentlyCreatedRootKey) {
         const leftIsNew = taskItemKey(left) === recentlyCreatedRootKey;
         const rightIsNew = taskItemKey(right) === recentlyCreatedRootKey;
         if (leftIsNew !== rightIsNew) return leftIsNew ? -1 : 1;
