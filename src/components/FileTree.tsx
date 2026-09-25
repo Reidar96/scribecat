@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { BookOpen, Copy, Download, Eraser, ExternalLink, FileDown, FilePlus, FolderArchive, FolderInput, FolderPlus, Pencil, Pin, PinOff, Printer, Smile, Trash2, Undo2, X } from "lucide-react";
+import { BookOpen, Copy, Download, Eraser, ExternalLink, FileDown, FilePlus, FolderArchive, FolderInput, FolderPlus, Pin, PinOff, Printer, Smile, Trash2, Undo2, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { getVaultCapabilities, platform, vaultCapabilityHint } from "@/platform";
 import { dirname, join } from "@/platform/paths";
