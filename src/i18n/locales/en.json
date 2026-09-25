@@ -1377,12 +1377,16 @@
   },
   "split": {
     "open": "Open another document beside this one",
+    "openLeft": "Open a document on the left",
+    "openRight": "Open a document on the right",
     "pickerTitle": "Open in split view",
     "search": "Search documents…",
     "noMatches": "No matching documents.",
     "close": "Close split document",
     "resize": "Resize split editors",
+    "swap": "Swap left and right documents",
     "dropTitle": "Open in split view",
-    "dropHint": "Release to open on the right"
+    "dropHintLeft": "Release to open on the left",
+    "dropHintRight": "Release to open on the right"
   }
 }
