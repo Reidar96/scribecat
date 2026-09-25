@@ -395,7 +395,7 @@
 }
 
 .tasks-item--subtask .tasks-item__drag {
-  visibility: hidden;
+  color: rgba(var(--muted-rgb),0.42);
 }
 
 .tasks-item--overdue {
@@ -418,6 +418,14 @@
 
 .tasks-item__drag:active {
   cursor: grabbing;
+}
+
+.tasks-item--drop-before {
+  box-shadow: 0 -2px 0 rgba(var(--accent-rgb),0.72);
+}
+
+.tasks-item--drop-after {
+  box-shadow: 0 2px 0 rgba(var(--accent-rgb),0.72);
 }
 
 .tasks-item__drag svg {
