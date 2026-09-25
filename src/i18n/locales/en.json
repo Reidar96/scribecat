@@ -624,7 +624,9 @@
     "resultCount": "{{count}} days",
     "noResults": "No matching diary days.",
     "overview": "Overview",
-    "closeResults": "Close results"
+    "closeResults": "Close results",
+    "reorderImages": "Change order",
+    "reorderImagesHint": "Drag the images to change their order."
   },
   "tasks": {
     "label": "Tasks",
