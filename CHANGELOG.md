@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.23.6] - 2026-09-25
+
+### Fixes and improvements
+- Lazy-load diary gallery images and overview thumbnails near the viewport, and render the diary overview incrementally as you scroll.
+- Add a red **Delete entry** action at the bottom of an open diary entry.
+- Support the existing diary delete context menu with long-press on touch devices as well as right-click on desktop.
+- Show a **+** on previous/next day navigation when that adjacent day has no diary entry yet, making it clear that navigation will create one.
+
 ## [0.23.5] - 2026-09-25
 
 ### Fixes and improvements
