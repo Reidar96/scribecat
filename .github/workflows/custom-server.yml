@@ -68,18 +68,12 @@ jobs:
 
       - name: Build and push ScribeCat server image
         run: |
-          VERSION=$(node -p "require('./package.json').version")
           IMAGE=ghcr.io/reidar96/scribecat-server
 
+          # main owns the moving latest tag. Exact version tags are published
+          # by release-server.yml as a multi-arch manifest.
           docker build -f server/Dockerfile -t "$IMAGE:latest" .
           docker push "$IMAGE:latest"
-
-          if docker manifest inspect "$IMAGE:$VERSION" >/dev/null 2>&1; then
-            echo "$IMAGE:$VERSION already exists; leaving the versioned tag unchanged."
-          else
-            docker tag "$IMAGE:latest" "$IMAGE:$VERSION"
-            docker push "$IMAGE:$VERSION"
-          fi
 
       - name: Create GitHub release for a new version
         id: release
@@ -104,7 +98,7 @@ jobs:
             echo "desktop_dispatch=true" >> "$GITHUB_OUTPUT"
           fi
 
-          SERVER_IMAGE=ghcr.io/reidar96/scribedog-server
+          SERVER_IMAGE=ghcr.io/reidar96/scribecat-server
           if docker manifest inspect "$SERVER_IMAGE:$VERSION" >/dev/null 2>&1; then
             echo "server_dispatch=false" >> "$GITHUB_OUTPUT"
           else
