@@ -379,7 +379,7 @@ function App() {
     for (const entry of entryClipboard) {
       const copiedPath =
         entry.kind === "file"
-          ? await duplicateFile(entry.path)
+          ? await duplicateFile(entry.path, { select: false })
           : await duplicateFolder(entry.path);
 
       if (!copiedPath) continue;
