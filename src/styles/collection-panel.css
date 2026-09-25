@@ -242,7 +242,7 @@
   margin: 0;
 }
 
-@media (max-width: 720px) {
+@media (max-width: 920px) {
   .collection-panel__header {
     padding: 0.55rem 0.65rem;
   }
