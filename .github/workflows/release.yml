@@ -4,6 +4,11 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish, e.g. 0.22.14'
+        required: true
 
 # A tag pushed twice (or re-pushed) would otherwise start a second run that
 # writes into the very same GitHub release as the first one, from four jobs at
@@ -12,8 +17,11 @@ on:
 # incomplete asset set — including the .sig files the updater depends on.
 # Queueing the second run instead lets the first finish untouched.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ inputs.version || github.ref }}
   cancel-in-progress: false
+
+env:
+  RELEASE_TAG: ${{ inputs.version && format('v{0}', inputs.version) || github.ref_name }}
 
 jobs:
   build:
@@ -27,6 +35,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.version && format('v{0}', inputs.version) || github.ref }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v7
@@ -59,8 +69,8 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: 'ScribeDog ${{ github.ref_name }}'
+          tagName: ${{ env.RELEASE_TAG }}
+          releaseName: 'ScribeCat ${{ env.RELEASE_TAG }}'
           releaseBody: 'See the assets below to download and install this version.'
           releaseDraft: false
           prerelease: false
@@ -76,7 +86,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          $version = "${{ github.ref_name }}".TrimStart("v")
+          $tag = "${{ env.RELEASE_TAG }}"
+          $version = $tag.TrimStart("v")
           $staging = Join-Path $env:RUNNER_TEMP "portable"
           New-Item -ItemType Directory -Force -Path "$staging/.scribedog" | Out-Null
 
@@ -91,4 +102,4 @@ jobs:
 
           $archive = "ScribeDog_${version}_portable.zip"
           Compress-Archive -DestinationPath $archive -Force -Path "$staging/ScribeDog.exe", "$staging/README.txt", "$staging/.scribedog"
-          gh release upload "${{ github.ref_name }}" $archive --clobber
+          gh release upload "$tag" $archive --clobber
