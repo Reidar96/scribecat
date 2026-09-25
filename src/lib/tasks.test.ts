@@ -7,6 +7,7 @@ import {
   isTasksContainerRelativePath,
   normalizeTaskSettings,
   parseTaskMarkdown,
+  insertSubtaskInMarkdown,
   removeTaskFromMarkdown,
   renameTaskDocumentHeading,
   sanitizeTaskCategory,
@@ -37,7 +38,9 @@ describe("tasks markdown", () => {
         deadline: "2026-10-01",
         note: "Husk vedlegget\nRing Kari først",
         tags: ["jobb", "kunde"],
-        priority: "high"
+        priority: "high",
+        indent: 0,
+        parentLineIndex: null
       },
       {
         lineIndex: 5,
@@ -47,7 +50,9 @@ describe("tasks markdown", () => {
         deadline: null,
         note: "",
         tags: [],
-        priority: null
+        priority: null,
+        indent: 0,
+        parentLineIndex: null
       }
     ]);
   });
@@ -62,9 +67,84 @@ describe("tasks markdown", () => {
         deadline: null,
         note: "",
         tags: [],
-        priority: null
+        priority: null,
+        indent: 0,
+        parentLineIndex: null
       }
     ]);
+  });
+
+  it("parses one-level subtasks and keeps them as portable indented Markdown", () => {
+    const markdown = [
+      "# Jobb",
+      "",
+      "- [ ] Hovedoppgave",
+      "  - [ ] Første underoppgave",
+      "  - [x] Andre underoppgave",
+      "- [ ] Neste hovedoppgave"
+    ].join("\n");
+
+    expect(parseTaskMarkdown(markdown)).toEqual([
+      {
+        lineIndex: 2,
+        endLineIndex: 2,
+        checked: false,
+        text: "Hovedoppgave",
+        deadline: null,
+        note: "",
+        tags: [],
+        priority: null,
+        indent: 0,
+        parentLineIndex: null
+      },
+      {
+        lineIndex: 3,
+        endLineIndex: 3,
+        checked: false,
+        text: "Første underoppgave",
+        deadline: null,
+        note: "",
+        tags: [],
+        priority: null,
+        indent: 2,
+        parentLineIndex: 2
+      },
+      {
+        lineIndex: 4,
+        endLineIndex: 4,
+        checked: true,
+        text: "Andre underoppgave",
+        deadline: null,
+        note: "",
+        tags: [],
+        priority: null,
+        indent: 2,
+        parentLineIndex: 2
+      },
+      {
+        lineIndex: 5,
+        endLineIndex: 5,
+        checked: false,
+        text: "Neste hovedoppgave",
+        deadline: null,
+        note: "",
+        tags: [],
+        priority: null,
+        indent: 0,
+        parentLineIndex: null
+      }
+    ]);
+
+    const inserted = insertSubtaskInMarkdown(markdown, 2, {
+      text: "Tredje underoppgave",
+      note: "Kort notat"
+    });
+
+    expect(inserted).toContain("  - [ ] Tredje underoppgave\n    > Kort notat");
+    expect(
+      parseTaskMarkdown(inserted).find((task) => task.text === "Tredje underoppgave")
+        ?.parentLineIndex
+    ).toBe(2);
   });
 
   it("updates and removes task blocks without replacing unrelated markdown", () => {
@@ -90,6 +170,24 @@ describe("tasks markdown", () => {
     const removed = removeTaskFromMarkdown(updated, second?.lineIndex ?? -1);
     expect(removed).not.toContain("Andre");
     expect(removed).toContain("Intro");
+  });
+
+  it("removes a parent task together with its subtasks", () => {
+    const markdown = [
+      "# Jobb",
+      "",
+      "- [ ] Hovedoppgave",
+      "  - [ ] Underoppgave A",
+      "  - [ ] Underoppgave B",
+      "- [ ] Behold meg"
+    ].join("\n");
+
+    const removed = removeTaskFromMarkdown(markdown, 2);
+
+    expect(removed).not.toContain("Hovedoppgave");
+    expect(removed).not.toContain("Underoppgave A");
+    expect(removed).not.toContain("Underoppgave B");
+    expect(removed).toContain("Behold meg");
   });
 
   it("appends to an existing document and creates a category document", () => {

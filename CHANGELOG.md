@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.22.11] - 2026-09-25
+
+### Improvements
+- Move completed tasks into a collapsible **Completed** section below active tasks.
+- Keep sidebar/task-filter counts focused on active work while completed items remain available inside the selected view.
+- Add one-level Markdown subtasks beneath a main task using ordinary indentation (`  - [ ] ...`).
+- Add a compact inline subtask composer to main tasks.
+- Keep parent/subtask relationships when moving a main task to another category.
+- Deleting a main task also removes its nested subtasks, matching the visible hierarchy.
+
 ## [0.22.10] - 2026-09-24
 
 ### Fixes
