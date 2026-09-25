@@ -591,6 +591,12 @@ function App() {
     }
   };
 
+  const closeAllDocumentTabs = () => {
+    setOpenTabs([]);
+    setSecondaryFilePath(null);
+    clearSelectedFile();
+  };
+
   const reorderDocumentTabs = (
     draggedFilePath: string,
     targetFilePath: string,
@@ -1482,6 +1488,7 @@ function App() {
               secondaryFilePath={secondaryFilePath}
               onSelectTab={(filePath) => void selectFilePathSafely(filePath)}
               onCloseTab={closeDocumentTab}
+              onCloseAllTabs={closeAllDocumentTabs}
               onReorderTabs={reorderDocumentTabs}
               onOpenSecondary={(filePath) => void openSecondaryDocument(filePath)}
               onClosePrimarySplit={() => void closePrimarySplitPane()}
