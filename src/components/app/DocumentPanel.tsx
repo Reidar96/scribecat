@@ -29,6 +29,7 @@ import { useBreadcrumbScroll } from "@/hooks/useBreadcrumbScroll";
 import { useLayoutMode } from "@/hooks/useLayoutMode";
 import { getPathCrumbs } from "@/lib/breadcrumbPath";
 import { getVaultIcon, type VaultIconMap } from "@/lib/vaultIcons";
+import { isDocumentLocked as getDocumentLocked } from "@/lib/documentLocks";
 import { anchorForTrigger, type PopoverAnchor } from "@/lib/usePopoverOverflowAlign";
 import type { FileVersion } from "@/lib/fileVersions";
 import { cn } from "@/lib/utils";
@@ -44,7 +45,7 @@ import { getVaultCapabilities, vaultCapabilityHint } from "@/platform";
 import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
 import { useSearchStore } from "@/store/useSearchStore";
 import { useVersioningSettingsStore } from "@/store/useVersioningSettingsStore";
-import type { FileDocumentState } from "@/store/useAppStore";
+import { useAppStore, type FileDocumentState } from "@/store/useAppStore";
 
 type DocumentPanelProps = {
   selectedFilePath: string | null;
@@ -111,6 +112,8 @@ type DocumentPanelProps = {
   onOpenSidebar: () => void;
   /** Deletes the note currently open in the editor after confirmation. */
   onDeleteRequest: () => void;
+  /** Deletes any visible split document after confirmation. */
+  onDeleteFileRequest: (filePath: string) => void;
   /** Phone and tablet: the status pill doubles as the save button. */
   onSaveRequest: () => void;
 };
@@ -220,6 +223,7 @@ export function DocumentPanel({
   onVersionRestoreRequest,
   onOpenSidebar,
   onDeleteRequest,
+  onDeleteFileRequest,
   onSaveRequest
 }: DocumentPanelProps) {
   const { t } = useTranslation();
@@ -306,6 +310,62 @@ export function DocumentPanel({
     if (selectedFileContent !== null) {
       onCanonicalMarkdown(filePath, replaceBody(selectedFileContent, body));
     }
+  };
+
+  const secondaryDocument = secondaryFilePath ? fileDocuments[secondaryFilePath] ?? null : null;
+  const secondaryMarkdown = secondaryDocument
+    ? splitFrontmatter(secondaryDocument.content).body
+    : null;
+  const secondaryRelativePath =
+    folderPath && secondaryFilePath
+      ? secondaryFilePath.replace(/\\/g, "/").startsWith(folderPath.replace(/\\/g, "/"))
+        ? secondaryFilePath
+            .replace(/\\/g, "/")
+            .slice(folderPath.replace(/\\/g, "/").replace(/\/$/, "").length)
+            .replace(/^\//, "")
+        : secondaryFilePath
+      : null;
+  const secondaryDocumentLocked =
+    secondaryRelativePath !== null &&
+    getDocumentLocked(useAppStore.getState().documentLocks, secondaryRelativePath);
+  const splitOptions = useMemo(
+    () =>
+      filterVaultFileOptions(
+        buildVaultFileOptions(folderPath, filePaths, selectedFilePath).filter(
+          (option) => option.filePath !== secondaryFilePath
+        ),
+        splitPickerQuery,
+        40
+      ),
+    [filePaths, folderPath, secondaryFilePath, selectedFilePath, splitPickerQuery]
+  );
+
+  const hasSplitDragPayload = (dataTransfer: DataTransfer) =>
+    Array.from(dataTransfer.types).some(
+      (type) => type === TAB_DRAG_MIME || type === FILE_LINK_DRAG_MIME
+    );
+
+  const splitDropFilePath = (dataTransfer: DataTransfer): string | null =>
+    dataTransfer.getData(TAB_DRAG_MIME) || getDraggedVaultFilePaths(dataTransfer)[0] || null;
+
+  const handleSplitResizeStart = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (layout !== "desktop") return;
+    event.preventDefault();
+    const container = event.currentTarget.parentElement;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+
+    const onMove = (moveEvent: PointerEvent) => {
+      const ratio = ((moveEvent.clientX - rect.left) / rect.width) * 100;
+      setSplitRatio(Math.min(75, Math.max(25, ratio)));
+    };
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
   };
 
   const isEditorMounted =
