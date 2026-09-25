@@ -1321,3 +1321,43 @@
 .device-list .ai-dialog__error {
   margin-top: 0.5rem;
 }
+
+
+.undo-delete-toast {
+  position: fixed;
+  left: 50%;
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  z-index: 120;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  max-width: min(92vw, 32rem);
+  transform: translateX(-50%);
+  border: 1px solid rgba(var(--overlay-rgb), 0.14);
+  border-radius: 0.8rem;
+  background: rgb(var(--surface-raised-rgb));
+  box-shadow: 0 0.85rem 2.5rem rgba(0, 0, 0, 0.22);
+  padding: 0.65rem 0.75rem 0.65rem 0.9rem;
+  color: rgb(var(--foreground-rgb));
+  font-size: var(--font-ui-sm);
+}
+
+.undo-delete-toast span {
+  min-width: 0;
+}
+
+.undo-delete-toast button {
+  flex: none;
+  border: 0;
+  border-radius: 0.55rem;
+  background: rgba(var(--accent-rgb), 0.12);
+  padding: 0.4rem 0.65rem;
+  color: rgb(var(--accent-rgb));
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.undo-delete-toast button:hover {
+  background: rgba(var(--accent-rgb), 0.18);
+}
