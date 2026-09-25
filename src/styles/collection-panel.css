@@ -27,11 +27,20 @@
   padding: 0.8rem 1rem;
 }
 
-.collection-panel__header-leading {
+.collection-panel__header-leading,
+.collection-panel__header-actions {
   display: flex;
   align-items: center;
+}
+
+.collection-panel__header-leading {
   min-width: 0;
   gap: 0.65rem;
+}
+
+.collection-panel__header-actions {
+  flex: none;
+  gap: 0.2rem;
 }
 
 .collection-panel__heading {
@@ -107,13 +116,55 @@
   transition:
     transform 120ms ease,
     background 120ms ease,
-    border-color 120ms ease;
+    border-color 120ms ease,
+    opacity 120ms ease,
+    filter 120ms ease;
 }
 
 .collection-card:hover {
   transform: translateY(-1px);
   border-color: rgba(var(--accent-rgb),0.28);
   background: rgba(var(--surface-hover-rgb),0.92);
+}
+
+.collection-card--drag-source {
+  opacity: 0.32;
+  filter: grayscale(0.45);
+}
+
+.collection-card--drop-before,
+.collection-card--drop-after {
+  border-color: rgba(var(--accent-rgb),0.52);
+}
+
+.collection-card--drop-before {
+  box-shadow: inset 0 3px 0 rgba(var(--accent-rgb),0.9);
+}
+
+.collection-card--drop-after {
+  box-shadow: inset 0 -3px 0 rgba(var(--accent-rgb),0.9);
+}
+
+.collection-card--drop-before::after,
+.collection-card--drop-after::after {
+  position: absolute;
+  left: 0.55rem;
+  z-index: 3;
+  width: 0.5rem;
+  height: 0.5rem;
+  border: 2px solid rgb(var(--accent-rgb));
+  border-radius: 999px;
+  background: rgb(var(--surface-rgb));
+  content: "";
+  pointer-events: none;
+}
+
+.collection-card--drop-before::after {
+  top: -0.25rem;
+}
+
+.collection-card--drop-after::after {
+  bottom: -0.25rem;
 }
 
 .collection-card:focus-visible,
@@ -131,6 +182,7 @@
   background: transparent;
   padding: 0;
   cursor: pointer;
+  -webkit-user-drag: none;
 }
 
 .collection-card__top {
@@ -139,6 +191,13 @@
   gap: 0.4rem;
   min-height: 1.2rem;
   color: rgba(var(--muted-rgb),0.95);
+}
+
+.collection-card__drag-icon {
+  width: 0.9rem !important;
+  height: 0.9rem !important;
+  margin-left: auto;
+  color: rgba(var(--muted-rgb),0.48);
 }
 
 .collection-card__top > svg {
