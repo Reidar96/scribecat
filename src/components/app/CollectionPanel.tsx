@@ -989,7 +989,7 @@ export function CollectionPanel({
           onContextMenu={(event) => {
             if (request.kind !== "folder") return;
             const target = event.target as HTMLElement;
-            if (target.closest(".collection-card:not(.collection-card--create)")) {
+            if (target.closest(".collection-card")) {
               return;
             }
             event.preventDefault();
