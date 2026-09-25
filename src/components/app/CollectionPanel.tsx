@@ -30,7 +30,6 @@ import {
   Network,
   PanelLeft,
   PanelLeftOpen,
-  Pencil,
   Printer,
   Tag,
   Trash2,
