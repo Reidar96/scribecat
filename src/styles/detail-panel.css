@@ -447,9 +447,17 @@ p.detail-panel__version {
 
 
 /* 0.24.0: open-document tabs and desktop split editor. */
+.document-tabs-bar {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+  min-height: 0;
+}
+
 .document-tabs {
   display: flex;
   align-items: stretch;
+  flex: 1 1 auto;
   gap: 0.2rem;
   min-width: 0;
   overflow-x: auto;
@@ -463,6 +471,33 @@ p.detail-panel__version {
 
 .document-tabs::-webkit-scrollbar {
   display: none;
+}
+
+.document-tabs__close-all {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  flex: 0 0 auto;
+  border: 0;
+  border-left: 1px solid rgba(var(--overlay-rgb), 0.1);
+  background: rgba(var(--surface-raised-rgb), 0.82);
+  padding: 0 0.55rem;
+  color: rgba(var(--text-rgb), 0.62);
+  font-size: 0.74rem;
+  cursor: pointer;
+}
+
+.document-tabs__close-all:hover,
+.document-tabs__close-all:focus-visible {
+  background: rgba(var(--surface-hover-rgb), 0.92);
+  color: rgba(var(--text-rgb), 0.95);
+  outline: none;
+}
+
+.document-tabs__close-all svg {
+  width: 0.9rem;
+  height: 0.9rem;
 }
 
 .document-tab {
@@ -912,17 +947,58 @@ p.detail-panel__version {
     grid-row: 3;
   }
 
-  .document-tabs {
+  .document-tabs-bar {
     grid-row: 4;
   }
 }
 
 @media (max-width: 920px) {
+  .detail-panel__card--document,
+  .detail-panel__card--document:has(> .detail-panel__toolbar) {
+    grid-template-rows: auto auto minmax(0, 1fr);
+  }
+
+  .detail-panel__header {
+    grid-row: 1;
+  }
+
+  .document-tabs-bar {
+    grid-row: 2;
+    min-width: 0;
+    height: 2.35rem;
+    max-height: 2.35rem;
+    overflow: hidden;
+    border-bottom: 1px solid rgba(var(--overlay-rgb), 0.1);
+  }
+
+  .detail-panel__body {
+    grid-row: 3;
+    min-height: 0;
+  }
+
   .document-tabs {
-    border-width: 0 0 1px;
+    min-height: 0;
+    height: 100%;
+    max-height: 100%;
+    border: 0;
     border-radius: 0;
     background: rgba(var(--surface-raised-rgb), 0.55);
-    padding-inline: 0.45rem;
+    padding: 0.2rem 0.45rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .document-tab {
+    height: 100%;
+  }
+
+  .document-tabs__close-all {
+    height: 100%;
+    padding-inline: 0.5rem;
+  }
+
+  .document-tabs__close-all span {
+    display: none;
   }
 
   .split-workspace__edge-add,
