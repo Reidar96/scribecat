@@ -201,8 +201,10 @@ export function TreeNodeRow({
   resolveDragFilePaths
 }: TreeNodeRowProps) {
   const { t, i18n } = useTranslation();
+  const isReorderEnabled = sortMode === "manual" && getVaultCapabilities().move;
   const { getLongPressProps } = useLongPressContextMenu<FileTreeNode>(
-    (target, x, y) => onRowContextMenu(target, x, y)
+    (target, x, y) => onRowContextMenu(target, x, y),
+    { openOnLongPress: !isReorderEnabled }
   );
   // Badge for the currently active project-wide search: number of matches
   // in this file (0 hides the badge and the row highlight).
@@ -248,7 +250,6 @@ export function TreeNodeRow({
   // Reordering and moving inside the tree only works in manual sort mode; a
   // file can always be dragged, because dropping it into the editor inserts a
   // link to it (see lib/editor/fileLinks.ts).
-  const isReorderEnabled = sortMode === "manual" && getVaultCapabilities().move;
   const isDragEnabled = isReorderEnabled || node.kind === "file";
   const isDragSource = dragSourceKeys.includes(key);
   const isMultiSelected = selectedKeys.has(key);
