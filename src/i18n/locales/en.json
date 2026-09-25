@@ -616,6 +616,8 @@
     "moveImageRight": "Move image later",
     "previousDay": "Previous day",
     "nextDay": "Next day",
+    "createPreviousDay": "Create previous day",
+    "createNextDay": "Create next day",
     "showCalendar": "Calendar",
     "search": "Search diary",
     "searchPlaceholder": "Search diary…",
@@ -626,7 +628,8 @@
     "overview": "Overview",
     "closeResults": "Close results",
     "reorderImages": "Change order",
-    "reorderImagesHint": "Drag the images to change their order."
+    "reorderImagesHint": "Drag the images to change their order.",
+    "deleteEntry": "Delete entry"
   },
   "tasks": {
     "label": "Tasks",
