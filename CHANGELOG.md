@@ -11,6 +11,7 @@
 - Keep active subtask notes editable without expanding the metadata row.
 - Reduce completed subtasks to a title-only presentation.
 - Restore a small, even amount of space and padding between every task row so compact groups still have air.
+- Add a split create tile to folder collections: folder on the left, note on the right, creating directly inside the currently open folder.
 
 
 ## [0.22.12] - 2026-09-25
