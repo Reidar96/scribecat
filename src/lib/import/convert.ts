@@ -9,8 +9,7 @@
 //
 // Sources are read through ConvertSource rather than by path, because the two
 // ways a file gets here have nothing else in common: the file dialog hands over
-// a path, while a drag from the desktop hands over a File whose path the
-// webview never discloses (see lib/dragDrop/droppedSources.ts).
+// a path, while a direct File source carries its bytes without exposing a filesystem path.
 
 import { requireLocalFs } from "@/platform";
 
@@ -75,7 +74,7 @@ const MAX_TEXT_BYTES = 5 * 1024 * 1024;
 // fenced as raw CSV instead, which at least stays searchable.
 const MAX_TABLE_ROWS = 1_000;
 
-export type SourceKind = "markdown" | "text" | "document" | "image" | "legacyDoc" | "unsupported";
+export type SourceKind = "markdown" | "text" | "document" | "image" | "unsupported";
 
 /**
  * A file to convert, independent of where it came from. `bytes` and `text` are
@@ -169,8 +168,7 @@ export function classifyExtension(extension: string): SourceKind {
   }
 
   // Named apart from "unsupported" so the user gets told *why* — the binary
-  // .doc format has no browser-side parser, and "save as .docx" is the fix.
-  return extension === "doc" ? "legacyDoc" : "unsupported";
+  return "unsupported";
 }
 
 export function isConvertibleFileName(fileName: string): boolean {
