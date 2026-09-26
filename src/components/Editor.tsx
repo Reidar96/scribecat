@@ -105,7 +105,9 @@ type EditorProps = {
   editorFocusRequestId?: number;
   onRequestSidebarFocus?: () => void;
   onRequestFileOpen?: (filePath: string) => void;
-  /** Opens a linked document beside the owning Markdown document. */
+  /** Opens a linked PDF beside the owning Markdown document. */
+  onOpenPdfInSplit?: (request: PdfPreviewState & { ownerFilePath: string }) => void;
+  /** Opens a linked DOCX/PPTX beside the owning Markdown document. */
   onOpenDocumentInSplit?: (request: DocumentPreviewState & { ownerFilePath: string }) => void;
   pdfSplitRestoreRequest?: InlinePdfSplitRestoreRequest | null;
   onZenModeRequest: () => void;
@@ -217,6 +219,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     editorFocusRequestId,
     onRequestSidebarFocus,
     onRequestFileOpen,
+    onOpenPdfInSplit,
     onOpenDocumentInSplit,
     pdfSplitRestoreRequest = null,
     onZenModeRequest,
@@ -1603,9 +1606,9 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
           label={pdfPreview.label}
           onClose={() => setPdfPreview(null)}
           onOpenInSplit={
-            layout === "desktop" && filePath && onOpenDocumentInSplit
+            layout === "desktop" && filePath && onOpenPdfInSplit
               ? () => {
-                  onOpenDocumentInSplit({ ...pdfPreview, ownerFilePath: filePath });
+                  onOpenPdfInSplit({ ...pdfPreview, ownerFilePath: filePath });
                   setPdfPreview(null);
                 }
               : undefined
@@ -1648,6 +1651,14 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         value={{
           folderPath,
           filePath,
+          onOpenPdfInSplit:
+            layout === "desktop" && filePath && onOpenPdfInSplit
+              ? (request) =>
+                  onOpenPdfInSplit({
+                    ...request,
+                    ownerFilePath: filePath
+                  })
+              : undefined,
           onOpenDocumentInSplit:
             layout === "desktop" && filePath && onOpenDocumentInSplit
               ? (request) =>
