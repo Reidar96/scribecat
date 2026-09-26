@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import { CheckCircle2, CircleAlert, CircleSlash, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { MAX_DROPPED_FILES } from "@/lib/dragDrop/droppedSources";
 import {
   importFiles,
   type ImportItemResult,
