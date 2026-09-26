@@ -174,6 +174,7 @@ export function PdfViewerSurface({
   const pinchRef = useRef<{ distance: number; zoom: number } | null>(null);
   const panRef = useRef<{
     pointerId: number;
+    pointerType: string;
     x: number;
     y: number;
     startedOnText: boolean;
@@ -192,6 +193,7 @@ export function PdfViewerSurface({
   const [zoomOpen, setZoomOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fallbackFullscreen, setFallbackFullscreen] = useState(false);
+  const [isPanning, setIsPanning] = useState(false);
 
   const previousPage = () => {
     setPageNumber((page) => Math.max(1, page - 1));
@@ -208,6 +210,28 @@ export function PdfViewerSurface({
   useEffect(() => {
     zoomRef.current = zoom;
   }, [zoom]);
+
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+
+    const handleWheel = (event: WheelEvent) => {
+      // Desktop trackpad pinch is exposed as Ctrl+wheel. Keep the browser
+      // from applying its own page zoom and apply it only to this PDF.
+      if (!event.ctrlKey) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      const factor = Math.exp(-event.deltaY / 240);
+      const next = Math.round(clampZoom(zoomRef.current * factor) * 100) / 100;
+      zoomRef.current = next;
+      setZoom(next);
+    };
+
+    stage.addEventListener("wheel", handleWheel, { passive: false });
+    return () => stage.removeEventListener("wheel", handleWheel);
+  }, []);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -490,7 +514,15 @@ export function PdfViewerSurface({
     setZoom(next);
   };
 
-  const toggleZoomControls = () => setZoomOpen((open) => !open);
+  const toggleZoomControls = () => {
+    if (zoomOpen) {
+      setZoomValue(1);
+      setZoomOpen(false);
+      return;
+    }
+
+    setZoomOpen(true);
+  };
 
   const toggleFullscreen = async () => {
     const root = rootRef.current;
@@ -561,15 +593,37 @@ export function PdfViewerSurface({
 
   const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     event.stopPropagation();
-    if (event.pointerType !== "touch") return;
+
+    const startedOnText =
+      event.target instanceof Element &&
+      Boolean(event.target.closest(".pdf-preview__text-layer"));
+
+    if (event.pointerType === "mouse") {
+      if (event.button !== 0 || zoomRef.current <= 1 || startedOnText) {
+        return;
+      }
+
+      event.preventDefault();
+      panRef.current = {
+        pointerId: event.pointerId,
+        pointerType: event.pointerType,
+        x: event.clientX,
+        y: event.clientY,
+        startedOnText
+      };
+      setIsPanning(true);
+      stageRef.current?.setPointerCapture(event.pointerId);
+      return;
+    }
+
+    if (event.pointerType !== "touch") {
+      return;
+    }
 
     const pointers = touchPointersRef.current;
     pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
 
     if (pointers.size === 1) {
-      const startedOnText =
-        event.target instanceof Element &&
-        Boolean(event.target.closest(".pdf-preview__text-layer"));
       swipeRef.current = {
         pointerId: event.pointerId,
         x: event.clientX,
@@ -578,6 +632,7 @@ export function PdfViewerSurface({
       };
       panRef.current = {
         pointerId: event.pointerId,
+        pointerType: event.pointerType,
         x: event.clientX,
         y: event.clientY,
         startedOnText
@@ -589,6 +644,8 @@ export function PdfViewerSurface({
       event.preventDefault();
       swipeRef.current = null;
       panRef.current = null;
+      setIsPanning(false);
+
       const [first, second] = Array.from(pointers.values());
       pinchRef.current = {
         distance: Math.max(1, pointerDistance(first, second)),
@@ -598,31 +655,50 @@ export function PdfViewerSurface({
   };
 
   const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (event.pointerType !== "touch") return;
-
-    const pointers = touchPointersRef.current;
-    const current = pointers.get(event.pointerId);
-    if (!current) return;
-    current.x = event.clientX;
-    current.y = event.clientY;
-
-    if (pointers.size === 1 && panRef.current?.pointerId === event.pointerId) {
+    if (
+      panRef.current?.pointerId === event.pointerId &&
+      panRef.current.pointerType === event.pointerType
+    ) {
       const pan = panRef.current;
-      if (!pan.startedOnText && zoomRef.current > 1) {
+
+      if (event.pointerType === "mouse" || !pan.startedOnText) {
         const stage = stageRef.current;
+
         if (stage) {
           event.preventDefault();
           stage.scrollLeft -= event.clientX - pan.x;
           stage.scrollTop -= event.clientY - pan.y;
         }
+
         pan.x = event.clientX;
         pan.y = event.clientY;
-        swipeRef.current = null;
+
+        if (event.pointerType === "touch") {
+          swipeRef.current = null;
+        }
       }
+
+      if (event.pointerType === "mouse") {
+        setIsPanning(true);
+      }
+
       return;
     }
 
-    if (pointers.size !== 2 || !pinchRef.current) return;
+    if (event.pointerType !== "touch") {
+      return;
+    }
+
+    const pointers = touchPointersRef.current;
+    const current = pointers.get(event.pointerId);
+    if (!current) return;
+
+    current.x = event.clientX;
+    current.y = event.clientY;
+
+    if (pointers.size !== 2 || !pinchRef.current) {
+      return;
+    }
 
     event.preventDefault();
     const [first, second] = Array.from(pointers.values());
@@ -633,11 +709,25 @@ export function PdfViewerSurface({
   };
 
   const finishPointer = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (event.pointerType !== "touch") return;
+    if (event.pointerType === "mouse") {
+      if (panRef.current?.pointerId === event.pointerId) {
+        if (stageRef.current?.hasPointerCapture(event.pointerId)) {
+          stageRef.current.releasePointerCapture(event.pointerId);
+        }
+        panRef.current = null;
+        setIsPanning(false);
+      }
+      return;
+    }
+
+    if (event.pointerType !== "touch") {
+      return;
+    }
 
     touchPointersRef.current.delete(event.pointerId);
     pinchRef.current = null;
     panRef.current = null;
+    setIsPanning(false);
 
     if (touchPointersRef.current.size !== 0) {
       swipeRef.current = null;
@@ -654,11 +744,14 @@ export function PdfViewerSurface({
     const dx = event.clientX - start.x;
     const dy = event.clientY - start.y;
     const duration = performance.now() - start.startedAt;
+
     if (
       duration > 700 ||
       Math.abs(dx) < 56 ||
       Math.abs(dx) < Math.abs(dy) * 1.25
-    ) return;
+    ) {
+      return;
+    }
 
     if (dx > 0) previousPage();
     else nextPage();
@@ -671,10 +764,21 @@ export function PdfViewerSurface({
 
   const handlePointerCancel = (event: React.PointerEvent<HTMLDivElement>) => {
     event.stopPropagation();
+
+    if (event.pointerType === "mouse") {
+      if (stageRef.current?.hasPointerCapture(event.pointerId)) {
+        stageRef.current.releasePointerCapture(event.pointerId);
+      }
+      panRef.current = null;
+      setIsPanning(false);
+      return;
+    }
+
     touchPointersRef.current.delete(event.pointerId);
     swipeRef.current = null;
     pinchRef.current = null;
     panRef.current = null;
+    setIsPanning(false);
   };
 
   return (
@@ -825,7 +929,14 @@ export function PdfViewerSurface({
             {t("pdfViewer.error")}
           </div>
         ) : (
-          <div ref={pageRef} className="pdf-preview__page">
+          <div
+            ref={pageRef}
+            className={
+              `pdf-preview__page${zoom > 1 ? " pdf-preview__page--zoomed" : ""}${
+                isPanning ? " pdf-preview__page--panning" : ""
+              }`
+            }
+          >
             <canvas ref={canvasRef} className="pdf-preview__canvas" />
             <div
               ref={textLayerRef}
