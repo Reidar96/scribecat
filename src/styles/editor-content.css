@@ -783,6 +783,7 @@
 }
 
 .pdf-preview {
+  container-type: inline-size;
   position: relative;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -1758,4 +1759,25 @@
   height: auto;
   padding: 10%;
   overflow: hidden;
+}
+
+
+/* Split panes can be narrow even on a wide desktop viewport. Use the PDF
+   reader's two-row narrow-toolbar layout based on the viewer width, not the
+   browser width, so PDF/Word/PPTX never overlap their controls. */
+@container (max-width: 720px) {
+  .pdf-preview__toolbar {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .pdf-preview__pager {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-self: center;
+  }
+
+  .pdf-preview__actions {
+    grid-column: 2;
+    grid-row: 1;
+  }
 }
