@@ -95,6 +95,64 @@ const OfficeVisual = memo(function OfficeVisual({
   return <div className={className} dangerouslySetInnerHTML={{ __html: svg ?? "" }} />;
 });
 
+const WordOverviewPage = memo(function WordOverviewPage({
+  html,
+  widthPx,
+  heightPx
+}: {
+  html: string;
+  widthPx: number;
+  heightPx: number;
+}) {
+  const frameRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(0.2);
+
+  useEffect(() => {
+    const frame = frameRef.current;
+    if (!frame) return;
+
+    const update = () => {
+      const frameWidth = Math.max(1, frame.clientWidth);
+      const frameHeight = Math.max(1, frame.clientHeight);
+      setScale(
+        Math.min(
+          frameWidth / Math.max(1, widthPx),
+          frameHeight / Math.max(1, heightPx)
+        )
+      );
+    };
+
+    update();
+    const observer =
+      typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
+    observer?.observe(frame);
+
+    return () => observer?.disconnect();
+  }, [widthPx, heightPx]);
+
+  return (
+    <div
+      ref={frameRef}
+      className="pdf-preview__overview-page-frame pdf-preview__overview-page-frame--word"
+    >
+      <div
+        className="document-preview__word-sheet document-preview__word-sheet--overview"
+        style={{
+          width: widthPx + "px",
+          height: heightPx + "px",
+          minHeight: heightPx + "px",
+          transform: `translate(-50%, -50%) scale(${scale})`
+        }}
+      >
+        <OfficeVisual
+          html={html}
+          className="document-preview__word-sheet-content"
+        />
+      </div>
+    </div>
+  );
+});
+
 export function DocumentViewer({
   absolutePath,
   label,
