@@ -40,6 +40,43 @@ function findNode(node: JSONNode, type: string): JSONNode | null {
   return null;
 }
 
+describe("local PDF media round-trip", () => {
+  it("migrates the 0.24.5 local PDF link into the media node", () => {
+    const { markdown, doc } = roundTrip(
+      "[Presentasjon.pdf](_attachments/Presentasjon.pdf)\n"
+    );
+
+    const media = findNode(doc, "image");
+    expect(media?.attrs?.alt).toBe("Presentasjon.pdf");
+    expect(media?.attrs?.src).toBe("_attachments/Presentasjon.pdf");
+    expect(markdown.trim()).toBe(
+      "![Presentasjon.pdf](_attachments/Presentasjon.pdf)"
+    );
+  });
+
+  it("keeps remote PDF URLs as normal links", () => {
+    const { markdown, doc } = roundTrip(
+      "[Manual](https://example.com/manual.pdf)\n"
+    );
+
+    expect(findNode(doc, "image")).toBeNull();
+    expect(markdown.trim()).toBe("[Manual](https://example.com/manual.pdf)");
+  });
+
+  it("round-trips the 0.24.6 PDF media form", () => {
+    const { markdown, doc } = roundTrip(
+      "![Presentasjon.pdf](_attachments/Presentasjon.pdf)\n"
+    );
+
+    expect(findNode(doc, "image")?.attrs?.src).toBe(
+      "_attachments/Presentasjon.pdf"
+    );
+    expect(markdown.trim()).toBe(
+      "![Presentasjon.pdf](_attachments/Presentasjon.pdf)"
+    );
+  });
+});
+
 describe("image markdown round-trip", () => {
   it("keeps a purely numeric alt text a string (phone camera file names)", () => {
     // TipTap's default attribute parser turns "1000078813" into a Number,

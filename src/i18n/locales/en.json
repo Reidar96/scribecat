@@ -1374,7 +1374,8 @@
     "copyPage": "Copy text from this page",
     "copied": "Page text copied",
     "openInSplit": "Open PDF beside this note",
-    "attached": "PDF attached to this tab"
+    "attached": "PDF attached to this tab",
+    "selectableText": "Selectable text on the PDF page"
   },
   "tabs": {
     "label": "Open documents",

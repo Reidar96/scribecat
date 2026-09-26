@@ -18,12 +18,23 @@ type PdfTextItemLike = {
   hasEOL?: boolean;
 };
 
+type PdfTextContentLike = {
+  items: unknown[];
+  styles?: Record<string, unknown>;
+};
+
+type PdfViewportLike = {
+  width: number;
+  height: number;
+  scale: number;
+};
+
 type PdfPageLike = {
-  getViewport(options: { scale: number }): { width: number; height: number };
-  getTextContent(): Promise<{ items: unknown[] }>;
+  getViewport(options: { scale: number }): PdfViewportLike;
+  getTextContent(): Promise<PdfTextContentLike>;
   render(options: {
     canvasContext: CanvasRenderingContext2D;
-    viewport: { width: number; height: number };
+    viewport: PdfViewportLike;
     transform?: number[];
   }): { promise: Promise<void>; cancel?: () => void };
 };
@@ -34,15 +45,34 @@ type PdfDocumentLike = {
   destroy?: () => Promise<void>;
 };
 
+type PdfTextLayerLike = {
+  render(): Promise<void>;
+  cancel?: () => void;
+};
+
+type PdfTextLayerConstructor = new (options: {
+  textContentSource: PdfTextContentLike;
+  container: HTMLElement;
+  viewport: PdfViewportLike;
+}) => PdfTextLayerLike;
+
+type PdfJsModuleLike = {
+  GlobalWorkerOptions: { workerSrc: string };
+  getDocument(options: { data: Uint8Array }): {
+    promise: Promise<PdfDocumentLike>;
+  };
+  TextLayer?: PdfTextLayerConstructor;
+};
+
 export type PdfPreviewRequest = {
   absolutePath: string;
   label: string;
 };
 
 type PdfViewerSurfaceProps = PdfPreviewRequest & {
-  onClose: () => void;
+  onClose?: () => void;
   onOpenInSplit?: () => void;
-  mode?: "modal" | "split";
+  mode?: "modal" | "split" | "inline";
 };
 
 async function copyText(text: string): Promise<void> {
@@ -90,6 +120,15 @@ function textFromItems(items: unknown[]): string {
     .trim();
 }
 
+function isFormControl(target: EventTarget | null): boolean {
+  return (
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    target instanceof HTMLButtonElement ||
+    target instanceof HTMLSelectElement
+  );
+}
+
 export function PdfViewerSurface({
   absolutePath,
   label,
@@ -98,10 +137,21 @@ export function PdfViewerSurface({
   mode = "modal"
 }: PdfViewerSurfaceProps) {
   const { t } = useTranslation();
+  const rootRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
+  const pageRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const textLayerRef = useRef<HTMLDivElement>(null);
   const documentRef = useRef<PdfDocumentLike | null>(null);
+  const textLayerConstructorRef = useRef<PdfTextLayerConstructor | null>(null);
   const renderCancelRef = useRef<(() => void) | null>(null);
+  const textLayerCancelRef = useRef<(() => void) | null>(null);
+  const swipeRef = useRef<{
+    pointerId: number;
+    x: number;
+    y: number;
+    startedAt: number;
+  } | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [pageInput, setPageInput] = useState("1");
   const [pageCount, setPageCount] = useState(0);
@@ -111,6 +161,14 @@ export function PdfViewerSurface({
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState(false);
   const [viewportVersion, setViewportVersion] = useState(0);
+
+  const previousPage = () => {
+    setPageNumber((page) => Math.max(1, page - 1));
+  };
+
+  const nextPage = () => {
+    setPageNumber((page) => Math.min(pageCount || 1, page + 1));
+  };
 
   useEffect(() => {
     setPageInput(String(pageNumber));
@@ -125,14 +183,17 @@ export function PdfViewerSurface({
         setLoading(true);
         setError(false);
 
-        const [data, pdfjs, worker] = await Promise.all([
+        const [data, pdfjsModule, worker] = await Promise.all([
           readFile(absolutePath),
           import("pdfjs-dist"),
           import("pdfjs-dist/build/pdf.worker.min.mjs?url")
         ]);
+        const pdfjs = pdfjsModule as unknown as PdfJsModuleLike;
 
         pdfjs.GlobalWorkerOptions.workerSrc = worker.default;
-        const document = (await pdfjs.getDocument({ data }).promise) as unknown as PdfDocumentLike;
+        textLayerConstructorRef.current = pdfjs.TextLayer ?? null;
+
+        const document = await pdfjs.getDocument({ data }).promise;
         loadedDocument = document;
 
         if (!active) {
@@ -159,7 +220,9 @@ export function PdfViewerSurface({
     return () => {
       active = false;
       renderCancelRef.current?.();
+      textLayerCancelRef.current?.();
       documentRef.current = null;
+      textLayerConstructorRef.current = null;
       void loadedDocument?.destroy?.();
     };
   }, [absolutePath]);
@@ -186,13 +249,25 @@ export function PdfViewerSurface({
     const document = documentRef.current;
     const canvas = canvasRef.current;
     const stage = stageRef.current;
+    const pageElement = pageRef.current;
+    const textLayerElement = textLayerRef.current;
 
-    if (!document || !canvas || !stage || pageNumber < 1 || pageNumber > document.numPages) {
+    if (
+      !document ||
+      !canvas ||
+      !stage ||
+      !pageElement ||
+      !textLayerElement ||
+      pageNumber < 1 ||
+      pageNumber > document.numPages
+    ) {
       return;
     }
 
     let active = true;
     renderCancelRef.current?.();
+    textLayerCancelRef.current?.();
+    textLayerElement.replaceChildren();
 
     void document.getPage(pageNumber).then(async (page) => {
       if (!active) return;
@@ -206,7 +281,9 @@ export function PdfViewerSurface({
         availableWidth / baseViewport.width,
         availableHeight / baseViewport.height
       );
-      const viewport = page.getViewport({ scale: Math.max(0.3, Math.min(fitScale, 2.4)) });
+      const viewport = page.getViewport({
+        scale: Math.max(0.3, Math.min(fitScale, 2.4))
+      });
       const context = canvas.getContext("2d");
 
       if (!context) {
@@ -214,16 +291,33 @@ export function PdfViewerSurface({
         return;
       }
 
+      pageElement.style.width = `${Math.floor(viewport.width)}px`;
+      pageElement.style.height = `${Math.floor(viewport.height)}px`;
+
       const outputScale = Math.max(1, Math.min(window.devicePixelRatio || 1, 2));
       canvas.width = Math.floor(viewport.width * outputScale);
       canvas.height = Math.floor(viewport.height * outputScale);
       canvas.style.width = `${Math.floor(viewport.width)}px`;
       canvas.style.height = `${Math.floor(viewport.height)}px`;
 
+      textLayerElement.style.width = `${Math.floor(viewport.width)}px`;
+      textLayerElement.style.height = `${Math.floor(viewport.height)}px`;
+      // PDF.js v6 uses --total-scale-factor; --scale-factor keeps the same
+      // layer compatible with older PDF.js internals should the dependency be
+      // temporarily rolled back.
+      textLayerElement.style.setProperty(
+        "--total-scale-factor",
+        String(viewport.scale)
+      );
+      textLayerElement.style.setProperty("--scale-factor", String(viewport.scale));
+
       const task = page.render({
         canvasContext: context,
         viewport,
-        transform: outputScale === 1 ? undefined : [outputScale, 0, 0, outputScale, 0, 0]
+        transform:
+          outputScale === 1
+            ? undefined
+            : [outputScale, 0, 0, outputScale, 0, 0]
       });
 
       renderCancelRef.current = () => task.cancel?.();
@@ -231,6 +325,34 @@ export function PdfViewerSurface({
 
       try {
         await task.promise;
+
+        if (!active) {
+          return;
+        }
+
+        const TextLayer = textLayerConstructorRef.current;
+
+        if (TextLayer) {
+          try {
+            const textContent = await page.getTextContent();
+
+            if (!active) {
+              return;
+            }
+
+            const textLayer = new TextLayer({
+              textContentSource: textContent,
+              container: textLayerElement,
+              viewport
+            });
+            textLayerCancelRef.current = () => textLayer.cancel?.();
+            await textLayer.render();
+          } catch (textLayerError) {
+            // The canvas remains useful if a malformed PDF defeats only the
+            // selectable text overlay. Keep page navigation/copy available.
+            console.warn("PDF text layer could not be rendered:", textLayerError);
+          }
+        }
       } catch (renderError) {
         const name =
           renderError && typeof renderError === "object" && "name" in renderError
@@ -250,6 +372,7 @@ export function PdfViewerSurface({
     return () => {
       active = false;
       renderCancelRef.current?.();
+      textLayerCancelRef.current?.();
     };
   }, [pageNumber, pageCount, viewportVersion]);
 
@@ -257,13 +380,22 @@ export function PdfViewerSurface({
     if (mode !== "modal") return;
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
+      if (event.key === "Escape" && onClose) {
         event.preventDefault();
         onClose();
-      } else if (event.key === "ArrowLeft") {
-        setPageNumber((page) => Math.max(1, page - 1));
+        return;
+      }
+
+      if (isFormControl(event.target)) {
+        return;
+      }
+
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        previousPage();
       } else if (event.key === "ArrowRight") {
-        setPageNumber((page) => Math.min(pageCount || 1, page + 1));
+        event.preventDefault();
+        nextPage();
       }
     };
 
@@ -304,8 +436,95 @@ export function PdfViewerSurface({
     }
   };
 
+  const handleViewerKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (mode === "modal" || isFormControl(event.target)) {
+      return;
+    }
+
+    // When the user has highlighted PDF text, arrow keys belong to the native
+    // selection instead of changing pages.
+    const selection = window.getSelection();
+    if (selection && !selection.isCollapsed) {
+      return;
+    }
+
+    if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      previousPage();
+    } else if (event.key === "ArrowRight") {
+      event.preventDefault();
+      nextPage();
+    }
+  };
+
+  const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    // Keep ProseMirror from turning a text-selection gesture into selection of
+    // the entire image/media node. Do not preventDefault: the browser still
+    // needs the native event to select PDF text.
+    event.stopPropagation();
+
+    if (event.pointerType === "touch" && event.isPrimary) {
+      swipeRef.current = {
+        pointerId: event.pointerId,
+        x: event.clientX,
+        y: event.clientY,
+        startedAt: performance.now()
+      };
+    }
+  };
+
+  const handlePointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
+    event.stopPropagation();
+
+    const start = swipeRef.current;
+    swipeRef.current = null;
+
+    if (
+      !start ||
+      start.pointerId !== event.pointerId ||
+      event.pointerType !== "touch"
+    ) {
+      return;
+    }
+
+    const selection = window.getSelection();
+    if (selection && !selection.isCollapsed) {
+      return;
+    }
+
+    const dx = event.clientX - start.x;
+    const dy = event.clientY - start.y;
+    const duration = performance.now() - start.startedAt;
+
+    if (
+      duration > 700 ||
+      Math.abs(dx) < 56 ||
+      Math.abs(dx) < Math.abs(dy) * 1.25
+    ) {
+      return;
+    }
+
+    if (dx > 0) {
+      previousPage();
+    } else {
+      nextPage();
+    }
+  };
+
   return (
-    <div className={`pdf-preview pdf-preview--${mode}`}>
+    <div
+      ref={rootRef}
+      className={`pdf-preview pdf-preview--${mode}`}
+      tabIndex={0}
+      onKeyDown={handleViewerKeyDown}
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={() => {
+        swipeRef.current = null;
+      }}
+      onMouseDown={(event) => event.stopPropagation()}
+      onClick={(event) => event.stopPropagation()}
+    >
       <div className="pdf-preview__toolbar">
         <strong className="pdf-preview__name" title={label}>
           {label}
@@ -317,7 +536,7 @@ export function PdfViewerSurface({
             disabled={loading || pageNumber <= 1}
             aria-label={t("pdfViewer.previous")}
             title={t("pdfViewer.previous")}
-            onClick={() => setPageNumber((page) => Math.max(1, page - 1))}
+            onClick={previousPage}
           >
             <ChevronLeft aria-hidden="true" />
           </button>
@@ -348,7 +567,7 @@ export function PdfViewerSurface({
             disabled={loading || pageCount === 0 || pageNumber >= pageCount}
             aria-label={t("pdfViewer.next")}
             title={t("pdfViewer.next")}
-            onClick={() => setPageNumber((page) => Math.min(pageCount, page + 1))}
+            onClick={nextPage}
           >
             <ChevronRight aria-hidden="true" />
           </button>
@@ -376,15 +595,17 @@ export function PdfViewerSurface({
             </button>
           ) : null}
 
-          <button
-            type="button"
-            className="pdf-preview__close"
-            aria-label={t("common.close")}
-            title={t("common.close")}
-            onClick={onClose}
-          >
-            <X aria-hidden="true" />
-          </button>
+          {onClose ? (
+            <button
+              type="button"
+              className="pdf-preview__close"
+              aria-label={t("common.close")}
+              title={t("common.close")}
+              onClick={onClose}
+            >
+              <X aria-hidden="true" />
+            </button>
+          ) : null}
         </div>
       </div>
 
@@ -399,14 +620,19 @@ export function PdfViewerSurface({
             {t("pdfViewer.error")}
           </div>
         ) : (
-          <>
+          <div ref={pageRef} className="pdf-preview__page">
             <canvas ref={canvasRef} className="pdf-preview__canvas" />
+            <div
+              ref={textLayerRef}
+              className="textLayer pdf-preview__text-layer"
+              aria-label={t("pdfViewer.selectableText")}
+            />
             {rendering ? (
               <div className="pdf-preview__rendering" aria-hidden="true">
                 <Loader2 className="pdf-preview__spinner" />
               </div>
             ) : null}
-          </>
+          </div>
         )}
       </div>
     </div>

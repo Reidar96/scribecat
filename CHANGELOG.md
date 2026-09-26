@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.24.6] - 2026-09-26
+
+### Fixes and improvements
+- Render **Combined view** PDFs as an embedded PDF window directly inside the Markdown document instead of as a clickable link.
+- Migrate local PDF links created by 0.24.5 into the same embedded PDF media view when the note is opened, preventing server-vault `/_attachments/*.pdf` 404 navigation.
+- Keep the existing 0.24.3 PDF reader controls inside the inline window, including page navigation, page jumping, copying page text, and opening the PDF beside its owning note in split view.
+- Add left/right touch swiping and focused keyboard arrow navigation for PDF pages.
+- Add a PDF.js text layer above the rendered page so PDF text can be selected with the mouse or touch selection controls.
+- Keep the **Individual pages** PDF insertion option unchanged.
+
 ## [0.24.5] - 2026-09-26
 
 ### New features and improvements
