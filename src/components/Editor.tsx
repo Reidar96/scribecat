@@ -83,7 +83,7 @@ import { useShortcutsStore } from "@/store/useShortcutsStore";
 
 // What the editor embeds as an image — the toolbar's file filter and the drop
 // handler share this list, so both accept exactly the same files.
-const EDITOR_MEDIA_EXTENSIONS = ["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "pdf"];
+const EDITOR_MEDIA_EXTENSIONS = ["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "pdf", "docx", "pptx", "mp4", "webm", "mov", "m4v", "ogv"];
 
 // Marks the surface as a light page inside the dark UI; tokens.css and the
 // dark variant in App.css key off this exact name.
