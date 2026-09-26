@@ -593,7 +593,7 @@ export function CollectionPanel({
     if (cardDirectory !== null && cardDirectory !== undefined) {
       return {
         directory: cardDirectory,
-        cardKey: card.getAttribute("data-collection-key")
+        cardKey: card?.getAttribute("data-collection-key") ?? null
       };
     }
 
