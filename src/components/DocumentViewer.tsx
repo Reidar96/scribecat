@@ -3,7 +3,7 @@ import { Check, ChevronLeft, ChevronRight, Copy, FileText, Grid2X2, Loader2, Pla
 import { readFile } from "@/platform/vaultFs";
 
 type Props = { absolutePath: string; label: string; onClose?: () => void };
-type Slide = { src: string; svg: string; text: string };
+type Slide = { svg: string; text: string };
 
 function extension(path: string): string {
   return path.split(/[?#]/)[0].split(".").pop()?.toLowerCase() ?? "";
@@ -18,6 +18,26 @@ function mimeFor(path: string): string {
   return "application/octet-stream";
 }
 
+async function copyText(text: string): Promise<void> {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+  document.body.appendChild(textarea);
+  textarea.select();
+  try {
+    document.execCommand("copy");
+  } finally {
+    textarea.remove();
+  }
+}
+
 export function DocumentViewer({ absolutePath, label, onClose }: Props) {
   const ext = extension(absolutePath);
   const [data, setData] = useState<Uint8Array | null>(null);
@@ -27,7 +47,7 @@ export function DocumentViewer({ absolutePath, label, onClose }: Props) {
   const [error, setError] = useState(false);
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
   const [pptView, setPptView] = useState<"single" | "all">("single");
-  const [pptCopied, setPptCopied] = useState(false);
+  const [officeCopied, setOfficeCopied] = useState(false);
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
 
   const isVideo = ["mp4", "webm", "mov", "m4v", "ogv"].includes(ext);
@@ -37,8 +57,7 @@ export function DocumentViewer({ absolutePath, label, onClose }: Props) {
   useEffect(() => {
     let active = true;
     let url: string | null = null;
-    let pptBlobUrls: string[] = [];
-    setError(false);
+        setError(false);
     setHtml("");
     setSlides([]);
     setSlide(0);
@@ -60,17 +79,13 @@ export function DocumentViewer({ absolutePath, label, onClose }: Props) {
         } else if (isPowerPoint) {
           const { renderPptxToSlideImages } = await import("@/lib/editor/pptxToImages");
           const rendered = await renderPptxToSlideImages(absolutePath, bytes);
-          pptBlobUrls = rendered.map((page) =>
-            URL.createObjectURL(new Blob([page.data], { type: page.mimeType }))
-          );
           if (rendered.length === 0) {
             throw new Error("The PowerPoint file does not contain readable slides.");
           }
           if (active) {
             const decoder = new TextDecoder();
             setSlides(
-              rendered.map((page, index) => ({
-                src: pptBlobUrls[index],
+              rendered.map((page) => ({
                 svg: decoder.decode(page.data),
                 text: page.text
               }))
@@ -86,9 +101,6 @@ export function DocumentViewer({ absolutePath, label, onClose }: Props) {
     return () => {
       active = false;
       if (url) URL.revokeObjectURL(url);
-      for (const blobUrl of pptBlobUrls) {
-        URL.revokeObjectURL(blobUrl);
-      }
     };
   }, [absolutePath, ext, isVideo, isWord, isPowerPoint]);
 
@@ -123,30 +135,22 @@ export function DocumentViewer({ absolutePath, label, onClose }: Props) {
     else setSlide((n) => Math.max(0, n - 1));
   };
 
-  const copyPowerPointText = async () => {
-    const text = slides[slide]?.text ?? "";
+  const copyOfficeText = async () => {
+    let text = "";
+
+    if (isPowerPoint) {
+      text = slides[slide]?.text ?? "";
+    } else if (isWord) {
+      const container = document.createElement("div");
+      container.innerHTML = html;
+      text = container.innerText.trim();
+    }
+
     if (!text) return;
 
-    try {
-      await navigator.clipboard?.writeText(text);
-      setPptCopied(true);
-      window.setTimeout(() => setPptCopied(false), 1400);
-    } catch {
-      const textarea = document.createElement("textarea");
-      textarea.value = text;
-      textarea.setAttribute("readonly", "");
-      textarea.style.position = "fixed";
-      textarea.style.opacity = "0";
-      document.body.appendChild(textarea);
-      textarea.select();
-      try {
-        document.execCommand("copy");
-        setPptCopied(true);
-        window.setTimeout(() => setPptCopied(false), 1400);
-      } finally {
-        textarea.remove();
-      }
-    }
+    await copyText(text);
+    setOfficeCopied(true);
+    window.setTimeout(() => setOfficeCopied(false), 1400);
   };
 
   const kind = useMemo(() => isVideo ? "video" : isPowerPoint ? "powerpoint" : "word", [isVideo, isPowerPoint]);
@@ -184,11 +188,21 @@ export function DocumentViewer({ absolutePath, label, onClose }: Props) {
           {isPowerPoint && pptView === "single" && slides.length > 0 ? (
             <button
               type="button"
-              onClick={() => void copyPowerPointText()}
-              aria-label={pptCopied ? "Text copied" : "Copy slide text"}
-              title={pptCopied ? "Text copied" : "Copy slide text"}
+              onClick={() => void copyOfficeText()}
+              aria-label={officeCopied ? "Text copied" : "Copy slide text"}
+              title={officeCopied ? "Text copied" : "Copy slide text"}
             >
-              {pptCopied ? <Check /> : <Copy />}
+              {officeCopied ? <Check /> : <Copy />}
+            </button>
+          ) : null}
+          {isWord && html ? (
+            <button
+              type="button"
+              onClick={() => void copyOfficeText()}
+              aria-label={officeCopied ? "Text copied" : "Copy document text"}
+              title={officeCopied ? "Text copied" : "Copy document text"}
+            >
+              {officeCopied ? <Check /> : <Copy />}
             </button>
           ) : null}
           {isPowerPoint && pptView === "single" && slides.length > 1 ? <button type="button" disabled={slide === 0} onClick={() => setSlide((n) => Math.max(0, n - 1))} aria-label="Previous slide"><ChevronLeft /></button> : null}
