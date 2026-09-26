@@ -1067,7 +1067,30 @@ function App() {
     void loadShortcutOverrides();
   }, [loadShortcutOverrides]);
 
-  // External files are not accepted via drag-and-drop. Explicit import remains available through the Import button.
+  // External files are intentionally blocked as drops so the webview never navigates away
+  // from ScribeCat. Supported files can still be imported through the explicit Import action.
+  useEffect(() => {
+    const swallowExternalFileDrop = (event: DragEvent) => {
+      if (event.defaultPrevented || !Array.from(event.dataTransfer?.types ?? []).includes("Files")) {
+        return;
+      }
+
+      event.preventDefault();
+
+      if (event.type === "dragover" && event.dataTransfer) {
+        event.dataTransfer.dropEffect = "none";
+      }
+    };
+
+    window.addEventListener("dragover", swallowExternalFileDrop);
+    window.addEventListener("drop", swallowExternalFileDrop);
+
+    return () => {
+      window.removeEventListener("dragover", swallowExternalFileDrop);
+      window.removeEventListener("drop", swallowExternalFileDrop);
+    };
+  }, []);
+
   const handleVersionDiffRequest = (version: FileVersion) => {
     setVersionDiffTarget({ version, fileLabel: selectedFileLabel ?? "" });
   };
