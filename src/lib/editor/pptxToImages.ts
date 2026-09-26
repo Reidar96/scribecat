@@ -707,7 +707,7 @@ async function parseSlides(data: Uint8Array): Promise<PptxSlide[]> {
     slideHeight: size.height
   };
 
-  return sources.map((source, index) =>
+  return sources.map((source) =>
     slideSvg(
       source,
       contextBase,
