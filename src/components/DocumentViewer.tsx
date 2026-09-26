@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   Check, ChevronLeft, ChevronRight, Columns2, Copy, FileText, Grid2X2,
-  Loader2, Maximize2, Minimize2, Play, Square, X, ZoomIn
+  Loader2, Maximize2, Minimize2, Square, X, ZoomIn
 } from "lucide-react";
 import { readFile } from "@/platform/vaultFs";
 import { copyText } from "@/lib/clipboard";
