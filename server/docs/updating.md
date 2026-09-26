@@ -12,7 +12,7 @@ plain pull gets the same release as the desktop app. To pin another version,
 put it in `.env`:
 
 ```dotenv
-SCRIBECAT_IMAGE=ghcr.io/reidar96/scribecat-server:0.25.11
+SCRIBECAT_IMAGE=ghcr.io/reidar96/scribecat-server:0.25.12
 ```
 
 Then update with:

@@ -460,13 +460,14 @@ export function DocumentPanel({
 
   const openPdfInSplit = (
     request: PdfPreviewRequest & { ownerFilePath: string },
-    pageNumber = request.pageNumber ?? 1
+    pageNumber = request.pageNumber ?? 1,
+    side: "left" | "right" = "right"
   ) => {
     if (layout !== "desktop") return;
 
     setAttachedDocument(null);
     setAttachedPdf({ ...request, pageNumber });
-    setSecondarySide("right");
+    setSecondarySide(side);
     setSplitPickerOpen(false);
     setSplitDropPreview(null);
 
@@ -478,7 +479,8 @@ export function DocumentPanel({
   };
 
   const openDocumentInSplit = (
-    request: DocumentPreviewRequest & { ownerFilePath: string }
+    request: DocumentPreviewRequest & { ownerFilePath: string },
+    side: "left" | "right" = "right"
   ) => {
     if (layout !== "desktop") return;
 
@@ -487,7 +489,7 @@ export function DocumentPanel({
       ...request,
       pageNumber: request.pageNumber ?? 1
     });
-    setSecondarySide("right");
+    setSecondarySide(side);
     setSplitPickerOpen(false);
     setSplitDropPreview(null);
 
@@ -506,10 +508,46 @@ export function DocumentPanel({
 
   const replaceSplitSide = (side: "left" | "right", filePath: string) => {
     setSplitPickerOpen(false);
+    setSplitDropPreview(null);
 
-    if (visibleAttachedPdf) {
+    const extension = filePath
+      .split(/[?#]/)[0]
+      .split(".")
+      .pop()
+      ?.toLowerCase();
+
+    if (extension === "pdf" || extension === "docx" || extension === "pptx") {
       setAttachedPdf(null);
+      setAttachedDocument(null);
+
+      if (extension === "pdf") {
+        openPdfInSplit(
+          {
+            absolutePath: filePath,
+            label: getFileLinkLabel(filePath),
+            ownerFilePath: selectedFilePath ?? "",
+            pageNumber: 1
+          },
+          1,
+          side
+        );
+      } else {
+        openDocumentInSplit(
+          {
+            absolutePath: filePath,
+            label: getFileLinkLabel(filePath),
+            ownerFilePath: selectedFilePath ?? "",
+            pageNumber: 1
+          },
+          side
+        );
+      }
+
+      return;
     }
+
+    setAttachedPdf(null);
+    setAttachedDocument(null);
 
     if (!secondaryFilePath) {
       if (filePath !== selectedFilePath) {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Check,
@@ -79,6 +79,22 @@ function mmToPixels(mm: number): number {
   return (mm / 25.4) * 96;
 }
 
+const OfficeVisual = memo(function OfficeVisual({
+  html,
+  svg,
+  className
+}: {
+  html?: string;
+  svg?: string;
+  className: string;
+}) {
+  if (html !== undefined) {
+    return <div className={className} dangerouslySetInnerHTML={{ __html: html }} />;
+  }
+
+  return <div className={className} dangerouslySetInnerHTML={{ __html: svg ?? "" }} />;
+});
+
 export function DocumentViewer({
   absolutePath,
   label,
@@ -93,6 +109,9 @@ export function DocumentViewer({
   const rootRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const pageRef = useRef<HTMLDivElement>(null);
+  const wordMeasureRef = useRef<HTMLDivElement>(null);
+  const zoomUiFrameRef = useRef<number | null>(null);
+  const pendingZoomUiRef = useRef(1);
   const touchPointersRef = useRef(new Map<number, { x: number; y: number }>());
   const swipeRef = useRef<{
     pointerId: number;
@@ -120,6 +139,7 @@ export function DocumentViewer({
 
   const [data, setData] = useState<Uint8Array | null>(null);
   const [html, setHtml] = useState("");
+  const [wordPages, setWordPages] = useState<string[]>([]);
   const [slides, setSlides] = useState<Slide[]>([]);
   const [pageNumber, setPageNumber] = useState(Math.max(1, initialPageNumber));
   const [pageInput, setPageInput] = useState(String(Math.max(1, initialPageNumber)));
@@ -139,7 +159,11 @@ export function DocumentViewer({
   const isVideo = ["mp4", "webm", "mov", "m4v", "ogv"].includes(ext);
   const isWord = ext === "docx";
   const isPowerPoint = ext === "pptx";
-  const pageCount = isPowerPoint ? slides.length : isWord ? 1 : 0;
+  const pageCount = isPowerPoint
+    ? slides.length
+    : isWord
+      ? wordPages.length
+      : 0;
 
   const previousPage = () => {
     setPageNumber((page) => Math.max(1, page - 1));
@@ -171,6 +195,7 @@ export function DocumentViewer({
 
     setData(null);
     setHtml("");
+    setWordPages([]);
     setSlides([]);
     setPageNumber(Math.max(1, initialPageNumber));
     setPageView("single");
@@ -246,6 +271,90 @@ export function DocumentViewer({
   }, [absolutePath, ext, isVideo, isWord, isPowerPoint]);
 
   useEffect(() => {
+    if (!isWord || !html || !wordMeasureRef.current) {
+      setWordPages(isWord && html ? [html] : []);
+      return;
+    }
+
+    const measureHost = wordMeasureRef.current;
+    const source = measureHost.firstElementChild as HTMLElement | null;
+
+    if (!source) {
+      setWordPages([html]);
+      return;
+    }
+
+    const pageWidthPx = mmToPixels(wordPageSize.widthMm);
+    const pageHeightPx = mmToPixels(wordPageSize.heightMm);
+
+    source.style.width = pageWidthPx + "px";
+    source.style.height = pageHeightPx + "px";
+    source.style.minHeight = pageHeightPx + "px";
+    source.style.maxWidth = "none";
+    source.style.boxSizing = "border-box";
+
+    const children = Array.from(source.children);
+
+    if (children.length === 0) {
+      setWordPages([html]);
+      return;
+    }
+
+    const pages: string[] = [];
+    let page = document.createElement("div");
+    page.className = "document-preview__word-sheet";
+    page.style.width = pageWidthPx + "px";
+    page.style.height = pageHeightPx + "px";
+    page.style.minHeight = pageHeightPx + "px";
+    page.style.boxSizing = "border-box";
+    page.style.overflow = "hidden";
+    measureHost.appendChild(page);
+
+    for (const child of children) {
+      const clone = child.cloneNode(true) as HTMLElement;
+      page.appendChild(clone);
+
+      if (page.scrollHeight > page.clientHeight && page.children.length > 1) {
+        page.removeChild(clone);
+        pages.push(page.innerHTML);
+
+        page.remove();
+        page = document.createElement("div");
+        page.className = "document-preview__word-sheet";
+        page.style.width = pageWidthPx + "px";
+        page.style.height = pageHeightPx + "px";
+        page.style.minHeight = pageHeightPx + "px";
+        page.style.boxSizing = "border-box";
+        page.style.overflow = "hidden";
+        measureHost.appendChild(page);
+        page.appendChild(clone);
+      }
+    }
+
+    if (page.children.length > 0) {
+      pages.push(page.innerHTML);
+    }
+
+    page.remove();
+
+    setWordPages(pages.length > 0 ? pages : [html]);
+  }, [
+    html,
+    isWord,
+    wordPageSize.heightMm,
+    wordPageSize.widthMm
+  ]);
+
+  useEffect(() => {
+    return () => {
+      if (zoomUiFrameRef.current !== null) {
+        cancelAnimationFrame(zoomUiFrameRef.current);
+      }
+      zoomUiFrameRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
     const stage = stageRef.current;
     if (!stage) return;
 
@@ -306,12 +415,17 @@ export function DocumentViewer({
 
       if (isFormControl(event.target)) return;
 
-      if (event.key === "ArrowLeft") {
+      if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+        if (
+          event.target instanceof HTMLElement &&
+          event.target.isContentEditable
+        ) {
+          return;
+        }
+
         event.preventDefault();
-        previousPage();
-      } else if (event.key === "ArrowRight") {
-        event.preventDefault();
-        nextPage();
+        if (event.key === "ArrowLeft") previousPage();
+        else nextPage();
       }
     };
 
@@ -373,10 +487,8 @@ export function DocumentViewer({
 
     page.style.width = Math.max(1, Math.round(naturalWidth * requestedScale)) + "px";
     page.style.height = Math.max(1, Math.round(naturalHeight * requestedScale)) + "px";
-    page.style.setProperty(
-      "--pdf-view-zoom",
-      String(zoomRef.current)
-    );
+    page.style.setProperty("--pdf-css-zoom", String(fitScale));
+    page.style.setProperty("--pdf-view-zoom", String(zoomRef.current));
   }, [
     html,
     isPowerPoint,
@@ -394,6 +506,13 @@ export function DocumentViewer({
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (slides.length === 0 || isFormControl(event.target)) {
+        return;
+      }
+
+      if (
+        event.target instanceof HTMLElement &&
+        event.target.isContentEditable
+      ) {
         return;
       }
 
@@ -486,6 +605,19 @@ export function DocumentViewer({
     stage.scrollTop = Math.max(0, pageY - pointerY);
   };
 
+  const publishZoomUi = (value: number) => {
+    pendingZoomUiRef.current = value;
+
+    if (zoomUiFrameRef.current !== null) {
+      return;
+    }
+
+    zoomUiFrameRef.current = requestAnimationFrame(() => {
+      zoomUiFrameRef.current = null;
+      setZoom(pendingZoomUiRef.current);
+    });
+  };
+
   const setZoomValue = (value: number) => {
     const next = Math.round(clampZoom(value) * 100) / 100;
     const previousZoom = zoomRef.current;
@@ -496,18 +628,18 @@ export function DocumentViewer({
     }
 
     zoomRef.current = next;
-    setZoom(next);
     setZoomOpen(true);
     applyVisualZoom(next, previousZoom);
+    publishZoomUi(next);
   };
 
   const resetZoom = () => {
     zoomAnchorRef.current = null;
     const previousZoom = zoomRef.current;
     zoomRef.current = 1;
-    setZoom(1);
     setZoomOpen(false);
     applyVisualZoom(1, previousZoom);
+    publishZoomUi(1);
 
     requestAnimationFrame(() => {
       const stage = stageRef.current;
@@ -560,7 +692,7 @@ export function DocumentViewer({
       text = slides[pageNumber - 1]?.text ?? "";
     } else if (isWord) {
       const container = document.createElement("div");
-      container.innerHTML = html;
+      container.innerHTML = wordPages[pageNumber - 1] ?? "";
       text = container.innerText.trim();
     }
 
@@ -825,6 +957,51 @@ export function DocumentViewer({
     "--word-page-height": wordPageSize.heightMm + "mm"
   } as React.CSSProperties;
 
+  const overviewPages = useMemo(() => {
+    if (isPowerPoint) {
+      return slides.map((slideData, index) => (
+        <button
+          type="button"
+          className="pdf-preview__overview-page"
+          key={index}
+          onClick={() => {
+            setPageNumber(index + 1);
+            setPageView("single");
+          }}
+          aria-label={"Slide " + (index + 1)}
+        >
+          <div className="document-preview__slide document-preview__slide--thumbnail">
+            <OfficeVisual svg={slideData.svg} className="document-preview__slide-svg" />
+          </div>
+          <span>{index + 1} / {slides.length}</span>
+        </button>
+      ));
+    }
+
+    if (isWord) {
+      return wordPages.map((pageHtml, index) => (
+        <button
+          type="button"
+          className="pdf-preview__overview-page"
+          key={index}
+          onClick={() => {
+            setPageNumber(index + 1);
+            setPageView("single");
+          }}
+          aria-label={"Page " + (index + 1)}
+        >
+          <OfficeVisual
+            html={pageHtml}
+            className="document-preview__word-sheet document-preview__word-sheet--thumbnail"
+          />
+          <span>{index + 1} / {wordPages.length}</span>
+        </button>
+      ));
+    }
+
+    return [];
+  }, [isPowerPoint, isWord, slides, wordPages]);
+
   const copyLabel = copyFailed
     ? "Copy failed"
     : copied
@@ -1031,6 +1208,20 @@ export function DocumentViewer({
         </div>
       </div>
 
+      {isWord && html ? (
+        <div
+          ref={wordMeasureRef}
+          className="document-preview__word-measurer"
+          aria-hidden="true"
+        >
+          <article
+            className="document-preview__word-sheet"
+            style={pageStyle}
+            dangerouslySetInnerHTML={{ __html: html }}
+          />
+        </div>
+      ) : null}
+
       <div
           ref={stageRef}
           className={
@@ -1065,15 +1256,15 @@ export function DocumentViewer({
             />
           ) : null}
 
-          {isWord && html && pageView === "single" ? (
+          {isWord && wordPages.length > 0 && pageView === "single" ? (
             <div
               ref={pageRef}
               className="pdf-preview__page document-preview__office-page"
               style={pageStyle}
             >
-              <article
+              <OfficeVisual
+                html={wordPages[pageNumber - 1] ?? ""}
                 className="document-preview__word-sheet"
-                dangerouslySetInnerHTML={{ __html: html }}
               />
             </div>
           ) : null}
@@ -1087,58 +1278,16 @@ export function DocumentViewer({
               }
               aria-label={"Slide " + pageNumber}
             >
-              <div
+              <OfficeVisual
+                svg={slides[pageNumber - 1].svg}
                 className="document-preview__slide-svg"
-                dangerouslySetInnerHTML={{
-                  __html: slides[pageNumber - 1].svg
-                }}
               />
             </section>
           ) : null}
 
           {pageView === "grid" ? (
             <div className="pdf-preview__overview">
-              {isPowerPoint
-                ? slides.map((slideData, index) => (
-                    <button
-                      type="button"
-                      className="pdf-preview__overview-page"
-                      key={index}
-                      onClick={() => {
-                        setPageNumber(index + 1);
-                        setPageView("single");
-                      }}
-                      aria-label={"Slide " + (index + 1)}
-                    >
-                      <div className="document-preview__slide document-preview__slide--thumbnail">
-                        <div
-                          className="document-preview__slide-svg"
-                          aria-hidden="true"
-                          dangerouslySetInnerHTML={{
-                            __html: slideData.svg
-                          }}
-                        />
-                      </div>
-                      <span>{index + 1} / {slides.length}</span>
-                    </button>
-                  ))
-                : html
-                  ? (
-                    <button
-                      type="button"
-                      className="pdf-preview__overview-page"
-                      onClick={() => setPageView("single")}
-                      aria-label="Page 1"
-                    >
-                      <div className="document-preview__word-sheet document-preview__word-sheet--thumbnail">
-                        <div
-                          dangerouslySetInnerHTML={{ __html: html }}
-                        />
-                      </div>
-                      <span>1 / 1</span>
-                    </button>
-                  )
-                  : null}
+              {overviewPages}
             </div>
           ) : null}
         </div>
