@@ -42,7 +42,7 @@ import { useTranslation } from "react-i18next";
           const baseViewport = page.getViewport({ scale: 1 });
           const scale = Math.min(0.32, 260 / Math.max(1, baseViewport.width));
           const viewport = page.getViewport({ scale });
-          const canvas = document.createElement("canvas");
+          const canvas = window.document.createElement("canvas");
           canvas.width = Math.max(1, Math.ceil(viewport.width));
           canvas.height = Math.max(1, Math.ceil(viewport.height));
           const context = canvas.getContext("2d");
@@ -336,6 +336,8 @@ export function PdfViewerSurface({
       try {
         setLoading(true);
         setError(false);
+        setPageView("single");
+        setPageThumbnails([]);
 
         const [data, pdfjsModule, worker] = await Promise.all([
           readFile(absolutePath),
@@ -1080,7 +1082,7 @@ export function PdfViewerSurface({
             {isFullscreen ? <Minimize2 aria-hidden="true" /> : <Maximize2 aria-hidden="true" />}
           </button>
 
-          {mode === "split" ? (
+          {mode !== "modal" ? (
             <button
               type="button"
               aria-pressed={isMinimized}
