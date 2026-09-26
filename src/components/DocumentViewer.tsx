@@ -58,7 +58,7 @@ async function parsePptx(data: Uint8Array): Promise<{ slides: Slide[]; blobs: Re
   const slides: Slide[] = [];
   for (const slideName of slideNames) {
     const xml = decoder.decode(zip[slideName]);
-    const texts = [...xmlText(xml, "a:t"), ...xmlText(xml, "a:txBody")].map(decodeXml);
+    const texts = xmlText(xml, "a:t").map(decodeXml);
     const relPath = slideName.replace(/slide\d+\.xml$/, "_rels/") + slideName.split("/").pop() + ".rels";
     const relXml = zip[relPath] ? decoder.decode(zip[relPath]) : "";
     const images: string[] = [];
@@ -103,7 +103,8 @@ export function DocumentViewer({ absolutePath, label, onClose }: Props) {
       try {
         if (isWord) {
           const mammoth = await import("mammoth");
-          const result = await mammoth.convertToHtml({ arrayBuffer: bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) });
+          const arrayBuffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+          const result = await mammoth.convertToHtml({ arrayBuffer });
           if (active) setHtml(result.value);
         } else if (isPowerPoint && ext === "pptx") {
           const parsed = await parsePptx(bytes);
