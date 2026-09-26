@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, FileText, Grid2X2, Loader2, Play, Square, X 
 import { readFile } from "@/platform/vaultFs";
 
 type Props = { absolutePath: string; label: string; onClose?: () => void };
+type Slide = { src: string };
 
 function extension(path: string): string {
   return path.split(/[?#]/)[0].split(".").pop()?.toLowerCase() ?? "";
