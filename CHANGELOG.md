@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.25.1] - 2026-09-26
+
+### Fixed
+- Route every supported local document type through the correct viewer instead of treating DOCX/PPTX/video files as images.
+- Keep mouse PDF navigation as ordinary scrolling with no grab/grabbing cursor; touch panning remains available when zoomed.
+- Keep PDF text selection independent from document zoom and preserve pointer-anchored pinch/trackpad zoom.
+- Clean up document viewer type detection so only actually supported DOCX/PPTX/video formats are offered.
+
+### Improved
+- Keep Word, PowerPoint and video attachments as normal local media files while rendering them through their dedicated viewers.
+- Publish the corrected desktop builds from the 0.25.1 tag.
+
+# Changelog
+
 ## [0.25.0] - 2026-09-26
 
 ### Fixed
