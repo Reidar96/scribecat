@@ -25,6 +25,9 @@ type TableEdgeControlsProps = {
 };
 
 const EDGE_HIT_SIZE = 7;
+const EDGE_CONTROL_INSET = 14;
+const INTERACTIVE_TARGET_SELECTOR =
+  'button, a, input, textarea, select, [role="button"], [role="link"]';
 function selectionPosition(editor: Editor, cell: HTMLTableCellElement): number | null {
   try {
     const domPos = editor.view.posAtDOM(cell, 0);
@@ -163,6 +166,15 @@ export function TableEdgeControls({ editor, disabled = false }: TableEdgeControl
 
     const onMouseMove = (event: MouseEvent) => {
       const target = event.target instanceof Element ? event.target : null;
+
+      // Never let the table affordance materialize on top of another control.
+      // It should only own the pointer once the user deliberately moves onto
+      // the visible + button itself.
+      if (target?.closest(INTERACTIVE_TARGET_SELECTOR)) {
+        setHandle(null);
+        return;
+      }
+
       const cell = target?.closest("td, th");
 
       if (!(cell instanceof HTMLTableCellElement) || !dom.contains(cell)) {
@@ -191,26 +203,26 @@ export function TableEdgeControls({ editor, disabled = false }: TableEdgeControl
         {
           action: "column-before",
           distance: Math.abs(event.clientX - rect.left),
-          x: rect.left,
+          x: rect.left + EDGE_CONTROL_INSET,
           y: cellCenterY
         },
         {
           action: "column-after",
           distance: Math.abs(event.clientX - rect.right),
-          x: rect.right,
+          x: rect.right - EDGE_CONTROL_INSET,
           y: cellCenterY
         },
         {
           action: "row-before",
           distance: Math.abs(event.clientY - rowRect.top),
           x: cellCenterX,
-          y: rowRect.top
+          y: rowRect.top + EDGE_CONTROL_INSET
         },
         {
           action: "row-after",
           distance: Math.abs(event.clientY - rowRect.bottom),
           x: cellCenterX,
-          y: rowRect.bottom
+          y: rowRect.bottom - EDGE_CONTROL_INSET
         }
       ];
 
