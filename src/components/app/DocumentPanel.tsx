@@ -24,6 +24,7 @@ import { FindReplacePanel } from "@/components/FindReplacePanel";
 import { VersionsPopover } from "@/components/VersionsPopover";
 import { DocumentMenu } from "@/components/app/DocumentMenu";
 import { DocumentTabs, TAB_DRAG_MIME } from "@/components/app/DocumentTabs";
+import { DocumentViewer, type DocumentPreviewRequest } from "@/components/DocumentViewer";
 import {
   PdfViewerSurface,
   type PdfPreviewRequest
