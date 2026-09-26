@@ -522,7 +522,8 @@ export function DocumentPanel({
           : {
               absolutePath: filePath,
               label: getFileLinkLabel(filePath),
-              pageNumber: 1
+              pageNumber: 1,
+              ownerFilePath: selectedFilePath ?? ""
             }
       );
 
