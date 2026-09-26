@@ -1,31 +1,20 @@
 /**
- * Copy text reliably in browsers and desktop webviews.
- *
- * The synchronous execCommand path runs while the button click still has
- * user activation. This matters because awaiting navigator.clipboard first
- * can consume that activation and make the fallback fail in some webviews.
+ * Copy plain text without relying on one particular browser/webview clipboard path.
  */
-function copyViaExecCommand(text: string): boolean {
+function copyViaCommand(text: string): boolean {
   const textarea = document.createElement("textarea");
   const previousActive = document.activeElement as HTMLElement | null;
 
   textarea.value = text;
   textarea.setAttribute("readonly", "");
   textarea.setAttribute("aria-hidden", "true");
-  Object.assign(textarea.style, {
-    position: "fixed",
-    left: "-10000px",
-    top: "0",
-    width: "1px",
-    height: "1px",
-    opacity: "0",
-    pointerEvents: "none"
-  });
-
+  textarea.style.position = "fixed";
+  textarea.style.left = "-9999px";
+  textarea.style.top = "0";
+  textarea.style.opacity = "0";
   document.body.appendChild(textarea);
-  textarea.focus({ preventScroll: true });
+  textarea.focus();
   textarea.select();
-  textarea.setSelectionRange(0, textarea.value.length);
 
   let copied = false;
   try {
@@ -43,20 +32,14 @@ function copyViaExecCommand(text: string): boolean {
 export async function copyText(text: string): Promise<boolean> {
   if (!text) return false;
 
-  // Prefer the synchronous route so a click on Copy keeps its user-activation
-  // context in Chromium/Tauri webviews.
-  if (copyViaExecCommand(text)) {
-    return true;
-  }
-
   if (typeof navigator.clipboard?.writeText === "function") {
     try {
       await navigator.clipboard.writeText(text);
       return true;
     } catch {
-      return false;
+      // Fall through: some webviews expose the API but reject this write.
     }
   }
 
-  return false;
+  return copyViaCommand(text);
 }

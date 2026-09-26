@@ -14,7 +14,6 @@ export type EditorFileContextValue = {
   folderPath: string | null;
   filePath: string | null;
   onOpenPdfInSplit?: (request: InlinePdfPreviewRequest) => void;
-  onOpenDocumentInSplit?: (request: InlinePdfPreviewRequest) => void;
   pdfSplitRestoreRequest?: InlinePdfSplitRestoreRequest | null;
 };
 
