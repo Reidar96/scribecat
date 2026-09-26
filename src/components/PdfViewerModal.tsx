@@ -208,6 +208,12 @@ export function PdfViewerSurface({
 
   useEffect(() => {
     setPageInput(String(pageNumber));
+
+    if (lastReportedPageRef.current === pageNumber) {
+      return;
+    }
+
+    lastReportedPageRef.current = pageNumber;
     onPageChange?.(pageNumber);
   }, [pageNumber, onPageChange]);
 
@@ -327,7 +333,7 @@ export function PdfViewerSurface({
       textLayerConstructorRef.current = null;
       void loadedDocument?.destroy?.();
     };
-  }, [absolutePath, initialPageNumber]);
+  }, [absolutePath]);
 
   useEffect(() => {
     const stage = stageRef.current;
