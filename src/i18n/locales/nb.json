@@ -762,7 +762,8 @@
   "editor": {
     "unserializableContent": "Lagring er satt på pause: redigereren kan ikke skrive dette notatet som Markdown ({{nodes}}). Angre siste endring for å unngå datatap, og rapporter gjerne feilen.",
     "imageRequiresFile": "Bilder og PDF-er kan bare settes inn når du redigerer en fil i en åpen mappe.",
-    "imageInsertFailed": "Kunne ikke sette inn bildet «{{fileName}}»: {{error}}",\n    "pdfInsertFailed": "Kunne ikke sette inn PDF-en «{{fileName}}» som bilder: {{error}}",
+    "imageInsertFailed": "Kunne ikke sette inn bildet «{{fileName}}»: {{error}}",
+    "pdfInsertFailed": "Kunne ikke sette inn PDF-en «{{fileName}}» som bilder: {{error}}",
     "imageDialogTitle": "Velg bilde eller PDF",
     "imageDialogFilter": "Bilder og PDF",
     "linkRequiresFile": "Filer kan bare lenkes når du redigerer en fil i en åpen mappe.",
