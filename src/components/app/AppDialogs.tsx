@@ -3,6 +3,7 @@ import type { AppUpdate } from "@/platform/types";
 import { DeleteFileDialog } from "@/components/DeleteFileDialog";
 import { ExportDialog, type ExportDialogTarget } from "@/components/ExportDialog";
 import type { MarkdownFileRecord } from "@/lib/fileSystem";
+import { ImportDialog } from "@/components/ImportDialog";
 import { MoveToDialog, type MoveRequest } from "@/components/MoveToDialog";
 import { SaveConflictDialog } from "@/components/SaveConflictDialog";
 import { SettingsDialog, type SettingsTab } from "@/components/SettingsDialog";
@@ -11,6 +12,7 @@ import { UpdateNotification } from "@/components/UpdateNotification";
 import { VersionDiffDialog, type VersionDiffTarget } from "@/components/VersionDiffDialog";
 import type { DeleteTarget } from "@/hooks/useDeleteTarget";
 import type { FileVersion } from "@/lib/fileVersions";
+import type { ImportSource } from "@/lib/import/importer";
 
 type AppDialogsProps = {
   // Closing a dirty entry of the "In progress" list (hooks/useWorkingSetActions.ts)
@@ -53,6 +55,15 @@ type AppDialogsProps = {
   resolveOrderedExportRecords: (target: ExportDialogTarget) => MarkdownFileRecord[];
   onCloseExport: () => void;
 
+  // Import
+  importFileList: ImportSource[] | null;
+  folderPath: string | null;
+  importTargetFolder: string | null;
+  importSkippedCount: number;
+  importLimitReached: boolean;
+  onImported: (createdFilePaths: string[]) => void;
+  onCloseImport: () => void;
+
   // Update
   availableUpdate: AppUpdate | null;
   onDismissUpdate: () => void;
@@ -94,7 +105,13 @@ export function AppDialogs({
   readMarkdownForExport,
   resolveOrderedExportRecords,
   onCloseExport,
+  importFileList,
   folderPath,
+  importTargetFolder,
+  importSkippedCount,
+  importLimitReached,
+  onImported,
+  onCloseImport,
   availableUpdate,
   onDismissUpdate,
   versionDiffTarget,
@@ -154,6 +171,16 @@ export function AppDialogs({
         readMarkdown={readMarkdownForExport}
         resolveOrderedRecords={resolveOrderedExportRecords}
         onClose={onCloseExport}
+      />
+
+      <ImportDialog
+        files={importFileList}
+        vaultRoot={folderPath}
+        targetFolder={importTargetFolder}
+        skippedCount={importSkippedCount}
+        limitReached={importLimitReached}
+        onImported={onImported}
+        onClose={onCloseImport}
       />
 
       <VersionDiffDialog
