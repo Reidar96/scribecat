@@ -661,7 +661,10 @@ export function PdfViewerSurface({
     ) {
       const pan = panRef.current;
 
-      if (event.pointerType === "mouse" || !pan.startedOnText) {
+      if (
+        event.pointerType === "mouse" ||
+        (zoomRef.current > 1 && !pan.startedOnText)
+      ) {
         const stage = stageRef.current;
 
         if (stage) {
