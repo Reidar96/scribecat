@@ -259,13 +259,14 @@ export function DocumentPanel({
   const [splitPickerQuery, setSplitPickerQuery] = useState("");
   const [splitDropPreview, setSplitDropPreview] = useState<"left" | "right" | null>(null);
   const [attachedPdf, setAttachedPdf] = useState<
-    (PdfPreviewRequest & { ownerFilePath: string }) | null
+    (PdfPreviewRequest & { ownerFilePath: string; pageNumber: number }) | null
   >(null);
   const [attachedDocument, setAttachedDocument] = useState<
     (DocumentPreviewRequest & { ownerFilePath: string }) | null
   >(null);
   const [pdfSplitRestoreRequest, setPdfSplitRestoreRequest] = useState<{
     absolutePath: string;
+    pageNumber: number;
     requestId: number;
   } | null>(null);
   const documentLocks = useAppStore((state) => state.documentLocks);
@@ -441,6 +442,7 @@ export function DocumentPanel({
   ) => {
     setPdfSplitRestoreRequest((current) => ({
       absolutePath: request.absolutePath,
+      pageNumber: request.pageNumber ?? 1,
       requestId: (current?.requestId ?? 0) + 1
     }));
   };
@@ -457,12 +459,13 @@ export function DocumentPanel({
   };
 
   const openPdfInSplit = (
-    request: PdfPreviewRequest & { ownerFilePath: string }
+    request: PdfPreviewRequest & { ownerFilePath: string },
+    pageNumber = request.pageNumber ?? 1
   ) => {
     if (layout !== "desktop") return;
 
     setAttachedDocument(null);
-    setAttachedPdf(request);
+    setAttachedPdf({ ...request, pageNumber });
     setSecondarySide("right");
     setSplitPickerOpen(false);
     setSplitDropPreview(null);
@@ -1053,6 +1056,14 @@ export function DocumentPanel({
                           mode="split"
                           absolutePath={visibleAttachedPdf.absolutePath}
                           label={visibleAttachedPdf.label}
+                          initialPageNumber={visibleAttachedPdf.pageNumber}
+                          onPageChange={(pageNumber) => {
+                            setAttachedPdf((current) =>
+                              current
+                                ? { ...current, pageNumber }
+                                : current
+                            );
+                          }}
                           onClose={closeAttachedPdf}
                         />
                       ) : visibleAttachedDocument ? (
