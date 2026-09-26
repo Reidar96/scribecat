@@ -979,7 +979,7 @@ export function PdfViewerSurface({
         </div>
       </div>
 
-      <div ref={stageRef} className="pdf-preview__stage">
+      <div ref={stageRef} className={`pdf-preview__stage${zoom > 1 ? " pdf-preview__stage--zoomed" : ""}`}>
         {zoom > 1 ? (
           <div className="pdf-preview__minimap" aria-hidden="true">
             <div
