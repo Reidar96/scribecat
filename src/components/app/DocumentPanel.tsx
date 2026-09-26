@@ -1018,7 +1018,7 @@ export function DocumentPanel({
                           mode="split"
                           absolutePath={visibleAttachedPdf.absolutePath}
                           label={visibleAttachedPdf.label}
-                          onClose={() => setAttachedPdf(null)}
+                          onClose={closeAttachedPdf}
                         />
                       ) : secondaryFilePath && secondaryDocument && secondaryMarkdown !== null ? (
                         <>
