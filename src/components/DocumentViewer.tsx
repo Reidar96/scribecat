@@ -234,6 +234,25 @@ export function DocumentViewer({
   }, [absolutePath, ext, isVideo, isWord, isPowerPoint]);
 
   useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+
+    const handleWheel = (event: WheelEvent) => {
+      if (!event.ctrlKey || pageView !== "single") return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      captureZoomAnchor(event.clientX, event.clientY);
+      const factor = Math.exp(-event.deltaY / 240);
+      setZoomValue(zoomRef.current * factor);
+    };
+
+    stage.addEventListener("wheel", handleWheel, { passive: false });
+    return () => stage.removeEventListener("wheel", handleWheel);
+  }, [pageView]);
+
+  useEffect(() => {
     const handleFullscreenChange = () => {
       const active = document.fullscreenElement === rootRef.current;
       setIsFullscreen(active);
@@ -248,6 +267,45 @@ export function DocumentViewer({
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (mode !== "modal") return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (
+        event.key === "Escape" &&
+        document.fullscreenElement === rootRef.current
+      ) {
+        return;
+      }
+
+      if (event.key === "Escape" && fallbackFullscreen) {
+        event.preventDefault();
+        setFallbackFullscreen(false);
+        setIsFullscreen(false);
+        return;
+      }
+
+      if (event.key === "Escape" && onClose) {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+
+      if (isFormControl(event.target)) return;
+
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        previousPage();
+      } else if (event.key === "ArrowRight") {
+        event.preventDefault();
+        nextPage();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [mode, onClose, pageCount, fallbackFullscreen]);
 
   useEffect(() => {
     const stage = stageRef.current;
