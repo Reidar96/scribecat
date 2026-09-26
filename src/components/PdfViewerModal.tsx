@@ -458,10 +458,6 @@ export function PdfViewerSurface({
 
       const renderedWidth = Math.floor(viewport.width * cssZoom);
       const renderedHeight = Math.floor(viewport.height * cssZoom);
-      renderedPageSizeRef.current = {
-        width: renderedWidth,
-        height: renderedHeight
-      };
       const visualRatio = zoom / Math.max(0.01, renderZoom);
       pageElement.style.width = `${Math.max(1, Math.round(renderedWidth * visualRatio))}px`;
       pageElement.style.height = `${Math.max(1, Math.round(renderedHeight * visualRatio))}px`;
