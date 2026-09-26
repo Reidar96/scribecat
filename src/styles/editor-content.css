@@ -917,9 +917,24 @@
 }
 
 .pdf-preview__split-button {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-width: 2rem;
+  flex: 0 0 auto !important;
   visibility: visible;
   opacity: 1;
+  white-space: nowrap;
+  border-color: rgb(var(--accent-rgb));
+  background: rgb(var(--accent-rgb) / 0.12);
 }
+
+.pdf-preview__split-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
 
 .pdf-preview__view-switch {
   display: inline-flex;
@@ -1391,6 +1406,13 @@
 }
 
 @media (max-width: 700px) {
+  .pdf-preview__actions > .pdf-preview__copy-button,
+  .pdf-preview__actions > .pdf-preview__fullscreen-button,
+  .pdf-preview__actions > .pdf-preview__view-switch,
+  .pdf-preview__actions > .pdf-preview__split-button {
+    display: none;
+  }
+
   .document-preview-modal {
     padding: 0.45rem;
   }
@@ -1534,8 +1556,9 @@
 
 .document-preview__slide {
   position: relative;
-  width: min(100%, 1100px);
-  aspect-ratio: 16 / 9;
+  width: auto;
+  height: auto;
+  max-width: none;
   overflow: hidden;
   padding: 0;
   border: 0;
@@ -1791,6 +1814,10 @@
     grid-column: 2;
     grid-row: 1;
   }
+
+  .pdf-preview__split-label {
+    display: none;
+  }
 }
 
 
@@ -1820,39 +1847,35 @@
 }
 
 .document-preview__office-page > .document-preview__word-sheet {
-  width: var(--word-page-width, 210mm);
-  height: var(--word-page-height, 297mm);
-  min-height: var(--word-page-height, 297mm);
+  width: 100%;
+  height: 100%;
+  min-height: 0;
   max-width: none;
   margin: 0;
-  transform: scale(
-    calc(var(--pdf-css-zoom, 1) * var(--pdf-view-zoom, 1))
-  );
+  transform: none;
   transform-origin: 0 0;
 }
 
 .document-preview__slide {
-  width: 1600px;
-  height: 900px;
+  width: auto;
+  height: auto;
   max-width: none;
   max-height: none;
   flex: none;
 }
 
 .document-preview__slide > .document-preview__slide-svg {
-  width: 1600px;
-  height: 900px;
+  display: block;
+  width: 100%;
+  height: 100%;
   max-width: none;
   max-height: none;
-  transform: scale(
-    calc(var(--pdf-css-zoom, 1) * var(--pdf-view-zoom, 1))
-  );
-  transform-origin: 0 0;
+  transform: none;
 }
 
 .document-preview__slide > .document-preview__slide-svg > svg {
-  width: 1600px;
-  height: 900px;
+  width: 100%;
+  height: 100%;
   max-width: none;
   max-height: none;
   display: block;

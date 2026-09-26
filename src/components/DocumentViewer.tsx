@@ -37,7 +37,7 @@ type Props = DocumentPreviewRequest & {
   mode?: "modal" | "split";
 };
 
-type Slide = { svg: string; text: string };
+type Slide = { svg: string; text: string; width: number; height: number };
 
 function extension(path: string): string {
   return path.split(/[?#]/)[0].split(".").pop()?.toLowerCase() ?? "";
@@ -61,7 +61,7 @@ function isFormControl(target: EventTarget | null): boolean {
   );
 }
 
-const MIN_ZOOM = 0.5;
+const MIN_ZOOM = 1;
 const MAX_ZOOM = 3;
 
 function clampZoom(value: number): number {
@@ -304,7 +304,9 @@ export function DocumentViewer({
             setSlides(
               rendered.map((page) => ({
                 svg: decoder.decode(page.data),
-                text: page.text
+                text: page.text,
+                width: page.width,
+                height: page.height
               }))
             );
           }
@@ -521,12 +523,13 @@ export function DocumentViewer({
       return;
     }
 
+    const currentSlide = slides[pageNumber - 1];
     const naturalWidth = isWord
       ? mmToPixels(wordPageSize.widthMm)
-      : 1600;
+      : currentSlide?.width ?? 1600;
     const naturalHeight = isWord
       ? mmToPixels(wordPageSize.heightMm)
-      : 900;
+      : currentSlide?.height ?? 900;
 
     stage.style.setProperty(
       "--pdf-page-aspect-ratio",
@@ -1096,7 +1099,7 @@ export function DocumentViewer({
         <div className="pdf-preview__pager">
           <button
             type="button"
-            disabled={pageCount === 0 || pageNumber <= 1 || isWord}
+            disabled={pageCount === 0 || pageNumber <= 1}
             aria-label={t("pdfViewer.previous")}
             title={t("pdfViewer.previous")}
             onClick={previousPage}
@@ -1140,6 +1143,7 @@ export function DocumentViewer({
           {!isVideo ? (
             <button
               type="button"
+              className="pdf-preview__copy-button"
               disabled={copying || (!html && !slides[pageNumber - 1]?.text)}
               aria-label={copyLabel}
               title={copyLabel}
@@ -1152,6 +1156,7 @@ export function DocumentViewer({
           {!isVideo ? (
             <button
               type="button"
+              className="pdf-preview__fullscreen-button"
               aria-pressed={isFullscreen}
               aria-label={
                 isFullscreen ? "Exit fullscreen" : "Fullscreen"
@@ -1252,6 +1257,7 @@ export function DocumentViewer({
               onClick={() => onOpenInSplit(pageNumber)}
             >
               <Columns2 aria-hidden="true" />
+              <span className="pdf-preview__split-label">{t("pdfViewer.openInSplit")}</span>
             </button>
           ) : null}
 
