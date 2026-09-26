@@ -443,7 +443,7 @@ export function PdfViewerSurface({
     return () => {
       active = false;
     };
-  }, [pageView, pageCount]);
+  }, [pageView, pageCount, viewportVersion]);
 
   useEffect(() => {
     const document = documentRef.current;
