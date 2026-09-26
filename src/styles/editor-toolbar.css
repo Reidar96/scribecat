@@ -33,7 +33,9 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.55rem;
+  align-content: flex-start;
+  column-gap: 0.55rem;
+  row-gap: 0.55rem;
   border: 1px solid rgba(var(--overlay-rgb),0.08);
   border-radius: 1rem;
   background: rgba(var(--surface-rgb),0.72);
@@ -42,7 +44,9 @@
 
 .editor-toolbar__group {
   display: flex;
-  flex-wrap: wrap;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  align-items: center;
   gap: 0.45rem;
 }
 
@@ -55,7 +59,9 @@
 }
 
 .editor-toolbar__separator {
+  flex: 0 0 1px;
   width: 1px;
+  min-height: 2rem;
   align-self: stretch;
   background: rgba(var(--overlay-rgb),0.1);
 }
