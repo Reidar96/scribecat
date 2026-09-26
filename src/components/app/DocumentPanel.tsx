@@ -767,6 +767,7 @@ export function DocumentPanel({
             filePaths={openTabs}
             activeFilePath={selectedFilePath}
             dirtyFilePaths={dirtyFilePaths}
+            attachedPdfOwnerFilePath={attachedPdf?.ownerFilePath ?? null}
             onSelect={onSelectTab}
             onClose={onCloseTab}
             onCloseAll={onCloseAllTabs}
