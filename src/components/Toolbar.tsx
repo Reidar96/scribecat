@@ -16,6 +16,7 @@ import {
   Heading5,
   Heading6,
   Highlighter,
+  ImagePlus,
   IndentDecrease,
   IndentIncrease,
   Info,
@@ -72,6 +73,7 @@ import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
 type ToolbarProps = {
   editor: Editor;
   onLinkRequest: () => void;
+  onImageInsertRequest: () => void;
   onPrintRequest: () => void;
   onDeleteRequest: () => void;
   deleteEnabled: boolean;
@@ -368,6 +370,7 @@ function CalloutMenu({ editor }: { editor: Editor }) {
 export function Toolbar({
   editor,
   onLinkRequest,
+  onImageInsertRequest,
   onPrintRequest,
   onDeleteRequest,
   deleteEnabled,
@@ -655,6 +658,19 @@ export function Toolbar({
         <TableGridPicker editor={editor} />
         {editor.isActive("table") ? <TableMenu editor={editor} /> : null}
         <EmojiPicker editor={editor} />
+        <Button
+          type="button"
+          size="icon-sm"
+          variant="outline"
+          aria-label={t("toolbar.insertImage")}
+          title={t("toolbar.insertImage")}
+          onMouseDown={(event) => {
+            event.preventDefault();
+          }}
+          onClick={onImageInsertRequest}
+        >
+          <ImagePlus />
+        </Button>
         <CalloutMenu editor={editor} />
       </div>
 
