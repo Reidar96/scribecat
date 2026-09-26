@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.25.9] - 2026-09-26
+
+### Fixed
+- Make document copy actions survive repeated switching between open PDF, Word and PowerPoint previews.
+- Fall back to the synchronous browser copy route when a webview exposes Clipboard API but rejects a write.
+- Reset document-preview state when changing files so stale copy/loading/fullscreen state cannot leak into the next document.
+
+### Improvements
+- Make PowerPoint preview controls follow the PDF reader pattern: view mode, slide navigation, copy and fullscreen controls in one stable toolbar.
+- Show DOCX content on a paper-sized sheet using the page dimensions stored in the Word document when available.
+- Keep Office previews centered on a dedicated reading surface with responsive layouts.
+
+### Docker
+- Publish `ghcr.io/reidar96/scribecat-server:0.25.9`.
+- Pin Server Edition Compose defaults to `0.25.9`.
+
+
 ## [0.25.8] - 2026-09-26
 
 ### Fixed
