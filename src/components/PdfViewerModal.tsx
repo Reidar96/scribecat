@@ -372,7 +372,7 @@ export function PdfViewerSurface({
     setPageThumbnails([]);
 
     void (async () => {
-      const thumbnails: string[] = [];
+      const thumbnails: Array<{ src: string; width: number; height: number }> = [];
 
       try {
         for (let pageIndex = 1; pageIndex <= document.numPages; pageIndex += 1) {
