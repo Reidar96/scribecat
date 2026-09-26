@@ -180,13 +180,15 @@ export function PdfViewerSurface({
     startedOnText: boolean;
   } | null>(null);
   const zoomRef = useRef(1);
+  const renderZoomRef = useRef(1);
+  const zoomRenderTimerRef = useRef<number | null>(null);
   const zoomAnchorRef = useRef<{
     clientX: number;
     clientY: number;
     pageX: number;
     pageY: number;
   } | null>(null);
-  const [miniMap, setMiniMap] = useState({ left: 0, top: 0, width: 1, height: 1 });
+  const renderedPageSizeRef = useRef({ width: 0, height: 0 });
   const [pageNumber, setPageNumber] = useState(1);
   const [pageInput, setPageInput] = useState("1");
   const [pageCount, setPageCount] = useState(0);
@@ -200,7 +202,7 @@ export function PdfViewerSurface({
   const [zoomOpen, setZoomOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fallbackFullscreen, setFallbackFullscreen] = useState(false);
-  const [miniMapImage, setMiniMapImage] = useState<string | null>(null);
+  const [renderZoom, setRenderZoom] = useState(1);
   const [isPanning, setIsPanning] = useState(false);
 
   const previousPage = () => {
@@ -217,7 +219,16 @@ export function PdfViewerSurface({
 
   useEffect(() => {
     zoomRef.current = zoom;
-  }, [zoom]);
+    renderZoomRef.current = renderZoom;
+  }, [zoom, renderZoom]);
+
+  useEffect(() => {
+    return () => {
+      if (zoomRenderTimerRef.current !== null) {
+        window.clearTimeout(zoomRenderTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const stage = stageRef.current;
@@ -326,38 +337,6 @@ export function PdfViewerSurface({
     };
   }, []);
 
-  useEffect(() => {
-    const stage = stageRef.current;
-    if (!stage) return;
-
-    const updateMiniMap = () => {
-      const maxX = Math.max(1, stage.scrollWidth - stage.clientWidth);
-      const maxY = Math.max(1, stage.scrollHeight - stage.clientHeight);
-      setMiniMap({
-        left: Math.min(1, stage.scrollLeft / maxX),
-        top: Math.min(1, stage.scrollTop / maxY),
-        width: Math.min(
-          1,
-          stage.clientWidth / Math.max(stage.scrollWidth, stage.clientWidth)
-        ),
-        height: Math.min(
-          1,
-          stage.clientHeight / Math.max(stage.scrollHeight, stage.clientHeight)
-        )
-      });
-    };
-
-    updateMiniMap();
-    const frame = requestAnimationFrame(updateMiniMap);
-    stage.addEventListener("scroll", updateMiniMap, { passive: true });
-    window.addEventListener("resize", updateMiniMap);
-
-    return () => {
-      cancelAnimationFrame(frame);
-      stage.removeEventListener("scroll", updateMiniMap);
-      window.removeEventListener("resize", updateMiniMap);
-    };
-  }, [zoom, pageNumber, viewportVersion]);
 
   useEffect(() => {
     const document = documentRef.current;
@@ -402,7 +381,7 @@ export function PdfViewerSurface({
         availableWidth / baseViewport.width,
         availableHeight / baseViewport.height
       );
-      const requestedScale = Math.max(0.3, fitScale * zoom);
+      const requestedScale = Math.max(0.3, fitScale * renderZoom);
       const renderScale = Math.min(requestedScale, MAX_RENDER_SCALE);
       const cssZoom = requestedScale / renderScale;
       const viewport = page.getViewport({ scale: renderScale });
@@ -413,9 +392,17 @@ export function PdfViewerSurface({
         return;
       }
 
-      pageElement.style.width = `${Math.floor(viewport.width * cssZoom)}px`;
-      pageElement.style.height = `${Math.floor(viewport.height * cssZoom)}px`;
+      const renderedWidth = Math.floor(viewport.width * cssZoom);
+      const renderedHeight = Math.floor(viewport.height * cssZoom);
+      renderedPageSizeRef.current = {
+        width: renderedWidth,
+        height: renderedHeight
+      };
+      const visualRatio = zoom / Math.max(0.01, renderZoom);
+      pageElement.style.width = `${Math.max(1, Math.round(renderedWidth * visualRatio))}px`;
+      pageElement.style.height = `${Math.max(1, Math.round(renderedHeight * visualRatio))}px`;
       pageElement.style.setProperty("--pdf-css-zoom", String(cssZoom));
+      pageElement.style.setProperty("--pdf-view-zoom", String(visualRatio));
 
       const outputScale = Math.max(1, Math.min(window.devicePixelRatio || 1, 2));
       canvas.width = Math.floor(viewport.width * outputScale);
@@ -449,8 +436,6 @@ export function PdfViewerSurface({
       try {
         await task.promise;
 
-        if (active) setMiniMapImage(canvas.toDataURL("image/png"));
-
         if (!active) {
           return;
         }
@@ -472,7 +457,6 @@ export function PdfViewerSurface({
             });
             textLayerCancelRef.current = () => textLayer.cancel?.();
             await textLayer.render();
-            if (active) setMiniMapImage(canvas.toDataURL("image/png"));
           } catch (textLayerError) {
             // The canvas remains useful if a malformed PDF defeats only the
             // selectable text overlay. Keep page navigation/copy available.
@@ -529,7 +513,7 @@ export function PdfViewerSurface({
       renderCancelRef.current?.();
       textLayerCancelRef.current?.();
     };
-  }, [pageNumber, pageCount, viewportVersion, zoom]);
+  }, [pageNumber, pageCount, viewportVersion, renderZoom]);
 
   useEffect(() => {
     if (mode !== "modal") return;
@@ -603,6 +587,64 @@ export function PdfViewerSurface({
     );
   };
 
+  const scheduleRenderZoom = (next: number) => {
+    if (zoomRenderTimerRef.current !== null) {
+      window.clearTimeout(zoomRenderTimerRef.current);
+    }
+
+    if (next === renderZoomRef.current) return;
+
+    zoomRenderTimerRef.current = window.setTimeout(() => {
+      zoomRenderTimerRef.current = null;
+      renderZoomRef.current = next;
+      setRenderZoom(next);
+    }, 140);
+  };
+
+  const applyVisualZoom = (next: number) => {
+    const stage = stageRef.current;
+    const page = pageRef.current;
+    if (!stage || !page) return;
+
+    const anchor = zoomAnchorRef.current;
+    const beforeRect = page.getBoundingClientRect();
+    const stageRect = stage.getBoundingClientRect();
+    const pageContentLeft =
+      beforeRect.left - stageRect.left + stage.scrollLeft;
+    const pageContentTop =
+      beforeRect.top - stageRect.top + stage.scrollTop;
+    const anchorX = anchor
+      ? pageContentLeft + beforeRect.width * anchor.pageX
+      : null;
+    const anchorY = anchor
+      ? pageContentTop + beforeRect.height * anchor.pageY
+      : null;
+
+    const baseWidth = renderedPageSizeRef.current.width || beforeRect.width;
+    const baseHeight = renderedPageSizeRef.current.height || beforeRect.height;
+    const visualRatio = next / Math.max(0.01, renderZoomRef.current);
+
+    page.style.width = `${Math.max(1, Math.round(baseWidth * visualRatio))}px`;
+    page.style.height = `${Math.max(1, Math.round(baseHeight * visualRatio))}px`;
+    page.style.setProperty("--pdf-view-zoom", String(visualRatio));
+
+    if (anchorX !== null && anchorY !== null) {
+      const afterRect = page.getBoundingClientRect();
+      stage.scrollLeft = Math.max(
+        0,
+        anchorX -
+          (afterRect.left - stageRect.left) -
+          afterRect.width * anchor.pageX
+      );
+      stage.scrollTop = Math.max(
+        0,
+        anchorY -
+          (afterRect.top - stageRect.top) -
+          afterRect.height * anchor.pageY
+      );
+    }
+  };
+
   const setZoomValue = (value: number) => {
     const next = Math.round(clampZoom(value) * 100) / 100;
     if (next === 1) {
@@ -612,6 +654,8 @@ export function PdfViewerSurface({
     zoomRef.current = next;
     setZoom(next);
     setZoomOpen(true);
+    applyVisualZoom(next);
+    scheduleRenderZoom(next);
   };
 
   const resetZoom = () => {
@@ -620,15 +664,19 @@ export function PdfViewerSurface({
     setZoom(1);
     setZoomOpen(false);
 
-    const resetScroll = () => {
+    if (zoomRenderTimerRef.current !== null) {
+      window.clearTimeout(zoomRenderTimerRef.current);
+      zoomRenderTimerRef.current = null;
+    }
+
+    renderZoomRef.current = 1;
+    setRenderZoom(1);
+    applyVisualZoom(1);
+
+    requestAnimationFrame(() => {
       const stage = stageRef.current;
       if (!stage) return;
       stage.scrollTo({ left: 0, top: 0, behavior: "auto" });
-    };
-
-    requestAnimationFrame(() => {
-      resetScroll();
-      requestAnimationFrame(resetScroll);
     });
   };
 
@@ -717,7 +765,7 @@ export function PdfViewerSurface({
 
     const startedOnText =
       event.target instanceof Element &&
-      Boolean(event.target.closest(".pdf-preview__text-layer"));
+      Boolean(event.target.closest(".pdf-preview__text-layer span"));
 
     if (event.pointerType === "mouse") {
       if (event.button !== 0 || zoomRef.current <= 1 || startedOnText) return;
@@ -1058,20 +1106,7 @@ export function PdfViewerSurface({
           </div>
         )}
       </div>
-      {zoom > 1 ? (
-        <div className="pdf-preview__minimap" aria-hidden="true">
-          {miniMapImage ? <img src={miniMapImage} alt="" /> : null}
-          <div
-            className="pdf-preview__minimap-viewport"
-            style={{
-              left: miniMap.left * 100 + "%",
-              top: miniMap.top * 100 + "%",
-              width: miniMap.width * 100 + "%",
-              height: miniMap.height * 100 + "%"
-            }}
-          />
-        </div>
-      ) : null}
+
     </div>
   );
 }
