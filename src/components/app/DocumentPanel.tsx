@@ -1178,6 +1178,7 @@ export function DocumentPanel({
                             onRequestSidebarFocus={onRequestSidebarFocus}
                             onRequestFileOpen={onRequestFileOpen}
                             onOpenPdfInSplit={openPdfInSplit}
+                            onOpenDocumentInSplit={openDocumentInSplit}
                             pdfSplitRestoreRequest={pdfSplitRestoreRequest}
                             onZenModeRequest={onZenModeRequest}
                             onDeleteRequest={() => onDeleteFileRequest(secondaryFilePath)}

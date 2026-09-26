@@ -1586,10 +1586,11 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
             onClose={() => setDocumentPreview(null)}
             onOpenInSplit={
               layout === "desktop" && filePath && onOpenDocumentInSplit
-                ? () => {
+                ? (pageNumber) => {
                     onOpenDocumentInSplit({
                       ...documentPreview,
-                      ownerFilePath: filePath
+                      ownerFilePath: filePath,
+                      pageNumber
                     });
                     setDocumentPreview(null);
                   }
