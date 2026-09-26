@@ -1035,5 +1035,13 @@
     "replace": "Bytt ut dokumentet i denne delen",
     "closePane": "Lukk denne delen",
     "openSelected": "Åpne valgte i delt visning"
+  },
+  "pdfInsertChoice": {
+    "eyebrow": "PDF i dokumentet",
+    "title": "Hvordan vil du sette inn PDF-en?",
+    "descriptionOne": "Velg hvordan «{{name}}» skal vises i dette Markdown-dokumentet.",
+    "descriptionMany": "Velg hvordan {{count}} PDF-er skal vises i dette Markdown-dokumentet.",
+    "pages": "Enkeltsider",
+    "preview": "Samlet visning"
   }
 }
