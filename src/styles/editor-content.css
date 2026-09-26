@@ -1283,8 +1283,35 @@
   width: min(100%, 860px);
   padding: 2.5rem;
   background: #fff;
-  color: #111;
+  color: #111 !important;
+  opacity: 1 !important;
   box-shadow: 0 12px 36px rgb(0 0 0 / 0.35);
+}
+
+.document-preview__word,
+.document-preview__word :where(
+  p,
+  span,
+  div,
+  li,
+  td,
+  th,
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  em,
+  a
+) {
+  color: #111 !important;
+  opacity: 1 !important;
+}
+
+.document-preview__word a {
+  text-decoration: underline;
 }
 
 .document-preview__word img {
