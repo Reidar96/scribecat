@@ -910,6 +910,17 @@
   gap: 0.35rem;
 }
 
+.pdf-preview__actions > button,
+.pdf-preview__actions > .pdf-preview__zoom,
+.pdf-preview__actions > .pdf-preview__view-switch {
+  flex: 0 0 auto;
+}
+
+.pdf-preview__split-button {
+  visibility: visible;
+  opacity: 1;
+}
+
 .pdf-preview__view-switch {
   display: inline-flex;
   align-items: center;
