@@ -917,9 +917,24 @@
 }
 
 .pdf-preview__split-button {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-width: 2rem;
+  flex: 0 0 auto !important;
   visibility: visible;
   opacity: 1;
+  white-space: nowrap;
+  border-color: rgb(var(--accent-rgb));
+  background: rgb(var(--accent-rgb) / 0.12);
 }
+
+.pdf-preview__split-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
 
 .pdf-preview__view-switch {
   display: inline-flex;
@@ -1798,6 +1813,10 @@
   .pdf-preview__actions {
     grid-column: 2;
     grid-row: 1;
+  }
+
+  .pdf-preview__split-label {
+    display: none;
   }
 }
 
