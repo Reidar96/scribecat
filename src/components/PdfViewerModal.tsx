@@ -673,7 +673,7 @@ export function PdfViewerSurface({
     }, 140);
   };
 
-  const applyVisualZoom = (next: number) => {
+  const applyVisualZoom = (next: number, previousZoom = zoomRef.current) => {
     const stage = stageRef.current;
     const page = pageRef.current;
     if (!stage || !page) return;
@@ -686,7 +686,7 @@ export function PdfViewerSurface({
     const pointerY = anchor
       ? anchor.clientY - stageRect.top
       : stageRect.height / 2;
-    const currentZoom = Math.max(0.01, zoomRef.current);
+    const currentZoom = Math.max(0.01, previousZoom);
     const currentWidth = Math.max(1, page.offsetWidth);
     const currentHeight = Math.max(1, page.offsetHeight);
     const scale = next / currentZoom;
@@ -707,19 +707,23 @@ export function PdfViewerSurface({
   };
   const setZoomValue = (value: number) => {
     const next = Math.round(clampZoom(value) * 100) / 100;
+    const previousZoom = zoomRef.current;
+
     if (next === 1) {
       resetZoom();
       return;
     }
+
     zoomRef.current = next;
     setZoom(next);
     setZoomOpen(true);
-    applyVisualZoom(next);
+    applyVisualZoom(next, previousZoom);
     scheduleRenderZoom(next);
   };
 
   const resetZoom = () => {
     zoomAnchorRef.current = null;
+    const previousZoom = zoomRef.current;
     zoomRef.current = 1;
     setZoom(1);
     setZoomOpen(false);
@@ -731,7 +735,7 @@ export function PdfViewerSurface({
 
     renderZoomRef.current = 1;
     setRenderZoom(1);
-    applyVisualZoom(1);
+    applyVisualZoom(1, previousZoom);
 
     requestAnimationFrame(() => {
       const stage = stageRef.current;
