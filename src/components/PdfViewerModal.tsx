@@ -1266,7 +1266,7 @@ export function PdfViewerSurface({
 
 type PdfViewerModalProps = PdfPreviewRequest & {
   onClose: () => void;
-  onOpenInSplit?: () => void;
+  onOpenInSplit?: (pageNumber: number) => void;
 };
 
 export function PdfViewerModal({
