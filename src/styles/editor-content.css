@@ -1258,9 +1258,36 @@
   background: rgb(255 255 255 / 0.1);
 }
 
+.document-preview__view-button {
+  border: 1px solid rgb(255 255 255 / 0.12);
+}
+
+.document-preview__view-button--active {
+  background: rgb(255 255 255 / 0.12) !important;
+}
+
 .document-preview__actions svg {
   width: 1rem;
   height: 1rem;
+}
+
+.document-preview__slides-all {
+  display: grid;
+  gap: 1rem;
+  width: min(100%, 1100px);
+}
+
+.document-preview__slide--thumbnail {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  cursor: pointer;
+  transform: scale(0.995);
+  transition: transform 120ms ease;
+}
+
+.document-preview__slide--thumbnail:hover,
+.document-preview__slide--thumbnail:focus-visible {
+  transform: scale(1);
 }
 
 .document-preview__stage {
