@@ -10,7 +10,6 @@ import { EditorFileContext } from "@/lib/editorFileContext";
 import { ImageLightbox } from "@/components/ImageLightbox";
 import { ImageContextMenuItems } from "@/components/ImageContextMenuItems";
 import { PdfViewerSurface } from "@/components/PdfViewerModal";
-import { DocumentViewer } from "@/components/DocumentViewer";
 import { ContextMenuSurface } from "@/components/fileTree/ContextMenuSurface";
 import { useContextMenuState } from "@/components/fileTree/useContextMenuState";
 import { useLongPressContextMenu } from "@/hooks/useLongPressContextMenu";
@@ -29,7 +28,7 @@ function isLocalDocumentSource(src: string): boolean {
   }
 
   const [path] = src.split(/[?#]/);
-  return /\.(pdf|docx|pptx|mp4|webm|mov|m4v|ogv)$/i.test(path);
+  return /\.pdf$/i.test(path);
 }
 
 function localPdfLabel(src: string, alt: string): string {
@@ -51,7 +50,6 @@ export function ImageView({ node, editor, getPos, updateAttributes, selected }: 
   const isLocalDocument = isLocalDocumentSource(src);
   const mediaExtension = src.split(/[?#]/)[0].split(".").pop()?.toLowerCase() ?? "";
   const isPdf = mediaExtension === "pdf";
-  const isDocumentPreview = ["docx", "pptx", "mp4", "webm", "mov", "m4v", "ogv"].includes(mediaExtension);
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
   const [documentAbsolutePath, setDocumentAbsolutePath] = useState<string | null>(null);
   const [loadError, setLoadError] = useState(false);
@@ -294,29 +292,25 @@ export function ImageView({ node, editor, getPos, updateAttributes, selected }: 
     >
       {isLocalDocument ? (
         documentAbsolutePath ? (
-          isDocumentPreview ? (
-            <DocumentViewer absolutePath={documentAbsolutePath} label={pdfLabel} />
-          ) : (
-            <PdfViewerSurface
-              absolutePath={documentAbsolutePath}
-              label={pdfLabel}
-              mode="inline"
-              restoreMinimizedRequestId={
-                pdfSplitRestoreRequest?.absolutePath === documentAbsolutePath
-                  ? pdfSplitRestoreRequest.requestId
-                  : 0
-              }
-              onOpenInSplit={
-                onOpenPdfInSplit
-                  ? () =>
-                      onOpenPdfInSplit({
-                        absolutePath: documentAbsolutePath,
-                        label: pdfLabel
-                      })
-                  : undefined
-              }
-            />
-          )
+          <PdfViewerSurface
+            absolutePath={documentAbsolutePath}
+            label={pdfLabel}
+            mode="inline"
+            restoreMinimizedRequestId={
+              pdfSplitRestoreRequest?.absolutePath === documentAbsolutePath
+                ? pdfSplitRestoreRequest.requestId
+                : 0
+            }
+            onOpenInSplit={
+              onOpenPdfInSplit
+                ? () =>
+                    onOpenPdfInSplit({
+                      absolutePath: documentAbsolutePath,
+                      label: pdfLabel
+                    })
+                : undefined
+            }
+          />
         ) : (
           <span className="editor-image-wrapper__placeholder">
             {loadError ? t("pdfViewer.error") : t("pdfViewer.loading")}

@@ -1,3 +1,12 @@
+## [0.25.16] - 2026-09-27
+
+### Changes
+- Keep DOCX export, PDF import/viewing, and image import/insertion.
+- Remove Word/PowerPoint preview and Word/PowerPoint import paths.
+- Block external file drag-and-drop and file pasting into the editor.
+- Fix PDF split-view minimization/restore and multi-page thumbnail layout.
+- Restore the mobile PDF fullscreen control with the compact name/paging/actions layout.
+
 ## [0.25.15] - 2026-09-26
 
 ### Improvements

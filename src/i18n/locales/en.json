@@ -133,7 +133,6 @@
     "progress": "Importing {{completed}} of {{total}} …",
     "doneSummary": "Import finished: {{doneCount}} imported, {{errorCount}} failed.",
     "doneSummaryCancelled": "Import cancelled: {{doneCount}} imported, {{errorCount}} failed, {{cancelledCount}} skipped.",
-    "errorLegacyDoc": "The legacy .doc format is not supported. Save the file as .docx and import it again.",
     "errorUnsupported": "File type is not supported.",
     "errorConvert": "Conversion failed: {{message}}",
     "errorWrite": "File could not be written: {{message}}",
@@ -1374,9 +1373,9 @@
     "copyPage": "Copy text from this page",
     "copied": "Page text copied",
     "openInSplit": "Open PDF beside this note",
-  "fullscreen": "Open PDF in fullscreen",
-  "exitFullscreen": "Exit PDF fullscreen",
-  "zoom": "Zoom PDF",
+    "fullscreen": "Open PDF in fullscreen",
+    "exitFullscreen": "Exit PDF fullscreen",
+    "zoom": "Zoom PDF",
     "attached": "PDF attached to this tab",
     "selectableText": "Selectable text on the PDF page"
   },
@@ -1403,14 +1402,6 @@
     "replace": "Replace this split document",
     "closePane": "Close this split pane",
     "openSelected": "Open selected in split view"
-  },
-  "pptxInsertChoice": {
-    "eyebrow": "PowerPoint in document",
-    "title": "How should the presentation be inserted?",
-    "descriptionOne": "Choose how “{{name}}” should appear in this Markdown document.",
-    "descriptionMany": "Choose how {{count}} PowerPoint files should appear in this Markdown document.",
-    "pages": "Individual slides",
-    "preview": "Combined view"
   },
   "pdfInsertChoice": {
     "eyebrow": "PDF in document",

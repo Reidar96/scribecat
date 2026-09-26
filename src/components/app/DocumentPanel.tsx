@@ -24,7 +24,6 @@ import { FindReplacePanel } from "@/components/FindReplacePanel";
 import { VersionsPopover } from "@/components/VersionsPopover";
 import { DocumentMenu } from "@/components/app/DocumentMenu";
 import { DocumentTabs, TAB_DRAG_MIME } from "@/components/app/DocumentTabs";
-import { DocumentViewer, type DocumentPreviewRequest } from "@/components/DocumentViewer";
 import {
   PdfViewerSurface,
   type PdfPreviewRequest
@@ -261,9 +260,6 @@ export function DocumentPanel({
   const [attachedPdf, setAttachedPdf] = useState<
     (PdfPreviewRequest & { ownerFilePath: string; pageNumber: number }) | null
   >(null);
-  const [attachedDocument, setAttachedDocument] = useState<
-    (DocumentPreviewRequest & { ownerFilePath: string; pageNumber: number }) | null
-  >(null);
   const [pdfSplitRestoreRequest, setPdfSplitRestoreRequest] = useState<{
     absolutePath: string;
     pageNumber: number;
@@ -297,10 +293,7 @@ export function DocumentPanel({
     if (attachedPdf && !openTabs.includes(attachedPdf.ownerFilePath)) {
       setAttachedPdf(null);
     }
-    if (attachedDocument && !openTabs.includes(attachedDocument.ownerFilePath)) {
-      setAttachedDocument(null);
-    }
-  }, [attachedPdf, attachedDocument, openTabs]);
+  }, [attachedPdf, openTabs]);
 
   // A PDF companion is rendered only while its owning Markdown tab is
   // the active (primary) document. If that tab is merely kept open in the
@@ -310,13 +303,9 @@ export function DocumentPanel({
     attachedPdf && attachedPdf.ownerFilePath === selectedFilePath
       ? attachedPdf
       : null;
-  const visibleAttachedDocument =
-    attachedDocument && attachedDocument.ownerFilePath === selectedFilePath
-      ? attachedDocument
-      : null;
   const hasSplitContent =
     layout === "desktop" &&
-    Boolean(secondaryFilePath || visibleAttachedPdf || visibleAttachedDocument);
+    Boolean(secondaryFilePath || visibleAttachedPdf);
   const capabilities = getVaultCapabilities();
   const capabilityHint = vaultCapabilityHint();
   const versioningEnabled = useVersioningSettingsStore((state) => state.versioningEnabled);
@@ -464,31 +453,7 @@ export function DocumentPanel({
     side: "left" | "right" = "right"
   ) => {
     if (layout !== "desktop") return;
-
-    setAttachedDocument(null);
     setAttachedPdf({ ...request, pageNumber });
-    setSecondarySide(side);
-    setSplitPickerOpen(false);
-    setSplitDropPreview(null);
-
-    if (request.ownerFilePath === secondaryFilePath) {
-      onClosePrimarySplit();
-    } else if (request.ownerFilePath === selectedFilePath) {
-      onCloseSecondary();
-    }
-  };
-
-  const openDocumentInSplit = (
-    request: DocumentPreviewRequest & { ownerFilePath: string },
-    side: "left" | "right" = "right"
-  ) => {
-    if (layout !== "desktop") return;
-
-    setAttachedPdf(null);
-    setAttachedDocument({
-      ...request,
-      pageNumber: request.pageNumber ?? 1
-    });
     setSecondarySide(side);
     setSplitPickerOpen(false);
     setSplitDropPreview(null);
@@ -516,38 +481,19 @@ export function DocumentPanel({
       .pop()
       ?.toLowerCase();
 
-    if (extension === "pdf" || extension === "docx" || extension === "pptx") {
-      setAttachedPdf(null);
-      setAttachedDocument(null);
-
-      if (extension === "pdf") {
-        openPdfInSplit(
-          {
-            absolutePath: filePath,
-            label: getFileLinkLabel(filePath),
-            ownerFilePath: selectedFilePath ?? "",
-            pageNumber: 1
-          },
-          1,
-          side
-        );
-      } else {
-        openDocumentInSplit(
-          {
-            absolutePath: filePath,
-            label: getFileLinkLabel(filePath),
-            ownerFilePath: selectedFilePath ?? "",
-            pageNumber: 1
-          },
-          side
-        );
-      }
-
+    if (extension === "pdf") {
+      openPdfInSplit(
+        {
+          absolutePath: filePath,
+          label: getFileLinkLabel(filePath),
+          ownerFilePath: selectedFilePath ?? "",
+          pageNumber: 1
+        },
+        1,
+        side
+      );
       return;
     }
-
-    setAttachedPdf(null);
-    setAttachedDocument(null);
 
     if (!secondaryFilePath) {
       if (filePath !== selectedFilePath) {
@@ -959,7 +905,6 @@ export function DocumentPanel({
                   }
 
                   setAttachedPdf(null);
-                  setAttachedDocument(null);
                   setSecondarySide(side);
                   if (filePath !== secondaryFilePath) {
                     onOpenSecondary(filePath);
@@ -1002,11 +947,6 @@ export function DocumentPanel({
                               closeAttachedPdf();
                               return;
                             }
-                            if (visibleAttachedDocument) {
-                              setAttachedDocument(null);
-                              setActiveEditorPane("primary");
-                              return;
-                            }
 
                             setActiveEditorPane("secondary");
                             onClosePrimarySplit();
@@ -1031,7 +971,6 @@ export function DocumentPanel({
                     onRequestSidebarFocus={onRequestSidebarFocus}
                     onRequestFileOpen={onRequestFileOpen}
                     onOpenPdfInSplit={openPdfInSplit}
-                    onOpenDocumentInSplit={openDocumentInSplit}
                     pdfSplitRestoreRequest={pdfSplitRestoreRequest}
                     onZenModeRequest={onZenModeRequest}
                     onDeleteRequest={onDeleteRequest}
@@ -1107,27 +1046,6 @@ export function DocumentPanel({
                           }}
                           onClose={closeAttachedPdf}
                         />
-                      ) : visibleAttachedDocument ? (
-                        <DocumentViewer
-                          mode="split"
-                          absolutePath={visibleAttachedDocument.absolutePath}
-                          label={visibleAttachedDocument.label}
-                          initialPageNumber={visibleAttachedDocument.pageNumber}
-                          onPageChange={(pageNumber) => {
-                            setAttachedDocument((current) =>
-                              current
-                                ? { ...current, pageNumber }
-                                : current
-                            );
-                          }}
-                          onClose={() => {
-                            const request = visibleAttachedDocument;
-                            setAttachedDocument(null);
-                            if (request) {
-                              setActiveEditorPane("primary");
-                            }
-                          }}
-                        />
                       ) : secondaryFilePath && secondaryDocument && secondaryMarkdown !== null ? (
                         <>
                           <div className="split-workspace__pane-header">
@@ -1178,7 +1096,6 @@ export function DocumentPanel({
                             onRequestSidebarFocus={onRequestSidebarFocus}
                             onRequestFileOpen={onRequestFileOpen}
                             onOpenPdfInSplit={openPdfInSplit}
-                            onOpenDocumentInSplit={openDocumentInSplit}
                             pdfSplitRestoreRequest={pdfSplitRestoreRequest}
                             onZenModeRequest={onZenModeRequest}
                             onDeleteRequest={() => onDeleteFileRequest(secondaryFilePath)}

@@ -196,7 +196,7 @@ export function PdfViewerSurface({
   const [isMinimized, setIsMinimized] = useState(false);
   const lastRestoreMinimizedRequestIdRef = useRef(restoreMinimizedRequestId);
   const [pageView, setPageView] = useState<"single" | "grid">("single");
-  const [pageThumbnails, setPageThumbnails] = useState<string[]>([]);
+  const [pageThumbnails, setPageThumbnails] = useState<Array<{ src: string; width: number; height: number }>>([]);
   const [pageThumbnailLoading, setPageThumbnailLoading] = useState(false);
 
   const previousPage = () => {
@@ -425,7 +425,11 @@ export function PdfViewerSurface({
           }).promise;
 
           if (!active) return;
-          thumbnails.push(canvas.toDataURL("image/png"));
+          thumbnails.push({
+            src: canvas.toDataURL("image/png"),
+            width: Math.ceil(viewport.width),
+            height: Math.ceil(viewport.height)
+          });
           canvas.width = 1;
           canvas.height = 1;
         }
@@ -439,7 +443,7 @@ export function PdfViewerSurface({
     return () => {
       active = false;
     };
-  }, [pageView, pageCount]);
+  }, [pageView, pageCount, viewportVersion]);
 
   useEffect(() => {
     const document = documentRef.current;
@@ -607,7 +611,7 @@ export function PdfViewerSurface({
       renderCancelRef.current?.();
       textLayerCancelRef.current?.();
     };
-  }, [pageNumber, pageCount, viewportVersion, renderZoom, pageView]);
+  }, [pageNumber, pageCount, viewportVersion, renderZoom, pageView, isMinimized]);
 
   useEffect(() => {
     if (mode !== "modal") return;
@@ -1234,19 +1238,22 @@ export function PdfViewerSurface({
                 <span>Loading pages…</span>
               </div>
             ) : null}
-            {pageThumbnails.map((src, index) => (
+            {pageThumbnails.map((thumbnail, index) => (
               <button
                 type="button"
                 className="pdf-preview__overview-page"
-                key={src}
+                key={thumbnail.src}
                 onClick={() => {
                   setPageNumber(index + 1);
                   setPageView("single");
                 }}
                 aria-label={`Page ${index + 1}`}
               >
-                <div className="pdf-preview__overview-page-frame">
-                  <img src={src} alt="" />
+                <div
+                  className="pdf-preview__overview-page-frame"
+                  style={{ aspectRatio: `${thumbnail.width} / ${thumbnail.height}` }}
+                >
+                  <img src={thumbnail.src} alt="" />
                 </div>
                 <span>{index + 1} / {pageThumbnails.length}</span>
               </button>

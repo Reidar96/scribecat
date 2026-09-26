@@ -128,7 +128,6 @@
     "progress": "Importando {{completed}} de {{total}} …",
     "doneSummary": "Importación finalizada: {{doneCount}} importados, {{errorCount}} con errores.",
     "doneSummaryCancelled": "Importación cancelada: {{doneCount}} importados, {{errorCount}} con errores, {{cancelledCount}} omitidos.",
-    "errorLegacyDoc": "El formato antiguo .doc no es compatible. Guarda el archivo como .docx e impórtalo de nuevo.",
     "errorUnsupported": "Tipo de archivo no compatible.",
     "errorConvert": "Error de conversión: {{message}}",
     "errorWrite": "No se pudo escribir el archivo: {{message}}",

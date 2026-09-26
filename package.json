@@ -1,7 +1,7 @@
 {
   "name": "scribecat",
   "private": true,
-  "version": "0.25.15",
+  "version": "0.25.16",
   "type": "module",
   "license": "MIT",
   "scripts": {
@@ -54,7 +54,6 @@
     "i18next": "^26.3.6",
     "lowlight": "^3.3.0",
     "lucide-react": "^1.25.0",
-    "mammoth": "^1.12.0",
     "markdown-it": "^14.3.0",
     "markdown-it-ins": "^4.0.0",
     "markdown-it-mark": "^4.0.0",

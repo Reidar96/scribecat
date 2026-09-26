@@ -57,11 +57,6 @@ import { downloadFolderAsArchive, downloadNoteAsMarkdown } from "@/lib/export/ma
 import { printMarkdown } from "@/lib/print";
 import type { FileVersion } from "@/lib/fileVersions";
 import type { VersionDiffTarget } from "@/components/VersionDiffDialog";
-import {
-  carriesExternalFiles,
-  collectDroppedSources,
-  type DropPayload
-} from "@/lib/dragDrop/droppedSources";
 import { sourceFromPath } from "@/lib/import/convert";
 import { IMPORT_FILE_EXTENSIONS, type ImportSource } from "@/lib/import/importer";
 import { cn } from "@/lib/utils";
@@ -1055,25 +1050,6 @@ function App() {
    * folder they were dropped on decides where they land — dropping next to
    * nothing in particular targets the vault root.
    */
-  const handleFilesDropped = (payload: DropPayload, targetDirectory: string) => {
-    if (!folderPath) {
-      return;
-    }
-
-    void (async () => {
-      const collected = await collectDroppedSources(payload);
-      const segments = targetDirectory.split("/").filter(Boolean);
-
-      setImportTargetFolder(segments.length > 0 ? await join(folderPath, ...segments) : folderPath);
-      // Imported notes go to the end of their folder rather than next to a row
-      // that only happened to be under the pointer.
-      setImportInsertAfterBasename(null);
-      setImportSkippedCount(collected.skipped);
-      setImportLimitReached(collected.limitReached);
-      setImportFileList(collected.sources);
-    })();
-  };
-
   const handleImported = (createdFilePaths: string[]) => {
     if (!folderPath) {
       return;
@@ -1091,16 +1067,11 @@ function App() {
     void loadShortcutOverrides();
   }, [loadShortcutOverrides]);
 
-  // Safety net for files dropped anywhere no handler claims them: without it
-  // the webview follows the drop and navigates the whole app away to the file,
-  // which looks exactly like a crash. Handlers that took the drop have called
-  // preventDefault by the time this window-level listener runs.
+  // External files are intentionally blocked as drops so the webview never navigates away
+  // from ScribeCat. Supported files can still be imported through the explicit Import action.
   useEffect(() => {
-    const swallowDrop = (event: DragEvent) => {
-      // Only drags from outside can navigate the app away, and leaving in-app
-      // drags strictly untouched keeps this from interfering with the editor's
-      // and the file tree's own drag handling.
-      if (event.defaultPrevented || !carriesExternalFiles(event.dataTransfer)) {
+    const swallowExternalFileDrop = (event: DragEvent) => {
+      if (event.defaultPrevented || !Array.from(event.dataTransfer?.types ?? []).includes("Files")) {
         return;
       }
 
@@ -1111,12 +1082,12 @@ function App() {
       }
     };
 
-    window.addEventListener("dragover", swallowDrop);
-    window.addEventListener("drop", swallowDrop);
+    window.addEventListener("dragover", swallowExternalFileDrop);
+    window.addEventListener("drop", swallowExternalFileDrop);
 
     return () => {
-      window.removeEventListener("dragover", swallowDrop);
-      window.removeEventListener("drop", swallowDrop);
+      window.removeEventListener("dragover", swallowExternalFileDrop);
+      window.removeEventListener("drop", swallowExternalFileDrop);
     };
   }, []);
 
@@ -1334,7 +1305,6 @@ function App() {
       onFileTreeSelectionChange={setFileTreeSelection}
       fileTreeSelection={fileTreeSelection}
       fileTreeSelectionCount={fileTreeSelection.length}
-      onFilesDropped={handleFilesDropped}
       onClose={layout === "phone" ? () => setIsSidebarSheetOpen(false) : undefined}
     />
   );
@@ -1514,7 +1484,6 @@ function App() {
               onDownloadMarkdownRequest={handleDownloadMarkdownRequest}
               onDownloadFolderArchiveRequest={handleDownloadFolderArchiveRequest}
               onPrintFileRequest={handlePrintFileRequest}
-              onFilesDropped={handleFilesDropped}
             />
           ) : (
             <DocumentPanel

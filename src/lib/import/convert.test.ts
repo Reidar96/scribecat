@@ -7,7 +7,7 @@ vi.mock("@tauri-apps/plugin-fs", () => ({
   stat: vi.fn(async () => ({ size: 0 }))
 }));
 
-vi.mock("@/lib/fileSystem", () => ({ allowFileAccess: vi.fn(async () => undefined) }));
+vi.mock("@/lib/fileSystem", () => ({ allowFileAccess: vi.fn(async () => undefined), getRelativeImageMarkdownPath: vi.fn(), guessImageMimeType: vi.fn(() => "image/png"), saveImageToFolder: vi.fn() }));
 
 import {
   SourceTooLargeError,
@@ -40,11 +40,13 @@ describe("classifyExtension", () => {
     expect(classifyExtension("md")).toBe("markdown");
     expect(classifyExtension("csv")).toBe("text");
     expect(classifyExtension("pdf")).toBe("document");
-    expect(classifyExtension("png")).toBe("unsupported");
+    expect(classifyExtension("png")).toBe("image");
   });
 
   it("names the legacy .doc format apart from unsupported ones", () => {
     expect(classifyExtension("doc")).toBe("legacyDoc");
+    expect(classifyExtension("docx")).toBe("unsupported");
+    expect(classifyExtension("pptx")).toBe("unsupported");
     expect(classifyExtension("xlsx")).toBe("unsupported");
     expect(classifyExtension("")).toBe("unsupported");
   });

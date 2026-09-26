@@ -68,7 +68,6 @@ type DialogPhase = "form" | "exporting" | "done" | "error";
 
 const FORMAT_LABELS: Record<ExportFormat, string> = {
   pdf: "PDF",
-  docx: "DOCX (Word)",
   odt: "ODT (OpenDocument)",
   html: "HTML",
   epub: "EPUB"

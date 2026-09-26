@@ -9,19 +9,18 @@
 //
 // Sources are read through ConvertSource rather than by path, because the two
 // ways a file gets here have nothing else in common: the file dialog hands over
-// a path, while a drag from the desktop hands over a File whose path the
-// webview never discloses (see lib/dragDrop/droppedSources.ts).
+// a path, while a direct File source carries its bytes without exposing a filesystem path.
 
 import { requireLocalFs } from "@/platform";
 
-import { allowFileAccess } from "@/lib/fileSystem";
+import { allowFileAccess, getRelativeImageMarkdownPath, guessImageMimeType, saveImageToFolder } from "@/lib/fileSystem";
 
 // Formats that carry structure a converter has to reconstruct.
-export const CONVERT_DOCUMENT_EXTENSIONS = ["docx", "pdf"] as const;
+export const CONVERT_DOCUMENT_EXTENSIONS = ["pdf"] as const;
 
 // Transcribed by the configured AI model, so these only work with a model set
 // up — the callers check isAiOcrConfigured() before offering them.
-export const CONVERT_IMAGE_EXTENSIONS = [] as const;
+export const CONVERT_IMAGE_EXTENSIONS = ["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "avif", "heic", "heif"] as const;
 
 // Read as text and either kept as-is, rendered into a table or fenced as code.
 // Anything not listed is refused rather than guessed at: a binary decoded as
@@ -75,7 +74,7 @@ const MAX_TEXT_BYTES = 5 * 1024 * 1024;
 // fenced as raw CSV instead, which at least stays searchable.
 const MAX_TABLE_ROWS = 1_000;
 
-export type SourceKind = "markdown" | "text" | "document" | "image" | "legacyDoc" | "unsupported";
+export type SourceKind = "markdown" | "text" | "document" | "image" | "unsupported";
 
 /**
  * A file to convert, independent of where it came from. `bytes` and `text` are
@@ -169,8 +168,7 @@ export function classifyExtension(extension: string): SourceKind {
   }
 
   // Named apart from "unsupported" so the user gets told *why* — the binary
-  // .doc format has no browser-side parser, and "save as .docx" is the fix.
-  return extension === "doc" ? "legacyDoc" : "unsupported";
+  return "unsupported";
 }
 
 export function isConvertibleFileName(fileName: string): boolean {
@@ -334,17 +332,26 @@ export async function convertToMarkdown(
     return convertTextSource(source, extension);
   }
 
-  if (extension === "docx") {
-    const { convertDocxToMarkdown } = await import("./docxImporter");
+  if ((CONVERT_IMAGE_EXTENSIONS as readonly string[]).includes(extension)) {
+    if (!target.embedImages) {
+      return "![" + source.name.replace(/\.[^.]+$/, "") + "](" + source.name + ")";
+    }
 
-    return target.embedImages
-      ? convertDocxToMarkdown(
-          await source.bytes(),
-          target.vaultRoot,
-          target.targetFilePath,
-          target.imageBaseName
-        )
-      : convertDocxToMarkdown(await source.bytes());
+    const data = await source.bytes();
+    const relativePath = await saveImageToFolder(
+      target.vaultRoot,
+      target.targetFilePath,
+      source.name,
+      guessImageMimeType(source.name),
+      data
+    );
+    const markdownPath = await getRelativeImageMarkdownPath(
+      target.vaultRoot,
+      target.targetFilePath,
+      relativePath
+    );
+    const alt = source.name.replace(/\.[^.]+$/, "");
+    return "![" + alt + "](" + markdownPath + ")";
   }
 
   const { convertPdfToMarkdown } = await import("./pdfImporter");
