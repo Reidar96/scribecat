@@ -18,7 +18,7 @@ services:
     # followed by `docker compose up -d` cannot silently keep an old release.
     # Set SCRIBECAT_IMAGE explicitly in .env to pin another version or to build
     # the image locally with `docker compose up -d --build`.
-    image: ${SCRIBECAT_IMAGE:-ghcr.io/reidar96/scribecat-server:0.25.2}
+    image: ${SCRIBECAT_IMAGE:-ghcr.io/reidar96/scribecat-server:0.25.3}
     restart: unless-stopped
     environment:
       # User and group the server runs as inside the container. The container
