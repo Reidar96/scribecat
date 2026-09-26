@@ -1014,7 +1014,8 @@
   "exitFullscreen": "Avslutt fullskjerm for PDF",
   "zoom": "Zoom PDF",
     "attached": "PDF er knyttet til denne fanen",
-    "selectableText": "Markerbar tekst på PDF-siden"
+    "selectableText": "Markerbar tekst på PDF-siden",
+    "restore": "Vis PDF igjen"
   },
   "tabs": {
     "label": "Åpne dokumenter",
