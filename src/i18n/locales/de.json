@@ -128,7 +128,6 @@
     "progress": "Importiere {{completed}} von {{total}} …",
     "doneSummary": "Import abgeschlossen: {{doneCount}} importiert, {{errorCount}} fehlgeschlagen.",
     "doneSummaryCancelled": "Import abgebrochen: {{doneCount}} importiert, {{errorCount}} fehlgeschlagen, {{cancelledCount}} übersprungen.",
-    "errorLegacyDoc": "Das alte .doc-Format wird nicht unterstützt. Bitte die Datei als .docx speichern und erneut importieren.",
     "errorUnsupported": "Dateityp wird nicht unterstützt.",
     "errorConvert": "Konvertierung fehlgeschlagen: {{message}}",
     "errorWrite": "Datei konnte nicht geschrieben werden: {{message}}",
