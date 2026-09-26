@@ -952,11 +952,7 @@ export function PdfViewerSurface({
         ) : (
           <div
             ref={pageRef}
-            className={
-              `pdf-preview__page${zoom > 1 ? " pdf-preview__page--zoomed" : ""}${
-                isPanning ? " pdf-preview__page--panning" : ""
-              }`
-            }
+            className={`pdf-preview__page${zoom > 1 ? " pdf-preview__page--zoomed" : ""}`}
           >
             <canvas ref={canvasRef} className="pdf-preview__canvas" />
             <div
