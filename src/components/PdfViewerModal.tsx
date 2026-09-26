@@ -387,6 +387,17 @@ export function PdfViewerSurface({
     if (mode !== "modal") return;
 
     const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && document.fullscreenElement === rootRef.current) {
+        return;
+      }
+
+      if (event.key === "Escape" && fallbackFullscreen) {
+        event.preventDefault();
+        setFallbackFullscreen(false);
+        setIsFullscreen(false);
+        return;
+      }
+
       if (event.key === "Escape" && onClose) {
         event.preventDefault();
         onClose();
@@ -408,7 +419,7 @@ export function PdfViewerSurface({
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [mode, onClose, pageCount]);
+  }, [mode, onClose, pageCount, fallbackFullscreen]);
 
   const commitPageInput = () => {
     const requested = Number.parseInt(pageInput, 10);
@@ -521,7 +532,7 @@ export function PdfViewerSurface({
   return (
     <div
       ref={rootRef}
-      className={`pdf-preview pdf-preview--${mode}`}
+      className={`pdf-preview pdf-preview--${mode}${fallbackFullscreen ? " pdf-preview--fallback-fullscreen" : ""}`}
       tabIndex={0}
       onKeyDown={handleViewerKeyDown}
       onPointerDown={handlePointerDown}
