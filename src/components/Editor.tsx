@@ -276,97 +276,6 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     void copy(currentEditor).then(reportCopyResult);
   };
 
-  const pasteFromClipboard = async () => {
-    const currentEditor = editorRef.current;
-
-    if (!currentEditor || documentLockedRef.current) {
-      return;
-    }
-
-    currentEditor.commands.focus();
-
-    // Native shells may still allow the old synchronous paste command. When
-    // it works, ProseMirror receives a normal paste event and keeps all of the
-    // existing image/Markdown handling.
-    try {
-      if (document.execCommand("paste")) {
-        setSelectionMenu(null);
-        return;
-      }
-    } catch {
-      // Browsers normally block execCommand("paste"); use Clipboard API below.
-    }
-
-    try {
-      let text: string | null = null;
-
-      if (typeof navigator.clipboard?.read === "function") {
-        const items = await navigator.clipboard.read();
-
-        for (const item of items) {
-          const mediaType = item.types.find(
-            (type) => type.startsWith("image/") || type === "application/pdf"
-          );
-          if (!mediaType) continue;
-
-          const blob = await item.getType(mediaType);
-          const extension =
-            mediaType === "application/pdf"
-              ? "pdf"
-              : mediaType === "image/jpeg"
-                ? "jpg"
-                : mediaType.split("/")[1]?.replace(/\+xml$/i, "") || "png";
-
-          await insertMediaPayloads(
-            [
-              {
-                fileName:
-                  mediaType === "application/pdf"
-                    ? "clipboard-document.pdf"
-                    : `clipboard-image.${extension}`,
-                mimeType: mediaType,
-                data: new Uint8Array(await blob.arrayBuffer())
-              }
-            ],
-            currentEditor.state.selection.from
-          );
-          setSelectionMenu(null);
-          return;
-        }
-
-        for (const item of items) {
-          if (!item.types.includes("text/plain")) continue;
-          text = await (await item.getType("text/plain")).text();
-          break;
-        }
-      }
-
-      text ??= await navigator.clipboard.readText();
-      if (!text) {
-        setSelectionMenu(null);
-        return;
-      }
-
-      const inCode =
-        currentEditor.state.selection.$from.parent.type.spec.code === true;
-      const shouldPasteMarkdown =
-        !inCode &&
-        useEditorSettingsStore.getState().pasteMarkdown &&
-        looksLikeMarkdown(text);
-
-      if (!shouldPasteMarkdown || !pasteMarkdown(currentEditor, text)) {
-        currentEditor.view.pasteText(text);
-      }
-
-      setSelectionMenu(null);
-    } catch {
-      setFeedback({
-        kind: "error",
-        message: t("editorContextMenu.pasteFailed")
-      });
-    }
-  };
-
   // Every editor context click is handled by ScribeCat. On touch the browser
   // may finish selecting the word just after contextmenu fires, so defer one
   // frame before deciding whether copy actions belong in the menu.
@@ -618,285 +527,11 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       if (extension === "pdf") {
         setPdfPreview({ absolutePath, label });
       } else {
-        setDocumentPreview({ absolutePath, label });
+        setFeedback({ kind: "error", message: t("pdfViewer.error") });
       }
     } catch {
       setFeedback({ kind: "error", message: t("pdfViewer.error") });
     }
-  };
-
-  const isPptxPayload = (payload: MediaPayload) =>
-    payload.mimeType ===
-      "application/vnd.openxmlformats-officedocument.presentationml.presentation" ||
-    /\.pptx$/i.test(payload.fileName);
-
-  const isPdfPayload = (payload: MediaPayload) =>
-    payload.mimeType === "application/pdf" || /\.pdf$/i.test(payload.fileName);
-
-  const insertImagePayloads = async (
-    payloads: ImagePayload[],
-    insertPos: number
-  ): Promise<number> => {
-    const currentEditor = editorRef.current;
-
-    if (!currentEditor || payloads.length === 0) {
-      return insertPos;
-    }
-
-    if (!folderPath || !filePath) {
-      setFeedback({
-        kind: "error",
-        message: t("editor.imageRequiresFile")
-      });
-      return insertPos;
-    }
-
-    // Paste and drop cannot be disabled like a button; refuse up front with
-    // the same hint instead of failing per image.
-    if (!getVaultCapabilities().images) {
-      setFeedback({ kind: "error", message: vaultCapabilityHint() });
-      return insertPos;
-    }
-
-    let pos = insertPos;
-
-    for (const { fileName, mimeType, data, altText } of payloads) {
-      try {
-        const rootRelativePath = await saveImageToFolder(
-          folderPath,
-          filePath,
-          fileName,
-          mimeType,
-          data
-        );
-        const markdownPath = await getRelativeImageMarkdownPath(
-          folderPath,
-          filePath,
-          rootRelativePath
-        );
-        const imageAltText = altText ?? fileName.replace(/\.[^.]+$/, "");
-
-        const sizeBefore = currentEditor.state.doc.content.size;
-        currentEditor
-          .chain()
-          .focus()
-          .insertContentAt(pos, {
-            type: "image",
-            attrs: { src: markdownPath, alt: imageAltText }
-          })
-          .run();
-        const sizeAfter = currentEditor.state.doc.content.size;
-
-        pos += sizeAfter - sizeBefore;
-      } catch (error) {
-        setFeedback({
-          kind: "error",
-          message: t("editor.imageInsertFailed", { fileName, error: extractErrorMessage(error, t) })
-        });
-      }
-    }
-
-    return pos;
-  };
-
-  const insertPdfEmbedPayload = async (
-    payload: MediaPayload,
-    insertPos: number
-  ): Promise<number> => {
-    const currentEditor = editorRef.current;
-
-    if (!currentEditor || !folderPath || !filePath) {
-      return insertPos;
-    }
-
-    if (!getVaultCapabilities().images) {
-      setFeedback({ kind: "error", message: vaultCapabilityHint() });
-      return insertPos;
-    }
-
-    try {
-      const rootRelativePath = await saveImageToFolder(
-        folderPath,
-        filePath,
-        payload.fileName,
-        "application/pdf",
-        payload.data
-      );
-      const markdownPath = await getRelativeImageMarkdownPath(
-        folderPath,
-        filePath,
-        rootRelativePath
-      );
-      const label =
-        payload.fileName.replace(/\\/g, "/").split("/").pop() || payload.fileName;
-      const sizeBefore = currentEditor.state.doc.content.size;
-
-      // PDF embeds deliberately reuse the image/media node. The Markdown stays
-      // portable as ![name](relative/path.pdf), while ImageView recognizes the
-      // .pdf source and renders the existing ScribeCat PDF reader inline.
-      currentEditor
-        .chain()
-        .focus()
-        .insertContentAt(insertPos, {
-          type: "image",
-          attrs: { src: markdownPath, alt: label }
-        })
-        .run();
-
-      const sizeAfter = currentEditor.state.doc.content.size;
-      return insertPos + (sizeAfter - sizeBefore);
-    } catch (error) {
-      setFeedback({
-        kind: "error",
-        message: t("editor.pdfInsertFailed", {
-          fileName: payload.fileName,
-          error: extractErrorMessage(error, t)
-        })
-      });
-      return insertPos;
-    }
-  };
-
-  const insertMediaPayloads = async (
-    payloads: MediaPayload[],
-    insertPos: number,
-    pdfMode?: PdfInsertMode
-  ) => {
-    const mediaKind = payloads.some(isPdfPayload)
-      ? "pdf"
-      : payloads.some(isPptxPayload)
-        ? "pptx"
-        : null;
-
-    if (mediaKind && !pdfMode) {
-      setPendingMediaInsert({ payloads, insertPos, mediaKind });
-      return;
-    }
-
-    let pos = insertPos;
-
-    for (const payload of payloads) {
-      if (isPptxPayload(payload)) {
-        if (pdfMode === "preview") {
-          pos = await insertImagePayloads([payload], pos);
-          continue;
-        }
-
-        try {
-          const { renderPptxToSlideImages } = await import("@/lib/editor/pptxToImages");
-          const slides = await renderPptxToSlideImages(payload.fileName, payload.data);
-          pos = await insertImagePayloads(slides, pos);
-        } catch (error) {
-          setFeedback({
-            kind: "error",
-            message: t("editor.pdfInsertFailed", {
-              fileName: payload.fileName,
-              error: extractErrorMessage(error, t)
-            })
-          });
-        }
-        continue;
-      }
-
-      if (!isPdfPayload(payload)) {
-        pos = await insertImagePayloads([payload], pos);
-        continue;
-      }
-
-      if (pdfMode === "preview") {
-        pos = await insertPdfEmbedPayload(payload, pos);
-        continue;
-      }
-
-      try {
-        const renderedPages = await renderPdfToPageImages(payload.fileName, payload.data);
-
-        if (renderedPages.length === 0) {
-          throw new Error("The PDF has no renderable pages.");
-        }
-
-        pos = await insertImagePayloads(renderedPages, pos);
-      } catch (error) {
-        setFeedback({
-          kind: "error",
-          message: t("editor.pdfInsertFailed", {
-            fileName: payload.fileName,
-            error: extractErrorMessage(error, t)
-          })
-        });
-      }
-    }
-
-  };
-
-  const insertMediaFiles = async (files: File[], insertPos: number) => {
-    const payloads = await Promise.all(
-      files.map(async (file) => ({
-        fileName: file.name,
-        mimeType: file.type,
-        data: new Uint8Array(await file.arrayBuffer())
-      }))
-    );
-
-    await insertMediaPayloads(payloads, insertPos);
-  };
-
-  // Toolbar media button: images insert directly. PDFs pause at the same
-  // two-choice dialog used by paste/drop so the user decides between rendered
-  // page images and the existing 0.24.3 PDF reader/split-view flow.
-  const handleImageInsertRequest = async () => {
-    const currentEditor = editorRef.current;
-
-    if (!currentEditor) {
-      return;
-    }
-
-    if (!folderPath || !filePath) {
-      setFeedback({
-        kind: "error",
-        message: t("editor.imageRequiresFile")
-      });
-      return;
-    }
-
-    let picked: PickedImageFile[];
-
-    try {
-      picked = await platform.imagePicker.pickImages({
-        defaultPath: folderPath ?? getLastOpenedFolderPath() ?? undefined,
-        title: t("editor.imageDialogTitle"),
-        filterName: t("editor.imageDialogFilter"),
-        extensions: EDITOR_MEDIA_EXTENSIONS
-      });
-    } catch (error) {
-      setFeedback({
-        kind: "error",
-        message: extractErrorMessage(error, t)
-      });
-      return;
-    }
-
-    if (picked.length === 0) {
-      return;
-    }
-
-    const payloads: MediaPayload[] = [];
-
-    for (const file of picked) {
-      try {
-        payloads.push({ fileName: file.fileName, ...(await file.read()) });
-      } catch (error) {
-        setFeedback({
-          kind: "error",
-          message: t("editor.imageInsertFailed", {
-            fileName: file.fileName,
-            error: extractErrorMessage(error, t)
-          })
-        });
-      }
-    }
-
-    await insertMediaPayloads(payloads, currentEditor.state.selection.from);
   };
 
   const printDocument = () => {
@@ -1068,43 +703,22 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
           return false;
         }
 
-        const droppedAt = () => {
-          const coordinates = view.posAtCoords({ left: event.clientX, top: event.clientY });
-          return coordinates?.pos ?? view.state.selection.from;
-        };
-
-        // Notes dragged out of the sidebar become links. Images and PDFs from
-        // outside the app are embedded; a PDF becomes one image per page.
         const draggedFilePaths = getDraggedVaultFilePaths(event.dataTransfer);
 
         if (draggedFilePaths.length > 0) {
           event.preventDefault();
-          insertFileLinks(draggedFilePaths, droppedAt());
+          const coordinates = view.posAtCoords({ left: event.clientX, top: event.clientY });
+          insertFileLinks(draggedFilePaths, coordinates?.pos ?? view.state.selection.from);
           return true;
         }
 
-        const files = getInlineMediaFilesFromDataTransfer(event.dataTransfer);
-
-        // Non-media documents keep the existing import-as-note behaviour.
-        // PDFs are the exception: they are deliberately allowed inline and
-        // rendered to page images instead of becoming links.
-        if (getNonInlineMediaFilesFromDataTransfer(event.dataTransfer).length > 0) {
+        if (event.dataTransfer?.files.length) {
           event.preventDefault();
           setFeedback({ kind: "error", message: t("editor.dropDocumentHint") });
-
-          if (files.length === 0) {
-            return true;
-          }
+          return true;
         }
 
-        if (files.length === 0) {
-          return false;
-        }
-
-        event.preventDefault();
-        void insertMediaFiles(files, droppedAt());
-
-        return true;
+        return false;
       },
       transformPasted: (slice) => normalizePastedSlice(slice),
       handlePaste: (view, event) => {
@@ -1113,23 +727,15 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
           return true;
         }
 
-        const plainPasteRequested = plainPasteRequestedRef.current;
-        plainPasteRequestedRef.current = false;
-
-        const files = getInlineMediaFilesFromClipboard(event.clipboardData);
-
-        if (files.length > 0) {
+        if (Array.from(event.clipboardData?.items ?? []).some((item) => item.kind === "file")) {
           event.preventDefault();
-
-          void insertMediaFiles(files, view.state.selection.from);
+          setFeedback({ kind: "error", message: t("editorContextMenu.pasteFailed") });
           return true;
         }
 
-        // Plain text that reads as Markdown is pasted as what it describes.
-        // Not when the clipboard also carries HTML (a copy out of a browser
-        // or Word, which ProseMirror already parses — a "*" in that text is
-        // a character, not emphasis), not into a code block, and not when
-        // the user asked for the raw text with Ctrl+Shift+V.
+        const plainPasteRequested = plainPasteRequestedRef.current;
+        plainPasteRequestedRef.current = false;
+
         const currentEditor = editorRef.current;
         const text = event.clipboardData?.getData("text/plain") ?? "";
         const hasHtml = Boolean(event.clipboardData?.getData("text/html"));
@@ -1496,7 +1102,6 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     <Toolbar
       editor={editor}
       onLinkRequest={handleLinkRequest}
-      onImageInsertRequest={handleImageInsertRequest}
       onPrintRequest={printDocument}
       onDeleteRequest={onDeleteRequest}
       deleteEnabled={deleteEnabled}
@@ -1510,53 +1115,6 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 
   return (
     <div className={cn("editor-view", documentLocked && "editor-view--locked", documentWidth === "compact" && "editor-view--compact")}>
-      <PdfInsertChoiceDialog
-        open={pendingMediaInsert !== null}
-        mediaKind={pendingMediaInsert?.mediaKind ?? "pdf"}
-        fileCount={pendingMediaInsert?.payloads.length ?? 0}
-        firstFileName={pendingMediaInsert?.payloads[0]?.fileName ?? ""}
-        onChoose={(mode) => {
-          const pending = pendingMediaInsert;
-          setPendingMediaInsert(null);
-
-          if (pending) {
-            void insertMediaPayloads(pending.payloads, pending.insertPos, mode);
-          }
-        }}
-        onCancel={() => setPendingMediaInsert(null)}
-      />
-
-      {documentPreview ? (
-        <div
-          className="media-preview media-preview--pdf"
-          role="dialog"
-          aria-modal="true"
-          aria-label={documentPreview.label}
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) {
-              setDocumentPreview(null);
-            }
-          }}
-        >
-          <DocumentViewer
-            absolutePath={documentPreview.absolutePath}
-            label={documentPreview.label}
-            onClose={() => setDocumentPreview(null)}
-            onOpenInSplit={
-              layout === "desktop" && filePath && onOpenDocumentInSplit
-                ? (pageNumber) => {
-                    onOpenDocumentInSplit({
-                      ...documentPreview,
-                      ownerFilePath: filePath,
-                      pageNumber
-                    });
-                    setDocumentPreview(null);
-                  }
-                : undefined
-            }
-          />
-        </div>
-      ) : null}
       {pdfPreview ? (
         <PdfViewerModal
           absolutePath={pdfPreview.absolutePath}
@@ -1750,11 +1308,11 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
           x={selectionMenu.x}
           y={selectionMenu.y}
           hasSelection={selectionMenu.hasSelection}
-          canPaste={!documentLocked}
+
           onCopyFormatted={() => copySelection("formatted")}
           onCopyMarkdown={() => copySelection("markdown")}
           onCopyPlainText={() => copySelection("plainText")}
-          onPaste={() => void pasteFromClipboard()}
+
           onClose={() => setSelectionMenu(null)}
         />
       ) : null}
