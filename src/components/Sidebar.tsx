@@ -53,6 +53,11 @@ import { useTagIndex } from "@/hooks/useTagIndex";
 import { useVaultSearch } from "@/hooks/useVaultSearch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useStoredCollapsed, useWorkingSetHeight } from "@/hooks/useWorkingSetHeight";
+import {
+  carriesExternalFiles,
+  readDropPayload,
+  type DropPayload
+} from "@/lib/dragDrop/droppedSources";
 import { canDownloadFolderArchive } from "@/lib/export/markdownDownload";
 import { formatFolderLabel, getFolderBasename, getRelativeDisplayPath } from "@/lib/fileSystem";
 import { isJournalRelativePath } from "@/lib/journal";
@@ -101,6 +106,7 @@ type SidebarProps = {
   onCreateFileRequest: (targetDirectory: string) => void;
   onCreateFolder: () => void;
   onCreateFolderRequest: (targetDirectory: string) => void;
+  onImportRequest: () => void;
   onSelectFilePath: (filePath: string) => Promise<void>;
   onOpenFolderNote: (folderPath: string) => Promise<void>;
   onOpenFolderCollection: (relativePath: string) => void;
@@ -169,6 +175,7 @@ export function Sidebar({
   onCreateFileRequest,
   onCreateFolder,
   onCreateFolderRequest,
+  onImportRequest,
   onSelectFilePath,
   onOpenFolderNote,
   onOpenFolderCollection,
@@ -348,6 +355,9 @@ export function Sidebar({
     setRootContextMenu({ x: event.clientX, y: event.clientY });
   };
 
+  // Files dragged in from outside the app land as imported notes. Drags that
+  // start inside the tree (reordering, or dragging a note into the editor) are
+  // none of this handler's business and are left to bubble untouched.
   // Same dismissal rules as the tree's own menu (useTreeContextMenu): any
   // click, a competing right-click, a scroll or Escape closes it.
   useEffect(() => {
@@ -445,6 +455,19 @@ export function Sidebar({
             <Plus />
           </Button>
 
+          {platform.features.importFiles ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onImportRequest}
+              disabled={isLoading || folderPath === null}
+              aria-label={t("sidebar.importFiles")}
+              title={t("sidebar.importFiles")}
+            >
+              <Import />
+            </Button>
+          ) : null}
 
           <Menu>
             <MenuTrigger
