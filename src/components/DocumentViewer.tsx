@@ -289,7 +289,6 @@ export function DocumentViewer({
     const pageStyle = window.getComputedStyle(source);
     const paddingTop = Number.parseFloat(pageStyle.paddingTop) || 0;
     const paddingBottom = Number.parseFloat(pageStyle.paddingBottom) || 0;
-    const contentHeight = Math.max(1, pageHeightPx - paddingTop - paddingBottom);
     const children = Array.from(source.children);
 
     if (children.length === 0) {
@@ -335,18 +334,21 @@ export function DocumentViewer({
     page.remove();
 
     setWordPages(pages.length > 0 ? pages : [html]);
-
-    return () => {
-      for (const child of Array.from(measureHost.children)) {
-        child.remove();
-      }
-    };
   }, [
     html,
     isWord,
     wordPageSize.heightMm,
     wordPageSize.widthMm
   ]);
+
+  useEffect(() => {
+    return () => {
+      if (zoomUiFrameRef.current !== null) {
+        cancelAnimationFrame(zoomUiFrameRef.current);
+      }
+      zoomUiFrameRef.current = null;
+    };
+  }, []);
 
   useEffect(() => {
     const stage = stageRef.current;
