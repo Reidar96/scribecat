@@ -127,7 +127,6 @@ export function DocumentViewer({
   const [zoomOpen, setZoomOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fallbackFullscreen, setFallbackFullscreen] = useState(false);
-  const [isMinimized, setIsMinimized] = useState(false);
   const [copying, setCopying] = useState(false);
   const [copied, setCopied] = useState(false);
   const [copyFailed, setCopyFailed] = useState(false);
@@ -179,7 +178,6 @@ export function DocumentViewer({
     setZoomOpen(false);
     setIsFullscreen(false);
     setFallbackFullscreen(false);
-    setIsMinimized(false);
     setCopying(false);
     setCopied(false);
     setCopyFailed(false);
@@ -841,7 +839,6 @@ export function DocumentViewer({
         mode +
         (pageView === "grid" ? " pdf-preview--grid" : "") +
         (fallbackFullscreen ? " pdf-preview--fallback-fullscreen" : "") +
-        (isMinimized ? " pdf-preview--minimized" : "") +
         " document-preview document-preview--" +
         kind
       }
@@ -1033,8 +1030,7 @@ export function DocumentViewer({
         </div>
       </div>
 
-      {!isMinimized ? (
-        <div
+      <div
           ref={stageRef}
           className={
             "pdf-preview__stage" +
@@ -1145,7 +1141,6 @@ export function DocumentViewer({
             </div>
           ) : null}
         </div>
-      ) : null}
     </div>
   );
 }
