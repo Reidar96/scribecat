@@ -541,7 +541,10 @@ export function DocumentViewer({
       availableWidth / naturalWidth,
       availableHeight / naturalHeight
     );
-    const requestedScale = Math.max(0.3, fitScale * zoomRef.current);
+    const requestedScale = Math.max(
+      0.3,
+      fitScale * (isWord || isPowerPoint ? 1 : zoomRef.current)
+    );
 
     page.style.width = Math.max(1, Math.round(naturalWidth * requestedScale)) + "px";
     page.style.height = Math.max(1, Math.round(naturalHeight * requestedScale)) + "px";
@@ -595,8 +598,9 @@ export function DocumentViewer({
     const stageRect = stage.getBoundingClientRect();
     const pointerX = clientX - stageRect.left;
     const pointerY = clientY - stageRect.top;
-    const pageWidth = Math.max(1, page.offsetWidth);
-    const pageHeight = Math.max(1, page.offsetHeight);
+    const officeZoom = isWord || isPowerPoint ? Math.max(1, zoomRef.current) : 1;
+    const pageWidth = Math.max(1, page.offsetWidth * officeZoom);
+    const pageHeight = Math.max(1, page.offsetHeight * officeZoom);
 
     zoomAnchorRef.current = {
       clientX,
@@ -646,6 +650,22 @@ export function DocumentViewer({
       ? anchor.clientY - stageRect.top
       : stageRect.height / 2;
     const currentZoom = Math.max(0.01, previousZoom);
+
+    if (isWord || isPowerPoint) {
+      page.style.setProperty("--pdf-view-zoom", String(next));
+
+      const pageLeft = page.offsetLeft;
+      const pageTop = page.offsetTop;
+      const baseWidth = Math.max(1, page.offsetWidth);
+      const baseHeight = Math.max(1, page.offsetHeight);
+      const pageX = pageLeft + baseWidth * next * (anchor?.pageX ?? 0.5);
+      const pageY = pageTop + baseHeight * next * (anchor?.pageY ?? 0.5);
+
+      stage.scrollLeft = Math.max(0, pageX - pointerX);
+      stage.scrollTop = Math.max(0, pageY - pointerY);
+      return;
+    }
+
     const currentWidth = Math.max(1, page.offsetWidth);
     const currentHeight = Math.max(1, page.offsetHeight);
     const scale = next / currentZoom;
