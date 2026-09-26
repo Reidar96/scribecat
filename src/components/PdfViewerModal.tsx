@@ -811,7 +811,7 @@ export function PdfViewerSurface({
               <X aria-hidden="true" />
             </button>
           ) : null}
-        </div>>
+        </div>
       </div>
 
       <div ref={stageRef} className="pdf-preview__stage">
