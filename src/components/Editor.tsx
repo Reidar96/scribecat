@@ -99,6 +99,8 @@ type EditorProps = {
   editorFocusRequestId?: number;
   onRequestSidebarFocus?: () => void;
   onRequestFileOpen?: (filePath: string) => void;
+  /** Opens a local PDF linked from this note beside the owning Markdown document. */
+  onOpenPdfInSplit?: (request: PdfPreviewState & { ownerFilePath: string }) => void;
   onZenModeRequest: () => void;
   onDeleteRequest: () => void;
   deleteEnabled: boolean;
@@ -188,6 +190,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     editorFocusRequestId,
     onRequestSidebarFocus,
     onRequestFileOpen,
+    onOpenPdfInSplit,
     onZenModeRequest,
     onDeleteRequest,
     deleteEnabled,
@@ -1368,6 +1371,14 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
           absolutePath={pdfPreview.absolutePath}
           label={pdfPreview.label}
           onClose={() => setPdfPreview(null)}
+          onOpenInSplit={
+            layout === "desktop" && filePath && onOpenPdfInSplit
+              ? () => {
+                  onOpenPdfInSplit({ ...pdfPreview, ownerFilePath: filePath });
+                  setPdfPreview(null);
+                }
+              : undefined
+          }
         />
       ) : null}
       {unserializableNodes.length > 0 ? (
