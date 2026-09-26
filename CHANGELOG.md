@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.25.2] - 2026-09-26
+
+### Fixed
+- Restore selectable PDF text when using the zoomed viewer and keep text selection independent from PDF panning.
+- Reset PDF zoom to 100% directly from the zoom button and open the zoom controls automatically when pinch zoom starts.
+- Keep pinch/trackpad zoom anchored to the pointer position instead of jumping toward the top-left corner.
+- Restore desktop mouse drag panning while zoomed, with grab/grabbing cursors and a live minimap preview.
+
+### Improved
+- PowerPoint single-slide preview now supports keyboard navigation and touch swipes.
+- Inline Word, PowerPoint and video media remains available through paste, drag-and-drop and the image toolbar picker.
+
 ## [0.25.1] - 2026-09-26
 
 ### Fixed
