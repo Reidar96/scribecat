@@ -95,8 +95,6 @@ function App() {
   const [importFileList, setImportFileList] = useState<ImportSource[] | null>(null);
   const [importTargetFolder, setImportTargetFolder] = useState<string | null>(null);
   // What a dropped folder contributed beyond the importable files themselves.
-  const [importSkippedCount, setImportSkippedCount] = useState(0);
-  const [importLimitReached, setImportLimitReached] = useState(false);
   const [importInsertAfterBasename, setImportInsertAfterBasename] = useState<string | null | undefined>(
     undefined
   );
@@ -1639,8 +1637,6 @@ function App() {
         importFileList={importFileList}
         folderPath={folderPath}
         importTargetFolder={importTargetFolder}
-        importSkippedCount={importSkippedCount}
-        importLimitReached={importLimitReached}
         onImported={handleImported}
         onCloseImport={() => setImportFileList(null)}
         availableUpdate={availableUpdate}
