@@ -554,7 +554,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       if (extension === "pdf") {
         setPdfPreview({ absolutePath, label });
       } else {
-        setDocumentPreview({ absolutePath, label });
+        setFeedback({ kind: "error", message: t("pdfViewer.error") });
       }
     } catch {
       setFeedback({ kind: "error", message: t("pdfViewer.error") });
@@ -734,18 +734,6 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       }
     }
 
-  };
-
-  const insertMediaFiles = async (files: File[], insertPos: number) => {
-    const payloads = await Promise.all(
-      files.map(async (file) => ({
-        fileName: file.name,
-        mimeType: file.type,
-        data: new Uint8Array(await file.arrayBuffer())
-      }))
-    );
-
-    await insertMediaPayloads(payloads, insertPos);
   };
 
   // Toolbar media button: images insert directly. PDFs pause at the same
@@ -1379,7 +1367,6 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     <div className={cn("editor-view", documentLocked && "editor-view--locked", documentWidth === "compact" && "editor-view--compact")}>
       <PdfInsertChoiceDialog
         open={pendingMediaInsert !== null}
-        mediaKind={pendingMediaInsert?.mediaKind ?? "pdf"}
         fileCount={pendingMediaInsert?.payloads.length ?? 0}
         firstFileName={pendingMediaInsert?.payloads[0]?.fileName ?? ""}
         onChoose={(mode) => {
