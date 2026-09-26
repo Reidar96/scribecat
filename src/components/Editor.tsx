@@ -47,11 +47,6 @@ import {
   type VaultFileOption
 } from "@/lib/editor/fileLinks";
 import { extractErrorMessage } from "@/lib/editor/errorMessages";
-import {
-  getInlineMediaFilesFromClipboard,
-  getInlineMediaFilesFromDataTransfer,
-  getNonInlineMediaFilesFromDataTransfer
-} from "@/lib/editor/imageTransfer";
 import { renderPdfToPageImages } from "@/lib/editor/pdfToImages";
 import { moveLine, moveListItem, toggleTaskItemChecked } from "@/lib/editor/listCommands";
 import { normalizeEscapedCheckboxes } from "@/lib/editor/markdownNormalize";
@@ -159,7 +154,7 @@ type MediaPayload = Omit<ImagePayload, "altText">;
 type PendingMediaInsert = {
   payloads: MediaPayload[];
   insertPos: number;
-  mediaKind: "pdf" | "pptx";
+  mediaKind: "pdf";
 };
 
 function isLocalDocumentPreviewHref(href: string): boolean {
@@ -173,7 +168,7 @@ function isLocalDocumentPreviewHref(href: string): boolean {
   }
 
   const [path] = href.split(/[?#]/);
-  return /\.(pdf|docx|pptx|mp4|webm|mov|m4v|ogv)$/i.test(path);
+  return /\.pdf$/i.test(path);
 }
 
 // The selected passage as markdown — the form the chat agent's get_selection
