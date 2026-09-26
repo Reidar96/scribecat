@@ -545,6 +545,24 @@ p.detail-panel__version {
   background: rgba(var(--accent-rgb), 0.9);
 }
 
+.document-tab__attachment {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.18rem;
+  flex: none;
+  border-radius: 999px;
+  background: rgba(var(--overlay-rgb), 0.08);
+  padding: 0.12rem 0.3rem;
+  color: rgba(var(--text-rgb), 0.6);
+  font-size: 0.62rem;
+  line-height: 1;
+}
+
+.document-tab__attachment svg {
+  width: 0.65rem;
+  height: 0.65rem;
+}
+
 .document-tab__close {
   display: inline-flex;
   align-items: center;
