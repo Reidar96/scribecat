@@ -24,6 +24,10 @@ import { FindReplacePanel } from "@/components/FindReplacePanel";
 import { VersionsPopover } from "@/components/VersionsPopover";
 import { DocumentMenu } from "@/components/app/DocumentMenu";
 import { DocumentTabs, TAB_DRAG_MIME } from "@/components/app/DocumentTabs";
+import {
+  PdfViewerSurface,
+  type PdfPreviewRequest
+} from "@/components/PdfViewerModal";
 import { join } from "@/platform/paths";
 import { EmojiPickerPopover } from "@/components/EmojiPicker";
 import { useBreadcrumbScroll } from "@/hooks/useBreadcrumbScroll";
@@ -251,6 +255,9 @@ export function DocumentPanel({
   const [splitPickerSide, setSplitPickerSide] = useState<"left" | "right">("right");
   const [splitPickerQuery, setSplitPickerQuery] = useState("");
   const [splitDropPreview, setSplitDropPreview] = useState<"left" | "right" | null>(null);
+  const [attachedPdf, setAttachedPdf] = useState<
+    (PdfPreviewRequest & { ownerFilePath: string }) | null
+  >(null);
   const documentLocks = useAppStore((state) => state.documentLocks);
   const setDocumentLocked = useAppStore((state) => state.setDocumentLocked);
   // Bumped by the header menu's "Versions" entry on the phone, where the
@@ -274,6 +281,21 @@ export function DocumentPanel({
       setActiveEditorPane("primary");
     }
   }, [layout, secondaryFilePath]);
+
+  useEffect(() => {
+    if (attachedPdf && !openTabs.includes(attachedPdf.ownerFilePath)) {
+      setAttachedPdf(null);
+    }
+  }, [attachedPdf, openTabs]);
+
+  const visibleAttachedPdf =
+    attachedPdf &&
+    (attachedPdf.ownerFilePath === selectedFilePath ||
+      attachedPdf.ownerFilePath === secondaryFilePath)
+      ? attachedPdf
+      : null;
+  const hasSplitContent =
+    layout === "desktop" && Boolean(secondaryFilePath || visibleAttachedPdf);
   const capabilities = getVaultCapabilities();
   const capabilityHint = vaultCapabilityHint();
   const versioningEnabled = useVersioningSettingsStore((state) => state.versioningEnabled);
@@ -369,6 +391,23 @@ export function DocumentPanel({
   const splitDropFilePath = (dataTransfer: DataTransfer): string | null =>
     dataTransfer.getData(TAB_DRAG_MIME) || getDraggedVaultFilePaths(dataTransfer)[0] || null;
 
+  const openPdfInSplit = (
+    request: PdfPreviewRequest & { ownerFilePath: string }
+  ) => {
+    if (layout !== "desktop") return;
+
+    setAttachedPdf(request);
+    setSecondarySide("right");
+    setSplitPickerOpen(false);
+    setSplitDropPreview(null);
+
+    if (request.ownerFilePath === secondaryFilePath) {
+      onClosePrimarySplit();
+    } else if (request.ownerFilePath === selectedFilePath) {
+      onCloseSecondary();
+    }
+  };
+
   const openSplitPickerForSide = (side: "left" | "right") => {
     setSplitPickerSide(side);
     setSplitPickerQuery("");
@@ -377,6 +416,10 @@ export function DocumentPanel({
 
   const replaceSplitSide = (side: "left" | "right", filePath: string) => {
     setSplitPickerOpen(false);
+
+    if (visibleAttachedPdf) {
+      setAttachedPdf(null);
+    }
 
     if (!secondaryFilePath) {
       if (filePath !== selectedFilePath) {
