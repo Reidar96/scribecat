@@ -1,3 +1,11 @@
+# ScribeCat 0.25.14
+
+### Office viewer
+- Keep the Word and PowerPoint split-view action visible in the PDF-style toolbar.
+- Use the same zoom-anchor geometry as the PDF viewer for Office documents.
+- During a two-finger pinch, keep the document point under the pinch midpoint fixed while zooming instead of anchoring to the top-left.
+- Use the same page-size scaling approach as PDF so zoom changes the document surface inside the fixed viewer, not the viewer itself.
+
 # ScribeCat 0.25.13
 
 ### Document tabs
