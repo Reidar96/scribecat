@@ -59,6 +59,11 @@ import {
   MenuTrigger
 } from "@/components/ui/menu";
 import { cn } from "@/lib/utils";
+import {
+  carriesExternalFiles,
+  readDropPayload,
+  type DropPayload
+} from "@/lib/dragDrop/droppedSources";
 import type { CollectionViewRequest } from "@/components/app/collectionTypes";
 import { useLayoutMode } from "@/hooks/useLayoutMode";
 import { useLongPressContextMenu } from "@/hooks/useLongPressContextMenu";
@@ -135,6 +140,7 @@ type CollectionPanelProps = {
   onDownloadMarkdownRequest: (filePath: string) => void;
   onDownloadFolderArchiveRequest: (folderPath: string, archiveName: string) => void;
   onPrintFileRequest: (filePath: string) => void;
+  onFilesDropped: (payload: DropPayload, targetDirectory: string) => void;
 };
 
 type NoteCard = {
@@ -273,7 +279,8 @@ export function CollectionPanel({
   onExportMultipleRequest,
   onDownloadMarkdownRequest,
   onDownloadFolderArchiveRequest,
-  onPrintFileRequest
+  onPrintFileRequest,
+  onFilesDropped
 }: CollectionPanelProps) {
   const { t, i18n } = useTranslation();
   const layout = useLayoutMode();
@@ -297,6 +304,10 @@ export function CollectionPanel({
   const [createDraft, setCreateDraft] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [draggedCardKey, setDraggedCardKey] = useState<string | null>(null);
+  const [externalDropTarget, setExternalDropTarget] = useState<{
+    directory: string;
+    cardKey: string | null;
+  } | null>(null);
   const [dropIndicator, setDropIndicator] = useState<{
     key: string;
     position: "before" | "after";
@@ -573,6 +584,74 @@ export function CollectionPanel({
 
   const manualReorderEnabled =
     request.kind === "folder" && sortMode === "manual";
+
+  const resolveExternalDropTarget = (target: EventTarget | null) => {
+    const element = target instanceof Element ? target : null;
+    const card = element?.closest<HTMLElement>("[data-collection-import-directory]");
+    const cardDirectory = card?.getAttribute("data-collection-import-directory");
+
+    if (cardDirectory !== null && cardDirectory !== undefined) {
+      return {
+        directory: cardDirectory,
+        cardKey: card?.getAttribute("data-collection-key") ?? null
+      };
+    }
+
+    if (request.kind === "folder") {
+      return { directory: request.relativePath, cardKey: null };
+    }
+
+    // A tag view has no single physical folder. Dropping onto one of its note
+    // cards still targets that note's folder, while bare background stays inert.
+    return null;
+  };
+
+  const handleExternalDragOver = (event: DragEvent<HTMLElement>) => {
+    if (!carriesExternalFiles(event.dataTransfer)) {
+      return;
+    }
+
+    const target = resolveExternalDropTarget(event.target);
+
+    if (!target) {
+      return;
+    }
+
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+    setExternalDropTarget((current) =>
+      current?.directory === target.directory && current.cardKey === target.cardKey
+        ? current
+        : target
+    );
+  };
+
+  const handleExternalDragLeave = (event: DragEvent<HTMLElement>) => {
+    if (
+      event.relatedTarget instanceof Node &&
+      event.currentTarget.contains(event.relatedTarget)
+    ) {
+      return;
+    }
+
+    setExternalDropTarget(null);
+  };
+
+  const handleExternalDrop = (event: DragEvent<HTMLElement>) => {
+    if (!carriesExternalFiles(event.dataTransfer)) {
+      return;
+    }
+
+    const target = resolveExternalDropTarget(event.target);
+
+    if (!target) {
+      return;
+    }
+
+    event.preventDefault();
+    setExternalDropTarget(null);
+    onFilesDropped(readDropPayload(event.dataTransfer), target.directory);
+  };
 
   const handleCardDragStart = (
     event: DragEvent<HTMLElement>,
@@ -882,9 +961,15 @@ export function CollectionPanel({
 
   return (
     <section
-      className="collection-panel"
+      className={cn(
+        "collection-panel",
+        externalDropTarget !== null && "collection-panel--external-drop-target"
+      )}
       aria-label={t("collection.label")}
       onKeyDown={handlePanelKeyDown}
+      onDragOver={handleExternalDragOver}
+      onDragLeave={handleExternalDragLeave}
+      onDrop={handleExternalDrop}
     >
       <div className="collection-panel__card">
         <header className="collection-panel__header">
@@ -1244,6 +1329,12 @@ export function CollectionPanel({
                         void handleCardDrop(event, card)
                     }
                   : {};
+                const importDirectory =
+                  card.kind === "folder"
+                    ? card.relativePath
+                    : parentLabel(card.relativePath);
+                const isExternalCardDropTarget =
+                  externalDropTarget?.cardKey === key;
                 const dragHandleProps = manualReorderEnabled
                   ? {
                       draggable: true,
@@ -1273,8 +1364,11 @@ export function CollectionPanel({
                         draggedCardKey === key && "collection-card--drag-source",
                         cardDropPosition === "before" && "collection-card--drop-before",
                         cardDropPosition === "after" && "collection-card--drop-after",
-                        cardDropAxis === "horizontal" && "collection-card--drop-horizontal"
+                        cardDropAxis === "horizontal" && "collection-card--drop-horizontal",
+                        isExternalCardDropTarget && "collection-card--external-drop-target"
                       )}
+                      data-collection-key={key}
+                      data-collection-import-directory={importDirectory}
                       onContextMenu={(event) => {
                         event.preventDefault();
                         event.stopPropagation();
@@ -1372,8 +1466,11 @@ export function CollectionPanel({
                       draggedCardKey === key && "collection-card--drag-source",
                       cardDropPosition === "before" && "collection-card--drop-before",
                       cardDropPosition === "after" && "collection-card--drop-after",
-                      cardDropAxis === "horizontal" && "collection-card--drop-horizontal"
+                      cardDropAxis === "horizontal" && "collection-card--drop-horizontal",
+                      isExternalCardDropTarget && "collection-card--external-drop-target"
                     )}
+                    data-collection-key={key}
+                    data-collection-import-directory={importDirectory}
                     onContextMenu={(event) => {
                       event.preventDefault();
                       event.stopPropagation();

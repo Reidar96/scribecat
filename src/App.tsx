@@ -1469,6 +1469,7 @@ function App() {
               onDownloadMarkdownRequest={handleDownloadMarkdownRequest}
               onDownloadFolderArchiveRequest={handleDownloadFolderArchiveRequest}
               onPrintFileRequest={handlePrintFileRequest}
+              onFilesDropped={handleFilesDropped}
             />
           ) : (
             <DocumentPanel

@@ -148,6 +148,16 @@
   background: rgba(var(--surface-hover-rgb),0.92);
 }
 
+.collection-panel--external-drop-target .collection-panel__card {
+  outline: 1px solid rgba(var(--accent-rgb), 0.45);
+  outline-offset: -1px;
+}
+
+.collection-card--external-drop-target {
+  border-color: rgba(var(--accent-rgb), 0.72);
+  box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.16);
+}
+
 .collection-card--selected {
   border-color: rgba(var(--accent-rgb),0.58);
   background: rgba(var(--accent-rgb),0.1);

@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.24.5] - 2026-09-26
+
+### New features and improvements
+- Add external file and folder drag-and-drop to File Viewer using the same import pipeline as the sidebar, including PDF-to-Markdown conversion.
+- When a PDF is pasted, dropped, or selected from the editor media button, ask whether to insert it as individual page images or as a combined PDF view.
+- Keep **Individual pages** on the 0.24.4 flow: render every PDF page to PNG and embed the pages directly in the Markdown note.
+- Reuse the existing 0.24.3 PDF reader for **Combined view**: save the PDF as a note-local attachment, open it in the existing paged reader, keep page text copying, and keep the existing attached split-view behavior.
+
 ## [0.24.4] - 2026-09-26
 
 ### New features and improvements
