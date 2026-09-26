@@ -628,7 +628,7 @@ export function PdfViewerSurface({
     page.style.height = `${Math.max(1, Math.round(baseHeight * visualRatio))}px`;
     page.style.setProperty("--pdf-view-zoom", String(visualRatio));
 
-    if (anchorX !== null && anchorY !== null) {
+    if (anchor && anchorX !== null && anchorY !== null) {
       const afterRect = page.getBoundingClientRect();
       stage.scrollLeft = Math.max(
         0,
