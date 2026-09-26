@@ -958,6 +958,51 @@ export function DocumentViewer({
     "--word-page-height": wordPageSize.heightMm + "mm"
   } as React.CSSProperties;
 
+  const overviewPages = useMemo(() => {
+    if (isPowerPoint) {
+      return slides.map((slideData, index) => (
+        <button
+          type="button"
+          className="pdf-preview__overview-page"
+          key={index}
+          onClick={() => {
+            setPageNumber(index + 1);
+            setPageView("single");
+          }}
+          aria-label={"Slide " + (index + 1)}
+        >
+          <div className="document-preview__slide document-preview__slide--thumbnail">
+            <OfficeVisual svg={slideData.svg} className="document-preview__slide-svg" />
+          </div>
+          <span>{index + 1} / {slides.length}</span>
+        </button>
+      ));
+    }
+
+    if (isWord) {
+      return wordPages.map((pageHtml, index) => (
+        <button
+          type="button"
+          className="pdf-preview__overview-page"
+          key={index}
+          onClick={() => {
+            setPageNumber(index + 1);
+            setPageView("single");
+          }}
+          aria-label={"Page " + (index + 1)}
+        >
+          <OfficeVisual
+            html={pageHtml}
+            className="document-preview__word-sheet document-preview__word-sheet--thumbnail"
+          />
+          <span>{index + 1} / {wordPages.length}</span>
+        </button>
+      ));
+    }
+
+    return [];
+  }, [isPowerPoint, isWord, slides, wordPages]);
+
   const copyLabel = copyFailed
     ? "Copy failed"
     : copied
@@ -1243,47 +1288,7 @@ export function DocumentViewer({
 
           {pageView === "grid" ? (
             <div className="pdf-preview__overview">
-              {isPowerPoint
-                ? slides.map((slideData, index) => (
-                    <button
-                      type="button"
-                      className="pdf-preview__overview-page"
-                      key={index}
-                      onClick={() => {
-                        setPageNumber(index + 1);
-                        setPageView("single");
-                      }}
-                      aria-label={"Slide " + (index + 1)}
-                    >
-                      <div className="document-preview__slide document-preview__slide--thumbnail">
-                        <OfficeVisual
-                          svg={slideData.svg}
-                          className="document-preview__slide-svg"
-                        />
-                      </div>
-                      <span>{index + 1} / {slides.length}</span>
-                    </button>
-                  ))
-                : wordPages.length > 0
-                  ? wordPages.map((pageHtml, index) => (
-                      <button
-                        type="button"
-                        className="pdf-preview__overview-page"
-                        key={index}
-                        onClick={() => {
-                          setPageNumber(index + 1);
-                          setPageView("single");
-                        }}
-                        aria-label={"Page " + (index + 1)}
-                      >
-                        <OfficeVisual
-                          html={pageHtml}
-                          className="document-preview__word-sheet document-preview__word-sheet--thumbnail"
-                        />
-                        <span>{index + 1} / {wordPages.length}</span>
-                      </button>
-                    ))
-                  : null
+              {overviewPages}
             </div>
           ) : null}
         </div>
