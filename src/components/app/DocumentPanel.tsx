@@ -262,7 +262,7 @@ export function DocumentPanel({
     (PdfPreviewRequest & { ownerFilePath: string; pageNumber: number }) | null
   >(null);
   const [attachedDocument, setAttachedDocument] = useState<
-    (DocumentPreviewRequest & { ownerFilePath: string }) | null
+    (DocumentPreviewRequest & { ownerFilePath: string; pageNumber: number }) | null
   >(null);
   const [pdfSplitRestoreRequest, setPdfSplitRestoreRequest] = useState<{
     absolutePath: string;
@@ -483,7 +483,10 @@ export function DocumentPanel({
     if (layout !== "desktop") return;
 
     setAttachedPdf(null);
-    setAttachedDocument(request);
+    setAttachedDocument({
+      ...request,
+      pageNumber: request.pageNumber ?? 1
+    });
     setSecondarySide("right");
     setSplitPickerOpen(false);
     setSplitDropPreview(null);
@@ -1071,9 +1074,20 @@ export function DocumentPanel({
                           mode="split"
                           absolutePath={visibleAttachedDocument.absolutePath}
                           label={visibleAttachedDocument.label}
+                          initialPageNumber={visibleAttachedDocument.pageNumber}
+                          onPageChange={(pageNumber) => {
+                            setAttachedDocument((current) =>
+                              current
+                                ? { ...current, pageNumber }
+                                : current
+                            );
+                          }}
                           onClose={() => {
+                            const request = visibleAttachedDocument;
                             setAttachedDocument(null);
-                            setActiveEditorPane("primary");
+                            if (request) {
+                              setActiveEditorPane("primary");
+                            }
                           }}
                         />
                       ) : secondaryFilePath && secondaryDocument && secondaryMarkdown !== null ? (
