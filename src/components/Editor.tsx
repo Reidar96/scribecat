@@ -44,10 +44,11 @@ import {
 } from "@/lib/editor/fileLinks";
 import { extractErrorMessage } from "@/lib/editor/errorMessages";
 import {
-  getImageFilesFromClipboard,
-  getImageFilesFromDataTransfer,
-  getNonImageFilesFromDataTransfer
+  getInlineMediaFilesFromClipboard,
+  getInlineMediaFilesFromDataTransfer,
+  getNonInlineMediaFilesFromDataTransfer
 } from "@/lib/editor/imageTransfer";
+import { renderPdfToPageImages } from "@/lib/editor/pdfToImages";
 import { moveLine, moveListItem, toggleTaskItemChecked } from "@/lib/editor/listCommands";
 import { normalizeEscapedCheckboxes } from "@/lib/editor/markdownNormalize";
 import { looksLikeMarkdown, pasteMarkdown } from "@/lib/editor/pasteMarkdown";
@@ -81,7 +82,7 @@ import { useShortcutsStore } from "@/store/useShortcutsStore";
 
 // What the editor embeds as an image — the toolbar's file filter and the drop
 // handler share this list, so both accept exactly the same files.
-const EDITOR_IMAGE_EXTENSIONS = ["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp"];
+const EDITOR_MEDIA_EXTENSIONS = ["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "pdf"];
 
 // Marks the surface as a light page inside the dark UI; tokens.css and the
 // dark variant in App.css key off this exact name.
@@ -313,20 +314,27 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         const items = await navigator.clipboard.read();
 
         for (const item of items) {
-          const imageType = item.types.find((type) => type.startsWith("image/"));
-          if (!imageType) continue;
+          const mediaType = item.types.find(
+            (type) => type.startsWith("image/") || type === "application/pdf"
+          );
+          if (!mediaType) continue;
 
-          const blob = await item.getType(imageType);
+          const blob = await item.getType(mediaType);
           const extension =
-            imageType === "image/jpeg"
-              ? "jpg"
-              : imageType.split("/")[1]?.replace(/\+xml$/i, "") || "png";
+            mediaType === "application/pdf"
+              ? "pdf"
+              : mediaType === "image/jpeg"
+                ? "jpg"
+                : mediaType.split("/")[1]?.replace(/\+xml$/i, "") || "png";
 
-          await insertImagePayloads(
+          await insertMediaPayloads(
             [
               {
-                fileName: `clipboard-image.${extension}`,
-                mimeType: imageType,
+                fileName:
+                  mediaType === "application/pdf"
+                    ? "clipboard-document.pdf"
+                    : `clipboard-image.${extension}`,
+                mimeType: mediaType,
                 data: new Uint8Array(await blob.arrayBuffer())
               }
             ],
@@ -625,7 +633,17 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     }
   };
 
-  type ImagePayload = { fileName: string; mimeType: string; data: Uint8Array };
+  type ImagePayload = {
+    fileName: string;
+    mimeType: string;
+    data: Uint8Array;
+    altText?: string;
+  };
+
+  type MediaPayload = Omit<ImagePayload, "altText">;
+
+  const isPdfPayload = (payload: MediaPayload) =>
+    payload.mimeType === "application/pdf" || /\.pdf$/i.test(payload.fileName);
 
   const insertImagePayloads = async (payloads: ImagePayload[], insertPos: number) => {
     const currentEditor = editorRef.current;
@@ -651,7 +669,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 
     let pos = insertPos;
 
-    for (const { fileName, mimeType, data } of payloads) {
+    for (const { fileName, mimeType, data, altText } of payloads) {
       try {
         const rootRelativePath = await saveImageToFolder(
           folderPath,
@@ -665,13 +683,16 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
           filePath,
           rootRelativePath
         );
-        const altText = fileName.replace(/\.[^.]+$/, "");
+        const imageAltText = altText ?? fileName.replace(/\.[^.]+$/, "");
 
         const sizeBefore = currentEditor.state.doc.content.size;
         currentEditor
           .chain()
           .focus()
-          .insertContentAt(pos, { type: "image", attrs: { src: markdownPath, alt: altText } })
+          .insertContentAt(pos, {
+            type: "image",
+            attrs: { src: markdownPath, alt: imageAltText }
+          })
           .run();
         const sizeAfter = currentEditor.state.doc.content.size;
 
@@ -685,7 +706,38 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     }
   };
 
-  const insertImageFiles = async (files: File[], insertPos: number) => {
+  const insertMediaPayloads = async (payloads: MediaPayload[], insertPos: number) => {
+    const imagePayloads: ImagePayload[] = [];
+
+    for (const payload of payloads) {
+      if (!isPdfPayload(payload)) {
+        imagePayloads.push(payload);
+        continue;
+      }
+
+      try {
+        const renderedPages = await renderPdfToPageImages(payload.fileName, payload.data);
+
+        if (renderedPages.length === 0) {
+          throw new Error("The PDF has no renderable pages.");
+        }
+
+        imagePayloads.push(...renderedPages);
+      } catch (error) {
+        setFeedback({
+          kind: "error",
+          message: t("editor.pdfInsertFailed", {
+            fileName: payload.fileName,
+            error: extractErrorMessage(error, t)
+          })
+        });
+      }
+    }
+
+    await insertImagePayloads(imagePayloads, insertPos);
+  };
+
+  const insertMediaFiles = async (files: File[], insertPos: number) => {
     const payloads = await Promise.all(
       files.map(async (file) => ({
         fileName: file.name,
@@ -694,12 +746,12 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       }))
     );
 
-    await insertImagePayloads(payloads, insertPos);
+    await insertMediaPayloads(payloads, insertPos);
   };
 
-  // Toolbar image button: pick one or more image files through the shell's
-  // picker (the native dialog opened at the current vault, or the browser's
-  // file input), then insert them like a paste/drop.
+  // Toolbar image button: pick one or more image/PDF files through the shell's
+  // picker, then insert them like a paste/drop. PDFs are rendered to ordinary
+  // PNG page attachments before they enter the Markdown document.
   const handleImageInsertRequest = async () => {
     const currentEditor = editorRef.current;
 
@@ -722,7 +774,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         defaultPath: folderPath ?? getLastOpenedFolderPath() ?? undefined,
         title: t("editor.imageDialogTitle"),
         filterName: t("editor.imageDialogFilter"),
-        extensions: EDITOR_IMAGE_EXTENSIONS
+        extensions: EDITOR_MEDIA_EXTENSIONS
       });
     } catch (error) {
       setFeedback({
@@ -736,7 +788,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       return;
     }
 
-    const payloads: ImagePayload[] = [];
+    const payloads: MediaPayload[] = [];
 
     for (const file of picked) {
       try {
@@ -752,7 +804,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       }
     }
 
-    await insertImagePayloads(payloads, currentEditor.state.selection.from);
+    await insertMediaPayloads(payloads, currentEditor.state.selection.from);
   };
 
   const printDocument = () => {
@@ -929,8 +981,8 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
           return coordinates?.pos ?? view.state.selection.from;
         };
 
-        // Notes dragged out of the sidebar become links, images dragged in from
-        // outside the app are embedded.
+        // Notes dragged out of the sidebar become links. Images and PDFs from
+        // outside the app are embedded; a PDF becomes one image per page.
         const draggedFilePaths = getDraggedVaultFilePaths(event.dataTransfer);
 
         if (draggedFilePaths.length > 0) {
@@ -939,12 +991,12 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
           return true;
         }
 
-        const files = getImageFilesFromDataTransfer(event.dataTransfer);
+        const files = getInlineMediaFilesFromDataTransfer(event.dataTransfer);
 
-        // Documents are deliberately not converted into the open text: they
-        // belong in the vault as their own note, so the drop is refused with a
-        // pointer to the file list rather than pasting a PDF into a sentence.
-        if (getNonImageFilesFromDataTransfer(event.dataTransfer).length > 0) {
+        // Non-media documents keep the existing import-as-note behaviour.
+        // PDFs are the exception: they are deliberately allowed inline and
+        // rendered to page images instead of becoming links.
+        if (getNonInlineMediaFilesFromDataTransfer(event.dataTransfer).length > 0) {
           event.preventDefault();
           setFeedback({ kind: "error", message: t("editor.dropDocumentHint") });
 
@@ -958,7 +1010,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         }
 
         event.preventDefault();
-        void insertImageFiles(files, droppedAt());
+        void insertMediaFiles(files, droppedAt());
 
         return true;
       },
@@ -972,12 +1024,12 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         const plainPasteRequested = plainPasteRequestedRef.current;
         plainPasteRequestedRef.current = false;
 
-        const files = getImageFilesFromClipboard(event.clipboardData);
+        const files = getInlineMediaFilesFromClipboard(event.clipboardData);
 
         if (files.length > 0) {
           event.preventDefault();
 
-          void insertImageFiles(files, view.state.selection.from);
+          void insertMediaFiles(files, view.state.selection.from);
           return true;
         }
 
