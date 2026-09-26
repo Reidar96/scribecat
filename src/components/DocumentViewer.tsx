@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, FileText, Loader2, Play, X } from "lucide-react";
 import { unzipSync } from "fflate";
 import { readFile } from "@/platform/vaultFs";
@@ -80,6 +80,7 @@ export function DocumentViewer({ absolutePath, label, onClose }: Props) {
   const [slide, setSlide] = useState(0);
   const [error, setError] = useState(false);
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
+  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
 
   const isVideo = ["mp4", "webm", "mov", "m4v", "ogv"].includes(ext);
   const isWord = ext === "docx";
@@ -126,6 +127,33 @@ export function DocumentViewer({ absolutePath, label, onClose }: Props) {
     if (objectUrl) URL.revokeObjectURL(objectUrl);
   }, [objectUrl]);
 
+  useEffect(() => {
+    if (!isPowerPoint) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (slides.length === 0) return;
+      if (event.key === "ArrowLeft") setSlide((n) => Math.max(0, n - 1));
+      if (event.key === "ArrowRight") setSlide((n) => Math.min(slides.length - 1, n + 1));
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isPowerPoint, slides.length]);
+
+  const handleSlidePointerDown = (event: React.PointerEvent<HTMLElement>) => {
+    if (!isPowerPoint || event.pointerType === "mouse") return;
+    touchStartRef.current = { x: event.clientX, y: event.clientY, time: performance.now() };
+  };
+
+  const handleSlidePointerUp = (event: React.PointerEvent<HTMLElement>) => {
+    const start = touchStartRef.current;
+    touchStartRef.current = null;
+    if (!start || !isPowerPoint) return;
+    const dx = event.clientX - start.x;
+    const dy = event.clientY - start.y;
+    if (performance.now() - start.time > 700 || Math.abs(dx) < 48 || Math.abs(dx) < Math.abs(dy) * 1.25) return;
+    if (dx < 0) setSlide((n) => Math.min(slides.length - 1, n + 1));
+    else setSlide((n) => Math.max(0, n - 1));
+  };
+
   const kind = useMemo(() => isVideo ? "video" : isPowerPoint ? "powerpoint" : "word", [isVideo, isPowerPoint]);
 
   return (
@@ -145,7 +173,7 @@ export function DocumentViewer({ absolutePath, label, onClose }: Props) {
         {isVideo && objectUrl ? <video className="document-preview__video" src={objectUrl} controls playsInline preload="metadata" /> : null}
         {isWord && html && <article className="document-preview__word" dangerouslySetInnerHTML={{ __html: html }} />}
         {isPowerPoint && slides.length > 0 ? (
-          <section className="document-preview__slide" aria-label={`Slide ${slide + 1}`}>
+          <section className="document-preview__slide" aria-label={`Slide ${slide + 1}`} onPointerDown={handleSlidePointerDown} onPointerUp={handleSlidePointerUp}>
             {slides[slide].images.map((src, index) => <img key={index} src={src} alt="" />)}
             <div className="document-preview__slide-text">
               {slides[slide].texts.map((text, index) => <p key={index}>{text}</p>)}
