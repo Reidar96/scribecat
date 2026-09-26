@@ -442,6 +442,8 @@ export function PdfViewerSurface({
       try {
         await task.promise;
 
+        if (active) setMiniMapImage(canvas.toDataURL("image/png"));
+
         if (!active) {
           return;
         }
