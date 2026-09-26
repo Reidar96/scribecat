@@ -116,6 +116,7 @@ export function DocumentViewer({
     pageY: number;
   } | null>(null);
   const feedbackTimerRef = useRef<number | null>(null);
+  const lastReportedPageRef = useRef<number | null>(null);
 
   const [data, setData] = useState<Uint8Array | null>(null);
   const [html, setHtml] = useState("");
