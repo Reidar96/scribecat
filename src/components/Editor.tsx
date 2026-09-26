@@ -15,7 +15,7 @@ import { LinkDialog, type LinkDialogResult } from "@/components/LinkDialog";
 import { Toolbar } from "@/components/Toolbar";
 import { PdfInsertChoiceDialog, type PdfInsertMode } from "@/components/PdfInsertChoiceDialog";
 import { PdfViewerModal } from "@/components/PdfViewerModal";
-import { DocumentViewer } from "@/components/DocumentViewer";
+import { DocumentViewer, type DocumentPreviewRequest } from "@/components/DocumentViewer";
 import { TableEdgeControls } from "@/components/TableEdgeControls";
 import { FileLinkSuggestionPopover } from "@/components/editor/FileLinkSuggestionPopover";
 import { DetailsPanel } from "@/components/editor/DetailsPanel";
@@ -107,6 +107,8 @@ type EditorProps = {
   onRequestFileOpen?: (filePath: string) => void;
   /** Opens a local PDF linked from this note beside the owning Markdown document. */
   onOpenPdfInSplit?: (request: PdfPreviewState & { ownerFilePath: string }) => void;
+  /** Opens a local DOCX/PPTX linked from this note beside the owning Markdown document. */
+  onOpenDocumentInSplit?: (request: DocumentPreviewRequest & { ownerFilePath: string }) => void;
   pdfSplitRestoreRequest?: InlinePdfSplitRestoreRequest | null;
   onZenModeRequest: () => void;
   onDeleteRequest: () => void;
@@ -218,6 +220,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     onRequestSidebarFocus,
     onRequestFileOpen,
     onOpenPdfInSplit,
+    onOpenDocumentInSplit,
     pdfSplitRestoreRequest = null,
     onZenModeRequest,
     onDeleteRequest,
@@ -1566,14 +1569,33 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       />
 
       {documentPreview ? (
-        <div className="document-preview-modal">
-          <div className="document-preview-modal__content">
-            <DocumentViewer
-              absolutePath={documentPreview.absolutePath}
-              label={documentPreview.label}
-              onClose={() => setDocumentPreview(null)}
-            />
-          </div>
+        <div
+          className="media-preview media-preview--pdf"
+          role="dialog"
+          aria-modal="true"
+          aria-label={documentPreview.label}
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setDocumentPreview(null);
+            }
+          }}
+        >
+          <DocumentViewer
+            absolutePath={documentPreview.absolutePath}
+            label={documentPreview.label}
+            onClose={() => setDocumentPreview(null)}
+            onOpenInSplit={
+              layout === "desktop" && filePath && onOpenDocumentInSplit
+                ? () => {
+                    onOpenDocumentInSplit({
+                      ...documentPreview,
+                      ownerFilePath: filePath
+                    });
+                    setDocumentPreview(null);
+                  }
+                : undefined
+            }
+          />
         </div>
       ) : null}
       {pdfPreview ? (
