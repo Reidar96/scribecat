@@ -188,7 +188,6 @@ export function PdfViewerSurface({
     pageX: number;
     pageY: number;
   } | null>(null);
-  const renderedPageSizeRef = useRef({ width: 0, height: 0 });
   const [pageNumber, setPageNumber] = useState(1);
   const [pageInput, setPageInput] = useState("1");
   const [pageCount, setPageCount] = useState(0);
@@ -484,22 +483,17 @@ export function PdfViewerSurface({
               const page = pageRef.current;
               if (!stage || !page) return;
 
-              const pageRect = page.getBoundingClientRect();
               const stageRect = stage.getBoundingClientRect();
-              const pageContentLeft =
-                pageRect.left - stageRect.left + stage.scrollLeft;
-              const pageContentTop =
-                pageRect.top - stageRect.top + stage.scrollTop;
               const pointerX = anchor.clientX - stageRect.left;
               const pointerY = anchor.clientY - stageRect.top;
 
               stage.scrollLeft = Math.max(
                 0,
-                pageContentLeft + pageRect.width * anchor.pageX - pointerX
+                page.offsetLeft + page.offsetWidth * anchor.pageX - pointerX
               );
               stage.scrollTop = Math.max(
                 0,
-                pageContentTop + pageRect.height * anchor.pageY - pointerY
+                page.offsetTop + page.offsetHeight * anchor.pageY - pointerY
               );
 
               zoomAnchorRef.current = null;
@@ -566,18 +560,31 @@ export function PdfViewerSurface({
   };
 
   const captureZoomAnchor = (clientX: number, clientY: number) => {
+    const stage = stageRef.current;
     const page = pageRef.current;
-    if (!page) return;
+    if (!stage || !page) return;
 
-    const rect = page.getBoundingClientRect();
+    const stageRect = stage.getBoundingClientRect();
+    const pointerX = clientX - stageRect.left;
+    const pointerY = clientY - stageRect.top;
+    const pageWidth = Math.max(1, page.offsetWidth);
+    const pageHeight = Math.max(1, page.offsetHeight);
+    const pageLeft = page.offsetLeft;
+    const pageTop = page.offsetTop;
+
     zoomAnchorRef.current = {
       clientX,
       clientY,
-      pageX: rect.width ? (clientX - rect.left) / rect.width : 0.5,
-      pageY: rect.height ? (clientY - rect.top) / rect.height : 0.5
+      pageX: Math.min(
+        1,
+        Math.max(0, (stage.scrollLeft + pointerX - pageLeft) / pageWidth)
+      ),
+      pageY: Math.min(
+        1,
+        Math.max(0, (stage.scrollTop + pointerY - pageTop) / pageHeight)
+      )
     };
   };
-
   const captureViewportCenterAnchor = () => {
     const stage = stageRef.current;
     if (!stage) return;
@@ -608,44 +615,32 @@ export function PdfViewerSurface({
     if (!stage || !page) return;
 
     const anchor = zoomAnchorRef.current;
-    const beforeRect = page.getBoundingClientRect();
     const stageRect = stage.getBoundingClientRect();
-    const pageContentLeft =
-      beforeRect.left - stageRect.left + stage.scrollLeft;
-    const pageContentTop =
-      beforeRect.top - stageRect.top + stage.scrollTop;
-    const anchorX = anchor
-      ? pageContentLeft + beforeRect.width * anchor.pageX
-      : null;
-    const anchorY = anchor
-      ? pageContentTop + beforeRect.height * anchor.pageY
-      : null;
+    const pointerX = anchor
+      ? anchor.clientX - stageRect.left
+      : stageRect.width / 2;
+    const pointerY = anchor
+      ? anchor.clientY - stageRect.top
+      : stageRect.height / 2;
+    const currentZoom = Math.max(0.01, zoomRef.current);
+    const currentWidth = Math.max(1, page.offsetWidth);
+    const currentHeight = Math.max(1, page.offsetHeight);
+    const scale = next / currentZoom;
 
-    const baseWidth = renderedPageSizeRef.current.width || beforeRect.width;
-    const baseHeight = renderedPageSizeRef.current.height || beforeRect.height;
-    const visualRatio = next / Math.max(0.01, renderZoomRef.current);
+    page.style.width = String(Math.max(1, Math.round(currentWidth * scale))) + "px";
+    page.style.height = String(Math.max(1, Math.round(currentHeight * scale))) + "px";
+    page.style.setProperty("--pdf-view-zoom", String(
+      next / Math.max(0.01, renderZoomRef.current)
+    ));
 
-    page.style.width = `${Math.max(1, Math.round(baseWidth * visualRatio))}px`;
-    page.style.height = `${Math.max(1, Math.round(baseHeight * visualRatio))}px`;
-    page.style.setProperty("--pdf-view-zoom", String(visualRatio));
+    const pageLeft = page.offsetLeft;
+    const pageTop = page.offsetTop;
+    const pageX = pageLeft + page.offsetWidth * (anchor?.pageX ?? 0.5);
+    const pageY = pageTop + page.offsetHeight * (anchor?.pageY ?? 0.5);
 
-    if (anchor && anchorX !== null && anchorY !== null) {
-      const afterRect = page.getBoundingClientRect();
-      stage.scrollLeft = Math.max(
-        0,
-        anchorX -
-          (afterRect.left - stageRect.left) -
-          afterRect.width * anchor.pageX
-      );
-      stage.scrollTop = Math.max(
-        0,
-        anchorY -
-          (afterRect.top - stageRect.top) -
-          afterRect.height * anchor.pageY
-      );
-    }
+    stage.scrollLeft = Math.max(0, pageX - pointerX);
+    stage.scrollTop = Math.max(0, pageY - pointerY);
   };
-
   const setZoomValue = (value: number) => {
     const next = Math.round(clampZoom(value) * 100) / 100;
     if (next === 1) {
