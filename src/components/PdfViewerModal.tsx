@@ -118,7 +118,7 @@ function isFormControl(target: EventTarget | null): boolean {
   );
 }
 
-const MIN_ZOOM = 0.5;
+const MIN_ZOOM = 1;
 const MAX_ZOOM = 3;
 const MAX_RENDER_SCALE = 3.5;
 
@@ -1104,6 +1104,7 @@ export function PdfViewerSurface({
         <div className="pdf-preview__actions">
           <button
             type="button"
+            className="pdf-preview__copy-button"
             disabled={loading || copying || pageCount === 0}
             aria-label={copied ? t("pdfViewer.copied") : t("pdfViewer.copyPage")}
             title={copied ? t("pdfViewer.copied") : t("pdfViewer.copyPage")}
@@ -1114,6 +1115,7 @@ export function PdfViewerSurface({
 
           <button
             type="button"
+            className="pdf-preview__fullscreen-button"
             aria-pressed={isFullscreen}
             aria-label={isFullscreen ? t("pdfViewer.exitFullscreen") : t("pdfViewer.fullscreen")}
             title={isFullscreen ? t("pdfViewer.exitFullscreen") : t("pdfViewer.fullscreen")}
@@ -1181,6 +1183,7 @@ export function PdfViewerSurface({
           {onOpenInSplit ? (
             <button
               type="button"
+              className="pdf-preview__split-button"
               aria-label={t("pdfViewer.openInSplit")}
               title={t("pdfViewer.openInSplit")}
               onClick={() => {
