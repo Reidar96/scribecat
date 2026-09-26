@@ -1194,6 +1194,7 @@ export function PdfViewerSurface({
               }}
             >
               <Columns2 aria-hidden="true" />
+              <span className="pdf-preview__split-label">{t("pdfViewer.openInSplit")}</span>
             </button>
           ) : null}
 
