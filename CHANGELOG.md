@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.24.9] - 2026-09-26
+
+### New features
+- Add a fullscreen button beside **Copy page text** for the embedded PDF viewer.
+- Add a PDF zoom button with a slider from 50% to 300%.
+- Support two-finger pinch-to-zoom in the inline, split, and fullscreen PDF viewer.
+- Allow single-finger panning when the PDF is zoomed, while keeping PDF text selection available.
+- Keep zoom independent from fullscreen so the same controls work directly inside the Markdown note.
+
 ## [0.24.8] - 2026-09-26
 
 ### Fixes
