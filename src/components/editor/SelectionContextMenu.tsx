@@ -50,16 +50,6 @@ export function SelectionContextMenu({
           }
         ]
       : []),
-    ...(canPaste
-      ? [
-          {
-            id: "paste",
-            label: t("editorContextMenu.paste"),
-            keys: "",
-            run: onPaste
-          }
-        ]
-      : [])
   ];
 
   return (
