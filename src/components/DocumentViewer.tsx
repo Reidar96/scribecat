@@ -151,6 +151,12 @@ export function DocumentViewer({
 
   useEffect(() => {
     setPageInput(String(pageNumber));
+
+    if (lastReportedPageRef.current === pageNumber) {
+      return;
+    }
+
+    lastReportedPageRef.current = pageNumber;
     onPageChange?.(pageNumber);
   }, [pageNumber, onPageChange]);
 
@@ -238,7 +244,7 @@ export function DocumentViewer({
         feedbackTimerRef.current = null;
       }
     };
-  }, [absolutePath, ext, initialPageNumber, isVideo, isWord, isPowerPoint]);
+  }, [absolutePath, ext, isVideo, isWord, isPowerPoint]);
 
   useEffect(() => {
     const stage = stageRef.current;
