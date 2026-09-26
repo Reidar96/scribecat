@@ -59,8 +59,6 @@ type AppDialogsProps = {
   importFileList: ImportSource[] | null;
   folderPath: string | null;
   importTargetFolder: string | null;
-  importSkippedCount: number;
-  importLimitReached: boolean;
   onImported: (createdFilePaths: string[]) => void;
   onCloseImport: () => void;
 
@@ -108,8 +106,6 @@ export function AppDialogs({
   importFileList,
   folderPath,
   importTargetFolder,
-  importSkippedCount,
-  importLimitReached,
   onImported,
   onCloseImport,
   availableUpdate,
@@ -177,8 +173,6 @@ export function AppDialogs({
         files={importFileList}
         vaultRoot={folderPath}
         targetFolder={importTargetFolder}
-        skippedCount={importSkippedCount}
-        limitReached={importLimitReached}
         onImported={onImported}
         onClose={onCloseImport}
       />
