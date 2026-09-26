@@ -43,8 +43,8 @@ describe("classifyExtension", () => {
     expect(classifyExtension("png")).toBe("image");
   });
 
-  it("names the legacy .doc format apart from unsupported ones", () => {
-    expect(classifyExtension("doc")).toBe("legacyDoc");
+  it("rejects Word and PowerPoint formats", () => {
+    expect(classifyExtension("doc")).toBe("unsupported");
     expect(classifyExtension("docx")).toBe("unsupported");
     expect(classifyExtension("pptx")).toBe("unsupported");
     expect(classifyExtension("xlsx")).toBe("unsupported");

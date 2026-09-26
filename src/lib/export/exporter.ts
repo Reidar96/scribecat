@@ -19,7 +19,7 @@ import { parseMarkdownToBlocks, type ExportBlock } from "./markdownModel";
 import { addArchiveEntry, buildZipArchive, createArchive, mimeTypeFor } from "./zipArchive";
 
 /** Formats available when every note becomes its own file. */
-export const EXPORT_FORMATS = ["pdf", "odt", "html"] as const;
+export const EXPORT_FORMATS = ["pdf", "docx", "odt", "html"] as const;
 
 /**
  * Formats available when the notes are merged into one document. EPUB is only
@@ -142,6 +142,10 @@ async function renderBlocksAs(
     case "pdf": {
       const { renderPdfDocument } = await import("./pdfExport");
       return { bytes: await renderPdfDocument(title, blocks, images, style) };
+    }
+    case "docx": {
+      const { renderDocxDocument } = await import("./docxExport");
+      return { bytes: await renderDocxDocument(title, blocks, images, style) };
     }
     case "odt": {
       const { renderOdtDocument } = await import("./odtExport");
