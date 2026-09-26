@@ -1045,9 +1045,15 @@
   cursor: text;
 }
 
+.pdf-preview__page {
+  --pdf-view-zoom: 1;
+}
+
 .pdf-preview__page > .pdf-preview__canvas,
 .pdf-preview__page > .pdf-preview__text-layer {
-  transform: scale(var(--pdf-css-zoom));
+  transform: scale(
+    calc(var(--pdf-css-zoom) * var(--pdf-view-zoom))
+  );
   transform-origin: 0 0;
 }
 
@@ -1100,51 +1106,6 @@
 .pdf-preview__text-layer .endOfContent {
   user-select: text;
   -webkit-user-select: text;
-}
-
-.pdf-preview__minimap {
-  position: absolute;
-  right: 1.5rem;
-  bottom: 1.5rem;
-  width: 92px;
-  height: 66px;
-  z-index: 5;
-  border: 1px solid rgb(255 255 255 / 0.24);
-  border-radius: 0.45rem;
-  background: rgb(0 0 0 / 0.58);
-  pointer-events: none;
-  overflow: hidden;
-}
-
-.pdf-preview__minimap::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: rgb(0 0 0 / 0.28);
-  pointer-events: none;
-}
-
-.pdf-preview__minimap > img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
-.pdf-preview__minimap img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
-.pdf-preview__minimap-viewport {
-  position: absolute;
-  z-index: 1;
-  min-width: 4px;
-  min-height: 4px;
-  border: 1px solid rgb(255 255 255 / 0.9);
-  background: rgb(255 255 255 / 0.16);
 }
 
 .pdf-preview__text-layer .endOfContent {
