@@ -273,6 +273,13 @@ export function PdfViewerSurface({
       if (!active) return;
 
       const baseViewport = page.getViewport({ scale: 1 });
+      // The inline viewer should follow the actual PDF page ratio. This keeps
+      // the window compact when the note column becomes narrower instead of
+      // leaving a large fixed-height area below a landscape page.
+      stage.style.setProperty(
+        "--pdf-page-aspect-ratio",
+        `${baseViewport.width} / ${baseViewport.height}`
+      );
       const stageWidth = stage.clientWidth || window.innerWidth;
       const stageHeight = stage.clientHeight || window.innerHeight;
       const availableWidth = Math.max(240, stageWidth - 32);
