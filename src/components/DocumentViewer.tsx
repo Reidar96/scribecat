@@ -986,8 +986,8 @@ export function DocumentViewer({
                   : "pdf-preview__view-button"
               }
               aria-pressed={pageView === "single"}
-              aria-label={t("pdfViewer.singlePage")}
-              title={t("pdfViewer.singlePage")}
+              aria-label="Single page"
+              title="Single page"
               onClick={() => {
                 resetZoom();
                 setPageView("single");
@@ -1004,8 +1004,8 @@ export function DocumentViewer({
                   : "pdf-preview__view-button"
               }
               aria-pressed={pageView === "grid"}
-              aria-label={t("pdfViewer.allPages")}
-              title={t("pdfViewer.allPages")}
+              aria-label="All pages"
+              title="All pages"
               onClick={() => {
                 resetZoom();
                 setPageView("grid");
