@@ -82,8 +82,8 @@ export function DocumentViewer({ absolutePath, label, onClose }: Props) {
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
 
   const isVideo = ["mp4", "webm", "mov", "m4v", "ogv"].includes(ext);
-  const isWord = ["docx", "doc"].includes(ext);
-  const isPowerPoint = ["pptx", "ppt"].includes(ext);
+  const isWord = ext === "docx";
+  const isPowerPoint = ext === "pptx";
 
   useEffect(() => {
     let active = true;
@@ -106,7 +106,7 @@ export function DocumentViewer({ absolutePath, label, onClose }: Props) {
           const arrayBuffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
           const result = await mammoth.convertToHtml({ arrayBuffer });
           if (active) setHtml(result.value);
-        } else if (isPowerPoint && ext === "pptx") {
+        } else if (isPowerPoint) {
           const parsed = await parsePptx(bytes);
           if (active) setSlides(parsed.slides);
         } else {

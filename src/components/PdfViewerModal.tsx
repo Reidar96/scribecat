@@ -195,7 +195,6 @@ export function PdfViewerSurface({
   const [zoomOpen, setZoomOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fallbackFullscreen, setFallbackFullscreen] = useState(false);
-  const [isPanning, setIsPanning] = useState(false);
 
   const previousPage = () => {
     setPageNumber((page) => Math.max(1, page - 1));
@@ -653,24 +652,6 @@ export function PdfViewerSurface({
       event.target instanceof Element &&
       Boolean(event.target.closest(".pdf-preview__text-layer"));
 
-    if (event.pointerType === "mouse") {
-      if (event.button !== 0 || zoomRef.current <= 1 || startedOnText) {
-        return;
-      }
-
-      event.preventDefault();
-      panRef.current = {
-        pointerId: event.pointerId,
-        pointerType: event.pointerType,
-        x: event.clientX,
-        y: event.clientY,
-        startedOnText
-      };
-      setIsPanning(true);
-      stageRef.current?.setPointerCapture(event.pointerId);
-      return;
-    }
-
     if (event.pointerType !== "touch") {
       return;
     }
@@ -699,7 +680,7 @@ export function PdfViewerSurface({
       event.preventDefault();
       swipeRef.current = null;
       panRef.current = null;
-      setIsPanning(false);
+      
 
       const [first, second] = Array.from(pointers.values());
       const midpointX = (first.x + second.x) / 2;
@@ -715,34 +696,20 @@ export function PdfViewerSurface({
   const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
     if (
       panRef.current?.pointerId === event.pointerId &&
-      panRef.current.pointerType === event.pointerType
+      panRef.current.pointerType === "touch"
     ) {
       const pan = panRef.current;
-
-      if (
-        event.pointerType === "mouse" ||
-        (zoomRef.current > 1 && !pan.startedOnText)
-      ) {
+      if (zoomRef.current > 1 && !pan.startedOnText) {
         const stage = stageRef.current;
-
         if (stage) {
           event.preventDefault();
           stage.scrollLeft -= event.clientX - pan.x;
           stage.scrollTop -= event.clientY - pan.y;
         }
-
         pan.x = event.clientX;
         pan.y = event.clientY;
-
-        if (event.pointerType === "touch") {
-          swipeRef.current = null;
-        }
+        swipeRef.current = null;
       }
-
-      if (event.pointerType === "mouse") {
-        setIsPanning(true);
-      }
-
       return;
     }
 
@@ -770,17 +737,6 @@ export function PdfViewerSurface({
   };
 
   const finishPointer = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (event.pointerType === "mouse") {
-      if (panRef.current?.pointerId === event.pointerId) {
-        if (stageRef.current?.hasPointerCapture(event.pointerId)) {
-          stageRef.current.releasePointerCapture(event.pointerId);
-        }
-        panRef.current = null;
-        setIsPanning(false);
-      }
-      return;
-    }
-
     if (event.pointerType !== "touch") {
       return;
     }
@@ -788,7 +744,7 @@ export function PdfViewerSurface({
     touchPointersRef.current.delete(event.pointerId);
     pinchRef.current = null;
     panRef.current = null;
-    setIsPanning(false);
+    
 
     if (touchPointersRef.current.size !== 0) {
       swipeRef.current = null;
@@ -826,20 +782,11 @@ export function PdfViewerSurface({
   const handlePointerCancel = (event: React.PointerEvent<HTMLDivElement>) => {
     event.stopPropagation();
 
-    if (event.pointerType === "mouse") {
-      if (stageRef.current?.hasPointerCapture(event.pointerId)) {
-        stageRef.current.releasePointerCapture(event.pointerId);
-      }
-      panRef.current = null;
-      setIsPanning(false);
-      return;
-    }
-
     touchPointersRef.current.delete(event.pointerId);
     swipeRef.current = null;
     pinchRef.current = null;
     panRef.current = null;
-    setIsPanning(false);
+    
   };
 
   return (
@@ -1005,11 +952,7 @@ export function PdfViewerSurface({
         ) : (
           <div
             ref={pageRef}
-            className={
-              `pdf-preview__page${zoom > 1 ? " pdf-preview__page--zoomed" : ""}${
-                isPanning ? " pdf-preview__page--panning" : ""
-              }`
-            }
+            className={`pdf-preview__page${zoom > 1 ? " pdf-preview__page--zoomed" : ""}`}
           >
             <canvas ref={canvasRef} className="pdf-preview__canvas" />
             <div
