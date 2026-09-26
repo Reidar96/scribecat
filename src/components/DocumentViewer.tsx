@@ -932,24 +932,6 @@ export function DocumentViewer({
             </button>
           ) : null}
 
-          {mode !== "modal" ? (
-            <button
-              type="button"
-              aria-pressed={isMinimized}
-              aria-label={
-                isMinimized ? "Expand document" : "Minimize document"
-              }
-              title={isMinimized ? "Expand document" : "Minimize document"}
-              onClick={() => setIsMinimized((value) => !value)}
-            >
-              {isMinimized ? (
-                <Maximize2 aria-hidden="true" />
-              ) : (
-                <Minimize2 aria-hidden="true" />
-              )}
-            </button>
-          ) : null}
-
           <div className="pdf-preview__zoom">
             <button
               type="button"
