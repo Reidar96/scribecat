@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.25.4] - 2026-09-26
+
+### Fixed
+- Remove the PDF minimap to avoid extra rendering and scroll work.
+- Allow desktop drag-to-pan on zoomed PDFs while keeping native text selection on actual PDF text.
+- Smooth PDF wheel, trackpad and pinch zoom by applying visual zoom immediately and deferring expensive high-resolution PDF rerendering until the gesture settles.
+- Keep pointer-anchored PDF zoom and reliable 100% reset.
+
 ## [0.25.3] - 2026-09-26
 
 ### Fixed
