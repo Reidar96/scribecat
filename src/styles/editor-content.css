@@ -1781,3 +1781,78 @@
     grid-row: 1;
   }
 }
+
+
+.document-preview__word-measurer {
+  position: absolute;
+  left: -100000px;
+  top: 0;
+  width: 0;
+  height: 0;
+  overflow: visible;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.document-preview__word-measurer > .document-preview__word-sheet {
+  width: var(--word-page-width, 210mm);
+  height: var(--word-page-height, 297mm);
+  min-height: var(--word-page-height, 297mm);
+  max-width: none;
+  overflow: hidden;
+}
+
+.document-preview__office-page {
+  background: transparent;
+  box-shadow: none;
+  overflow: hidden;
+}
+
+.document-preview__office-page > .document-preview__word-sheet {
+  width: var(--word-page-width, 210mm);
+  height: var(--word-page-height, 297mm);
+  min-height: var(--word-page-height, 297mm);
+  max-width: none;
+  margin: 0;
+  transform: scale(
+    calc(var(--pdf-css-zoom, 1) * var(--pdf-view-zoom, 1))
+  );
+  transform-origin: 0 0;
+}
+
+.document-preview__slide {
+  width: 1600px;
+  height: 900px;
+  max-width: none;
+  max-height: none;
+  flex: none;
+}
+
+.document-preview__slide > .document-preview__slide-svg {
+  width: 1600px;
+  height: 900px;
+  max-width: none;
+  max-height: none;
+  transform: scale(
+    calc(var(--pdf-css-zoom, 1) * var(--pdf-view-zoom, 1))
+  );
+  transform-origin: 0 0;
+}
+
+.document-preview__slide > .document-preview__slide-svg > svg {
+  width: 1600px;
+  height: 900px;
+  max-width: none;
+  max-height: none;
+  display: block;
+}
+
+.document-preview__word-sheet--thumbnail {
+  width: 100%;
+  max-width: none;
+  min-height: 0;
+  height: auto;
+  padding: 10%;
+  overflow: hidden;
+  transform: none !important;
+}
