@@ -1629,7 +1629,9 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
                     ...request,
                     ownerFilePath: filePath
                   })
-              : undefined
+              : undefined,
+          pdfSplitRestoreRequest:
+            layout === "desktop" ? pdfSplitRestoreRequest ?? null : null
         }}
       >
         <div className="editor-view__body">
