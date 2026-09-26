@@ -260,6 +260,10 @@ export function DocumentPanel({
   const [attachedPdf, setAttachedPdf] = useState<
     (PdfPreviewRequest & { ownerFilePath: string }) | null
   >(null);
+  const [pdfSplitRestoreRequest, setPdfSplitRestoreRequest] = useState<{
+    absolutePath: string;
+    requestId: number;
+  } | null>(null);
   const documentLocks = useAppStore((state) => state.documentLocks);
   const setDocumentLocked = useAppStore((state) => state.setDocumentLocked);
   // Bumped by the header menu's "Versions" entry on the phone, where the
@@ -419,6 +423,30 @@ export function DocumentPanel({
 
   const splitDropFilePath = (dataTransfer: DataTransfer): string | null =>
     dataTransfer.getData(TAB_DRAG_MIME) || getDraggedVaultFilePaths(dataTransfer)[0] || null;
+
+  const restoreInlinePdfAfterSplitClose = (
+    request: PdfPreviewRequest & { ownerFilePath: string }
+  ) => {
+    if (request.ownerFilePath !== selectedFilePath) {
+      return;
+    }
+
+    setPdfSplitRestoreRequest((current) => ({
+      absolutePath: request.absolutePath,
+      requestId: (current?.requestId ?? 0) + 1
+    }));
+  };
+
+  const closeAttachedPdf = () => {
+    const request = attachedPdf;
+
+    if (request) {
+      restoreInlinePdfAfterSplitClose(request);
+    }
+
+    setAttachedPdf(null);
+    setActiveEditorPane("primary");
+  };
 
   const openPdfInSplit = (
     request: PdfPreviewRequest & { ownerFilePath: string }
