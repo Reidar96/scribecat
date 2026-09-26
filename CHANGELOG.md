@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.24.10] - 2026-09-26
+
+### Fixed
+- Keep desktop trackpad pinch-to-zoom inside the PDF viewer instead of zooming the whole ScribeCat interface.
+- Reset the PDF zoom to 100% when closing the zoom control.
+- Allow dragging/panning the zoomed PDF with the mouse as well as touch.
+- Show a grab/grabbing cursor while panning the zoomed PDF.
+
 ## [0.24.9] - 2026-09-26
 
 ### New features

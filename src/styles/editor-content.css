@@ -1013,6 +1013,7 @@
 
 .pdf-preview__stage {
   touch-action: none;
+  overscroll-behavior: contain;
 }
 
 .pdf-preview__page {
@@ -1021,6 +1022,20 @@
   flex: none;
   background: #fff;
   box-shadow: 0 12px 36px rgb(0 0 0 / 0.4);
+}
+
+.pdf-preview__page--zoomed {
+  cursor: grab;
+}
+
+.pdf-preview__page--zoomed.pdf-preview__page--panning {
+  cursor: grabbing;
+}
+
+.pdf-preview__page--zoomed .pdf-preview__text-layer,
+.pdf-preview__page--zoomed .pdf-preview__text-layer span,
+.pdf-preview__page--zoomed .pdf-preview__text-layer br {
+  cursor: text;
 }
 
 .pdf-preview__page > .pdf-preview__canvas,
