@@ -6,25 +6,32 @@ As with any update, back up the data folder first (see
 [Backups](data-and-backups.md#backups)), so a bad update is a restore, not a
 loss.
 
-Images are published per version, with no `latest` tag: you pick a version
-and keep it until you decide to move. Put the one you want in `.env`,
+Images are published per version and also keep a moving `latest` tag for
+convenience. The Compose file defaults to the current published version, so a
+plain pull gets the same release as the desktop app. To pin another version,
+put it in `.env`:
 
 ```dotenv
-SCRIBECAT_IMAGE=ghcr.io/snooky234/scribecat-server:0.15.1
+SCRIBECAT_IMAGE=ghcr.io/reidar96/scribecat-server:0.25.2
 ```
 
-and update with
+Then update with:
 
 ```bash
 docker compose pull
 docker compose up -d
 ```
 
-Building from the repository instead works as well:
+For a repository checkout, building from source instead works as well:
 
 ```bash
-git pull && docker compose up -d --build
+git pull
+docker compose up -d --build
 ```
+
+When you use a versioned image, `docker compose pull` fetches that exact
+server/frontend build; it does not depend on whatever image happens to be
+left locally from an older release.
 
 Sessions and the desktop apps' access keys survive restarts and updates;
 nobody has to sign in again.
