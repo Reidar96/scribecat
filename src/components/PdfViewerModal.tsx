@@ -7,7 +7,10 @@ import {
   Columns2,
   Copy,
   Loader2,
-  X
+  Maximize2,
+  Minimize2,
+  X,
+  ZoomIn
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -129,6 +132,21 @@ function isFormControl(target: EventTarget | null): boolean {
   );
 }
 
+const MIN_ZOOM = 0.5;
+const MAX_ZOOM = 3;
+const MAX_RENDER_SCALE = 3.5;
+
+function clampZoom(value: number): number {
+  return Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, value));
+}
+
+function pointerDistance(
+  first: { x: number; y: number },
+  second: { x: number; y: number }
+): number {
+  return Math.hypot(first.x - second.x, first.y - second.y);
+}
+
 export function PdfViewerSurface({
   absolutePath,
   label,
@@ -152,6 +170,15 @@ export function PdfViewerSurface({
     y: number;
     startedAt: number;
   } | null>(null);
+  const touchPointersRef = useRef(new Map<number, { x: number; y: number }>());
+  const pinchRef = useRef<{ distance: number; zoom: number } | null>(null);
+  const panRef = useRef<{
+    pointerId: number;
+    x: number;
+    y: number;
+    startedOnText: boolean;
+  } | null>(null);
+  const zoomRef = useRef(1);
   const [pageNumber, setPageNumber] = useState(1);
   const [pageInput, setPageInput] = useState("1");
   const [pageCount, setPageCount] = useState(0);
@@ -161,6 +188,10 @@ export function PdfViewerSurface({
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState(false);
   const [viewportVersion, setViewportVersion] = useState(0);
+  const [zoom, setZoom] = useState(1);
+  const [zoomOpen, setZoomOpen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [fallbackFullscreen, setFallbackFullscreen] = useState(false);
 
   const previousPage = () => {
     setPageNumber((page) => Math.max(1, page - 1));
@@ -173,6 +204,25 @@ export function PdfViewerSurface({
   useEffect(() => {
     setPageInput(String(pageNumber));
   }, [pageNumber]);
+
+  useEffect(() => {
+    zoomRef.current = zoom;
+  }, [zoom]);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const active = document.fullscreenElement === rootRef.current;
+      setIsFullscreen(active);
+      if (active) setFallbackFullscreen(false);
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      if (document.fullscreenElement === rootRef.current) {
+        void document.exitFullscreen?.();
+      }
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -288,9 +338,10 @@ export function PdfViewerSurface({
         availableWidth / baseViewport.width,
         availableHeight / baseViewport.height
       );
-      const viewport = page.getViewport({
-        scale: Math.max(0.3, Math.min(fitScale, 2.4))
-      });
+      const requestedScale = Math.max(0.3, fitScale * zoom);
+      const renderScale = Math.min(requestedScale, MAX_RENDER_SCALE);
+      const cssZoom = requestedScale / renderScale;
+      const viewport = page.getViewport({ scale: renderScale });
       const context = canvas.getContext("2d");
 
       if (!context) {
@@ -298,8 +349,9 @@ export function PdfViewerSurface({
         return;
       }
 
-      pageElement.style.width = `${Math.floor(viewport.width)}px`;
-      pageElement.style.height = `${Math.floor(viewport.height)}px`;
+      pageElement.style.width = `${Math.floor(viewport.width * cssZoom)}px`;
+      pageElement.style.height = `${Math.floor(viewport.height * cssZoom)}px`;
+      pageElement.style.setProperty("--pdf-css-zoom", String(cssZoom));
 
       const outputScale = Math.max(1, Math.min(window.devicePixelRatio || 1, 2));
       canvas.width = Math.floor(viewport.width * outputScale);
@@ -381,12 +433,23 @@ export function PdfViewerSurface({
       renderCancelRef.current?.();
       textLayerCancelRef.current?.();
     };
-  }, [pageNumber, pageCount, viewportVersion]);
+  }, [pageNumber, pageCount, viewportVersion, zoom]);
 
   useEffect(() => {
     if (mode !== "modal") return;
 
     const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && document.fullscreenElement === rootRef.current) {
+        return;
+      }
+
+      if (event.key === "Escape" && fallbackFullscreen) {
+        event.preventDefault();
+        setFallbackFullscreen(false);
+        setIsFullscreen(false);
+        return;
+      }
+
       if (event.key === "Escape" && onClose) {
         event.preventDefault();
         onClose();
@@ -408,7 +471,7 @@ export function PdfViewerSurface({
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [mode, onClose, pageCount]);
+  }, [mode, onClose, pageCount, fallbackFullscreen]);
 
   const commitPageInput = () => {
     const requested = Number.parseInt(pageInput, 10);
@@ -419,6 +482,38 @@ export function PdfViewerSurface({
     }
 
     setPageNumber(Math.max(1, Math.min(pageCount, requested)));
+  };
+
+  const setZoomValue = (value: number) => {
+    const next = Math.round(clampZoom(value) * 100) / 100;
+    zoomRef.current = next;
+    setZoom(next);
+  };
+
+  const toggleZoomControls = () => setZoomOpen((open) => !open);
+
+  const toggleFullscreen = async () => {
+    const root = rootRef.current;
+    if (!root) return;
+    if (document.fullscreenElement === root) {
+      await document.exitFullscreen?.();
+      return;
+    }
+    if (fallbackFullscreen) {
+      setFallbackFullscreen(false);
+      setIsFullscreen(false);
+      return;
+    }
+    if (root.requestFullscreen) {
+      try {
+        await root.requestFullscreen();
+        return;
+      } catch {
+        // Fall back to app-level fullscreen if the host blocks the API.
+      }
+    }
+    setFallbackFullscreen(true);
+    setIsFullscreen(true);
   };
 
   const copyCurrentPage = async () => {
@@ -465,70 +560,133 @@ export function PdfViewerSurface({
   };
 
   const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-    // Keep ProseMirror from turning a text-selection gesture into selection of
-    // the entire image/media node. Do not preventDefault: the browser still
-    // needs the native event to select PDF text.
     event.stopPropagation();
+    if (event.pointerType !== "touch") return;
 
-    if (event.pointerType === "touch" && event.isPrimary) {
+    const pointers = touchPointersRef.current;
+    pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+    if (pointers.size === 1) {
+      const startedOnText =
+        event.target instanceof Element &&
+        Boolean(event.target.closest(".pdf-preview__text-layer"));
       swipeRef.current = {
         pointerId: event.pointerId,
         x: event.clientX,
         y: event.clientY,
         startedAt: performance.now()
       };
+      panRef.current = {
+        pointerId: event.pointerId,
+        x: event.clientX,
+        y: event.clientY,
+        startedOnText
+      };
+      return;
+    }
+
+    if (pointers.size === 2) {
+      event.preventDefault();
+      swipeRef.current = null;
+      panRef.current = null;
+      const [first, second] = Array.from(pointers.values());
+      pinchRef.current = {
+        distance: Math.max(1, pointerDistance(first, second)),
+        zoom: zoomRef.current
+      };
     }
   };
 
-  const handlePointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
-    event.stopPropagation();
+  const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType !== "touch") return;
+
+    const pointers = touchPointersRef.current;
+    const current = pointers.get(event.pointerId);
+    if (!current) return;
+    current.x = event.clientX;
+    current.y = event.clientY;
+
+    if (pointers.size === 1 && panRef.current?.pointerId === event.pointerId) {
+      const pan = panRef.current;
+      if (!pan.startedOnText && zoomRef.current > 1) {
+        const stage = stageRef.current;
+        if (stage) {
+          event.preventDefault();
+          stage.scrollLeft -= event.clientX - pan.x;
+          stage.scrollTop -= event.clientY - pan.y;
+        }
+        pan.x = event.clientX;
+        pan.y = event.clientY;
+        swipeRef.current = null;
+      }
+      return;
+    }
+
+    if (pointers.size !== 2 || !pinchRef.current) return;
+
+    event.preventDefault();
+    const [first, second] = Array.from(pointers.values());
+    const distance = Math.max(1, pointerDistance(first, second));
+    setZoomValue(
+      pinchRef.current.zoom * (distance / pinchRef.current.distance)
+    );
+  };
+
+  const finishPointer = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType !== "touch") return;
+
+    touchPointersRef.current.delete(event.pointerId);
+    pinchRef.current = null;
+    panRef.current = null;
+
+    if (touchPointersRef.current.size !== 0) {
+      swipeRef.current = null;
+      return;
+    }
 
     const start = swipeRef.current;
     swipeRef.current = null;
-
-    if (
-      !start ||
-      start.pointerId !== event.pointerId ||
-      event.pointerType !== "touch"
-    ) {
-      return;
-    }
+    if (!start || start.pointerId !== event.pointerId) return;
 
     const selection = window.getSelection();
-    if (selection && !selection.isCollapsed) {
-      return;
-    }
+    if (selection && !selection.isCollapsed) return;
 
     const dx = event.clientX - start.x;
     const dy = event.clientY - start.y;
     const duration = performance.now() - start.startedAt;
-
     if (
       duration > 700 ||
       Math.abs(dx) < 56 ||
       Math.abs(dx) < Math.abs(dy) * 1.25
-    ) {
-      return;
-    }
+    ) return;
 
-    if (dx > 0) {
-      previousPage();
-    } else {
-      nextPage();
-    }
+    if (dx > 0) previousPage();
+    else nextPage();
+  };
+
+  const handlePointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
+    event.stopPropagation();
+    finishPointer(event);
+  };
+
+  const handlePointerCancel = (event: React.PointerEvent<HTMLDivElement>) => {
+    event.stopPropagation();
+    touchPointersRef.current.delete(event.pointerId);
+    swipeRef.current = null;
+    pinchRef.current = null;
+    panRef.current = null;
   };
 
   return (
     <div
       ref={rootRef}
-      className={`pdf-preview pdf-preview--${mode}`}
+      className={`pdf-preview pdf-preview--${mode}${fallbackFullscreen ? " pdf-preview--fallback-fullscreen" : ""}`}
       tabIndex={0}
       onKeyDown={handleViewerKeyDown}
       onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
-      onPointerCancel={() => {
-        swipeRef.current = null;
-      }}
+      onPointerCancel={handlePointerCancel}
       onMouseDown={(event) => event.stopPropagation()}
       onClick={(event) => event.stopPropagation()}
     >
@@ -590,6 +748,46 @@ export function PdfViewerSurface({
           >
             {copied ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
           </button>
+
+          <button
+            type="button"
+            aria-pressed={isFullscreen}
+            aria-label={isFullscreen ? t("pdfViewer.exitFullscreen") : t("pdfViewer.fullscreen")}
+            title={isFullscreen ? t("pdfViewer.exitFullscreen") : t("pdfViewer.fullscreen")}
+            onClick={() => void toggleFullscreen()}
+          >
+            {isFullscreen ? <Minimize2 aria-hidden="true" /> : <Maximize2 aria-hidden="true" />}
+          </button>
+
+          <div className="pdf-preview__zoom">
+            <button
+              type="button"
+              aria-expanded={zoomOpen}
+              aria-label={t("pdfViewer.zoom")}
+              title={t("pdfViewer.zoom")}
+              onClick={toggleZoomControls}
+            >
+              <ZoomIn aria-hidden="true" />
+            </button>
+            {zoomOpen ? (
+              <div className="pdf-preview__zoom-panel">
+                <label htmlFor="pdf-preview-zoom">
+                  <span>{t("pdfViewer.zoom")}</span>
+                  <output>{Math.round(zoom * 100)}%</output>
+                </label>
+                <input
+                  id="pdf-preview-zoom"
+                  type="range"
+                  min={MIN_ZOOM}
+                  max={MAX_ZOOM}
+                  step="0.05"
+                  value={zoom}
+                  aria-label={t("pdfViewer.zoom")}
+                  onChange={(event) => setZoomValue(Number(event.target.value))}
+                />
+              </div>
+            ) : null}
+          </div>
 
           {onOpenInSplit ? (
             <button

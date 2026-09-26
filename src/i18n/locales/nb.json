@@ -1010,6 +1010,9 @@
     "copyPage": "Kopier tekst fra denne siden",
     "copied": "Teksten på siden er kopiert",
     "openInSplit": "Åpne PDF ved siden av dette notatet",
+  "fullscreen": "Åpne PDF i fullskjerm",
+  "exitFullscreen": "Avslutt fullskjerm for PDF",
+  "zoom": "Zoom PDF",
     "attached": "PDF er knyttet til denne fanen",
     "selectableText": "Markerbar tekst på PDF-siden"
   },
