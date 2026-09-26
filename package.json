@@ -1,7 +1,7 @@
 {
   "name": "scribecat",
   "private": true,
-  "version": "0.25.15",
+  "version": "0.25.16",
   "type": "module",
   "license": "MIT",
   "scripts": {
@@ -47,14 +47,12 @@
     "@tiptap/starter-kit": "^3.28.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "docx": "^9.7.1",
     "emoji-mart": "^5.6.0",
     "emojibase-data": "^17.0.0",
     "fflate": "^0.8.3",
     "i18next": "^26.3.6",
     "lowlight": "^3.3.0",
     "lucide-react": "^1.25.0",
-    "mammoth": "^1.12.0",
     "markdown-it": "^14.3.0",
     "markdown-it-ins": "^4.0.0",
     "markdown-it-mark": "^4.0.0",
