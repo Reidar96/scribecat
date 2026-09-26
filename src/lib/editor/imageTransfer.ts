@@ -4,7 +4,7 @@ type InlineMediaFileLike = {
 };
 
 export function isInlineMediaFile(file: InlineMediaFileLike): boolean {
-  return file.type.startsWith("image/") || file.type === "application/pdf" || /\.pdf$/i.test(file.name);
+  return file.type.startsWith("image/") || file.type === "application/pdf" || /\.(pdf|docx|pptx|mp4|webm|mov|m4v|ogv)$/i.test(file.name);
 }
 
 // Extracts image/PDF files from a drag/drop or clipboard transfer. Drops use
