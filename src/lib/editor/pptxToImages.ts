@@ -118,6 +118,7 @@ export async function renderPptxToSlideImages(
   mimeType: "image/svg+xml";
   data: Uint8Array;
   altText: string;
+  text: string;
 }>> {
   const slides = await parseSlides(data);
   if (slides.length === 0) {
@@ -131,6 +132,7 @@ export async function renderPptxToSlideImages(
     fileName: baseName + "-slide-" + String(index + 1).padStart(digits, "0") + ".svg",
     mimeType: "image/svg+xml" as const,
     data: encoder.encode(slideSvg(slide, index, slides.length)),
-    altText: baseName + " — slide " + (index + 1) + " of " + slides.length
+    altText: baseName + " — slide " + (index + 1) + " of " + slides.length,
+    text: slide.texts.join("\n")
   }));
 }
