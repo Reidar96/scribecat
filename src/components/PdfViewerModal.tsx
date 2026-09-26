@@ -15,64 +15,6 @@ import {
   Grid2X2
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-  useEffect(() => {
-    if (pageView !== "grid") {
-      setPageThumbnails([]);
-      setPageThumbnailLoading(false);
-      return;
-    }
-
-    const document = documentRef.current;
-    if (!document || pageCount === 0) {
-      return;
-    }
-
-    let active = true;
-    setPageThumbnailLoading(true);
-    setPageThumbnails([]);
-
-    void (async () => {
-      const thumbnails: string[] = [];
-
-      try {
-        for (let pageIndex = 1; pageIndex <= document.numPages; pageIndex += 1) {
-          if (!active) return;
-
-          const page = await document.getPage(pageIndex);
-          const baseViewport = page.getViewport({ scale: 1 });
-          const scale = Math.min(0.32, 260 / Math.max(1, baseViewport.width));
-          const viewport = page.getViewport({ scale });
-          const canvas = window.document.createElement("canvas");
-          canvas.width = Math.max(1, Math.ceil(viewport.width));
-          canvas.height = Math.max(1, Math.ceil(viewport.height));
-          const context = canvas.getContext("2d");
-
-          if (!context) {
-            canvas.remove();
-            continue;
-          }
-
-          context.fillStyle = "#ffffff";
-          context.fillRect(0, 0, canvas.width, canvas.height);
-          await page.render({ canvasContext: context, viewport }).promise;
-
-          if (!active) return;
-          thumbnails.push(canvas.toDataURL("image/png"));
-          canvas.width = 1;
-          canvas.height = 1;
-        }
-
-        if (active) setPageThumbnails(thumbnails);
-      } finally {
-        if (active) setPageThumbnailLoading(false);
-      }
-    })();
-
-    return () => {
-      active = false;
-    };
-  }, [pageView, pageCount]);
-
 import { readFile } from "@/platform/vaultFs";
 
 type PdfTextItemLike = {
@@ -401,6 +343,64 @@ export function PdfViewerSurface({
     };
   }, []);
 
+
+  useEffect(() => {
+    if (pageView !== "grid") {
+      setPageThumbnails([]);
+      setPageThumbnailLoading(false);
+      return;
+    }
+
+    const document = documentRef.current;
+    if (!document || pageCount === 0) {
+      return;
+    }
+
+    let active = true;
+    setPageThumbnailLoading(true);
+    setPageThumbnails([]);
+
+    void (async () => {
+      const thumbnails: string[] = [];
+
+      try {
+        for (let pageIndex = 1; pageIndex <= document.numPages; pageIndex += 1) {
+          if (!active) return;
+
+          const page = await document.getPage(pageIndex);
+          const baseViewport = page.getViewport({ scale: 1 });
+          const scale = Math.min(0.32, 260 / Math.max(1, baseViewport.width));
+          const viewport = page.getViewport({ scale });
+          const canvas = window.document.createElement("canvas");
+          canvas.width = Math.max(1, Math.ceil(viewport.width));
+          canvas.height = Math.max(1, Math.ceil(viewport.height));
+          const context = canvas.getContext("2d");
+
+          if (!context) {
+            canvas.remove();
+            continue;
+          }
+
+          context.fillStyle = "#ffffff";
+          context.fillRect(0, 0, canvas.width, canvas.height);
+          await page.render({ canvasContext: context, viewport }).promise;
+
+          if (!active) return;
+          thumbnails.push(canvas.toDataURL("image/png"));
+          canvas.width = 1;
+          canvas.height = 1;
+        }
+
+        if (active) setPageThumbnails(thumbnails);
+      } finally {
+        if (active) setPageThumbnailLoading(false);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [pageView, pageCount]);
 
   useEffect(() => {
     const document = documentRef.current;
