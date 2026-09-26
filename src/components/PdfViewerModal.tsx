@@ -204,6 +204,7 @@ export function PdfViewerSurface({
   const [fallbackFullscreen, setFallbackFullscreen] = useState(false);
   const [renderZoom, setRenderZoom] = useState(1);
   const [isPanning, setIsPanning] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
 
   const previousPage = () => {
     setPageNumber((page) => Math.max(1, page - 1));
@@ -866,6 +867,9 @@ export function PdfViewerSurface({
     event.preventDefault();
     const [first, second] = Array.from(pointers.values());
     const distance = Math.max(1, pointerDistance(first, second));
+    const midpointX = (first.x + second.x) / 2;
+    const midpointY = (first.y + second.y) / 2;
+    captureZoomAnchor(midpointX, midpointY);
     setZoomValue(
       pinchRef.current.zoom * (distance / pinchRef.current.distance)
     );
@@ -940,7 +944,7 @@ export function PdfViewerSurface({
   return (
     <div
       ref={rootRef}
-      className={`pdf-preview pdf-preview--${mode}${fallbackFullscreen ? " pdf-preview--fallback-fullscreen" : ""}`}
+      className={`pdf-preview pdf-preview--${mode}${fallbackFullscreen ? " pdf-preview--fallback-fullscreen" : ""}${isMinimized ? " pdf-preview--minimized" : ""}`}
       tabIndex={0}
       onKeyDown={handleViewerKeyDown}
       onPointerDown={handlePointerDown}
@@ -1019,6 +1023,22 @@ export function PdfViewerSurface({
             {isFullscreen ? <Minimize2 aria-hidden="true" /> : <Maximize2 aria-hidden="true" />}
           </button>
 
+          {mode === "split" ? (
+            <button
+              type="button"
+              aria-pressed={isMinimized}
+              aria-label={isMinimized ? "Expand PDF" : "Minimize PDF"}
+              title={isMinimized ? "Expand PDF" : "Minimize PDF"}
+              onClick={() => setIsMinimized((value) => !value)}
+            >
+              {isMinimized ? (
+                <Maximize2 aria-hidden="true" />
+              ) : (
+                <Minimize2 aria-hidden="true" />
+              )}
+            </button>
+          ) : null}
+
           <div className="pdf-preview__zoom">
             <button
               type="button"
@@ -1077,7 +1097,8 @@ export function PdfViewerSurface({
         </div>
       </div>
 
-      <div ref={stageRef} className={`pdf-preview__stage${zoom > 1 ? " pdf-preview__stage--zoomed" : ""}`}>
+      {!isMinimized ? (
+        <div ref={stageRef} className={`pdf-preview__stage${zoom > 1 ? " pdf-preview__stage--zoomed" : ""}`}>
         {loading ? (
           <div className="pdf-preview__message">
             <Loader2 className="pdf-preview__spinner" aria-hidden="true" />
@@ -1105,7 +1126,8 @@ export function PdfViewerSurface({
             ) : null}
           </div>
         )}
-      </div>
+        </div>
+      ) : null}
 
     </div>
   );
