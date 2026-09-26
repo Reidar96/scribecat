@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.24.3] - 2026-09-26
+
+### New features and improvements
+- Show the number of direct notes and subfolders on every folder card in File Viewer, alongside the modified date.
+- Improve the built-in PDF reader with direct page jumping and a **Copy page text** action.
+- Let a local PDF linked from a Markdown note open beside that note in desktop split view using the same PDF reader.
+- Keep split PDFs attached to their owning Markdown tab instead of creating a separate PDF tab. Switching away hides the PDF, returning to the owner restores it, and closing the owner closes the PDF attachment.
+- Mark tabs that currently have an attached PDF with a small PDF badge.
+
 ## [0.24.2] - 2026-09-25
 
 ### Fixes and improvements
