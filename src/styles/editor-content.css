@@ -23,8 +23,12 @@
 }
 
 .pdf-preview__stage {
-  touch-action: none;
+  touch-action: pan-x pan-y;
   overscroll-behavior: contain;
+}
+
+.pdf-preview__stage--zoomed {
+  touch-action: none;
 }
 
 .pdf-preview__page {
