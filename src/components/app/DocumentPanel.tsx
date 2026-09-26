@@ -922,12 +922,8 @@ export function DocumentPanel({
                           aria-label={t("split.closePane")}
                           title={t("split.closePane")}
                           onClick={() => {
-                            if (
-                              visibleAttachedPdf &&
-                              visibleAttachedPdf.ownerFilePath === selectedFilePath
-                            ) {
-                              setAttachedPdf(null);
-                              onCloseTab(selectedFilePath);
+                            if (visibleAttachedPdf) {
+                              closeAttachedPdf();
                               return;
                             }
 
@@ -954,6 +950,7 @@ export function DocumentPanel({
                     onRequestSidebarFocus={onRequestSidebarFocus}
                     onRequestFileOpen={onRequestFileOpen}
                     onOpenPdfInSplit={openPdfInSplit}
+                    pdfSplitRestoreRequest={pdfSplitRestoreRequest}
                     onZenModeRequest={onZenModeRequest}
                     onDeleteRequest={onDeleteRequest}
                     deleteEnabled={capabilities.delete}
