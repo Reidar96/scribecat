@@ -528,6 +528,7 @@ export function DocumentPanel({
             ownerFilePath: selectedFilePath ?? "",
             pageNumber: 1
           },
+          1,
           side
         );
       } else {
