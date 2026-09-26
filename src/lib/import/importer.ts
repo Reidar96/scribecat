@@ -19,7 +19,6 @@ export const IMPORT_FILE_EXTENSIONS = [...CONVERTIBLE_EXTENSIONS];
 export type ImportItemStatus = "pending" | "converting" | "done" | "error" | "cancelled";
 
 export type ImportErrorKey =
-  | "errorLegacyDoc"
   | "errorUnsupported"
   | "errorTooLarge"
   | "errorConvert"
@@ -154,12 +153,6 @@ export async function importFiles(
     reportProgress();
 
     try {
-      if (kind === "legacyDoc") {
-        item.status = "error";
-        item.errorKey = "errorLegacyDoc";
-        continue;
-      }
-
       if (kind === "unsupported") {
         item.status = "error";
         item.errorKey = "errorUnsupported";
