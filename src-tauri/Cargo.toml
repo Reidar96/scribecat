@@ -1,6 +1,6 @@
 [package]
 name = "scribecat"
-version = "0.25.16"
+version = "0.25.17"
 description = "A local Markdown editor"
 authors = ["snooky234"]
 license = "MIT"
