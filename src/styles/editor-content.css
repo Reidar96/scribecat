@@ -783,6 +783,7 @@
 }
 
 .pdf-preview {
+  position: relative;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   gap: 0.7rem;
@@ -995,11 +996,11 @@
   position: relative;
   min-height: 0;
   overflow: auto;
-  display: grid;
-  place-items: center;
+  display: block;
   border-radius: 0.75rem;
   background: rgb(12 12 14 / 0.86);
   padding: 1rem;
+  overflow-anchor: none;
 }
 
 .pdf-preview--inline .pdf-preview__stage {
@@ -1023,9 +1024,11 @@
 .pdf-preview__page {
   --pdf-css-zoom: 1;
   position: relative;
-  flex: none;
+  width: max-content;
+  margin: 0 auto;
   background: #fff;
   box-shadow: 0 12px 36px rgb(0 0 0 / 0.4);
+  overflow-anchor: none;
 }
 
 .pdf-preview__page--zoomed {
@@ -1101,8 +1104,8 @@
 
 .pdf-preview__minimap {
   position: absolute;
-  right: 0.75rem;
-  bottom: 0.75rem;
+  right: 1.5rem;
+  bottom: 1.5rem;
   width: 92px;
   height: 66px;
   z-index: 5;
@@ -1122,6 +1125,13 @@
 }
 
 .pdf-preview__minimap > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.pdf-preview__minimap img {
   display: block;
   width: 100%;
   height: 100%;
