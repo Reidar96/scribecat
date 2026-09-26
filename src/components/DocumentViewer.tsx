@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Columns2, FileText, Grid2X2, Loader2, Play, X } from "lucide-react";
-import { unzipSync } from "fflate";
+import { ChevronLeft, ChevronRight, FileText, Grid2X2, Loader2, Play, Square, X } from "lucide-react";
 import { readFile } from "@/platform/vaultFs";
 
 type Props = { absolutePath: string; label: string; onClose?: () => void };
@@ -16,60 +15,6 @@ function mimeFor(path: string): string {
   if (ext === "mov") return "video/quicktime";
   if (ext === "m4v") return "video/x-m4v";
   return "application/octet-stream";
-}
-
-function decodeXml(value: string): string {
-  const el = new DOMParser().parseFromString(value, "application/xml").documentElement;
-  return (el?.textContent ?? value).replace(/\s+/g, " ").trim();
-}
-
-function xmlText(xml: string, tag: string): string[] {
-  const doc = new DOMParser().parseFromString(xml, "application/xml");
-  return Array.from(doc.getElementsByTagName(tag)).map((n) => (n.textContent ?? "").trim()).filter(Boolean);
-}
-
-function resolveTarget(base: string, target: string): string {
-  const parts = (base + "/" + target).split("/");
-  const out: string[] = [];
-  for (const part of parts) {
-    if (!part || part === ".") continue;
-    if (part === "..") out.pop();
-    else out.push(part);
-  }
-  return out.join("/");
-}
-
-type Slide = { title?: string; texts: string[]; images: string[] };
-
-async function parsePptx(data: Uint8Array): Promise<{ slides: Slide[]; blobs: Record<string, string> }> {
-  const zip = unzipSync(data);
-  const decoder = new TextDecoder();
-  const slideNames = Object.keys(zip)
-    .filter((name) => /^ppt\/slides\/slide\d+\.xml$/.test(name))
-    .sort((a, b) => Number(a.match(/\d+/)?.[0] ?? 0) - Number(b.match(/\d+/)?.[0] ?? 0));
-  const blobs: Record<string, string> = {};
-  for (const [name, bytes] of Object.entries(zip)) {
-    if (/^ppt\/media\//.test(name)) {
-      const ext = extension(name);
-      const mime = ext === "png" ? "image/png" : ext === "jpg" || ext === "jpeg" ? "image/jpeg" : ext === "gif" ? "image/gif" : "image/*";
-      blobs[name] = URL.createObjectURL(new Blob([bytes], { type: mime }));
-    }
-  }
-  const slides: Slide[] = [];
-  for (const slideName of slideNames) {
-    const xml = decoder.decode(zip[slideName]);
-    const texts = xmlText(xml, "a:t").map(decodeXml);
-    const relPath = slideName.replace(/slide\d+\.xml$/, "_rels/") + slideName.split("/").pop() + ".rels";
-    const relXml = zip[relPath] ? decoder.decode(zip[relPath]) : "";
-    const images: string[] = [];
-    for (const match of relXml.matchAll(/Target="([^"]+)"/g)) {
-      const target = match[1];
-      const resolved = resolveTarget("ppt/slides", target);
-      if (blobs[resolved]) images.push(blobs[resolved]);
-    }
-    slides.push({ title: texts[0], texts, images });
-  }
-  return { slides, blobs };
 }
 
 export function DocumentViewer({ absolutePath, label, onClose }: Props) {
@@ -111,12 +56,15 @@ export function DocumentViewer({ absolutePath, label, onClose }: Props) {
           const result = await mammoth.convertToHtml({ arrayBuffer });
           if (active) setHtml(result.value);
         } else if (isPowerPoint) {
-          const parsed = await parsePptx(bytes);
-          pptBlobUrls = Object.values(parsed.blobs);
-          if (parsed.slides.length === 0) {
+          const { renderPptxToSlideImages } = await import("@/lib/editor/pptxToImages");
+          const rendered = await renderPptxToSlideImages(absolutePath, bytes);
+          pptBlobUrls = rendered.map((page) =>
+            URL.createObjectURL(new Blob([page.data], { type: page.mimeType }))
+          );
+          if (rendered.length === 0) {
             throw new Error("The PowerPoint file does not contain readable slides.");
           }
-          if (active) setSlides(parsed.slides);
+          if (active) setSlides(pptBlobUrls.map((src) => ({ src })));
         } else {
           throw new Error("Unsupported document format");
         }
@@ -181,7 +129,7 @@ export function DocumentViewer({ absolutePath, label, onClose }: Props) {
                 title="One slide"
                 onClick={() => setPptView("single")}
               >
-                <Columns2 aria-hidden="true" />
+                <Square aria-hidden="true" />
               </button>
               <button
                 type="button"
@@ -208,10 +156,7 @@ export function DocumentViewer({ absolutePath, label, onClose }: Props) {
         {isWord && html && <article className="document-preview__word" dangerouslySetInnerHTML={{ __html: html }} />}
         {isPowerPoint && slides.length > 0 && pptView === "single" ? (
           <section className="document-preview__slide" aria-label={`Slide ${slide + 1}`} onPointerDown={handleSlidePointerDown} onPointerUp={handleSlidePointerUp}>
-            {slides[slide].images.map((src, index) => <img key={index} src={src} alt="" />)}
-            <div className="document-preview__slide-text">
-              {slides[slide].texts.map((text, index) => <p key={index}>{text}</p>)}
-            </div>
+            <img src={slides[slide].src} alt="" />
           </section>
         ) : null}
         {isPowerPoint && slides.length > 0 && pptView === "all" ? (
@@ -226,14 +171,7 @@ export function DocumentViewer({ absolutePath, label, onClose }: Props) {
                   setPptView("single");
                 }}
               >
-                {currentSlide.images.map((src, imageIndex) => (
-                  <img key={imageIndex} src={src} alt="" />
-                ))}
-                <div className="document-preview__slide-text">
-                  {currentSlide.texts.map((text, textIndex) => (
-                    <p key={textIndex}>{text}</p>
-                  ))}
-                </div>
+                <img src={currentSlide.src} alt="" />
               </section>
             ))}
           </div>
