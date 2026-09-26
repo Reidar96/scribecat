@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { X } from "lucide-react";
 
 import { getVaultCapabilities, platform, vaultCapabilityHint } from "@/platform";
+import type { PickedImageFile } from "@/platform/types";
 import { EditorContent, type Editor as TipTapEditor, useEditor } from "@tiptap/react";
 import { NodeSelection } from "@tiptap/pm/state";
 
@@ -12,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { FindReplacePanel } from "@/components/FindReplacePanel";
 import { LinkDialog, type LinkDialogResult } from "@/components/LinkDialog";
 import { Toolbar } from "@/components/Toolbar";
+import { PdfInsertChoiceDialog, type PdfInsertMode } from "@/components/PdfInsertChoiceDialog";
 import { PdfViewerModal } from "@/components/PdfViewerModal";
 import { TableEdgeControls } from "@/components/TableEdgeControls";
 import { FileLinkSuggestionPopover } from "@/components/editor/FileLinkSuggestionPopover";
@@ -45,6 +47,12 @@ import {
   type VaultFileOption
 } from "@/lib/editor/fileLinks";
 import { extractErrorMessage } from "@/lib/editor/errorMessages";
+import {
+  getInlineMediaFilesFromClipboard,
+  getInlineMediaFilesFromDataTransfer,
+  getNonInlineMediaFilesFromDataTransfer
+} from "@/lib/editor/imageTransfer";
+import { renderPdfToPageImages } from "@/lib/editor/pdfToImages";
 import { moveLine, moveListItem, toggleTaskItemChecked } from "@/lib/editor/listCommands";
 import { normalizeEscapedCheckboxes } from "@/lib/editor/markdownNormalize";
 import { looksLikeMarkdown, pasteMarkdown } from "@/lib/editor/pasteMarkdown";
@@ -58,7 +66,11 @@ import {
   type SelectionRange
 } from "@/lib/editor/selectionClipboard";
 import {
-  ABSOLUTE_URL_PATTERN} from "@/lib/fileSystem";
+  ABSOLUTE_URL_PATTERN,
+  getLastOpenedFolderPath,
+  getRelativeImageMarkdownPath,
+  saveImageToFolder
+} from "@/lib/fileSystem";
 import { dirname, join } from "@/platform/paths";
 import { updateSearchHighlight } from "@/lib/searchHighlight";
 import { canDownloadMarkdown, downloadNoteAsMarkdown } from "@/lib/export/markdownDownload";
@@ -71,6 +83,10 @@ import { useAppStore } from "@/store/useAppStore";
 import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
 import { useSearchStore } from "@/store/useSearchStore";
 import { useShortcutsStore } from "@/store/useShortcutsStore";
+
+// What the editor embeds as an image — the toolbar's file filter and the drop
+// handler share this list, so both accept exactly the same files.
+const EDITOR_MEDIA_EXTENSIONS = ["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "pdf"];
 
 // Marks the surface as a light page inside the dark UI; tokens.css and the
 // dark variant in App.css key off this exact name.
@@ -131,6 +147,21 @@ type PdfPreviewState = {
   label: string;
 };
 
+type ImagePayload = {
+  fileName: string;
+  mimeType: string;
+  data: Uint8Array;
+  altText?: string;
+};
+
+type MediaPayload = Omit<ImagePayload, "altText">;
+
+type PendingMediaInsert = {
+  payloads: MediaPayload[];
+  insertPos: number;
+  mediaKind: "pdf" | "pptx";
+};
+
 function isLocalDocumentPreviewHref(href: string): boolean {
   if (
     !href ||
@@ -142,7 +173,7 @@ function isLocalDocumentPreviewHref(href: string): boolean {
   }
 
   const [path] = href.split(/[?#]/);
-  return /\.pdf$/i.test(path);
+  return /\.(pdf|docx|pptx|mp4|webm|mov|m4v|ogv)$/i.test(path);
 }
 
 // The selected passage as markdown — the form the chat agent's get_selection
@@ -225,6 +256,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   } = useDetailsPanelWidth();
   const [linkDialog, setLinkDialog] = useState<LinkDialogState | null>(null);
   const [pdfPreview, setPdfPreview] = useState<PdfPreviewState | null>(null);
+  const [pendingMediaInsert, setPendingMediaInsert] = useState<PendingMediaInsert | null>(null);
   // Node types the serializer replaced with a placeholder in the last
   // serialization (see lib/editor/serializationGuard). While the list is
   // not empty the document is not reported to the store, so nothing with a
@@ -527,11 +559,256 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       if (extension === "pdf") {
         setPdfPreview({ absolutePath, label });
       } else {
-        setFeedback({ kind: "error", message: t("pdfViewer.error") });
+        setDocumentPreview({ absolutePath, label });
       }
     } catch {
       setFeedback({ kind: "error", message: t("pdfViewer.error") });
     }
+  };
+
+  const isPdfPayload = (payload: MediaPayload) =>
+    payload.mimeType === "application/pdf" || /\.pdf$/i.test(payload.fileName);
+
+  const insertImagePayloads = async (
+    payloads: ImagePayload[],
+    insertPos: number
+  ): Promise<number> => {
+    const currentEditor = editorRef.current;
+
+    if (!currentEditor || payloads.length === 0) {
+      return insertPos;
+    }
+
+    if (!folderPath || !filePath) {
+      setFeedback({
+        kind: "error",
+        message: t("editor.imageRequiresFile")
+      });
+      return insertPos;
+    }
+
+    // Paste and drop cannot be disabled like a button; refuse up front with
+    // the same hint instead of failing per image.
+    if (!getVaultCapabilities().images) {
+      setFeedback({ kind: "error", message: vaultCapabilityHint() });
+      return insertPos;
+    }
+
+    let pos = insertPos;
+
+    for (const { fileName, mimeType, data, altText } of payloads) {
+      try {
+        const rootRelativePath = await saveImageToFolder(
+          folderPath,
+          filePath,
+          fileName,
+          mimeType,
+          data
+        );
+        const markdownPath = await getRelativeImageMarkdownPath(
+          folderPath,
+          filePath,
+          rootRelativePath
+        );
+        const imageAltText = altText ?? fileName.replace(/\.[^.]+$/, "");
+
+        const sizeBefore = currentEditor.state.doc.content.size;
+        currentEditor
+          .chain()
+          .focus()
+          .insertContentAt(pos, {
+            type: "image",
+            attrs: { src: markdownPath, alt: imageAltText }
+          })
+          .run();
+        const sizeAfter = currentEditor.state.doc.content.size;
+
+        pos += sizeAfter - sizeBefore;
+      } catch (error) {
+        setFeedback({
+          kind: "error",
+          message: t("editor.imageInsertFailed", { fileName, error: extractErrorMessage(error, t) })
+        });
+      }
+    }
+
+    return pos;
+  };
+
+  const insertPdfEmbedPayload = async (
+    payload: MediaPayload,
+    insertPos: number
+  ): Promise<number> => {
+    const currentEditor = editorRef.current;
+
+    if (!currentEditor || !folderPath || !filePath) {
+      return insertPos;
+    }
+
+    if (!getVaultCapabilities().images) {
+      setFeedback({ kind: "error", message: vaultCapabilityHint() });
+      return insertPos;
+    }
+
+    try {
+      const rootRelativePath = await saveImageToFolder(
+        folderPath,
+        filePath,
+        payload.fileName,
+        "application/pdf",
+        payload.data
+      );
+      const markdownPath = await getRelativeImageMarkdownPath(
+        folderPath,
+        filePath,
+        rootRelativePath
+      );
+      const label =
+        payload.fileName.replace(/\\/g, "/").split("/").pop() || payload.fileName;
+      const sizeBefore = currentEditor.state.doc.content.size;
+
+      // PDF embeds deliberately reuse the image/media node. The Markdown stays
+      // portable as ![name](relative/path.pdf), while ImageView recognizes the
+      // .pdf source and renders the existing ScribeCat PDF reader inline.
+      currentEditor
+        .chain()
+        .focus()
+        .insertContentAt(insertPos, {
+          type: "image",
+          attrs: { src: markdownPath, alt: label }
+        })
+        .run();
+
+      const sizeAfter = currentEditor.state.doc.content.size;
+      return insertPos + (sizeAfter - sizeBefore);
+    } catch (error) {
+      setFeedback({
+        kind: "error",
+        message: t("editor.pdfInsertFailed", {
+          fileName: payload.fileName,
+          error: extractErrorMessage(error, t)
+        })
+      });
+      return insertPos;
+    }
+  };
+
+  const insertMediaPayloads = async (
+    payloads: MediaPayload[],
+    insertPos: number,
+    pdfMode?: PdfInsertMode
+  ) => {
+    const mediaKind = payloads.some(isPdfPayload)
+      ? "pdf"
+      : null;
+
+    if (mediaKind && !pdfMode) {
+      setPendingMediaInsert({ payloads, insertPos, mediaKind });
+      return;
+    }
+
+    let pos = insertPos;
+
+    for (const payload of payloads) {
+      if (!isPdfPayload(payload)) {
+        pos = await insertImagePayloads([payload], pos);
+        continue;
+      }
+
+      if (pdfMode === "preview") {
+        pos = await insertPdfEmbedPayload(payload, pos);
+        continue;
+      }
+
+      try {
+        const renderedPages = await renderPdfToPageImages(payload.fileName, payload.data);
+
+        if (renderedPages.length === 0) {
+          throw new Error("The PDF has no renderable pages.");
+        }
+
+        pos = await insertImagePayloads(renderedPages, pos);
+      } catch (error) {
+        setFeedback({
+          kind: "error",
+          message: t("editor.pdfInsertFailed", {
+            fileName: payload.fileName,
+            error: extractErrorMessage(error, t)
+          })
+        });
+      }
+    }
+
+  };
+
+  const insertMediaFiles = async (files: File[], insertPos: number) => {
+    const payloads = await Promise.all(
+      files.map(async (file) => ({
+        fileName: file.name,
+        mimeType: file.type,
+        data: new Uint8Array(await file.arrayBuffer())
+      }))
+    );
+
+    await insertMediaPayloads(payloads, insertPos);
+  };
+
+  // Toolbar media button: images insert directly. PDFs pause at the same
+  // two-choice dialog used by paste/drop so the user decides between rendered
+  // page images and the existing 0.24.3 PDF reader/split-view flow.
+  const handleImageInsertRequest = async () => {
+    const currentEditor = editorRef.current;
+
+    if (!currentEditor) {
+      return;
+    }
+
+    if (!folderPath || !filePath) {
+      setFeedback({
+        kind: "error",
+        message: t("editor.imageRequiresFile")
+      });
+      return;
+    }
+
+    let picked: PickedImageFile[];
+
+    try {
+      picked = await platform.imagePicker.pickImages({
+        defaultPath: folderPath ?? getLastOpenedFolderPath() ?? undefined,
+        title: t("editor.imageDialogTitle"),
+        filterName: t("editor.imageDialogFilter"),
+        extensions: EDITOR_MEDIA_EXTENSIONS
+      });
+    } catch (error) {
+      setFeedback({
+        kind: "error",
+        message: extractErrorMessage(error, t)
+      });
+      return;
+    }
+
+    if (picked.length === 0) {
+      return;
+    }
+
+    const payloads: MediaPayload[] = [];
+
+    for (const file of picked) {
+      try {
+        payloads.push({ fileName: file.fileName, ...(await file.read()) });
+      } catch (error) {
+        setFeedback({
+          kind: "error",
+          message: t("editor.imageInsertFailed", {
+            fileName: file.fileName,
+            error: extractErrorMessage(error, t)
+          })
+        });
+      }
+    }
+
+    await insertMediaPayloads(payloads, currentEditor.state.selection.from);
   };
 
   const printDocument = () => {
@@ -694,11 +971,6 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     },
     editorProps: {
       handleDrop: (view, event, _slice, moved) => {
-        if (documentLockedRef.current) {
-          event.preventDefault();
-          return true;
-        }
-
         if (moved) {
           return false;
         }
@@ -722,11 +994,6 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       },
       transformPasted: (slice) => normalizePastedSlice(slice),
       handlePaste: (view, event) => {
-        if (documentLockedRef.current) {
-          event.preventDefault();
-          return true;
-        }
-
         if (Array.from(event.clipboardData?.items ?? []).some((item) => item.kind === "file")) {
           event.preventDefault();
           setFeedback({ kind: "error", message: t("editorContextMenu.pasteFailed") });
@@ -735,9 +1002,8 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 
         const plainPasteRequested = plainPasteRequestedRef.current;
         plainPasteRequestedRef.current = false;
-
-        const currentEditor = editorRef.current;
         const text = event.clipboardData?.getData("text/plain") ?? "";
+        const currentEditor = editorRef.current;
         const hasHtml = Boolean(event.clipboardData?.getData("text/html"));
         const inCode = view.state.selection.$from.parent.type.spec.code === true;
 
@@ -1102,6 +1368,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     <Toolbar
       editor={editor}
       onLinkRequest={handleLinkRequest}
+      onImageInsertRequest={handleImageInsertRequest}
       onPrintRequest={printDocument}
       onDeleteRequest={onDeleteRequest}
       deleteEnabled={deleteEnabled}
@@ -1115,6 +1382,22 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 
   return (
     <div className={cn("editor-view", documentLocked && "editor-view--locked", documentWidth === "compact" && "editor-view--compact")}>
+      <PdfInsertChoiceDialog
+        open={pendingMediaInsert !== null}
+        mediaKind={pendingMediaInsert?.mediaKind ?? "pdf"}
+        fileCount={pendingMediaInsert?.payloads.length ?? 0}
+        firstFileName={pendingMediaInsert?.payloads[0]?.fileName ?? ""}
+        onChoose={(mode) => {
+          const pending = pendingMediaInsert;
+          setPendingMediaInsert(null);
+
+          if (pending) {
+            void insertMediaPayloads(pending.payloads, pending.insertPos, mode);
+          }
+        }}
+        onCancel={() => setPendingMediaInsert(null)}
+      />
+
       {pdfPreview ? (
         <PdfViewerModal
           absolutePath={pdfPreview.absolutePath}
@@ -1308,11 +1591,9 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
           x={selectionMenu.x}
           y={selectionMenu.y}
           hasSelection={selectionMenu.hasSelection}
-
           onCopyFormatted={() => copySelection("formatted")}
           onCopyMarkdown={() => copySelection("markdown")}
           onCopyPlainText={() => copySelection("plainText")}
-
           onClose={() => setSelectionMenu(null)}
         />
       ) : null}
