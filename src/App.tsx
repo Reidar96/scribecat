@@ -1037,17 +1037,10 @@ function App() {
       const { targetDirectory, insertAfterBasename } = await resolveNewEntryTarget();
       setImportTargetFolder(targetDirectory);
       setImportInsertAfterBasename(insertAfterBasename);
-      setImportSkippedCount(0);
-      setImportLimitReached(false);
       setImportFileList(selectedPaths.map((path) => ({ source: sourceFromPath(path) })));
     }
   };
 
-  /**
-   * Files and folders dragged onto the file tree from outside the app. The
-   * folder they were dropped on decides where they land — dropping next to
-   * nothing in particular targets the vault root.
-   */
   const handleImported = (createdFilePaths: string[]) => {
     if (!folderPath) {
       return;
