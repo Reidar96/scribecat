@@ -656,10 +656,6 @@ export function PdfViewerSurface({
       return;
     }
 
-    if (event.pointerType === "mouse") {
-      return;
-    }
-
     const pointers = touchPointersRef.current;
     pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
 
@@ -741,17 +737,6 @@ export function PdfViewerSurface({
   };
 
   const finishPointer = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (event.pointerType === "mouse") {
-      if (panRef.current?.pointerId === event.pointerId) {
-        if (stageRef.current?.hasPointerCapture(event.pointerId)) {
-          stageRef.current.releasePointerCapture(event.pointerId);
-        }
-        panRef.current = null;
-        
-      }
-      return;
-    }
-
     if (event.pointerType !== "touch") {
       return;
     }
@@ -796,15 +781,6 @@ export function PdfViewerSurface({
 
   const handlePointerCancel = (event: React.PointerEvent<HTMLDivElement>) => {
     event.stopPropagation();
-
-    if (event.pointerType === "mouse") {
-      if (stageRef.current?.hasPointerCapture(event.pointerId)) {
-        stageRef.current.releasePointerCapture(event.pointerId);
-      }
-      panRef.current = null;
-      
-      return;
-    }
 
     touchPointersRef.current.delete(event.pointerId);
     swipeRef.current = null;
