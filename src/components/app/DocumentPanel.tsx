@@ -427,10 +427,6 @@ export function DocumentPanel({
   const restoreInlinePdfAfterSplitClose = (
     request: PdfPreviewRequest & { ownerFilePath: string }
   ) => {
-    if (request.ownerFilePath !== selectedFilePath) {
-      return;
-    }
-
     setPdfSplitRestoreRequest((current) => ({
       absolutePath: request.absolutePath,
       requestId: (current?.requestId ?? 0) + 1
@@ -1074,6 +1070,7 @@ export function DocumentPanel({
                             onRequestSidebarFocus={onRequestSidebarFocus}
                             onRequestFileOpen={onRequestFileOpen}
                             onOpenPdfInSplit={openPdfInSplit}
+                            pdfSplitRestoreRequest={pdfSplitRestoreRequest}
                             onZenModeRequest={onZenModeRequest}
                             onDeleteRequest={() => onDeleteFileRequest(secondaryFilePath)}
                             deleteEnabled={capabilities.delete}
