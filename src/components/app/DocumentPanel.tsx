@@ -506,10 +506,47 @@ export function DocumentPanel({
 
   const replaceSplitSide = (side: "left" | "right", filePath: string) => {
     setSplitPickerOpen(false);
+    setSplitDropPreview(null);
 
-    if (visibleAttachedPdf) {
+    const extension = filePath
+      .split(/[?#]/)[0]
+      .split(".")
+      .pop()
+      ?.toLowerCase();
+
+    if (extension === "pdf" || extension === "docx" || extension === "pptx") {
       setAttachedPdf(null);
+      setAttachedDocument(
+        extension === "pdf"
+          ? null
+          : {
+              absolutePath: filePath,
+              label: getFileLinkLabel(filePath),
+              pageNumber: 1
+            }
+      );
+
+      if (extension === "pdf") {
+        setAttachedPdf({
+          absolutePath: filePath,
+          label: getFileLinkLabel(filePath),
+          pageNumber: 1,
+          ownerFilePath: selectedFilePath ?? ""
+        });
+      }
+
+      setSecondarySide(side);
+      setActiveEditorPane("primary");
+
+      if (secondaryFilePath) {
+        onCloseSecondary();
+      }
+
+      return;
     }
+
+    setAttachedPdf(null);
+    setAttachedDocument(null);
 
     if (!secondaryFilePath) {
       if (filePath !== selectedFilePath) {
