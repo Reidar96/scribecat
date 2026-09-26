@@ -1566,7 +1566,17 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       />
 
       {documentPreview ? (
-        <div className="document-preview-modal">
+        <div
+          className="media-preview media-preview--pdf"
+          role="dialog"
+          aria-modal="true"
+          aria-label={documentPreview.label}
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setDocumentPreview(null);
+            }
+          }}
+        >
           <div className="document-preview-modal__content">
             <DocumentViewer
               absolutePath={documentPreview.absolutePath}
