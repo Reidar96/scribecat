@@ -293,25 +293,24 @@ export function ImageView({ node, editor, getPos, updateAttributes, selected }: 
       {isLocalDocument ? (
         documentAbsolutePath ? (
           <PdfViewerSurface
-              absolutePath={documentAbsolutePath}
-              label={pdfLabel}
-              mode="inline"
-              restoreMinimizedRequestId={
-                pdfSplitRestoreRequest?.absolutePath === documentAbsolutePath
-                  ? pdfSplitRestoreRequest.requestId
-                  : 0
-              }
-              onOpenInSplit={
-                onOpenPdfInSplit
-                  ? () =>
-                      onOpenPdfInSplit({
-                        absolutePath: documentAbsolutePath,
-                        label: pdfLabel
-                      })
-                  : undefined
-              }
-            />
-          )
+            absolutePath={documentAbsolutePath}
+            label={pdfLabel}
+            mode="inline"
+            restoreMinimizedRequestId={
+              pdfSplitRestoreRequest?.absolutePath === documentAbsolutePath
+                ? pdfSplitRestoreRequest.requestId
+                : 0
+            }
+            onOpenInSplit={
+              onOpenPdfInSplit
+                ? () =>
+                    onOpenPdfInSplit({
+                      absolutePath: documentAbsolutePath,
+                      label: pdfLabel
+                    })
+                : undefined
+            }
+          />
         ) : (
           <span className="editor-image-wrapper__placeholder">
             {loadError ? t("pdfViewer.error") : t("pdfViewer.loading")}
