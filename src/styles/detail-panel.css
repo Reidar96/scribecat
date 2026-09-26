@@ -603,6 +603,10 @@ p.detail-panel__version {
   grid-template-rows: auto minmax(0, 1fr);
 }
 
+.split-workspace__pane--pdf {
+  grid-template-rows: minmax(0, 1fr);
+}
+
 .split-workspace__pane--secondary-left {
   border-right: 1px solid rgba(var(--overlay-rgb), 0.1);
 }
