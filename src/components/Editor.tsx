@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import { X } from "lucide-react";
 
 import { getVaultCapabilities, platform, vaultCapabilityHint } from "@/platform";
-import type { PickedImageFile } from "@/platform/types";
 import { EditorContent, type Editor as TipTapEditor, useEditor } from "@tiptap/react";
 import { NodeSelection } from "@tiptap/pm/state";
 
@@ -13,9 +12,7 @@ import { cn } from "@/lib/utils";
 import { FindReplacePanel } from "@/components/FindReplacePanel";
 import { LinkDialog, type LinkDialogResult } from "@/components/LinkDialog";
 import { Toolbar } from "@/components/Toolbar";
-import { PdfInsertChoiceDialog, type PdfInsertMode } from "@/components/PdfInsertChoiceDialog";
 import { PdfViewerModal } from "@/components/PdfViewerModal";
-import { DocumentViewer, type DocumentPreviewRequest } from "@/components/DocumentViewer";
 import { TableEdgeControls } from "@/components/TableEdgeControls";
 import { FileLinkSuggestionPopover } from "@/components/editor/FileLinkSuggestionPopover";
 import { DetailsPanel } from "@/components/editor/DetailsPanel";
@@ -48,12 +45,6 @@ import {
   type VaultFileOption
 } from "@/lib/editor/fileLinks";
 import { extractErrorMessage } from "@/lib/editor/errorMessages";
-import {
-  getInlineMediaFilesFromClipboard,
-  getInlineMediaFilesFromDataTransfer,
-  getNonInlineMediaFilesFromDataTransfer
-} from "@/lib/editor/imageTransfer";
-import { renderPdfToPageImages } from "@/lib/editor/pdfToImages";
 import { moveLine, moveListItem, toggleTaskItemChecked } from "@/lib/editor/listCommands";
 import { normalizeEscapedCheckboxes } from "@/lib/editor/markdownNormalize";
 import { looksLikeMarkdown, pasteMarkdown } from "@/lib/editor/pasteMarkdown";
@@ -67,11 +58,7 @@ import {
   type SelectionRange
 } from "@/lib/editor/selectionClipboard";
 import {
-  ABSOLUTE_URL_PATTERN,
-  getLastOpenedFolderPath,
-  getRelativeImageMarkdownPath,
-  saveImageToFolder
-} from "@/lib/fileSystem";
+  ABSOLUTE_URL_PATTERN} from "@/lib/fileSystem";
 import { dirname, join } from "@/platform/paths";
 import { updateSearchHighlight } from "@/lib/searchHighlight";
 import { canDownloadMarkdown, downloadNoteAsMarkdown } from "@/lib/export/markdownDownload";
@@ -84,10 +71,6 @@ import { useAppStore } from "@/store/useAppStore";
 import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
 import { useSearchStore } from "@/store/useSearchStore";
 import { useShortcutsStore } from "@/store/useShortcutsStore";
-
-// What the editor embeds as an image — the toolbar's file filter and the drop
-// handler share this list, so both accept exactly the same files.
-const EDITOR_MEDIA_EXTENSIONS = ["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "pdf", "docx", "pptx", "mp4", "webm", "mov", "m4v", "ogv"];
 
 // Marks the surface as a light page inside the dark UI; tokens.css and the
 // dark variant in App.css key off this exact name.
@@ -107,8 +90,6 @@ type EditorProps = {
   onRequestFileOpen?: (filePath: string) => void;
   /** Opens a local PDF linked from this note beside the owning Markdown document. */
   onOpenPdfInSplit?: (request: PdfPreviewState & { ownerFilePath: string }) => void;
-  /** Opens a local DOCX/PPTX linked from this note beside the owning Markdown document. */
-  onOpenDocumentInSplit?: (request: DocumentPreviewRequest & { ownerFilePath: string }) => void;
   pdfSplitRestoreRequest?: InlinePdfSplitRestoreRequest | null;
   onZenModeRequest: () => void;
   onDeleteRequest: () => void;
@@ -150,26 +131,6 @@ type PdfPreviewState = {
   label: string;
 };
 
-type DocumentPreviewState = {
-  absolutePath: string;
-  label: string;
-};
-
-type ImagePayload = {
-  fileName: string;
-  mimeType: string;
-  data: Uint8Array;
-  altText?: string;
-};
-
-type MediaPayload = Omit<ImagePayload, "altText">;
-
-type PendingMediaInsert = {
-  payloads: MediaPayload[];
-  insertPos: number;
-  mediaKind: "pdf" | "pptx";
-};
-
 function isLocalDocumentPreviewHref(href: string): boolean {
   if (
     !href ||
@@ -181,7 +142,7 @@ function isLocalDocumentPreviewHref(href: string): boolean {
   }
 
   const [path] = href.split(/[?#]/);
-  return /\.(pdf|docx|pptx|mp4|webm|mov|m4v|ogv)$/i.test(path);
+  return /\.pdf$/i.test(path);
 }
 
 // The selected passage as markdown — the form the chat agent's get_selection
@@ -220,7 +181,6 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     onRequestSidebarFocus,
     onRequestFileOpen,
     onOpenPdfInSplit,
-    onOpenDocumentInSplit,
     pdfSplitRestoreRequest = null,
     onZenModeRequest,
     onDeleteRequest,
@@ -265,8 +225,6 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   } = useDetailsPanelWidth();
   const [linkDialog, setLinkDialog] = useState<LinkDialogState | null>(null);
   const [pdfPreview, setPdfPreview] = useState<PdfPreviewState | null>(null);
-  const [documentPreview, setDocumentPreview] = useState<DocumentPreviewState | null>(null);
-  const [pendingMediaInsert, setPendingMediaInsert] = useState<PendingMediaInsert | null>(null);
   // Node types the serializer replaced with a placeholder in the last
   // serialization (see lib/editor/serializationGuard). While the list is
   // not empty the document is not reported to the store, so nothing with a
