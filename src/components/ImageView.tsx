@@ -74,7 +74,7 @@ export function ImageView({ node, editor, getPos, updateAttributes, selected }: 
       return;
     }
 
-    if (isPdf) {
+    if (isLocalDocument) {
       if (!filePath) {
         setLoadError(true);
         return;
@@ -155,9 +155,6 @@ export function ImageView({ node, editor, getPos, updateAttributes, selected }: 
       : objectUrl;
   const effectiveWidth = dragWidth ?? width;
   const pdfLabel = localPdfLabel(src, alt);
-  const mediaExtension = src.split(/[?#]/)[0].split(".").pop()?.toLowerCase() ?? "";
-  const isDocumentPreview = ["docx", "pptx", "mp4", "webm", "mov", "m4v", "ogv"].includes(mediaExtension);
-
   const startResize = (handle: ResizeHandle) => (event: React.PointerEvent<HTMLSpanElement>) => {
     const imgEl = imgRef.current;
 
