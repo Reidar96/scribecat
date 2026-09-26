@@ -36,6 +36,85 @@ const rawStringAttribute = (name: string) => ({
 const attributeAsString = (value: unknown): string =>
   value === null || value === undefined ? "" : String(value);
 
+
+function isLocalPdfHref(href: string): boolean {
+  if (
+    !href ||
+    /^[a-z][a-z0-9+.-]*:/i.test(href) ||
+    href.startsWith("//") ||
+    href.startsWith("#")
+  ) {
+    return false;
+  }
+
+  const [path] = href.split(/[?#]/);
+  return /\.pdf$/i.test(path);
+}
+
+/**
+ * 0.24.5 stored the combined PDF choice as a normal Markdown link. Rendering
+ * that link through the browser made server vaults try GET /_attachments/*.pdf
+ * and showed a 404 instead of ScribeCat's PDF reader.
+ *
+ * Treat local PDF links as media nodes while parsing. Existing 0.24.5 notes
+ * therefore immediately gain the inline PDF window, and the next serialization
+ * writes the portable image-style Markdown form used by new 0.24.6 inserts.
+ */
+export function pdfLinkAsMediaMarkdownItPlugin(markdownit: MarkdownIt): void {
+  markdownit.core.ruler.push("scribecat_pdf_link_as_media", (state) => {
+    for (const token of state.tokens) {
+      if (token.type !== "inline" || !token.children) {
+        continue;
+      }
+
+      const children = token.children;
+
+      for (let index = 0; index < children.length; index += 1) {
+        const open = children[index];
+
+        if (open.type !== "link_open") {
+          continue;
+        }
+
+        const href = open.attrGet("href") ?? "";
+
+        if (!isLocalPdfHref(href)) {
+          continue;
+        }
+
+        let closeIndex = index + 1;
+
+        while (
+          closeIndex < children.length &&
+          children[closeIndex].type !== "link_close"
+        ) {
+          closeIndex += 1;
+        }
+
+        if (closeIndex >= children.length) {
+          continue;
+        }
+
+        const labelChildren = children.slice(index + 1, closeIndex);
+        const label = labelChildren.map((child) => child.content).join("");
+
+        // Reuse the link_open token object instead of constructing a private
+        // markdown-it Token class. The image renderer only needs the standard
+        // image fields below.
+        open.type = "image";
+        open.tag = "img";
+        open.nesting = 0;
+        open.attrs = [["src", href]];
+        open.children = labelChildren;
+        open.content = label;
+        open.markup = "";
+
+        children.splice(index, closeIndex - index + 1, open);
+      }
+    }
+  });
+}
+
 // With `breaks: true` every newline inside a paragraph becomes a <br>, so
 // "![a](a.png)" + newline + "![b](b.png)" arrives as one paragraph holding
 // image, softbreak, image. The image node is a block node, so ProseMirror
@@ -125,6 +204,9 @@ export const EditorImage = Image.extend({
         },
         parse: {
           setup(markdownit: MarkdownIt) {
+            // Convert legacy/local PDF links before the line-break cleanup so
+            // the latter sees them as the block-level media nodes they become.
+            markdownit.use(pdfLinkAsMediaMarkdownItPlugin);
             markdownit.use(imageLineBreakMarkdownItPlugin);
           }
         }
