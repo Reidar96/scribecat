@@ -121,6 +121,8 @@ function isFormControl(target: EventTarget | null): boolean {
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 3;
 const MAX_RENDER_SCALE = 3.5;
+const OVERVIEW_PAGE_SIZE = 6;
+const OVERVIEW_THUMBNAIL_WIDTH = 220;
 
 function clampZoom(value: number): number {
   return Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, value));
@@ -196,8 +198,17 @@ export function PdfViewerSurface({
   const [isMinimized, setIsMinimized] = useState(false);
   const lastRestoreMinimizedRequestIdRef = useRef(restoreMinimizedRequestId);
   const [pageView, setPageView] = useState<"single" | "grid">("single");
-  const [pageThumbnails, setPageThumbnails] = useState<Array<{ src: string; width: number; height: number }>>([]);
+  const [overviewPage, setOverviewPage] = useState(0);
+  const [pageThumbnails, setPageThumbnails] = useState<Array<{
+    pageNumber: number;
+    src: string;
+    width: number;
+    height: number;
+  }>>([]);
   const [pageThumbnailLoading, setPageThumbnailLoading] = useState(false);
+  const overviewPageCount = Math.max(1, Math.ceil(pageCount / OVERVIEW_PAGE_SIZE));
+  const overviewStartPage = overviewPage * OVERVIEW_PAGE_SIZE + 1;
+  const overviewEndPage = Math.min(pageCount, overviewStartPage + OVERVIEW_PAGE_SIZE - 1);
 
   const previousPage = () => {
     setPageNumber((page) => Math.max(1, page - 1));
@@ -288,6 +299,7 @@ export function PdfViewerSurface({
         setLoading(true);
         setError(false);
         setPageView("single");
+        setOverviewPage(0);
         setPageThumbnails([]);
 
         const [data, pdfjsModule, worker] = await Promise.all([
@@ -367,34 +379,37 @@ export function PdfViewerSurface({
       return;
     }
 
+    const maxOverviewPage = Math.max(0, Math.ceil(pageCount / OVERVIEW_PAGE_SIZE) - 1);
+    const pageIndex = Math.min(overviewPage, maxOverviewPage);
+    const startPage = pageIndex * OVERVIEW_PAGE_SIZE + 1;
+    const endPage = Math.min(document.numPages, startPage + OVERVIEW_PAGE_SIZE - 1);
+
+    if (pageIndex !== overviewPage) {
+      setOverviewPage(pageIndex);
+      return;
+    }
+
     let active = true;
     setPageThumbnailLoading(true);
     setPageThumbnails([]);
 
     void (async () => {
-      const thumbnails: Array<{ src: string; width: number; height: number }> = [];
+      const thumbnails: Array<{
+        pageNumber: number;
+        src: string;
+        width: number;
+        height: number;
+      }> = [];
 
       try {
-        for (let pageIndex = 1; pageIndex <= document.numPages; pageIndex += 1) {
+        for (let pageNumber = startPage; pageNumber <= endPage; pageNumber += 1) {
           if (!active) return;
 
-          const page = await document.getPage(pageIndex);
+          const page = await document.getPage(pageNumber);
           const baseViewport = page.getViewport({ scale: 1 });
-          const stage = stageRef.current;
-          const stageWidth = stage?.clientWidth || window.innerWidth;
-          const computedStage = stage ? window.getComputedStyle(stage) : null;
-          const horizontalPadding =
-            (Number.parseFloat(computedStage?.paddingLeft ?? "0") || 0) +
-            (Number.parseFloat(computedStage?.paddingRight ?? "0") || 0);
-          const contentWidth = Math.max(320, stageWidth - horizontalPadding - 32);
-          const columns = stageWidth >= 1000 ? 2 : 1;
-          const targetCssWidth = Math.min(
-            720,
-            Math.max(320, (contentWidth - (columns - 1) * 16) / columns)
-          );
           const scale = Math.max(
-            0.45,
-            targetCssWidth / Math.max(1, baseViewport.width)
+            0.1,
+            Math.min(1, OVERVIEW_THUMBNAIL_WIDTH / Math.max(1, baseViewport.width))
           );
           const viewport = page.getViewport({ scale });
           const qualityScale = Math.min(
@@ -404,8 +419,6 @@ export function PdfViewerSurface({
           const canvas = window.document.createElement("canvas");
           canvas.width = Math.max(1, Math.ceil(viewport.width * qualityScale));
           canvas.height = Math.max(1, Math.ceil(viewport.height * qualityScale));
-          canvas.style.width = String(Math.ceil(viewport.width)) + "px";
-          canvas.style.height = String(Math.ceil(viewport.height)) + "px";
           const context = canvas.getContext("2d");
 
           if (!context) {
@@ -426,9 +439,10 @@ export function PdfViewerSurface({
 
           if (!active) return;
           thumbnails.push({
+            pageNumber,
             src: canvas.toDataURL("image/png"),
-            width: Math.ceil(viewport.width),
-            height: Math.ceil(viewport.height)
+            width: baseViewport.width,
+            height: baseViewport.height
           });
           canvas.width = 1;
           canvas.height = 1;
@@ -443,7 +457,7 @@ export function PdfViewerSurface({
     return () => {
       active = false;
     };
-  }, [pageView, pageCount, viewportVersion]);
+  }, [pageView, pageCount, overviewPage]);
 
   useEffect(() => {
     const document = documentRef.current;
@@ -1062,158 +1076,174 @@ export function PdfViewerSurface({
           {label}
         </strong>
 
-        <div className="pdf-preview__pager">
+        {isMinimized ? (
           <button
             type="button"
-            disabled={loading || pageNumber <= 1}
-            aria-label={t("pdfViewer.previous")}
-            title={t("pdfViewer.previous")}
-            onClick={previousPage}
+            className="pdf-preview__restore-button"
+            aria-label={t("pdfViewer.restore")}
+            title={t("pdfViewer.restore")}
+            onClick={() => setIsMinimized(false)}
           >
-            <ChevronLeft aria-hidden="true" />
+            <Maximize2 aria-hidden="true" />
           </button>
+        ) : (
+          <>
+            <div className="pdf-preview__pager">
+              <button
+                type="button"
+                disabled={loading || pageNumber <= 1}
+                aria-label={t("pdfViewer.previous")}
+                title={t("pdfViewer.previous")}
+                onClick={previousPage}
+              >
+                <ChevronLeft aria-hidden="true" />
+              </button>
 
-          <label className="pdf-preview__page-input">
-            <span className="sr-only">{t("pdfViewer.page")}</span>
-            <input
-              type="number"
-              min={1}
-              max={Math.max(1, pageCount)}
-              value={pageInput}
-              disabled={loading || pageCount === 0}
-              onChange={(event) => setPageInput(event.target.value)}
-              onBlur={commitPageInput}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  commitPageInput();
-                  event.currentTarget.blur();
-                }
-              }}
-            />
-            <span>{pageCount > 0 ? `/ ${pageCount}` : "…"}</span>
-          </label>
-
-          <button
-            type="button"
-            disabled={loading || pageCount === 0 || pageNumber >= pageCount}
-            aria-label={t("pdfViewer.next")}
-            title={t("pdfViewer.next")}
-            onClick={nextPage}
-          >
-            <ChevronRight aria-hidden="true" />
-          </button>
-        </div>
-
-        <div className="pdf-preview__actions">
-          <button
-            type="button"
-            className="pdf-preview__copy-button"
-            disabled={loading || copying || pageCount === 0}
-            aria-label={copied ? t("pdfViewer.copied") : t("pdfViewer.copyPage")}
-            title={copied ? t("pdfViewer.copied") : t("pdfViewer.copyPage")}
-            onClick={() => void copyCurrentPage()}
-          >
-            {copied ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
-          </button>
-
-          <button
-            type="button"
-            className="pdf-preview__fullscreen-button"
-            aria-pressed={isFullscreen}
-            aria-label={isFullscreen ? t("pdfViewer.exitFullscreen") : t("pdfViewer.fullscreen")}
-            title={isFullscreen ? t("pdfViewer.exitFullscreen") : t("pdfViewer.fullscreen")}
-            onClick={() => void toggleFullscreen()}
-          >
-            {isFullscreen ? <Minimize2 aria-hidden="true" /> : <Maximize2 aria-hidden="true" />}
-          </button>
-
-          <div className="pdf-preview__zoom">
-            <button
-              type="button"
-              aria-expanded={zoomOpen}
-              aria-label={t("pdfViewer.zoom")}
-              title={t("pdfViewer.zoom")}
-              onClick={toggleZoomControls}
-            >
-              <ZoomIn aria-hidden="true" />
-            </button>
-            {zoomOpen ? (
-              <div className="pdf-preview__zoom-panel">
-                <label htmlFor="pdf-preview-zoom">
-                  <span>{t("pdfViewer.zoom")}</span>
-                  <output>{Math.round(zoom * 100)}%</output>
-                </label>
+              <label className="pdf-preview__page-input">
+                <span className="sr-only">{t("pdfViewer.page")}</span>
                 <input
-                  id="pdf-preview-zoom"
-                  type="range"
-                  min={MIN_ZOOM}
-                  max={MAX_ZOOM}
-                  step="0.05"
-                  value={zoom}
-                  aria-label={t("pdfViewer.zoom")}
-                  onChange={(event) => {
-                    captureViewportCenterAnchor();
-                    setZoomValue(Number(event.target.value));
+                  type="number"
+                  min={1}
+                  max={Math.max(1, pageCount)}
+                  value={pageInput}
+                  disabled={loading || pageCount === 0}
+                  onChange={(event) => setPageInput(event.target.value)}
+                  onBlur={commitPageInput}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      commitPageInput();
+                      event.currentTarget.blur();
+                    }
                   }}
                 />
+                <span>{pageCount > 0 ? `/ ${pageCount}` : "…"}</span>
+              </label>
+
+              <button
+                type="button"
+                disabled={loading || pageCount === 0 || pageNumber >= pageCount}
+                aria-label={t("pdfViewer.next")}
+                title={t("pdfViewer.next")}
+                onClick={nextPage}
+              >
+                <ChevronRight aria-hidden="true" />
+              </button>
+            </div>
+
+            <div className="pdf-preview__actions">
+              <button
+                type="button"
+                className="pdf-preview__copy-button"
+                disabled={loading || copying || pageCount === 0}
+                aria-label={copied ? t("pdfViewer.copied") : t("pdfViewer.copyPage")}
+                title={copied ? t("pdfViewer.copied") : t("pdfViewer.copyPage")}
+                onClick={() => void copyCurrentPage()}
+              >
+                {copied ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
+              </button>
+
+              <button
+                type="button"
+                className="pdf-preview__fullscreen-button"
+                aria-pressed={isFullscreen}
+                aria-label={isFullscreen ? t("pdfViewer.exitFullscreen") : t("pdfViewer.fullscreen")}
+                title={isFullscreen ? t("pdfViewer.exitFullscreen") : t("pdfViewer.fullscreen")}
+                onClick={() => void toggleFullscreen()}
+              >
+                {isFullscreen ? <Minimize2 aria-hidden="true" /> : <Maximize2 aria-hidden="true" />}
+              </button>
+
+              <div className="pdf-preview__zoom">
+                <button
+                  type="button"
+                  aria-expanded={zoomOpen}
+                  aria-label={t("pdfViewer.zoom")}
+                  title={t("pdfViewer.zoom")}
+                  onClick={toggleZoomControls}
+                >
+                  <ZoomIn aria-hidden="true" />
+                </button>
+                {zoomOpen ? (
+                  <div className="pdf-preview__zoom-panel">
+                    <label htmlFor="pdf-preview-zoom">
+                      <span>{t("pdfViewer.zoom")}</span>
+                      <output>{Math.round(zoom * 100)}%</output>
+                    </label>
+                    <input
+                      id="pdf-preview-zoom"
+                      type="range"
+                      min={MIN_ZOOM}
+                      max={MAX_ZOOM}
+                      step="0.05"
+                      value={zoom}
+                      aria-label={t("pdfViewer.zoom")}
+                      onChange={(event) => {
+                        captureViewportCenterAnchor();
+                        setZoomValue(Number(event.target.value));
+                      }}
+                    />
+                  </div>
+                ) : null}
               </div>
-            ) : null}
-          </div>
 
-          <div className="pdf-preview__view-switch" role="group" aria-label="Page view">
-            <button
-              type="button"
-              className={pageView === "single" ? "pdf-preview__view-button pdf-preview__view-button--active" : "pdf-preview__view-button"}
-              aria-pressed={pageView === "single"}
-              aria-label="Single page"
-              title="Single page"
-              onClick={() => setPageView("single")}
-            >
-              <Square aria-hidden="true" />
-            </button>
-            <button
-              type="button"
-              className={pageView === "grid" ? "pdf-preview__view-button pdf-preview__view-button--active" : "pdf-preview__view-button"}
-              aria-pressed={pageView === "grid"}
-              aria-label="All pages"
-              title="All pages"
-              onClick={() => setPageView("grid")}
-            >
-              <Grid2X2 aria-hidden="true" />
-            </button>
-          </div>
+              <div className="pdf-preview__view-switch" role="group" aria-label="Page view">
+                <button
+                  type="button"
+                  className={pageView === "single" ? "pdf-preview__view-button pdf-preview__view-button--active" : "pdf-preview__view-button"}
+                  aria-pressed={pageView === "single"}
+                  aria-label="Single page"
+                  title="Single page"
+                  onClick={() => setPageView("single")}
+                >
+                  <Square aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  className={pageView === "grid" ? "pdf-preview__view-button pdf-preview__view-button--active" : "pdf-preview__view-button"}
+                  aria-pressed={pageView === "grid"}
+                  aria-label="All pages"
+                  title="All pages"
+                  onClick={() => {
+                    setOverviewPage(Math.floor((pageNumber - 1) / OVERVIEW_PAGE_SIZE));
+                    setPageView("grid");
+                  }}
+                >
+                  <Grid2X2 aria-hidden="true" />
+                </button>
+              </div>
 
-          {onOpenInSplit ? (
-            <button
-              type="button"
-              className="pdf-preview__split-button"
-              aria-label={t("pdfViewer.openInSplit")}
-              title={t("pdfViewer.openInSplit")}
-              onClick={() => {
-                if (mode === "inline") {
-                  setIsMinimized(true);
-                }
-                onOpenInSplit(pageNumber);
-              }}
-            >
-              <Columns2 aria-hidden="true" />
-              <span className="pdf-preview__split-label">{t("pdfViewer.openInSplit")}</span>
-            </button>
-          ) : null}
+              {onOpenInSplit ? (
+                <button
+                  type="button"
+                  className="pdf-preview__split-button"
+                  aria-label={t("pdfViewer.openInSplit")}
+                  title={t("pdfViewer.openInSplit")}
+                  onClick={() => {
+                    if (mode === "inline") {
+                      setIsMinimized(true);
+                    }
+                    onOpenInSplit(pageNumber);
+                  }}
+                >
+                  <Columns2 aria-hidden="true" />
+                </button>
+              ) : null}
 
-          {onClose ? (
-            <button
-              type="button"
-              className="pdf-preview__close"
-              aria-label={t("common.close")}
-              title={t("common.close")}
-              onClick={onClose}
-            >
-              <X aria-hidden="true" />
-            </button>
-          ) : null}
-        </div>
+              {onClose ? (
+                <button
+                  type="button"
+                  className="pdf-preview__close"
+                  aria-label={t("common.close")}
+                  title={t("common.close")}
+                  onClick={onClose}
+                >
+                  <X aria-hidden="true" />
+                </button>
+              ) : null}
+            </div>
+          </>
+        )}
       </div>
 
       {!isMinimized ? (
@@ -1231,33 +1261,61 @@ export function PdfViewerSurface({
             {t("pdfViewer.error")}
           </div>
         ) : pageView === "grid" ? (
-          <div className="pdf-preview__overview">
-            {pageThumbnailLoading && pageThumbnails.length === 0 ? (
-              <div className="pdf-preview__message">
-                <Loader2 className="pdf-preview__spinner" aria-hidden="true" />
-                <span>Loading pages…</span>
-              </div>
-            ) : null}
-            {pageThumbnails.map((thumbnail, index) => (
+          <div className="pdf-preview__overview-wrap">
+            <div className="pdf-preview__overview-nav">
               <button
                 type="button"
-                className="pdf-preview__overview-page"
-                key={thumbnail.src}
-                onClick={() => {
-                  setPageNumber(index + 1);
-                  setPageView("single");
-                }}
-                aria-label={`Page ${index + 1}`}
+                disabled={overviewPage <= 0}
+                aria-label={t("pdfViewer.previous")}
+                title={t("pdfViewer.previous")}
+                onClick={() => setOverviewPage((current) => Math.max(0, current - 1))}
               >
-                <div
-                  className="pdf-preview__overview-page-frame"
-                  style={{ aspectRatio: `${thumbnail.width} / ${thumbnail.height}` }}
-                >
-                  <img src={thumbnail.src} alt="" />
-                </div>
-                <span>{index + 1} / {pageThumbnails.length}</span>
+                <ChevronLeft aria-hidden="true" />
               </button>
-            ))}
+              <span>
+                {pageCount > 0 ? `${overviewStartPage}–${overviewEndPage} / ${pageCount}` : "…"}
+              </span>
+              <button
+                type="button"
+                disabled={overviewPage >= overviewPageCount - 1}
+                aria-label={t("pdfViewer.next")}
+                title={t("pdfViewer.next")}
+                onClick={() =>
+                  setOverviewPage((current) => Math.min(overviewPageCount - 1, current + 1))
+                }
+              >
+                <ChevronRight aria-hidden="true" />
+              </button>
+            </div>
+
+            <div className="pdf-preview__overview">
+              {pageThumbnailLoading && pageThumbnails.length === 0 ? (
+                <div className="pdf-preview__message">
+                  <Loader2 className="pdf-preview__spinner" aria-hidden="true" />
+                  <span>{t("pdfViewer.loading")}</span>
+                </div>
+              ) : null}
+              {pageThumbnails.map((thumbnail) => (
+                <button
+                  type="button"
+                  className="pdf-preview__overview-page"
+                  key={thumbnail.pageNumber}
+                  onClick={() => {
+                    setPageNumber(thumbnail.pageNumber);
+                    setPageView("single");
+                  }}
+                  aria-label={`${t("pdfViewer.page")} ${thumbnail.pageNumber}`}
+                >
+                  <div
+                    className="pdf-preview__overview-page-frame"
+                    style={{ aspectRatio: `${thumbnail.width} / ${thumbnail.height}` }}
+                  >
+                    <img src={thumbnail.src} alt="" />
+                  </div>
+                  <span>{thumbnail.pageNumber} / {pageCount}</span>
+                </button>
+              ))}
+            </div>
           </div>
         ) : (
           <div

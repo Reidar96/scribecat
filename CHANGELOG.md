@@ -1,3 +1,15 @@
+## [0.25.17] - 2026-09-27
+
+### Changes
+- Make the PDF split-view action icon-only so toolbar labels never overlap controls.
+- Replace oversized PDF multi-page previews with correctly proportioned thumbnails and six-page browsing.
+- Collapse minimized inline PDFs to the document title plus a single restore button.
+- Keep the editor toolbar grouped and wrap complete control groups cleanly in narrow desktop and split-view panes.
+- Remove Journal and Tasks folders and their notes from the toolbar's Insert link picker.
+- Keep table edge + controls from stealing clicks intended for nearby buttons and other interactive elements.
+- Keep mobile PDF fullscreen available.
+- Bump desktop, server and Docker release metadata to 0.25.17.
+
 ## [0.25.16] - 2026-09-27
 
 ### Changes
