@@ -1246,6 +1246,7 @@ export function DocumentViewer({
           {onOpenInSplit ? (
             <button
               type="button"
+              className="pdf-preview__split-button"
               aria-label={t("pdfViewer.openInSplit")}
               title={t("pdfViewer.openInSplit")}
               onClick={() => onOpenInSplit(pageNumber)}
