@@ -1029,6 +1029,15 @@
 }
 
 .pdf-preview__page--zoomed .pdf-preview__text-layer,
+.pdf-preview__page--zoomed {
+  cursor: grab;
+}
+
+.pdf-preview__page--zoomed.pdf-preview__page--panning {
+  cursor: grabbing;
+}
+
+.pdf-preview__page--zoomed .pdf-preview__text-layer,
 .pdf-preview__page--zoomed .pdf-preview__text-layer span,
 .pdf-preview__page--zoomed .pdf-preview__text-layer br {
   cursor: text;
@@ -1108,9 +1117,16 @@
 .pdf-preview__minimap::before {
   content: "";
   position: absolute;
-  inset: 8px;
-  border: 1px solid rgb(255 255 255 / 0.32);
-  background: rgb(255 255 255 / 0.08);
+  inset: 0;
+  background: rgb(0 0 0 / 0.28);
+  pointer-events: none;
+}
+
+.pdf-preview__minimap > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .pdf-preview__minimap-viewport {
@@ -1131,8 +1147,8 @@
   bottom: 0;
   z-index: -1;
   cursor: default;
-  user-select: none;
-  -webkit-user-select: none;
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 .pdf-preview__text-layer ::selection {
