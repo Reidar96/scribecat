@@ -1,0 +1,30 @@
+name: Publish ScribeCat 0.24.10
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  publish:
+    if: github.event.before == 'd05bf30643bfbfe8d73343ce857b19010c99a75f'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create release tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if ! gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/v0.24.10" >/dev/null 2>&1; then
+            gh api --method POST "repos/${GITHUB_REPOSITORY}/git/refs" \
+              -f ref='refs/tags/v0.24.10' \
+              -f sha='d05bf30643bfbfe8d73343ce857b19010c99a75f'
+          fi
+
+      - name: Dispatch release build
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run release.yml --repo "${GITHUB_REPOSITORY}" -f version=0.24.10
