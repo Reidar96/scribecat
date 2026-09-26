@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.25.0] - 2026-09-26
+
+### Fixed
+- Keep PDF pinch and trackpad zoom anchored to the pointer position.
+- Activate the PDF zoom controls when pinch/trackpad zoom starts.
+- Preserve native PDF text selection when the document is not zoomed.
+- Restore mouse/touch panning with grab/grabbing cursors while zoomed.
+- Add a zoom minimap showing the current viewport.
+
+### New features
+- Embed Word .docx documents in the editor with a readable document view.
+- Embed PowerPoint .pptx documents as single-slide views with previous/next controls.
+- Embed common video formats with native playback controls.
+- Accept Word, PowerPoint and video files from the editor media picker, paste and drop flows.
+
+
 ## [0.24.10] - 2026-09-26
 
 ### Fixed
