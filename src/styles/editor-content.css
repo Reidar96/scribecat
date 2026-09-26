@@ -1966,3 +1966,8 @@
     justify-self: center;
   }
 }
+
+
+.document-preview__office-page > .document-preview__word-sheet {
+  will-change: transform;
+}
