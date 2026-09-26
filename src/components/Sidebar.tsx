@@ -53,11 +53,6 @@ import { useTagIndex } from "@/hooks/useTagIndex";
 import { useVaultSearch } from "@/hooks/useVaultSearch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useStoredCollapsed, useWorkingSetHeight } from "@/hooks/useWorkingSetHeight";
-import {
-  carriesExternalFiles,
-  readDropPayload,
-  type DropPayload
-} from "@/lib/dragDrop/droppedSources";
 import { canDownloadFolderArchive } from "@/lib/export/markdownDownload";
 import { formatFolderLabel, getFolderBasename, getRelativeDisplayPath } from "@/lib/fileSystem";
 import { isJournalRelativePath } from "@/lib/journal";
@@ -145,8 +140,6 @@ type SidebarProps = {
   onFileTreeSelectionChange: (entries: BatchEntry[]) => void;
   fileTreeSelection: BatchEntry[];
   fileTreeSelectionCount: number;
-  // Files dragged in from outside the app, with the vault-relative folder they
-  // were dropped on ("" is the vault root).
   /** Set while the panel is a sheet (phone layout); renders the close button. */
   onClose?: () => void;
 };
@@ -355,9 +348,6 @@ export function Sidebar({
     setRootContextMenu({ x: event.clientX, y: event.clientY });
   };
 
-  // Files dragged in from outside the app land as imported notes. Drags that
-  // start inside the tree (reordering, or dragging a note into the editor) are
-  // none of this handler's business and are left to bubble untouched.
   // Same dismissal rules as the tree's own menu (useTreeContextMenu): any
   // click, a competing right-click, a scroll or Escape closes it.
   useEffect(() => {
