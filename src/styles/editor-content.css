@@ -798,8 +798,8 @@
 }
 
 .pdf-preview--inline {
-  height: min(68vh, 720px);
-  min-height: 360px;
+  height: auto;
+  min-height: 0;
   gap: 0;
   overflow: hidden;
   border: 1px solid rgba(var(--overlay-rgb), 0.16);
@@ -933,6 +933,10 @@
 }
 
 .pdf-preview--inline .pdf-preview__stage {
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  aspect-ratio: var(--pdf-page-aspect-ratio, 16 / 9);
   border-radius: 0;
   padding: 0.75rem;
   touch-action: pan-y pinch-zoom;
@@ -1057,11 +1061,6 @@
 
   .pdf-preview__stage {
     padding: 0.5rem;
-  }
-
-  .pdf-preview--inline {
-    height: min(62vh, 620px);
-    min-height: 320px;
   }
 
   .pdf-preview--inline .pdf-preview__stage {
