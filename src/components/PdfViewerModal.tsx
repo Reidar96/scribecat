@@ -180,6 +180,8 @@ export function PdfViewerSurface({
     startedOnText: boolean;
   } | null>(null);
   const zoomRef = useRef(1);
+  const zoomAnchorRef = useRef<{ x: number; y: number; pageX: number; pageY: number } | null>(null);
+  const [miniMap, setMiniMap] = useState({ left: 0, top: 0, width: 1, height: 1 });
   const [pageNumber, setPageNumber] = useState(1);
   const [pageInput, setPageInput] = useState("1");
   const [pageCount, setPageCount] = useState(0);
@@ -223,10 +225,18 @@ export function PdfViewerSurface({
       event.preventDefault();
       event.stopPropagation();
 
+      const page = pageRef.current;
+      if (page) {
+        const rect = page.getBoundingClientRect();
+        zoomAnchorRef.current = {
+          x: event.clientX,
+          y: event.clientY,
+          pageX: rect.width ? (event.clientX - rect.left) / rect.width : 0.5,
+          pageY: rect.height ? (event.clientY - rect.top) / rect.height : 0.5
+        };
+      }
       const factor = Math.exp(-event.deltaY / 240);
-      const next = Math.round(clampZoom(zoomRef.current * factor) * 100) / 100;
-      zoomRef.current = next;
-      setZoom(next);
+      setZoomValue(zoomRef.current * factor);
     };
 
     stage.addEventListener("wheel", handleWheel, { passive: false });
@@ -318,6 +328,28 @@ export function PdfViewerSurface({
       window.removeEventListener("resize", update);
     };
   }, []);
+
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    const updateMiniMap = () => {
+      const maxX = Math.max(1, stage.scrollWidth - stage.clientWidth);
+      const maxY = Math.max(1, stage.scrollHeight - stage.clientHeight);
+      setMiniMap({
+        left: Math.min(1, stage.scrollLeft / maxX),
+        top: Math.min(1, stage.scrollTop / maxY),
+        width: Math.min(1, stage.clientWidth / Math.max(stage.scrollWidth, stage.clientWidth)),
+        height: Math.min(1, stage.clientHeight / Math.max(stage.scrollHeight, stage.clientHeight))
+      });
+    };
+    updateMiniMap();
+    stage.addEventListener("scroll", updateMiniMap, { passive: true });
+    window.addEventListener("resize", updateMiniMap);
+    return () => {
+      stage.removeEventListener("scroll", updateMiniMap);
+      window.removeEventListener("resize", updateMiniMap);
+    };
+  }, [zoom, pageNumber, viewportVersion]);
 
   useEffect(() => {
     const document = documentRef.current;
@@ -448,6 +480,16 @@ export function PdfViewerSurface({
       } finally {
         if (active) {
           setRendering(false);
+          const anchor = zoomAnchorRef.current;
+          if (anchor) {
+            requestAnimationFrame(() => {
+              if (!stageRef.current || !pageRef.current) return;
+              const rect = pageRef.current.getBoundingClientRect();
+              stageRef.current.scrollLeft += rect.left + rect.width * anchor.pageX - anchor.x;
+              stageRef.current.scrollTop += rect.top + rect.height * anchor.pageY - anchor.y;
+              zoomAnchorRef.current = null;
+            });
+          }
         }
       }
     });
@@ -508,10 +550,23 @@ export function PdfViewerSurface({
     setPageNumber(Math.max(1, Math.min(pageCount, requested)));
   };
 
+  const captureZoomAnchor = (clientX: number, clientY: number) => {
+    const page = pageRef.current;
+    if (!page) return;
+    const rect = page.getBoundingClientRect();
+    zoomAnchorRef.current = {
+      x: clientX,
+      y: clientY,
+      pageX: rect.width ? (clientX - rect.left) / rect.width : 0.5,
+      pageY: rect.height ? (clientY - rect.top) / rect.height : 0.5
+    };
+  };
+
   const setZoomValue = (value: number) => {
     const next = Math.round(clampZoom(value) * 100) / 100;
     zoomRef.current = next;
     setZoom(next);
+    if (next !== 1) setZoomOpen(true);
   };
 
   const toggleZoomControls = () => {
@@ -647,6 +702,9 @@ export function PdfViewerSurface({
       setIsPanning(false);
 
       const [first, second] = Array.from(pointers.values());
+      const midpointX = (first.x + second.x) / 2;
+      const midpointY = (first.y + second.y) / 2;
+      captureZoomAnchor(midpointX, midpointY);
       pinchRef.current = {
         distance: Math.max(1, pointerDistance(first, second)),
         zoom: zoomRef.current
@@ -921,7 +979,20 @@ export function PdfViewerSurface({
         </div>
       </div>
 
-      <div ref={stageRef} className="pdf-preview__stage">
+      <div ref={stageRef} className={`pdf-preview__stage${zoom > 1 ? " pdf-preview__stage--zoomed" : ""}`}>
+        {zoom > 1 ? (
+          <div className="pdf-preview__minimap" aria-hidden="true">
+            <div
+              className="pdf-preview__minimap-viewport"
+              style={{
+                left: miniMap.left * 100 + "%",
+                top: miniMap.top * 100 + "%",
+                width: miniMap.width * 100 + "%",
+                height: miniMap.height * 100 + "%"
+              }}
+            />
+          </div>
+        ) : null}
         {loading ? (
           <div className="pdf-preview__message">
             <Loader2 className="pdf-preview__spinner" aria-hidden="true" />

@@ -10,6 +10,7 @@ import { EditorFileContext } from "@/lib/editorFileContext";
 import { ImageLightbox } from "@/components/ImageLightbox";
 import { ImageContextMenuItems } from "@/components/ImageContextMenuItems";
 import { PdfViewerSurface } from "@/components/PdfViewerModal";
+import { DocumentViewer } from "@/components/DocumentViewer";
 import { ContextMenuSurface } from "@/components/fileTree/ContextMenuSurface";
 import { useContextMenuState } from "@/components/fileTree/useContextMenuState";
 import { useLongPressContextMenu } from "@/hooks/useLongPressContextMenu";
@@ -22,13 +23,13 @@ const MIN_IMAGE_WIDTH = 48;
 const RESIZE_HANDLES = ["nw", "ne", "sw", "se"] as const;
 type ResizeHandle = (typeof RESIZE_HANDLES)[number];
 
-function isLocalPdfSource(src: string): boolean {
+function isLocalDocumentSource(src: string): boolean {
   if (!src || ABSOLUTE_URL_PATTERN.test(src) || src.startsWith("//")) {
     return false;
   }
 
   const [path] = src.split(/[?#]/);
-  return /\.pdf$/i.test(path);
+  return /\.(pdf|docx|pptx|mp4|webm|mov|m4v|ogv)$/i.test(path);
 }
 
 function localPdfLabel(src: string, alt: string): string {
@@ -47,7 +48,7 @@ export function ImageView({ node, editor, getPos, updateAttributes, selected }: 
   const src = (node.attrs.src as string | null) ?? "";
   const alt = (node.attrs.alt as string | null) ?? "";
   const width = (node.attrs.width as number | null) ?? null;
-  const isPdf = isLocalPdfSource(src);
+  const isPdf = isLocalDocumentSource(src);
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
   const [pdfAbsolutePath, setPdfAbsolutePath] = useState<string | null>(null);
   const [loadError, setLoadError] = useState(false);
@@ -151,6 +152,8 @@ export function ImageView({ node, editor, getPos, updateAttributes, selected }: 
       : objectUrl;
   const effectiveWidth = dragWidth ?? width;
   const pdfLabel = localPdfLabel(src, alt);
+  const mediaExtension = src.split(/[?#]/)[0].split(".").pop()?.toLowerCase() ?? "";
+  const isDocumentPreview = ["docx", "pptx", "mp4", "webm", "mov", "m4v", "ogv"].includes(mediaExtension);
 
   const startResize = (handle: ResizeHandle) => (event: React.PointerEvent<HTMLSpanElement>) => {
     const imgEl = imgRef.current;
@@ -291,20 +294,24 @@ export function ImageView({ node, editor, getPos, updateAttributes, selected }: 
     >
       {isPdf ? (
         pdfAbsolutePath ? (
-          <PdfViewerSurface
-            absolutePath={pdfAbsolutePath}
-            label={pdfLabel}
-            mode="inline"
-            onOpenInSplit={
-              onOpenPdfInSplit
-                ? () =>
-                    onOpenPdfInSplit({
-                      absolutePath: pdfAbsolutePath,
-                      label: pdfLabel
-                    })
-                : undefined
-            }
-          />
+          isDocumentPreview ? (
+            <DocumentViewer absolutePath={pdfAbsolutePath} label={pdfLabel} />
+          ) : (
+            <PdfViewerSurface
+              absolutePath={pdfAbsolutePath}
+              label={pdfLabel}
+              mode="inline"
+              onOpenInSplit={
+                onOpenPdfInSplit
+                  ? () =>
+                      onOpenPdfInSplit({
+                        absolutePath: pdfAbsolutePath,
+                        label: pdfLabel
+                      })
+                  : undefined
+              }
+            />
+          )
         ) : (
           <span className="editor-image-wrapper__placeholder">
             {loadError ? t("pdfViewer.error") : t("pdfViewer.loading")}
