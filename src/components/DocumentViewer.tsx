@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, FileText, Grid2X2, Loader2, Play, Square, X } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Copy, FileText, Grid2X2, Loader2, Play, Square, X } from "lucide-react";
 import { readFile } from "@/platform/vaultFs";
 
 type Props = { absolutePath: string; label: string; onClose?: () => void };
-type Slide = { src: string };
+type Slide = { src: string; svg: string; text: string };
 
 function extension(path: string): string {
   return path.split(/[?#]/)[0].split(".").pop()?.toLowerCase() ?? "";
@@ -27,6 +27,7 @@ export function DocumentViewer({ absolutePath, label, onClose }: Props) {
   const [error, setError] = useState(false);
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
   const [pptView, setPptView] = useState<"single" | "all">("single");
+  const [pptCopied, setPptCopied] = useState(false);
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
 
   const isVideo = ["mp4", "webm", "mov", "m4v", "ogv"].includes(ext);
@@ -65,7 +66,16 @@ export function DocumentViewer({ absolutePath, label, onClose }: Props) {
           if (rendered.length === 0) {
             throw new Error("The PowerPoint file does not contain readable slides.");
           }
-          if (active) setSlides(pptBlobUrls.map((src) => ({ src })));
+          if (active) {
+            const decoder = new TextDecoder();
+            setSlides(
+              rendered.map((page, index) => ({
+                src: pptBlobUrls[index],
+                svg: decoder.decode(page.data),
+                text: page.text
+              }))
+            );
+          }
         } else {
           throw new Error("Unsupported document format");
         }
@@ -113,6 +123,32 @@ export function DocumentViewer({ absolutePath, label, onClose }: Props) {
     else setSlide((n) => Math.max(0, n - 1));
   };
 
+  const copyPowerPointText = async () => {
+    const text = slides[slide]?.text ?? "";
+    if (!text) return;
+
+    try {
+      await navigator.clipboard?.writeText(text);
+      setPptCopied(true);
+      window.setTimeout(() => setPptCopied(false), 1400);
+    } catch {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand("copy");
+        setPptCopied(true);
+        window.setTimeout(() => setPptCopied(false), 1400);
+      } finally {
+        textarea.remove();
+      }
+    }
+  };
+
   const kind = useMemo(() => isVideo ? "video" : isPowerPoint ? "powerpoint" : "word", [isVideo, isPowerPoint]);
 
   return (
@@ -145,6 +181,16 @@ export function DocumentViewer({ absolutePath, label, onClose }: Props) {
             </>
           ) : null}
           {isPowerPoint && pptView === "single" && slides.length > 0 ? <span>{slide + 1} / {slides.length}</span> : null}
+          {isPowerPoint && pptView === "single" && slides.length > 0 ? (
+            <button
+              type="button"
+              onClick={() => void copyPowerPointText()}
+              aria-label={pptCopied ? "Text copied" : "Copy slide text"}
+              title={pptCopied ? "Text copied" : "Copy slide text"}
+            >
+              {pptCopied ? <Check /> : <Copy />}
+            </button>
+          ) : null}
           {isPowerPoint && pptView === "single" && slides.length > 1 ? <button type="button" disabled={slide === 0} onClick={() => setSlide((n) => Math.max(0, n - 1))} aria-label="Previous slide"><ChevronLeft /></button> : null}
           {isPowerPoint && pptView === "single" && slides.length > 1 ? <button type="button" disabled={slide === slides.length - 1} onClick={() => setSlide((n) => Math.min(slides.length - 1, n + 1))} aria-label="Next slide"><ChevronRight /></button> : null}
           {onClose ? <button type="button" onClick={onClose} aria-label="Close"><X /></button> : null}
@@ -157,7 +203,10 @@ export function DocumentViewer({ absolutePath, label, onClose }: Props) {
         {isWord && html && <article className="document-preview__word" dangerouslySetInnerHTML={{ __html: html }} />}
         {isPowerPoint && slides.length > 0 && pptView === "single" ? (
           <section className="document-preview__slide" aria-label={`Slide ${slide + 1}`} onPointerDown={handleSlidePointerDown} onPointerUp={handleSlidePointerUp}>
-            <img src={slides[slide].src} alt="" />
+            <div
+              className="document-preview__slide-svg"
+              dangerouslySetInnerHTML={{ __html: slides[slide].svg }}
+            />
           </section>
         ) : null}
         {isPowerPoint && slides.length > 0 && pptView === "all" ? (
@@ -172,7 +221,11 @@ export function DocumentViewer({ absolutePath, label, onClose }: Props) {
                   setPptView("single");
                 }}
               >
-                <img src={currentSlide.src} alt="" />
+                <div
+                  className="document-preview__slide-svg"
+                  aria-hidden="true"
+                  dangerouslySetInnerHTML={{ __html: currentSlide.svg }}
+                />
               </section>
             ))}
           </div>
