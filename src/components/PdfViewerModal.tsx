@@ -72,11 +72,14 @@ type PdfJsModuleLike = {
 export type PdfPreviewRequest = {
   absolutePath: string;
   label: string;
+  pageNumber?: number;
 };
 
 type PdfViewerSurfaceProps = PdfPreviewRequest & {
   onClose?: () => void;
-  onOpenInSplit?: () => void;
+  onOpenInSplit?: (pageNumber: number) => void;
+  onPageChange?: (pageNumber: number) => void;
+  initialPageNumber?: number;
   mode?: "modal" | "split" | "inline";
   restoreMinimizedRequestId?: number;
 };
@@ -135,6 +138,8 @@ export function PdfViewerSurface({
   label,
   onClose,
   onOpenInSplit,
+  onPageChange,
+  initialPageNumber = 1,
   mode = "modal",
   restoreMinimizedRequestId = 0
 }: PdfViewerSurfaceProps) {
@@ -172,8 +177,8 @@ export function PdfViewerSurface({
     pageX: number;
     pageY: number;
   } | null>(null);
-  const [pageNumber, setPageNumber] = useState(1);
-  const [pageInput, setPageInput] = useState("1");
+  const [pageNumber, setPageNumber] = useState(Math.max(1, initialPageNumber));
+  const [pageInput, setPageInput] = useState(String(Math.max(1, initialPageNumber)));
   const [pageCount, setPageCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [rendering, setRendering] = useState(false);
@@ -203,7 +208,8 @@ export function PdfViewerSurface({
 
   useEffect(() => {
     setPageInput(String(pageNumber));
-  }, [pageNumber]);
+    onPageChange?.(pageNumber);
+  }, [pageNumber, onPageChange]);
 
   useEffect(() => {
     zoomRef.current = zoom;
@@ -297,7 +303,9 @@ export function PdfViewerSurface({
 
         documentRef.current = document;
         setPageCount(document.numPages);
-        setPageNumber(1);
+        setPageNumber(
+          Math.max(1, Math.min(document.numPages, initialPageNumber))
+        );
       } catch {
         if (active) {
           setError(true);
@@ -319,7 +327,7 @@ export function PdfViewerSurface({
       textLayerConstructorRef.current = null;
       void loadedDocument?.destroy?.();
     };
-  }, [absolutePath]);
+  }, [absolutePath, initialPageNumber]);
 
   useEffect(() => {
     const stage = stageRef.current;
@@ -1107,22 +1115,6 @@ export function PdfViewerSurface({
             {isFullscreen ? <Minimize2 aria-hidden="true" /> : <Maximize2 aria-hidden="true" />}
           </button>
 
-          {mode !== "modal" ? (
-            <button
-              type="button"
-              aria-pressed={isMinimized}
-              aria-label={isMinimized ? "Expand PDF" : "Minimize PDF"}
-              title={isMinimized ? "Expand PDF" : "Minimize PDF"}
-              onClick={() => setIsMinimized((value) => !value)}
-            >
-              {isMinimized ? (
-                <Maximize2 aria-hidden="true" />
-              ) : (
-                <Minimize2 aria-hidden="true" />
-              )}
-            </button>
-          ) : null}
-
           <div className="pdf-preview__zoom">
             <button
               type="button"
@@ -1188,7 +1180,7 @@ export function PdfViewerSurface({
                 if (mode === "inline") {
                   setIsMinimized(true);
                 }
-                onOpenInSplit();
+                onOpenInSplit(pageNumber);
               }}
             >
               <Columns2 aria-hidden="true" />
