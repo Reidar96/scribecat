@@ -1,3 +1,12 @@
+## [0.25.15] - 2026-09-26
+
+### Improvements
+- Simplify document and PDF viewer controls on phones to paging, zoom and close.
+- Limit document and PDF zoom to 100–300% on desktop and mobile.
+- Rebuild PowerPoint preview rendering from the PPTX slide size, object positions, text runs, common shapes, images and theme colors instead of flattening extracted text and images into a generic 16:9 canvas.
+- Preserve each PowerPoint slide's native aspect ratio so zoom changes the page inside the fixed viewer.
+- Keep Word and PowerPoint "open in split" on the same split path as PDF previews.
+
 # ScribeCat 0.25.14
 
 ### Office viewer
