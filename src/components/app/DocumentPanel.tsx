@@ -458,12 +458,13 @@ export function DocumentPanel({
     setActiveEditorPane("primary");
   };
 
-  const openPdfInSplit = (
-    request: PdfPreviewRequest & { ownerFilePath: string }
+  const openDocumentInSplit = (
+    request: DocumentPreviewState & { ownerFilePath: string }
   ) => {
     if (layout !== "desktop") return;
 
-    setAttachedPdf(request);
+    setAttachedPdf(null);
+    setAttachedDocument(request);
     setSecondarySide("right");
     setSplitPickerOpen(false);
     setSplitDropPreview(null);
@@ -473,6 +474,12 @@ export function DocumentPanel({
     } else if (request.ownerFilePath === selectedFilePath) {
       onCloseSecondary();
     }
+  };
+
+  const openPdfInSplit = (
+    request: PdfPreviewRequest & { ownerFilePath: string }
+  ) => {
+    openDocumentInSplit(request);
   };
 
   const openSplitPickerForSide = (side: "left" | "right") => {
@@ -1044,6 +1051,7 @@ export function DocumentPanel({
                           mode="split"
                           absolutePath={visibleAttachedDocument.absolutePath}
                           label={visibleAttachedDocument.label}
+                          onOpenInSplit={undefined}
                           onClose={() => {
                             setAttachedDocument(null);
                             setActiveEditorPane("primary");
