@@ -87,6 +87,23 @@ const EDITOR_MEDIA_EXTENSIONS = ["png", "jpg", "jpeg", "gif", "webp", "svg", "bm
 // dark variant in App.css key off this exact name.
 const PAPER_SURFACE_CLASS = "editor-view__surface--paper";
 
+function isLinkOptionInsideFolder(option: VaultFileOption, folder: string): boolean {
+  const normalize = (value: string) =>
+    value
+      .replace(/\\/g, "/")
+      .replace(/^\.\//, "")
+      .replace(/^\/+|\/+$/g, "")
+      .toLocaleLowerCase();
+
+  const relativePath = normalize(option.relativePath);
+  const folderPath = normalize(folder);
+
+  return Boolean(
+    folderPath &&
+      (relativePath === folderPath || relativePath.startsWith(`${folderPath}/`))
+  );
+}
+
 type EditorProps = {
   markdown: string;
   /** Full note including YAML frontmatter; the editor itself only sees markdown body. */
@@ -238,6 +255,8 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   const paperSurface = useEditorSettingsStore((state) => state.paperSurface);
   const documentWidth = useEditorSettingsStore((state) => state.documentWidth);
   const detailsPanelVisible = useEditorSettingsStore((state) => state.detailsPanelVisible);
+  const journalFolder = useEditorSettingsStore((state) => state.journalSettings.folder);
+  const taskFolder = useEditorSettingsStore((state) => state.taskSettings.folder);
   const layout = useLayoutMode();
   // Phone and tablet show the details panel as a sheet with its own switch.
   const detailsSheetOpen = useEditorSettingsStore((state) => state.detailsSheetOpen);
@@ -271,6 +290,15 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   const fileLinkOptions = useMemo(
     () => (filePath ? buildVaultFileOptions(folderPath, vaultFilePaths, filePath) : []),
     [folderPath, vaultFilePaths, filePath]
+  );
+  const linkDialogFileOptions = useMemo(
+    () =>
+      fileLinkOptions.filter(
+        (option) =>
+          !isLinkOptionInsideFolder(option, journalFolder) &&
+          !isLinkOptionInsideFolder(option, taskFolder)
+      ),
+    [fileLinkOptions, journalFolder, taskFolder]
   );
 
   const [feedback, setFeedback] = useState<{ kind: "error" | "success"; message: string } | null>(null);
@@ -1561,7 +1589,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         initialHref={linkDialog?.href ?? ""}
         selectedText={linkDialog?.selectedText ?? ""}
         isLinkActive={linkDialog?.isLinkActive ?? false}
-        fileOptions={fileLinkOptions}
+        fileOptions={linkDialogFileOptions}
         currentFilePath={filePath}
         onSubmit={handleLinkSubmit}
         onRemove={handleLinkRemove}
