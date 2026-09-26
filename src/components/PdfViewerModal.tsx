@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { readFile } from "@/platform/vaultFs";
+import { copyText } from "@/lib/clipboard";
 
 type PdfTextItemLike = {
   str?: string;
@@ -80,26 +81,6 @@ type PdfViewerSurfaceProps = PdfPreviewRequest & {
   restoreMinimizedRequestId?: number;
 };
 
-async function copyText(text: string): Promise<void> {
-  if (navigator.clipboard?.writeText) {
-    await navigator.clipboard.writeText(text);
-    return;
-  }
-
-  const textarea = document.createElement("textarea");
-  textarea.value = text;
-  textarea.setAttribute("readonly", "");
-  textarea.style.position = "fixed";
-  textarea.style.opacity = "0";
-  document.body.appendChild(textarea);
-  textarea.select();
-
-  try {
-    document.execCommand("copy");
-  } finally {
-    textarea.remove();
-  }
-}
 
 function textFromItems(items: unknown[]): string {
   let text = "";
@@ -829,7 +810,8 @@ export function PdfViewerSurface({
         return;
       }
 
-      await copyText(text);
+      const didCopy = await copyText(text);
+      if (!didCopy) return;
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1400);
     } finally {
