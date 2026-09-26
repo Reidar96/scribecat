@@ -1,9 +1,9 @@
 name: Validate ScribeCat 0.24.9
 
 on:
-  push:
+  pull_request:
     branches:
-      - release/0.24.9-pdf-zoom-fullscreen
+      - main
 
 permissions:
   contents: read
