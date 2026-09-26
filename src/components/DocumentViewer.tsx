@@ -1234,11 +1234,9 @@ export function DocumentViewer({
               }
               aria-label={"Slide " + pageNumber}
             >
-              <div
+              <OfficeVisual
+                svg={slides[pageNumber - 1].svg}
                 className="document-preview__slide-svg"
-                dangerouslySetInnerHTML={{
-                  __html: slides[pageNumber - 1].svg
-                }}
               />
             </section>
           ) : null}
@@ -1258,12 +1256,9 @@ export function DocumentViewer({
                       aria-label={"Slide " + (index + 1)}
                     >
                       <div className="document-preview__slide document-preview__slide--thumbnail">
-                        <div
+                        <OfficeVisual
+                          svg={slideData.svg}
                           className="document-preview__slide-svg"
-                          aria-hidden="true"
-                          dangerouslySetInnerHTML={{
-                            __html: slideData.svg
-                          }}
                         />
                       </div>
                       <span>{index + 1} / {slides.length}</span>
