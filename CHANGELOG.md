@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.24.8] - 2026-09-26
+
+### Fixes
+- Fix text selection in the embedded PDF viewer.
+- Remove the CSS rule that accidentally disabled selection on PDF.js text spans.
+- Apply the PDF.js text-layer sizing and transform variables so selectable text stays aligned with the rendered PDF page.
+
 ## [0.24.7] - 2026-09-26
 
 ### Fixes
