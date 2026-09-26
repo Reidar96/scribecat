@@ -48,9 +48,12 @@ export function ImageView({ node, editor, getPos, updateAttributes, selected }: 
   const src = (node.attrs.src as string | null) ?? "";
   const alt = (node.attrs.alt as string | null) ?? "";
   const width = (node.attrs.width as number | null) ?? null;
-  const isPdf = isLocalDocumentSource(src);
+  const isLocalDocument = isLocalDocumentSource(src);
+  const mediaExtension = src.split(/[?#]/)[0].split(".").pop()?.toLowerCase() ?? "";
+  const isPdf = mediaExtension === "pdf";
+  const isDocumentPreview = ["docx", "pptx", "mp4", "webm", "mov", "m4v", "ogv"].includes(mediaExtension);
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
-  const [pdfAbsolutePath, setPdfAbsolutePath] = useState<string | null>(null);
+  const [documentAbsolutePath, setDocumentAbsolutePath] = useState<string | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [dragWidth, setDragWidth] = useState<number | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -64,7 +67,7 @@ export function ImageView({ node, editor, getPos, updateAttributes, selected }: 
 
   useEffect(() => {
     setObjectUrl(null);
-    setPdfAbsolutePath(null);
+    setDocumentAbsolutePath(null);
     setLoadError(false);
 
     if (!src) {
@@ -86,7 +89,7 @@ export function ImageView({ node, editor, getPos, updateAttributes, selected }: 
           const absolutePath = await join(currentFileDir, decodeFileLinkHref(rawPath));
 
           if (isActive) {
-            setPdfAbsolutePath(absolutePath);
+            setDocumentAbsolutePath(absolutePath);
             setLoadError(false);
           }
         } catch {
@@ -143,7 +146,7 @@ export function ImageView({ node, editor, getPos, updateAttributes, selected }: 
         URL.revokeObjectURL(createdUrl);
       }
     };
-  }, [filePath, isPdf, src]);
+  }, [filePath, isLocalDocument, src]);
 
   const displaySrc = isPdf
     ? null
@@ -204,7 +207,7 @@ export function ImageView({ node, editor, getPos, updateAttributes, selected }: 
   // the native pointer gesture for text selection and swiping.
   const selectOnTouch = (event: React.PointerEvent<HTMLElement>) => {
     if (
-      isPdf ||
+      isLocalDocument ||
       !editor.isEditable ||
       event.pointerType === "mouse" ||
       event.button !== 0
@@ -238,16 +241,16 @@ export function ImageView({ node, editor, getPos, updateAttributes, selected }: 
     <NodeViewWrapper
       as="div"
       className={
-        isPdf
+        isLocalDocument
           ? "editor-image-wrapper editor-pdf-wrapper"
           : "editor-image-wrapper"
       }
-      data-drag-handle={isPdf ? undefined : ""}
+      data-drag-handle={isLocalDocument ? undefined : ""}
       data-scribecat-long-press={
-        isPdf ? undefined : longPressProps["data-scribecat-long-press"]
+        isLocalDocument ? undefined : longPressProps["data-scribecat-long-press"]
       }
       onPointerDown={(event: React.PointerEvent<HTMLElement>) => {
-        if (isPdf) {
+        if (isLocalDocument) {
           return;
         }
 
@@ -255,27 +258,27 @@ export function ImageView({ node, editor, getPos, updateAttributes, selected }: 
         longPressProps.onPointerDown(event);
       }}
       onPointerMove={(event: React.PointerEvent<HTMLElement>) => {
-        if (!isPdf) {
+        if (!isLocalDocument) {
           longPressProps.onPointerMove(event);
         }
       }}
       onPointerUp={(event: React.PointerEvent<HTMLElement>) => {
-        if (!isPdf) {
+        if (!isLocalDocument) {
           longPressProps.onPointerUp(event);
         }
       }}
       onPointerCancel={(event: React.PointerEvent<HTMLElement>) => {
-        if (!isPdf) {
+        if (!isLocalDocument) {
           longPressProps.onPointerCancel(event);
         }
       }}
       onClickCapture={(event: React.MouseEvent<HTMLElement>) => {
-        if (!isPdf) {
+        if (!isLocalDocument) {
           longPressProps.onClickCapture(event);
         }
       }}
       onContextMenuCapture={(event: React.MouseEvent<HTMLElement>) => {
-        if (!isPdf) {
+        if (!isLocalDocument) {
           longPressProps.onContextMenuCapture(event);
         }
       }}
@@ -292,20 +295,20 @@ export function ImageView({ node, editor, getPos, updateAttributes, selected }: 
         setContextMenu({ x: event.clientX, y: event.clientY });
       }}
     >
-      {isPdf ? (
-        pdfAbsolutePath ? (
+      {isLocalDocument ? (
+        documentAbsolutePath ? (
           isDocumentPreview ? (
-            <DocumentViewer absolutePath={pdfAbsolutePath} label={pdfLabel} />
+            <DocumentViewer absolutePath={documentAbsolutePath} label={pdfLabel} />
           ) : (
             <PdfViewerSurface
-              absolutePath={pdfAbsolutePath}
+              absolutePath={documentAbsolutePath}
               label={pdfLabel}
               mode="inline"
               onOpenInSplit={
                 onOpenPdfInSplit
                   ? () =>
                       onOpenPdfInSplit({
-                        absolutePath: pdfAbsolutePath,
+                        absolutePath: documentAbsolutePath,
                         label: pdfLabel
                       })
                   : undefined
@@ -356,7 +359,7 @@ export function ImageView({ node, editor, getPos, updateAttributes, selected }: 
         </span>
       )}
 
-      {!isPdf && contextMenu ? (
+      {!isLocalDocument && contextMenu ? (
         <ContextMenuSurface
           x={contextMenu.x}
           y={contextMenu.y}
