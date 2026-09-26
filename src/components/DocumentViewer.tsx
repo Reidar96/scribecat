@@ -293,7 +293,6 @@ export function DocumentViewer({
     source.style.maxWidth = "none";
     source.style.boxSizing = "border-box";
 
-    const pageStyle = window.getComputedStyle(source);
     const children = Array.from(source.children);
 
     if (children.length === 0) {
