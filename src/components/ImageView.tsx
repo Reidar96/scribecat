@@ -9,9 +9,11 @@ import { NodeViewWrapper, type ReactNodeViewProps } from "@tiptap/react";
 import { EditorFileContext } from "@/lib/editorFileContext";
 import { ImageLightbox } from "@/components/ImageLightbox";
 import { ImageContextMenuItems } from "@/components/ImageContextMenuItems";
+import { PdfViewerSurface } from "@/components/PdfViewerModal";
 import { ContextMenuSurface } from "@/components/fileTree/ContextMenuSurface";
 import { useContextMenuState } from "@/components/fileTree/useContextMenuState";
 import { useLongPressContextMenu } from "@/hooks/useLongPressContextMenu";
+import { decodeFileLinkHref } from "@/lib/editor/fileLinks";
 import { ABSOLUTE_URL_PATTERN, guessImageMimeType } from "@/lib/fileSystem";
 import { suggestedImageFileName } from "@/lib/imageFileName";
 
@@ -20,13 +22,34 @@ const MIN_IMAGE_WIDTH = 48;
 const RESIZE_HANDLES = ["nw", "ne", "sw", "se"] as const;
 type ResizeHandle = (typeof RESIZE_HANDLES)[number];
 
+function isLocalPdfSource(src: string): boolean {
+  if (!src || ABSOLUTE_URL_PATTERN.test(src) || src.startsWith("//")) {
+    return false;
+  }
+
+  const [path] = src.split(/[?#]/);
+  return /\.pdf$/i.test(path);
+}
+
+function localPdfLabel(src: string, alt: string): string {
+  if (alt) {
+    return alt;
+  }
+
+  const [rawPath] = src.split(/[?#]/);
+  const decodedPath = decodeFileLinkHref(rawPath);
+  return decodedPath.replace(/\\/g, "/").split("/").pop() || decodedPath;
+}
+
 export function ImageView({ node, editor, getPos, updateAttributes, selected }: ReactNodeViewProps) {
   const { t } = useTranslation();
-  const { filePath } = useContext(EditorFileContext);
+  const { filePath, onOpenPdfInSplit } = useContext(EditorFileContext);
   const src = (node.attrs.src as string | null) ?? "";
   const alt = (node.attrs.alt as string | null) ?? "";
   const width = (node.attrs.width as number | null) ?? null;
+  const isPdf = isLocalPdfSource(src);
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
+  const [pdfAbsolutePath, setPdfAbsolutePath] = useState<string | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [dragWidth, setDragWidth] = useState<number | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -39,8 +62,47 @@ export function ImageView({ node, editor, getPos, updateAttributes, selected }: 
   const dragWidthRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (!src || ABSOLUTE_URL_PATTERN.test(src)) {
-      setLoadError(false);
+    setObjectUrl(null);
+    setPdfAbsolutePath(null);
+    setLoadError(false);
+
+    if (!src) {
+      return;
+    }
+
+    if (isPdf) {
+      if (!filePath) {
+        setLoadError(true);
+        return;
+      }
+
+      let isActive = true;
+
+      const resolvePdf = async () => {
+        try {
+          const [rawPath] = src.split(/[?#]/);
+          const currentFileDir = await dirname(filePath);
+          const absolutePath = await join(currentFileDir, decodeFileLinkHref(rawPath));
+
+          if (isActive) {
+            setPdfAbsolutePath(absolutePath);
+            setLoadError(false);
+          }
+        } catch {
+          if (isActive) {
+            setLoadError(true);
+          }
+        }
+      };
+
+      void resolvePdf();
+
+      return () => {
+        isActive = false;
+      };
+    }
+
+    if (ABSOLUTE_URL_PATTERN.test(src)) {
       return;
     }
 
@@ -80,10 +142,15 @@ export function ImageView({ node, editor, getPos, updateAttributes, selected }: 
         URL.revokeObjectURL(createdUrl);
       }
     };
-  }, [filePath, src]);
+  }, [filePath, isPdf, src]);
 
-  const displaySrc = ABSOLUTE_URL_PATTERN.test(src) ? src : objectUrl;
+  const displaySrc = isPdf
+    ? null
+    : ABSOLUTE_URL_PATTERN.test(src)
+      ? src
+      : objectUrl;
   const effectiveWidth = dragWidth ?? width;
+  const pdfLabel = localPdfLabel(src, alt);
 
   const startResize = (handle: ResizeHandle) => (event: React.PointerEvent<HTMLSpanElement>) => {
     const imgEl = imgRef.current;
@@ -128,14 +195,17 @@ export function ImageView({ node, editor, getPos, updateAttributes, selected }: 
     window.addEventListener("pointerup", onPointerUp);
   };
 
-  // A tap on the image must not focus the contenteditable: on phones and
-  // tablets that raises the on-screen keyboard for a selection that has nothing
-  // to type into. Select the node directly instead of letting ProseMirror's
-  // mousedown handling focus the view first. A mouse keeps the default path,
-  // and an editor that is already focused stays focused (the keyboard is up
-  // anyway, and Backspace on the selected image should keep working).
+  // A tap on an ordinary image must not focus the contenteditable: on phones
+  // and tablets that raises the on-screen keyboard for a selection that has
+  // nothing to type into. The inline PDF is different: its text layer needs
+  // the native pointer gesture for text selection and swiping.
   const selectOnTouch = (event: React.PointerEvent<HTMLElement>) => {
-    if (!editor.isEditable || event.pointerType === "mouse" || event.button !== 0) {
+    if (
+      isPdf ||
+      !editor.isEditable ||
+      event.pointerType === "mouse" ||
+      event.button !== 0
+    ) {
       return;
     }
 
@@ -150,7 +220,7 @@ export function ImageView({ node, editor, getPos, updateAttributes, selected }: 
     editor.view.dispatch(state.tr.setSelection(NodeSelection.create(state.doc, pos)));
   };
 
-  const deleteImage = () => {
+  const deleteMedia = () => {
     if (!editor.isEditable) return;
 
     const pos = getPos();
@@ -162,27 +232,85 @@ export function ImageView({ node, editor, getPos, updateAttributes, selected }: 
   };
 
   return (
-      <NodeViewWrapper
-        as="div"
-        className="editor-image-wrapper"
-        data-drag-handle
-        data-scribecat-long-press={longPressProps["data-scribecat-long-press"]}
-        onPointerDown={(event: React.PointerEvent<HTMLElement>) => {
-          selectOnTouch(event);
-          longPressProps.onPointerDown(event);
-        }}
-        onPointerMove={longPressProps.onPointerMove}
-        onPointerUp={longPressProps.onPointerUp}
-        onPointerCancel={longPressProps.onPointerCancel}
-        onClickCapture={longPressProps.onClickCapture}
-        onContextMenuCapture={longPressProps.onContextMenuCapture}
-        onContextMenu={(event: React.MouseEvent<HTMLElement>) => {
-          event.preventDefault();
+    <NodeViewWrapper
+      as="div"
+      className={
+        isPdf
+          ? "editor-image-wrapper editor-pdf-wrapper"
+          : "editor-image-wrapper"
+      }
+      data-drag-handle={isPdf ? undefined : ""}
+      data-scribecat-long-press={
+        isPdf ? undefined : longPressProps["data-scribecat-long-press"]
+      }
+      onPointerDown={(event: React.PointerEvent<HTMLElement>) => {
+        if (isPdf) {
+          return;
+        }
+
+        selectOnTouch(event);
+        longPressProps.onPointerDown(event);
+      }}
+      onPointerMove={(event: React.PointerEvent<HTMLElement>) => {
+        if (!isPdf) {
+          longPressProps.onPointerMove(event);
+        }
+      }}
+      onPointerUp={(event: React.PointerEvent<HTMLElement>) => {
+        if (!isPdf) {
+          longPressProps.onPointerUp(event);
+        }
+      }}
+      onPointerCancel={(event: React.PointerEvent<HTMLElement>) => {
+        if (!isPdf) {
+          longPressProps.onPointerCancel(event);
+        }
+      }}
+      onClickCapture={(event: React.MouseEvent<HTMLElement>) => {
+        if (!isPdf) {
+          longPressProps.onClickCapture(event);
+        }
+      }}
+      onContextMenuCapture={(event: React.MouseEvent<HTMLElement>) => {
+        if (!isPdf) {
+          longPressProps.onContextMenuCapture(event);
+        }
+      }}
+      onContextMenu={(event: React.MouseEvent<HTMLElement>) => {
+        if (isPdf) {
+          // Keep native text-selection/copy behaviour inside the PDF and stop
+          // the editor's own context menu from replacing it.
           event.stopPropagation();
-          setContextMenu({ x: event.clientX, y: event.clientY });
-        }}
-      >
-      {displaySrc ? (
+          return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+        setContextMenu({ x: event.clientX, y: event.clientY });
+      }}
+    >
+      {isPdf ? (
+        pdfAbsolutePath ? (
+          <PdfViewerSurface
+            absolutePath={pdfAbsolutePath}
+            label={pdfLabel}
+            mode="inline"
+            onOpenInSplit={
+              onOpenPdfInSplit
+                ? () =>
+                    onOpenPdfInSplit({
+                      absolutePath: pdfAbsolutePath,
+                      label: pdfLabel
+                    })
+                : undefined
+            }
+          />
+        ) : (
+          <span className="editor-image-wrapper__placeholder">
+            {loadError ? t("pdfViewer.error") : t("pdfViewer.loading")}
+          </span>
+        )
+      ) : displaySrc ? (
         <>
           <img
             ref={imgRef}
@@ -220,7 +348,8 @@ export function ImageView({ node, editor, getPos, updateAttributes, selected }: 
           {loadError ? t("imageView.notFound", { src }) : t("imageView.loading")}
         </span>
       )}
-        {contextMenu ? (
+
+      {!isPdf && contextMenu ? (
         <ContextMenuSurface
           x={contextMenu.x}
           y={contextMenu.y}
@@ -231,10 +360,10 @@ export function ImageView({ node, editor, getPos, updateAttributes, selected }: 
             src={displaySrc}
             fileName={suggestedImageFileName(src, alt)}
             onClose={() => setContextMenu(null)}
-            onDelete={editor.isEditable ? deleteImage : undefined}
+            onDelete={editor.isEditable ? deleteMedia : undefined}
           />
-          </ContextMenuSurface>
-        ) : null}
-      </NodeViewWrapper>
+        </ContextMenuSurface>
+      ) : null}
+    </NodeViewWrapper>
   );
 }
