@@ -177,7 +177,8 @@ export function PdfViewerSurface({
     pageX: number;
     pageY: number;
   } | null>(null);
-  const [pageNumber, setPageNumber] = useState(Math.max(1, initialPageNumber));
+  const lastReportedPageRef = useRef<number | null>(null);
+  const [pageNumber, setPageNumber = useState(Math.max(1, initialPageNumber));
   const [pageInput, setPageInput] = useState(String(Math.max(1, initialPageNumber)));
   const [pageCount, setPageCount] = useState(0);
   const [loading, setLoading] = useState(true);
