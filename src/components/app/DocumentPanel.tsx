@@ -24,6 +24,10 @@ import { FindReplacePanel } from "@/components/FindReplacePanel";
 import { VersionsPopover } from "@/components/VersionsPopover";
 import { DocumentMenu } from "@/components/app/DocumentMenu";
 import { DocumentTabs, TAB_DRAG_MIME } from "@/components/app/DocumentTabs";
+import {
+  PdfViewerSurface,
+  type PdfPreviewRequest
+} from "@/components/PdfViewerModal";
 import { join } from "@/platform/paths";
 import { EmojiPickerPopover } from "@/components/EmojiPicker";
 import { useBreadcrumbScroll } from "@/hooks/useBreadcrumbScroll";
@@ -251,6 +255,9 @@ export function DocumentPanel({
   const [splitPickerSide, setSplitPickerSide] = useState<"left" | "right">("right");
   const [splitPickerQuery, setSplitPickerQuery] = useState("");
   const [splitDropPreview, setSplitDropPreview] = useState<"left" | "right" | null>(null);
+  const [attachedPdf, setAttachedPdf] = useState<
+    (PdfPreviewRequest & { ownerFilePath: string }) | null
+  >(null);
   const documentLocks = useAppStore((state) => state.documentLocks);
   const setDocumentLocked = useAppStore((state) => state.setDocumentLocked);
   // Bumped by the header menu's "Versions" entry on the phone, where the
@@ -274,6 +281,23 @@ export function DocumentPanel({
       setActiveEditorPane("primary");
     }
   }, [layout, secondaryFilePath]);
+
+  useEffect(() => {
+    if (attachedPdf && !openTabs.includes(attachedPdf.ownerFilePath)) {
+      setAttachedPdf(null);
+    }
+  }, [attachedPdf, openTabs]);
+
+  // A PDF companion is rendered only while its owning Markdown tab is
+  // the active (primary) document. If that tab is merely kept open in the
+  // background, the attachment stays remembered but does not float beside
+  // another note.
+  const visibleAttachedPdf =
+    attachedPdf && attachedPdf.ownerFilePath === selectedFilePath
+      ? attachedPdf
+      : null;
+  const hasSplitContent =
+    layout === "desktop" && Boolean(secondaryFilePath || visibleAttachedPdf);
   const capabilities = getVaultCapabilities();
   const capabilityHint = vaultCapabilityHint();
   const versioningEnabled = useVersioningSettingsStore((state) => state.versioningEnabled);
@@ -369,6 +393,23 @@ export function DocumentPanel({
   const splitDropFilePath = (dataTransfer: DataTransfer): string | null =>
     dataTransfer.getData(TAB_DRAG_MIME) || getDraggedVaultFilePaths(dataTransfer)[0] || null;
 
+  const openPdfInSplit = (
+    request: PdfPreviewRequest & { ownerFilePath: string }
+  ) => {
+    if (layout !== "desktop") return;
+
+    setAttachedPdf(request);
+    setSecondarySide("right");
+    setSplitPickerOpen(false);
+    setSplitDropPreview(null);
+
+    if (request.ownerFilePath === secondaryFilePath) {
+      onClosePrimarySplit();
+    } else if (request.ownerFilePath === selectedFilePath) {
+      onCloseSecondary();
+    }
+  };
+
   const openSplitPickerForSide = (side: "left" | "right") => {
     setSplitPickerSide(side);
     setSplitPickerQuery("");
@@ -377,6 +418,10 @@ export function DocumentPanel({
 
   const replaceSplitSide = (side: "left" | "right", filePath: string) => {
     setSplitPickerOpen(false);
+
+    if (visibleAttachedPdf) {
+      setAttachedPdf(null);
+    }
 
     if (!secondaryFilePath) {
       if (filePath !== selectedFilePath) {
@@ -722,6 +767,7 @@ export function DocumentPanel({
             filePaths={openTabs}
             activeFilePath={selectedFilePath}
             dirtyFilePaths={dirtyFilePaths}
+            attachedPdfOwnerFilePath={attachedPdf?.ownerFilePath ?? null}
             onSelect={onSelectTab}
             onClose={onCloseTab}
             onCloseAll={onCloseAllTabs}
@@ -741,10 +787,10 @@ export function DocumentPanel({
               <div
                 className={cn(
                   "split-workspace",
-                  layout === "desktop" && secondaryFilePath && "split-workspace--active"
+                  hasSplitContent && "split-workspace--active"
                 )}
                 style={
-                  layout === "desktop" && secondaryFilePath
+                  hasSplitContent
                     ? ({ "--split-left": `${splitRatio}%` } as React.CSSProperties)
                     : undefined
                 }
@@ -780,12 +826,13 @@ export function DocumentPanel({
                   setSplitPickerOpen(false);
 
                   if (filePath === selectedFilePath) {
-                    if (secondaryFilePath) {
+                    if (hasSplitContent) {
                       setSecondarySide(side === "left" ? "right" : "left");
                     }
                     return;
                   }
 
+                  setAttachedPdf(null);
                   setSecondarySide(side);
                   if (filePath !== secondaryFilePath) {
                     onOpenSecondary(filePath);
@@ -795,17 +842,15 @@ export function DocumentPanel({
                 <div
                   className={cn(
                     "split-workspace__pane split-workspace__pane--primary",
-                    layout === "desktop" &&
-                      secondaryFilePath &&
-                      "split-workspace__pane--primary-split"
+                    hasSplitContent && "split-workspace__pane--primary-split"
                   )}
                   style={
-                    layout === "desktop" && secondaryFilePath
+                    hasSplitContent
                       ? { gridColumn: secondarySide === "left" ? 3 : 1 }
                       : undefined
                   }
                 >
-                  {layout === "desktop" && secondaryFilePath ? (
+                  {hasSplitContent ? (
                     <div className="split-workspace__pane-header">
                       <span title={selectedFilePath}>{getFileLinkLabel(selectedFilePath)}</span>
                       <div className="split-workspace__pane-actions">
@@ -826,6 +871,15 @@ export function DocumentPanel({
                           aria-label={t("split.closePane")}
                           title={t("split.closePane")}
                           onClick={() => {
+                            if (
+                              visibleAttachedPdf &&
+                              visibleAttachedPdf.ownerFilePath === selectedFilePath
+                            ) {
+                              setAttachedPdf(null);
+                              onCloseTab(selectedFilePath);
+                              return;
+                            }
+
                             setActiveEditorPane("secondary");
                             onClosePrimarySplit();
                           }}
@@ -848,6 +902,7 @@ export function DocumentPanel({
                     editorFocusRequestId={editorFocusRequestId}
                     onRequestSidebarFocus={onRequestSidebarFocus}
                     onRequestFileOpen={onRequestFileOpen}
+                    onOpenPdfInSplit={openPdfInSplit}
                     onZenModeRequest={onZenModeRequest}
                     onDeleteRequest={onDeleteRequest}
                     deleteEnabled={capabilities.delete}
@@ -863,7 +918,7 @@ export function DocumentPanel({
                   />
                 </div>
 
-                {layout === "desktop" && secondaryFilePath && secondaryDocument && secondaryMarkdown !== null ? (
+                {hasSplitContent ? (
                   <>
                     <div
                       className="split-workspace__resizer"
@@ -898,74 +953,88 @@ export function DocumentPanel({
                         <ArrowLeftRight aria-hidden="true" />
                       </button>
                     </div>
+
                     <div
                       className={cn(
                         "split-workspace__pane split-workspace__pane--secondary",
+                        visibleAttachedPdf && "split-workspace__pane--pdf",
                         `split-workspace__pane--secondary-${secondarySide}`
                       )}
                       style={{ gridColumn: secondarySide === "left" ? 1 : 3 }}
                     >
-                      <div className="split-workspace__pane-header">
-                        <span title={secondaryFilePath}>{getFileLinkLabel(secondaryFilePath)}</span>
-                        <div className="split-workspace__pane-actions">
-                          <button
-                            type="button"
-                            aria-label={t("split.replace")}
-                            title={t("split.replace")}
-                            onClick={() => openSplitPickerForSide(secondarySide)}
-                          >
-                            <Plus aria-hidden="true" />
-                          </button>
-                          <button
-                            type="button"
-                            aria-label={t("split.closePane")}
-                            title={t("split.closePane")}
-                            onClick={() => {
-                              setActiveEditorPane("primary");
-                              onCloseSecondary();
-                            }}
-                          >
-                            <X aria-hidden="true" />
-                          </button>
-                        </div>
-                      </div>
-                      <Editor
-                        key={secondaryFilePath}
-                        markdown={secondaryMarkdown}
-                        documentMarkdown={secondaryDocument.content}
-                        onMarkdownChange={(body) =>
-                          onSecondaryMarkdownChange(
-                            secondaryFilePath,
-                            replaceBody(secondaryDocument.content, body)
-                          )
-                        }
-                        onDocumentMarkdownChange={(markdown) =>
-                          onSecondaryMarkdownChange(secondaryFilePath, markdown)
-                        }
-                        onCanonicalMarkdown={(filePath, body) =>
-                          onCanonicalMarkdown(
-                            filePath,
-                            replaceBody(secondaryDocument.content, body)
-                          )
-                        }
-                        folderPath={folderPath}
-                        filePath={secondaryFilePath}
-                        onRequestSidebarFocus={onRequestSidebarFocus}
-                        onRequestFileOpen={onRequestFileOpen}
-                        onZenModeRequest={onZenModeRequest}
-                        onDeleteRequest={() => onDeleteFileRequest(secondaryFilePath)}
-                        deleteEnabled={capabilities.delete}
-                        documentLocked={secondaryDocumentLocked}
-                        onDocumentLockToggle={() =>
-                          void setDocumentLocked(
-                            secondaryFilePath,
-                            !secondaryDocumentLocked
-                          )
-                        }
-                        onEditorFocus={() => setActiveEditorPane("secondary")}
-                        hideToolbar={activeEditorPane !== "secondary"}
-                        toolbarContainer={toolbarSlot}
-                      />
+                      {visibleAttachedPdf ? (
+                        <PdfViewerSurface
+                          mode="split"
+                          absolutePath={visibleAttachedPdf.absolutePath}
+                          label={visibleAttachedPdf.label}
+                          onClose={() => setAttachedPdf(null)}
+                        />
+                      ) : secondaryFilePath && secondaryDocument && secondaryMarkdown !== null ? (
+                        <>
+                          <div className="split-workspace__pane-header">
+                            <span title={secondaryFilePath}>{getFileLinkLabel(secondaryFilePath)}</span>
+                            <div className="split-workspace__pane-actions">
+                              <button
+                                type="button"
+                                aria-label={t("split.replace")}
+                                title={t("split.replace")}
+                                onClick={() => openSplitPickerForSide(secondarySide)}
+                              >
+                                <Plus aria-hidden="true" />
+                              </button>
+                              <button
+                                type="button"
+                                aria-label={t("split.closePane")}
+                                title={t("split.closePane")}
+                                onClick={() => {
+                                  setActiveEditorPane("primary");
+                                  onCloseSecondary();
+                                }}
+                              >
+                                <X aria-hidden="true" />
+                              </button>
+                            </div>
+                          </div>
+                          <Editor
+                            key={secondaryFilePath}
+                            markdown={secondaryMarkdown}
+                            documentMarkdown={secondaryDocument.content}
+                            onMarkdownChange={(body) =>
+                              onSecondaryMarkdownChange(
+                                secondaryFilePath,
+                                replaceBody(secondaryDocument.content, body)
+                              )
+                            }
+                            onDocumentMarkdownChange={(markdown) =>
+                              onSecondaryMarkdownChange(secondaryFilePath, markdown)
+                            }
+                            onCanonicalMarkdown={(filePath, body) =>
+                              onCanonicalMarkdown(
+                                filePath,
+                                replaceBody(secondaryDocument.content, body)
+                              )
+                            }
+                            folderPath={folderPath}
+                            filePath={secondaryFilePath}
+                            onRequestSidebarFocus={onRequestSidebarFocus}
+                            onRequestFileOpen={onRequestFileOpen}
+                            onOpenPdfInSplit={openPdfInSplit}
+                            onZenModeRequest={onZenModeRequest}
+                            onDeleteRequest={() => onDeleteFileRequest(secondaryFilePath)}
+                            deleteEnabled={capabilities.delete}
+                            documentLocked={secondaryDocumentLocked}
+                            onDocumentLockToggle={() =>
+                              void setDocumentLocked(
+                                secondaryFilePath,
+                                !secondaryDocumentLocked
+                              )
+                            }
+                            onEditorFocus={() => setActiveEditorPane("secondary")}
+                            hideToolbar={activeEditorPane !== "secondary"}
+                            toolbarContainer={toolbarSlot}
+                          />
+                        </>
+                      ) : null}
                     </div>
                   </>
                 ) : null}

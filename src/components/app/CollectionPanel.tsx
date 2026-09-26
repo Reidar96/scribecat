@@ -151,6 +151,8 @@ type FolderCard = {
   relativePath: string;
   title: string;
   mtimeMs: number;
+  noteCount: number;
+  folderCount: number;
 };
 
 type CollectionCard = NoteCard | FolderCard;
@@ -179,6 +181,24 @@ function collectionGridHasMultipleColumns(cardElement: HTMLElement): boolean {
   );
 
   return estimatedColumns > 1;
+}
+
+function folderChildCounts(folder: FileTreeFolderNode): {
+  noteCount: number;
+  folderCount: number;
+} {
+  let noteCount = 0;
+  let folderCount = 0;
+
+  for (const child of folder.children) {
+    if (child.kind === "folder") {
+      folderCount += 1;
+    } else {
+      noteCount += 1;
+    }
+  }
+
+  return { noteCount, folderCount };
 }
 
 function findFolder(nodes: FileTreeNode[], relativePath: string): FileTreeFolderNode | null {
@@ -396,7 +416,8 @@ export function CollectionPanel({
               kind: "folder",
               relativePath: node.relativePath,
               title: node.name,
-              mtimeMs: node.effectiveMtimeMs
+              mtimeMs: node.effectiveMtimeMs,
+              ...folderChildCounts(node)
             }
           : {
               kind: "note",
@@ -422,7 +443,8 @@ export function CollectionPanel({
           kind: "folder",
           relativePath: child.relativePath,
           title: child.name,
-          mtimeMs: child.effectiveMtimeMs
+          mtimeMs: child.effectiveMtimeMs,
+          ...folderChildCounts(child)
         });
       } else {
         result.push({
@@ -1304,11 +1326,22 @@ export function CollectionPanel({
                         ) : null}
                       </div>
                       <h3>{card.title}</h3>
-                      {card.mtimeMs > 0 ? (
-                        <span className="collection-card__date">
-                          {formatModifiedLabel(card.mtimeMs, i18n.resolvedLanguage ?? i18n.language)}
+                      <div className="collection-card__footer">
+                        <span className="collection-card__summary">
+                          {t("collection.folderSummary", {
+                            notes: card.noteCount,
+                            folders: card.folderCount
+                          })}
                         </span>
-                      ) : null}
+                        {card.mtimeMs > 0 ? (
+                          <span className="collection-card__date">
+                            {formatModifiedLabel(
+                              card.mtimeMs,
+                              i18n.resolvedLanguage ?? i18n.language
+                            )}
+                          </span>
+                        ) : null}
+                      </div>
                     </article>
                   );
                 }

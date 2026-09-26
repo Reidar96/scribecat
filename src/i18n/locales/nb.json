@@ -1004,7 +1004,12 @@
     "error": "PDF-en kunne ikke åpnes.",
     "previous": "Forrige side",
     "next": "Neste side",
-    "pageCount": "Side {{page}} av {{count}}"
+    "pageCount": "Side {{page}} av {{count}}",
+    "page": "Side",
+    "copyPage": "Kopier tekst fra denne siden",
+    "copied": "Teksten på siden er kopiert",
+    "openInSplit": "Åpne PDF ved siden av dette notatet",
+    "attached": "PDF er knyttet til denne fanen"
   },
   "tabs": {
     "label": "Åpne dokumenter",

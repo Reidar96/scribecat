@@ -1368,7 +1368,12 @@
     "error": "The PDF could not be opened.",
     "previous": "Previous page",
     "next": "Next page",
-    "pageCount": "Page {{page}} of {{count}}"
+    "pageCount": "Page {{page}} of {{count}}",
+    "page": "Page",
+    "copyPage": "Copy text from this page",
+    "copied": "Page text copied",
+    "openInSplit": "Open PDF beside this note",
+    "attached": "PDF attached to this tab"
   },
   "tabs": {
     "label": "Open documents",
