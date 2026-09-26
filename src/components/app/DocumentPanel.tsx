@@ -81,7 +81,6 @@ type DocumentPanelProps = {
     position: "before" | "after"
   ) => void;
   onOpenSecondary: (filePath: string) => void;
-  onOpenDocumentInSplit?: (request: DocumentPreviewState & { ownerFilePath: string }) => void;
   onClosePrimarySplit: () => void;
   onCloseSecondary: () => void;
   onSecondaryMarkdownChange: (filePath: string, markdown: string) => void;
@@ -206,7 +205,6 @@ export function DocumentPanel({
   onCloseAllTabs,
   onReorderTabs,
   onOpenSecondary,
-  onOpenDocumentInSplit,
   onClosePrimarySplit,
   onCloseSecondary,
   onSecondaryMarkdownChange,
@@ -951,6 +949,11 @@ export function DocumentPanel({
                               closeAttachedPdf();
                               return;
                             }
+                            if (visibleAttachedDocument) {
+                              setAttachedDocument(null);
+                              setActiveEditorPane("primary");
+                              return;
+                            }
 
                             setActiveEditorPane("secondary");
                             onClosePrimarySplit();
@@ -974,11 +977,7 @@ export function DocumentPanel({
                     editorFocusRequestId={editorFocusRequestId}
                     onRequestSidebarFocus={onRequestSidebarFocus}
                     onRequestFileOpen={onRequestFileOpen}
-                    onOpenDocumentInSplit={(request) => {
-                      if (onOpenDocumentInSplit) {
-                        onOpenDocumentInSplit(request);
-                      }
-                    }}
+                    onOpenDocumentInSplit={openDocumentInSplit}
                     pdfSplitRestoreRequest={pdfSplitRestoreRequest}
                     onZenModeRequest={onZenModeRequest}
                     onDeleteRequest={onDeleteRequest}
