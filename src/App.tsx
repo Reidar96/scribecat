@@ -57,6 +57,8 @@ import { downloadFolderAsArchive, downloadNoteAsMarkdown } from "@/lib/export/ma
 import { printMarkdown } from "@/lib/print";
 import type { FileVersion } from "@/lib/fileVersions";
 import type { VersionDiffTarget } from "@/components/VersionDiffDialog";
+import { sourceFromPath } from "@/lib/import/convert";
+import { IMPORT_FILE_EXTENSIONS, type ImportSource } from "@/lib/import/importer";
 import { cn } from "@/lib/utils";
 import { normalizePathKey } from "@/store/appStore/pathUtils";
 import { isDocumentLocked as getDocumentLocked } from "@/lib/documentLocks";
@@ -90,6 +92,14 @@ function App() {
   const [settingsInitialTab, setSettingsInitialTab] = useState<SettingsTab>("application");
   const [versionDiffTarget, setVersionDiffTarget] = useState<VersionDiffTarget | null>(null);
   const [isRestoringVersion, setIsRestoringVersion] = useState(false);
+  const [importFileList, setImportFileList] = useState<ImportSource[] | null>(null);
+  const [importTargetFolder, setImportTargetFolder] = useState<string | null>(null);
+  // What a dropped folder contributed beyond the importable files themselves.
+  const [importSkippedCount, setImportSkippedCount] = useState(0);
+  const [importLimitReached, setImportLimitReached] = useState(false);
+  const [importInsertAfterBasename, setImportInsertAfterBasename] = useState<string | null | undefined>(
+    undefined
+  );
   const [pendingEntryRename, setPendingEntryRename] = useState<PendingEntryRename | null>(
     null
   );
@@ -157,6 +167,7 @@ function App() {
   const createFileAtPath = useAppStore((state) => state.createFileAtPath);
   const duplicateFile = useAppStore((state) => state.duplicateFile);
   const duplicateFolder = useAppStore((state) => state.duplicateFolder);
+  const registerImportedFiles = useAppStore((state) => state.registerImportedFiles);
   const createNewFolder = useAppStore((state) => state.createNewFolder);
   const emptyFolderPaths = useAppStore((state) => state.emptyFolderPaths);
   const renameSelectedFile = useAppStore((state) => state.renameSelectedFile);
@@ -1009,12 +1020,54 @@ function App() {
     return true;
   };
 
+  const requestImportFiles = async () => {
+    if (!platform.dialogs) {
+      return;
+    }
+
+    const selectedPaths = await platform.dialogs.chooseFiles({
+      title: t("importDialog.chooseFilesTitle"),
+      filters: [
+        {
+          name: t("importDialog.filterName"),
+          extensions: [...IMPORT_FILE_EXTENSIONS]
+        }
+      ]
+    });
+
+    if (selectedPaths.length > 0) {
+      const { targetDirectory, insertAfterBasename } = await resolveNewEntryTarget();
+      setImportTargetFolder(targetDirectory);
+      setImportInsertAfterBasename(insertAfterBasename);
+      setImportSkippedCount(0);
+      setImportLimitReached(false);
+      setImportFileList(selectedPaths.map((path) => ({ source: sourceFromPath(path) })));
+    }
+  };
+
+  /**
+   * Files and folders dragged onto the file tree from outside the app. The
+   * folder they were dropped on decides where they land — dropping next to
+   * nothing in particular targets the vault root.
+   */
+  const handleImported = (createdFilePaths: string[]) => {
+    if (!folderPath) {
+      return;
+    }
+
+    const parentRelativePath = getRelativeDisplayPath(folderPath, importTargetFolder ?? folderPath);
+    registerImportedFiles(createdFilePaths, parentRelativePath, importInsertAfterBasename);
+  };
+
+
+
   // Custom key bindings are app-wide (shortcuts.json in the app config dir),
   // so they are loaded once at startup rather than per opened folder.
   useEffect(() => {
     void loadShortcutOverrides();
   }, [loadShortcutOverrides]);
 
+  // External files are not accepted via drag-and-drop. Explicit import remains available through the Import button.
   const handleVersionDiffRequest = (version: FileVersion) => {
     setVersionDiffTarget({ version, fileLabel: selectedFileLabel ?? "" });
   };
@@ -1140,6 +1193,7 @@ function App() {
       onCreateFileRequest={(targetDirectory) => void handleCreateFile(targetDirectory)}
       onCreateFolder={() => void handleCreateFolder()}
       onCreateFolderRequest={(targetDirectory) => void handleCreateFolder(targetDirectory)}
+      onImportRequest={() => void requestImportFiles()}
       onSelectFilePath={async (filePath) => {
         await selectFilePathSafely(filePath);
         setIsSidebarSheetOpen(false);
@@ -1559,6 +1613,13 @@ function App() {
         readMarkdownForExport={readMarkdownForExport}
         resolveOrderedExportRecords={resolveOrderedRecords}
         onCloseExport={closeExport}
+        importFileList={importFileList}
+        folderPath={folderPath}
+        importTargetFolder={importTargetFolder}
+        importSkippedCount={importSkippedCount}
+        importLimitReached={importLimitReached}
+        onImported={handleImported}
+        onCloseImport={() => setImportFileList(null)}
         availableUpdate={availableUpdate}
         onDismissUpdate={dismissUpdate}
         versionDiffTarget={versionDiffTarget}
