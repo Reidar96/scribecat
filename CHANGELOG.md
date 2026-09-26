@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.24.7] - 2026-09-26
+
+### Fixes
+- Make the embedded **Combined view** PDF window follow the active PDF page's aspect ratio.
+- When the Markdown document column becomes narrower, the PDF window now becomes shorter with it instead of keeping a large fixed height.
+- Keep the existing PDF navigation, selectable text layer, touch swipe, copy, and split-view behavior unchanged.
+
 ## [0.24.6] - 2026-09-26
 
 ### Fixes and improvements
