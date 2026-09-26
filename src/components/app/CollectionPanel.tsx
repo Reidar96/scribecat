@@ -882,15 +882,9 @@ export function CollectionPanel({
 
   return (
     <section
-      className={cn(
-        "collection-panel",
-        externalDropTarget !== null && "collection-panel--external-drop-target"
-      )}
+      className="collection-panel"
       aria-label={t("collection.label")}
       onKeyDown={handlePanelKeyDown}
-      onDragOver={handleExternalDragOver}
-      onDragLeave={handleExternalDragLeave}
-      onDrop={handleExternalDrop}
     >
       <div className="collection-panel__card">
         <header className="collection-panel__header">
@@ -1250,10 +1244,6 @@ export function CollectionPanel({
                         void handleCardDrop(event, card)
                     }
                   : {};
-                const importDirectory =
-                  card.kind === "folder"
-                    ? card.relativePath
-                    : parentLabel(card.relativePath);
                 const dragHandleProps = manualReorderEnabled
                   ? {
                       draggable: true,
@@ -1283,11 +1273,9 @@ export function CollectionPanel({
                         draggedCardKey === key && "collection-card--drag-source",
                         cardDropPosition === "before" && "collection-card--drop-before",
                         cardDropPosition === "after" && "collection-card--drop-after",
-                        cardDropAxis === "horizontal" && "collection-card--drop-horizontal",
-                        isExternalCardDropTarget && "collection-card--external-drop-target"
+                        cardDropAxis === "horizontal" && "collection-card--drop-horizontal"
                       )}
                       data-collection-key={key}
-                      data-collection-import-directory={importDirectory}
                       onContextMenu={(event) => {
                         event.preventDefault();
                         event.stopPropagation();
@@ -1385,8 +1373,7 @@ export function CollectionPanel({
                       draggedCardKey === key && "collection-card--drag-source",
                       cardDropPosition === "before" && "collection-card--drop-before",
                       cardDropPosition === "after" && "collection-card--drop-after",
-                      cardDropAxis === "horizontal" && "collection-card--drop-horizontal",
-                      isExternalCardDropTarget && "collection-card--external-drop-target"
+                      cardDropAxis === "horizontal" && "collection-card--drop-horizontal"
                     )}
                     data-collection-key={key}
                     onContextMenu={(event) => {
