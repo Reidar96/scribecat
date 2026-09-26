@@ -1040,6 +1040,14 @@
     "closePane": "Lukk denne delen",
     "openSelected": "Åpne valgte i delt visning"
   },
+  "pptxInsertChoice": {
+    "eyebrow": "PowerPoint i dokumentet",
+    "title": "Hvordan vil du sette inn presentasjonen?",
+    "descriptionOne": "Velg hvordan «{{name}}» skal vises i dette Markdown-dokumentet.",
+    "descriptionMany": "Velg hvordan {{count}} PowerPoint-filer skal vises i dette Markdown-dokumentet.",
+    "pages": "Enkeltslides",
+    "preview": "Samlet visning"
+  },
   "pdfInsertChoice": {
     "eyebrow": "PDF i dokumentet",
     "title": "Hvordan vil du sette inn PDF-en?",

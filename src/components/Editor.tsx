@@ -15,6 +15,7 @@ import { LinkDialog, type LinkDialogResult } from "@/components/LinkDialog";
 import { Toolbar } from "@/components/Toolbar";
 import { PdfInsertChoiceDialog, type PdfInsertMode } from "@/components/PdfInsertChoiceDialog";
 import { PdfViewerModal } from "@/components/PdfViewerModal";
+import { DocumentViewer } from "@/components/DocumentViewer";
 import { TableEdgeControls } from "@/components/TableEdgeControls";
 import { FileLinkSuggestionPopover } from "@/components/editor/FileLinkSuggestionPopover";
 import { DetailsPanel } from "@/components/editor/DetailsPanel";
@@ -143,6 +144,11 @@ type PdfPreviewState = {
   label: string;
 };
 
+type DocumentPreviewState = {
+  absolutePath: string;
+  label: string;
+};
+
 type ImagePayload = {
   fileName: string;
   mimeType: string;
@@ -155,9 +161,10 @@ type MediaPayload = Omit<ImagePayload, "altText">;
 type PendingMediaInsert = {
   payloads: MediaPayload[];
   insertPos: number;
+  mediaKind: "pdf" | "pptx";
 };
 
-function isLocalPdfHref(href: string): boolean {
+function isLocalDocumentPreviewHref(href: string): boolean {
   if (
     !href ||
     ABSOLUTE_URL_PATTERN.test(href) ||
@@ -168,7 +175,7 @@ function isLocalPdfHref(href: string): boolean {
   }
 
   const [path] = href.split(/[?#]/);
-  return /\.pdf$/i.test(path);
+  return /\.(pdf|docx|pptx|mp4|webm|mov|m4v|ogv)$/i.test(path);
 }
 
 // The selected passage as markdown — the form the chat agent's get_selection
@@ -250,6 +257,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   } = useDetailsPanelWidth();
   const [linkDialog, setLinkDialog] = useState<LinkDialogState | null>(null);
   const [pdfPreview, setPdfPreview] = useState<PdfPreviewState | null>(null);
+  const [documentPreview, setDocumentPreview] = useState<DocumentPreviewState | null>(null);
   const [pendingMediaInsert, setPendingMediaInsert] = useState<PendingMediaInsert | null>(null);
   // Node types the serializer replaced with a placeholder in the last
   // serialization (see lib/editor/serializationGuard). While the list is
@@ -629,25 +637,32 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     onRequestFileOpen?.(targetFilePath);
   };
 
-  const openLocalPdf = async (href: string) => {
-    if (!filePath) {
-      return;
-    }
+  const openLocalDocument = async (href: string) => {
+    if (!filePath) return;
 
     const [rawPath] = href.split(/[?#]/);
     const decodedPath = decodeFileLinkHref(rawPath);
 
     try {
       const absolutePath = await join(await dirname(filePath), decodedPath);
-      const label = decodedPath.replace(/\\/g, "/").split("/").pop() || decodedPath;
-      setPdfPreview({ absolutePath, label });
+      const label =
+        decodedPath.replace(/\\/g, "/").split("/").pop() || decodedPath;
+      const extension = label.split(".").pop()?.toLowerCase() ?? "";
+
+      if (extension === "pdf") {
+        setPdfPreview({ absolutePath, label });
+      } else {
+        setDocumentPreview({ absolutePath, label });
+      }
     } catch {
-      setFeedback({
-        kind: "error",
-        message: t("pdfViewer.error")
-      });
+      setFeedback({ kind: "error", message: t("pdfViewer.error") });
     }
   };
+
+  const isPptxPayload = (payload: MediaPayload) =>
+    payload.mimeType ===
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation" ||
+    /\.pptx$/i.test(payload.fileName);
 
   const isPdfPayload = (payload: MediaPayload) =>
     payload.mimeType === "application/pdf" || /\.pdf$/i.test(payload.fileName);
@@ -781,14 +796,42 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     insertPos: number,
     pdfMode?: PdfInsertMode
   ) => {
-    if (payloads.some(isPdfPayload) && !pdfMode) {
-      setPendingMediaInsert({ payloads, insertPos });
+    const mediaKind = payloads.some(isPdfPayload)
+      ? "pdf"
+      : payloads.some(isPptxPayload)
+        ? "pptx"
+        : null;
+
+    if (mediaKind && !pdfMode) {
+      setPendingMediaInsert({ payloads, insertPos, mediaKind });
       return;
     }
 
     let pos = insertPos;
 
     for (const payload of payloads) {
+      if (isPptxPayload(payload)) {
+        if (pdfMode === "preview") {
+          pos = await insertImagePayloads([payload], pos);
+          continue;
+        }
+
+        try {
+          const { renderPptxToSlideImages } = await import("@/lib/editor/pptxToImages");
+          const slides = await renderPptxToSlideImages(payload.fileName, payload.data);
+          pos = await insertImagePayloads(slides, pos);
+        } catch (error) {
+          setFeedback({
+            kind: "error",
+            message: t("editor.pdfInsertFailed", {
+              fileName: payload.fileName,
+              error: extractErrorMessage(error, t)
+            })
+          });
+        }
+        continue;
+      }
+
       if (!isPdfPayload(payload)) {
         pos = await insertImagePayloads([payload], pos);
         continue;
@@ -1174,8 +1217,8 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 
           if (isFileLinkHref(rawHref)) {
             openFileLink(rawHref);
-          } else if (isLocalPdfHref(rawHref)) {
-            void openLocalPdf(rawHref);
+          } else if (isLocalDocumentPreviewHref(rawHref)) {
+            void openLocalDocument(rawHref);
           } else {
             void platform.shell.openUrl(anchor.href);
           }
@@ -1503,10 +1546,9 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     <div className={cn("editor-view", documentLocked && "editor-view--locked", documentWidth === "compact" && "editor-view--compact")}>
       <PdfInsertChoiceDialog
         open={pendingMediaInsert !== null}
-        fileCount={pendingMediaInsert?.payloads.filter(isPdfPayload).length ?? 0}
-        firstFileName={
-          pendingMediaInsert?.payloads.find(isPdfPayload)?.fileName ?? ""
-        }
+        mediaKind={pendingMediaInsert?.mediaKind ?? "pdf"}
+        fileCount={pendingMediaInsert?.payloads.length ?? 0}
+        firstFileName={pendingMediaInsert?.payloads[0]?.fileName ?? ""}
         onChoose={(mode) => {
           const pending = pendingMediaInsert;
           setPendingMediaInsert(null);
@@ -1518,6 +1560,17 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         onCancel={() => setPendingMediaInsert(null)}
       />
 
+      {documentPreview ? (
+        <div className="document-preview-modal">
+          <div className="document-preview-modal__content">
+            <DocumentViewer
+              absolutePath={documentPreview.absolutePath}
+              label={documentPreview.label}
+              onClose={() => setDocumentPreview(null)}
+            />
+          </div>
+        </div>
+      ) : null}
       {pdfPreview ? (
         <PdfViewerModal
           absolutePath={pdfPreview.absolutePath}

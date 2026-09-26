@@ -47,6 +47,8 @@ import {
   FILE_LINK_DRAG_MIME
 } from "@/lib/editor/fileLinks";
 import { getVaultCapabilities, vaultCapabilityHint } from "@/platform";
+import { isJournalRelativePath } from "@/lib/journal";
+import { isTasksContainerRelativePath } from "@/lib/tasks";
 import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
 import { useSearchStore } from "@/store/useSearchStore";
 import { useVersioningSettingsStore } from "@/store/useVersioningSettingsStore";
@@ -303,6 +305,8 @@ export function DocumentPanel({
   const versioningEnabled = useVersioningSettingsStore((state) => state.versioningEnabled);
   const closeFindPanel = useSearchStore((state) => state.closePanel);
   const autoSaveEnabled = useEditorSettingsStore((state) => state.autoSaveEnabled);
+  const taskSettings = useEditorSettingsStore((state) => state.taskSettings);
+  const journalSettings = useEditorSettingsStore((state) => state.journalSettings);
   // Folder crumbs always navigate to the corresponding collection grid.
   // A folder note's final crumb is also a folder, so it links back to that
   // folder collection rather than behaving like an ordinary note leaf.
@@ -376,13 +380,36 @@ export function DocumentPanel({
   const splitOptions = useMemo(
     () =>
       filterVaultFileOptions(
-        buildVaultFileOptions(folderPath, filePaths, selectedFilePath).filter(
-          (option) => option.filePath !== secondaryFilePath
-        ),
+        buildVaultFileOptions(folderPath, filePaths, selectedFilePath).filter((option) => {
+          if (option.filePath === secondaryFilePath) {
+            return false;
+          }
+
+          // Task and journal documents are dedicated app surfaces, not
+          // secondary editors. Keep them out of the split picker even when
+          // their folders are otherwise visible in the vault.
+          if (isTasksContainerRelativePath(option.relativePath, taskSettings.folder)) {
+            return false;
+          }
+
+          if (isJournalRelativePath(option.relativePath, journalSettings)) {
+            return false;
+          }
+
+          return true;
+        }),
         splitPickerQuery,
         40
       ),
-    [filePaths, folderPath, secondaryFilePath, selectedFilePath, splitPickerQuery]
+    [
+      filePaths,
+      folderPath,
+      secondaryFilePath,
+      selectedFilePath,
+      splitPickerQuery,
+      taskSettings.folder,
+      journalSettings
+    ]
   );
 
   const hasSplitDragPayload = (dataTransfer: DataTransfer) =>

@@ -1404,6 +1404,14 @@
     "closePane": "Close this split pane",
     "openSelected": "Open selected in split view"
   },
+  "pptxInsertChoice": {
+    "eyebrow": "PowerPoint in document",
+    "title": "How should the presentation be inserted?",
+    "descriptionOne": "Choose how “{{name}}” should appear in this Markdown document.",
+    "descriptionMany": "Choose how {{count}} PowerPoint files should appear in this Markdown document.",
+    "pages": "Individual slides",
+    "preview": "Combined view"
+  },
   "pdfInsertChoice": {
     "eyebrow": "PDF in document",
     "title": "How should the PDF be inserted?",

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, FileText, Loader2, Play, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Columns2, FileText, Grid2X2, Loader2, Play, X } from "lucide-react";
 import { unzipSync } from "fflate";
 import { readFile } from "@/platform/vaultFs";
 
@@ -80,6 +80,7 @@ export function DocumentViewer({ absolutePath, label, onClose }: Props) {
   const [slide, setSlide] = useState(0);
   const [error, setError] = useState(false);
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
+  const [pptView, setPptView] = useState<"single" | "all">("single");
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
 
   const isVideo = ["mp4", "webm", "mov", "m4v", "ogv"].includes(ext);
@@ -89,10 +90,12 @@ export function DocumentViewer({ absolutePath, label, onClose }: Props) {
   useEffect(() => {
     let active = true;
     let url: string | null = null;
+    let pptBlobUrls: string[] = [];
     setError(false);
     setHtml("");
     setSlides([]);
     setSlide(0);
+    setPptView("single");
     void readFile(absolutePath).then(async (bytes) => {
       if (!active) return;
       setData(bytes);
@@ -109,6 +112,10 @@ export function DocumentViewer({ absolutePath, label, onClose }: Props) {
           if (active) setHtml(result.value);
         } else if (isPowerPoint) {
           const parsed = await parsePptx(bytes);
+          pptBlobUrls = Object.values(parsed.blobs);
+          if (parsed.slides.length === 0) {
+            throw new Error("The PowerPoint file does not contain readable slides.");
+          }
           if (active) setSlides(parsed.slides);
         } else {
           throw new Error("Unsupported document format");
@@ -120,6 +127,9 @@ export function DocumentViewer({ absolutePath, label, onClose }: Props) {
     return () => {
       active = false;
       if (url) URL.revokeObjectURL(url);
+      for (const blobUrl of pptBlobUrls) {
+        URL.revokeObjectURL(blobUrl);
+      }
     };
   }, [absolutePath, ext, isVideo, isWord, isPowerPoint]);
 
@@ -161,9 +171,33 @@ export function DocumentViewer({ absolutePath, label, onClose }: Props) {
       <div className="document-preview__toolbar">
         <strong>{label}</strong>
         <div className="document-preview__actions">
-          {slides.length > 0 ? <span>{slide + 1} / {slides.length}</span> : null}
-          {slides.length > 1 ? <button type="button" disabled={slide === 0} onClick={() => setSlide((n) => Math.max(0, n - 1))} aria-label="Previous slide"><ChevronLeft /></button> : null}
-          {slides.length > 1 ? <button type="button" disabled={slide === slides.length - 1} onClick={() => setSlide((n) => Math.min(slides.length - 1, n + 1))} aria-label="Next slide"><ChevronRight /></button> : null}
+          {isPowerPoint && slides.length > 0 ? (
+            <>
+              <button
+                type="button"
+                className={pptView === "single" ? "document-preview__view-button document-preview__view-button--active" : "document-preview__view-button"}
+                aria-pressed={pptView === "single"}
+                aria-label="Show one slide"
+                title="One slide"
+                onClick={() => setPptView("single")}
+              >
+                <Columns2 aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                className={pptView === "all" ? "document-preview__view-button document-preview__view-button--active" : "document-preview__view-button"}
+                aria-pressed={pptView === "all"}
+                aria-label="Show all slides"
+                title="All slides"
+                onClick={() => setPptView("all")}
+              >
+                <Grid2X2 aria-hidden="true" />
+              </button>
+            </>
+          ) : null}
+          {isPowerPoint && pptView === "single" && slides.length > 0 ? <span>{slide + 1} / {slides.length}</span> : null}
+          {isPowerPoint && pptView === "single" && slides.length > 1 ? <button type="button" disabled={slide === 0} onClick={() => setSlide((n) => Math.max(0, n - 1))} aria-label="Previous slide"><ChevronLeft /></button> : null}
+          {isPowerPoint && pptView === "single" && slides.length > 1 ? <button type="button" disabled={slide === slides.length - 1} onClick={() => setSlide((n) => Math.min(slides.length - 1, n + 1))} aria-label="Next slide"><ChevronRight /></button> : null}
           {onClose ? <button type="button" onClick={onClose} aria-label="Close"><X /></button> : null}
         </div>
       </div>
@@ -172,13 +206,37 @@ export function DocumentViewer({ absolutePath, label, onClose }: Props) {
         {error ? <div className="document-preview__message"><FileText /> Unable to preview this file.</div> : null}
         {isVideo && objectUrl ? <video className="document-preview__video" src={objectUrl} controls playsInline preload="metadata" /> : null}
         {isWord && html && <article className="document-preview__word" dangerouslySetInnerHTML={{ __html: html }} />}
-        {isPowerPoint && slides.length > 0 ? (
+        {isPowerPoint && slides.length > 0 && pptView === "single" ? (
           <section className="document-preview__slide" aria-label={`Slide ${slide + 1}`} onPointerDown={handleSlidePointerDown} onPointerUp={handleSlidePointerUp}>
             {slides[slide].images.map((src, index) => <img key={index} src={src} alt="" />)}
             <div className="document-preview__slide-text">
               {slides[slide].texts.map((text, index) => <p key={index}>{text}</p>)}
             </div>
           </section>
+        ) : null}
+        {isPowerPoint && slides.length > 0 && pptView === "all" ? (
+          <div className="document-preview__slides-all">
+            {slides.map((currentSlide, index) => (
+              <section
+                key={index}
+                className="document-preview__slide document-preview__slide--thumbnail"
+                aria-label={`Slide ${index + 1}`}
+                onClick={() => {
+                  setSlide(index);
+                  setPptView("single");
+                }}
+              >
+                {currentSlide.images.map((src, imageIndex) => (
+                  <img key={imageIndex} src={src} alt="" />
+                ))}
+                <div className="document-preview__slide-text">
+                  {currentSlide.texts.map((text, textIndex) => (
+                    <p key={textIndex}>{text}</p>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
         ) : null}
         {isVideo && !objectUrl && data && <div className="document-preview__message"><Play /> Preparing video…</div>}
       </div>

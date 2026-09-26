@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.25.5] - 2026-09-26
+
+### Fixed
+- Keep pinch-to-zoom centered on the moving pinch midpoint on touch devices.
+- Add a minimize control for PDF viewers opened in split view.
+- Route local DOCX, PPTX and video links to ScribeCat's document viewer instead of raw browser rendering.
+- Add single-slide and all-slides views for PowerPoint previews.
+- Add PowerPoint insertion choices for individual slide images or a combined PPTX viewer.
+- Keep Word previews at full readable text contrast.
+- Hide task and journal documents from the split-view file picker.
+
 ## [0.25.4] - 2026-09-26
 
 ### Fixed
