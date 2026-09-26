@@ -130,6 +130,7 @@ export function DocumentViewer({ absolutePath, label, onClose }: Props) {
   useEffect(() => {
     if (!isPowerPoint) return;
     const onKeyDown = (event: KeyboardEvent) => {
+      if (slides.length === 0) return;
       if (event.key === "ArrowLeft") setSlide((n) => Math.max(0, n - 1));
       if (event.key === "ArrowRight") setSlide((n) => Math.min(slides.length - 1, n + 1));
     };
