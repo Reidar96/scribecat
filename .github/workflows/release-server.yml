@@ -10,6 +10,8 @@ name: Release server image
 # the server meaningful.
 on:
   push:
+    branches:
+      - 'v*'
     tags:
       - 'v*'
   workflow_dispatch:
