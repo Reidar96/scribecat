@@ -271,7 +271,7 @@ function renderShapeBackground(
 
   const line = firstDescendant(spPr, "ln");
   const lineFill = line ? resolveFill(line, themeColors, "none") : "none";
-  const lineWidth = line ? Math.max(1, numberAttr(line, "w", 12700) / 914400) : 0;
+  const lineWidth = line ? Math.max(127, numberAttr(line, "w", 12700)) : 0;
 
   const common =
     ' fill="' + escapeXml(fill) + '"' +
@@ -302,9 +302,12 @@ function renderShapeBackground(
   );
 }
 
-function fontSizeFromProperties(props: Element | null, fallback: number): number {
-  const size = numberAttr(props, "sz", 1800);
-  return props && Number.isFinite(size) && size > 0 ? size / 100 : fallback;
+function fontSizeFromProperties(props: Element | null, fallbackPoints: number): number {
+  const sizeHundredthPoints = numberAttr(props, "sz", NaN);
+  const points = Number.isFinite(sizeHundredthPoints) && sizeHundredthPoints > 0
+    ? sizeHundredthPoints / 100
+    : fallbackPoints;
+  return points * 12700;
 }
 
 function runPropertyElement(run: Element): Element | null {
@@ -362,16 +365,15 @@ function paragraphAlignment(paragraph: Element): "start" | "middle" | "end" {
 }
 
 function renderText(
-  shape: Element,
   box: ShapeBox,
   body: Element,
   themeColors: Record<string, string>
 ): { svg: string; text: string } {
   const bodyPr = firstDescendant(body, "bodyPr");
-  const leftInset = Math.max(0, numberAttr(bodyPr && firstDescendant(bodyPr, "lIns"), "val", 0));
-  const rightInset = Math.max(0, numberAttr(bodyPr && firstDescendant(bodyPr, "rIns"), "val", 0));
-  const topInset = Math.max(0, numberAttr(bodyPr && firstDescendant(bodyPr, "tIns"), "val", 0));
-  const bottomInset = Math.max(0, numberAttr(bodyPr && firstDescendant(bodyPr, "bIns"), "val", 0));
+  const leftInset = numberAttr(bodyPr, "lIns", 0);
+  const rightInset = numberAttr(bodyPr, "rIns", 0);
+  const topInset = numberAttr(bodyPr, "tIns", 0);
+  const bottomInset = numberAttr(bodyPr, "bIns", 0);
   const usableWidth = Math.max(1, box.width - leftInset - rightInset);
   const paragraphs = descendants(body, "p");
   const textLines: string[] = [];
@@ -393,7 +395,7 @@ function renderText(
     return { svg: "", text: "" };
   }
 
-  const lineHeight = Math.max(12, Math.max(...paragraphData.map((p) => p.maxSize)) * 1.2);
+  const lineHeight = Math.max(12700, Math.max(...paragraphData.map((p) => p.maxSize)) * 1.2);
   const totalHeight = paragraphData.length * lineHeight;
   const anchor = attr(bodyPr, "anchor") ?? "t";
   const startY =
@@ -547,8 +549,8 @@ function renderShapeTree(
       if (texts.length) {
         output.push(
           '<text x="' + mapped.x +
-          '" y="' + (mapped.y + 18) +
-          '" font-family="Arial, sans-serif" font-size="18" fill="#111111">' +
+          '" y="' + (mapped.y + 228600) +
+          '" font-family="Arial, sans-serif" font-size="228600" fill="#111111">' +
           escapeXml(texts.join(" ")) + "</text>"
         );
         text.push(texts.join(" "));
@@ -565,7 +567,7 @@ function renderShapeTree(
       output.push(renderShapeBackground(node, mapped, context.themeColors));
 
       if (body) {
-        const renderedText = renderText(node, mapped, body, context.themeColors);
+        const renderedText = renderText(mapped, body, context.themeColors);
         output.push(renderedText.svg);
         if (renderedText.text) text.push(renderedText.text);
       }
@@ -626,13 +628,6 @@ function slideSvg(
     scaleX: 1,
     scaleY: 1
   });
-
-  const footer =
-    '<text x="' + (context.slideWidth - 120000) +
-    '" y="' + (context.slideHeight - 90000) +
-    '" text-anchor="end" font-family="Arial, sans-serif" font-size="' +
-    Math.max(12000, context.slideWidth / 80) +
-    '" fill="rgba(0,0,0,0.45)">' + (index + 1) + " / " + total + "</text>";
 
   const svg =
     '<?xml version="1.0" encoding="UTF-8"?>' +
