@@ -711,6 +711,11 @@ export function PdfViewerSurface({
   const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     event.stopPropagation();
 
+    const stage = stageRef.current;
+    if (!stage || !stage.contains(event.target as Node)) {
+      return;
+    }
+
     const startedOnText =
       event.target instanceof Element &&
       Boolean(event.target.closest(".pdf-preview__text-layer"));
@@ -718,9 +723,15 @@ export function PdfViewerSurface({
     if (event.pointerType === "mouse") {
       if (event.button !== 0 || zoomRef.current <= 1 || startedOnText) return;
       event.preventDefault();
-      panRef.current = { pointerId: event.pointerId, pointerType: "mouse", x: event.clientX, y: event.clientY, startedOnText };
+      panRef.current = {
+        pointerId: event.pointerId,
+        pointerType: "mouse",
+        x: event.clientX,
+        y: event.clientY,
+        startedOnText
+      };
       setIsPanning(true);
-      stageRef.current?.setPointerCapture(event.pointerId);
+      rootRef.current?.setPointerCapture(event.pointerId);
       return;
     }
 
@@ -774,8 +785,14 @@ export function PdfViewerSurface({
         const stage = stageRef.current;
         if (stage) {
           event.preventDefault();
-          stage.scrollLeft -= event.clientX - pan.x;
-          stage.scrollTop -= event.clientY - pan.y;
+          stage.scrollLeft = Math.max(
+            0,
+            stage.scrollLeft - (event.clientX - pan.x)
+          );
+          stage.scrollTop = Math.max(
+            0,
+            stage.scrollTop - (event.clientY - pan.y)
+          );
         }
         pan.x = event.clientX;
         pan.y = event.clientY;
@@ -810,7 +827,9 @@ export function PdfViewerSurface({
   const finishPointer = (event: React.PointerEvent<HTMLDivElement>) => {
     if (event.pointerType === "mouse") {
       if (panRef.current?.pointerId === event.pointerId) {
-        if (stageRef.current?.hasPointerCapture(event.pointerId)) stageRef.current.releasePointerCapture(event.pointerId);
+        if (rootRef.current?.hasPointerCapture(event.pointerId)) {
+          rootRef.current.releasePointerCapture(event.pointerId);
+        }
         panRef.current = null;
         setIsPanning(false);
       }
@@ -1009,20 +1028,6 @@ export function PdfViewerSurface({
       </div>
 
       <div ref={stageRef} className={`pdf-preview__stage${zoom > 1 ? " pdf-preview__stage--zoomed" : ""}`}>
-        {zoom > 1 ? (
-          <div className="pdf-preview__minimap" aria-hidden="true">
-            {miniMapImage ? <img src={miniMapImage} alt="" /> : null}
-            <div
-              className="pdf-preview__minimap-viewport"
-              style={{
-                left: miniMap.left * 100 + "%",
-                top: miniMap.top * 100 + "%",
-                width: miniMap.width * 100 + "%",
-                height: miniMap.height * 100 + "%"
-              }}
-            />
-          </div>
-        ) : null}
         {loading ? (
           <div className="pdf-preview__message">
             <Loader2 className="pdf-preview__spinner" aria-hidden="true" />
@@ -1051,6 +1056,20 @@ export function PdfViewerSurface({
           </div>
         )}
       </div>
+      {zoom > 1 ? (
+        <div className="pdf-preview__minimap" aria-hidden="true">
+          {miniMapImage ? <img src={miniMapImage} alt="" /> : null}
+          <div
+            className="pdf-preview__minimap-viewport"
+            style={{
+              left: miniMap.left * 100 + "%",
+              top: miniMap.top * 100 + "%",
+              width: miniMap.width * 100 + "%",
+              height: miniMap.height * 100 + "%"
+            }}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }
