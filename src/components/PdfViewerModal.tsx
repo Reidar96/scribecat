@@ -231,7 +231,6 @@ export function PdfViewerSurface({
       event.preventDefault();
       event.stopPropagation();
 
-      const page = pageRef.current;
       captureZoomAnchor(event.clientX, event.clientY);
       const factor = Math.exp(-event.deltaY / 240);
       setZoomValue(zoomRef.current * factor);
