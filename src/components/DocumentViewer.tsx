@@ -26,11 +26,14 @@ import {
 export type DocumentPreviewRequest = {
   absolutePath: string;
   label: string;
+  pageNumber?: number;
 };
 
 type Props = DocumentPreviewRequest & {
   onClose?: () => void;
-  onOpenInSplit?: () => void;
+  onOpenInSplit?: (pageNumber: number) => void;
+  onPageChange?: (pageNumber: number) => void;
+  initialPageNumber?: number;
   mode?: "modal" | "split";
 };
 
@@ -81,6 +84,8 @@ export function DocumentViewer({
   label,
   onClose,
   onOpenInSplit,
+  onPageChange,
+  initialPageNumber = 1,
   mode = "modal"
 }: Props) {
   const { t } = useTranslation();
@@ -115,8 +120,8 @@ export function DocumentViewer({
   const [data, setData] = useState<Uint8Array | null>(null);
   const [html, setHtml] = useState("");
   const [slides, setSlides] = useState<Slide[]>([]);
-  const [pageNumber, setPageNumber] = useState(1);
-  const [pageInput, setPageInput] = useState("1");
+  const [pageNumber, setPageNumber] = useState(Math.max(1, initialPageNumber));
+  const [pageInput, setPageInput] = useState(String(Math.max(1, initialPageNumber)));
   const [pageView, setPageView] = useState<"single" | "grid">("single");
   const [zoom, setZoom] = useState(1);
   const [zoomOpen, setZoomOpen] = useState(false);
@@ -146,7 +151,8 @@ export function DocumentViewer({
 
   useEffect(() => {
     setPageInput(String(pageNumber));
-  }, [pageNumber]);
+    onPageChange?.(pageNumber);
+  }, [pageNumber, onPageChange]);
 
   useEffect(() => {
     let active = true;
@@ -160,7 +166,7 @@ export function DocumentViewer({
     setData(null);
     setHtml("");
     setSlides([]);
-    setPageNumber(1);
+    setPageNumber(Math.max(1, initialPageNumber));
     setPageView("single");
     setZoom(1);
     zoomRef.current = 1;
@@ -232,7 +238,7 @@ export function DocumentViewer({
         feedbackTimerRef.current = null;
       }
     };
-  }, [absolutePath, ext, isVideo, isWord, isPowerPoint]);
+  }, [absolutePath, ext, initialPageNumber, isVideo, isWord, isPowerPoint]);
 
   useEffect(() => {
     const stage = stageRef.current;
@@ -1019,7 +1025,7 @@ export function DocumentViewer({
               type="button"
               aria-label={t("pdfViewer.openInSplit")}
               title={t("pdfViewer.openInSplit")}
-              onClick={() => onOpenInSplit()}
+              onClick={() => onOpenInSplit(pageNumber)}
             >
               <Columns2 aria-hidden="true" />
             </button>
