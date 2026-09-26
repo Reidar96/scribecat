@@ -10,9 +10,68 @@ import {
   Maximize2,
   Minimize2,
   X,
-  ZoomIn
+  ZoomIn,
+  Square,
+  Grid2X2
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+  useEffect(() => {
+    if (pageView !== "grid") {
+      setPageThumbnails([]);
+      setPageThumbnailLoading(false);
+      return;
+    }
+
+    const document = documentRef.current;
+    if (!document || pageCount === 0) {
+      return;
+    }
+
+    let active = true;
+    setPageThumbnailLoading(true);
+    setPageThumbnails([]);
+
+    void (async () => {
+      const thumbnails: string[] = [];
+
+      try {
+        for (let pageIndex = 1; pageIndex <= document.numPages; pageIndex += 1) {
+          if (!active) return;
+
+          const page = await document.getPage(pageIndex);
+          const baseViewport = page.getViewport({ scale: 1 });
+          const scale = Math.min(0.32, 260 / Math.max(1, baseViewport.width));
+          const viewport = page.getViewport({ scale });
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.max(1, Math.ceil(viewport.width));
+          canvas.height = Math.max(1, Math.ceil(viewport.height));
+          const context = canvas.getContext("2d");
+
+          if (!context) {
+            canvas.remove();
+            continue;
+          }
+
+          context.fillStyle = "#ffffff";
+          context.fillRect(0, 0, canvas.width, canvas.height);
+          await page.render({ canvasContext: context, viewport }).promise;
+
+          if (!active) return;
+          thumbnails.push(canvas.toDataURL("image/png"));
+          canvas.width = 1;
+          canvas.height = 1;
+        }
+
+        if (active) setPageThumbnails(thumbnails);
+      } finally {
+        if (active) setPageThumbnailLoading(false);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [pageView, pageCount]);
 
 import { readFile } from "@/platform/vaultFs";
 
@@ -204,6 +263,9 @@ export function PdfViewerSurface({
   const [renderZoom, setRenderZoom] = useState(1);
   const [isPanning, setIsPanning] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [pageView, setPageView] = useState<"single" | "grid">("single");
+  const [pageThumbnails, setPageThumbnails] = useState<string[]>([]);
+  const [pageThumbnailLoading, setPageThumbnailLoading] = useState(false);
 
   const previousPage = () => {
     setPageNumber((page) => Math.max(1, page - 1));
@@ -508,7 +570,7 @@ export function PdfViewerSurface({
       renderCancelRef.current?.();
       textLayerCancelRef.current?.();
     };
-  }, [pageNumber, pageCount, viewportVersion, renderZoom]);
+  }, [pageNumber, pageCount, viewportVersion, renderZoom, pageView]);
 
   useEffect(() => {
     if (mode !== "modal") return;
@@ -1067,12 +1129,40 @@ export function PdfViewerSurface({
             ) : null}
           </div>
 
+          <div className="pdf-preview__view-switch" role="group" aria-label="Page view">
+            <button
+              type="button"
+              className={pageView === "single" ? "pdf-preview__view-button pdf-preview__view-button--active" : "pdf-preview__view-button"}
+              aria-pressed={pageView === "single"}
+              aria-label="Single page"
+              title="Single page"
+              onClick={() => setPageView("single")}
+            >
+              <Square aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              className={pageView === "grid" ? "pdf-preview__view-button pdf-preview__view-button--active" : "pdf-preview__view-button"}
+              aria-pressed={pageView === "grid"}
+              aria-label="All pages"
+              title="All pages"
+              onClick={() => setPageView("grid")}
+            >
+              <Grid2X2 aria-hidden="true" />
+            </button>
+          </div>
+
           {onOpenInSplit ? (
             <button
               type="button"
               aria-label={t("pdfViewer.openInSplit")}
               title={t("pdfViewer.openInSplit")}
-              onClick={onOpenInSplit}
+              onClick={() => {
+                if (mode === "inline") {
+                  setIsMinimized(true);
+                }
+                onOpenInSplit();
+              }}
             >
               <Columns2 aria-hidden="true" />
             </button>
@@ -1093,7 +1183,10 @@ export function PdfViewerSurface({
       </div>
 
       {!isMinimized ? (
-        <div ref={stageRef} className={`pdf-preview__stage${zoom > 1 ? " pdf-preview__stage--zoomed" : ""}`}>
+        <div
+          ref={stageRef}
+          className={`pdf-preview__stage${zoom > 1 ? " pdf-preview__stage--zoomed" : ""}${pageView === "grid" ? " pdf-preview__stage--grid" : ""}`}
+        >
         {loading ? (
           <div className="pdf-preview__message">
             <Loader2 className="pdf-preview__spinner" aria-hidden="true" />
@@ -1102,6 +1195,30 @@ export function PdfViewerSurface({
         ) : error ? (
           <div className="pdf-preview__message" role="alert">
             {t("pdfViewer.error")}
+          </div>
+        ) : pageView === "grid" ? (
+          <div className="pdf-preview__overview">
+            {pageThumbnailLoading && pageThumbnails.length === 0 ? (
+              <div className="pdf-preview__message">
+                <Loader2 className="pdf-preview__spinner" aria-hidden="true" />
+                <span>Loading pages…</span>
+              </div>
+            ) : null}
+            {pageThumbnails.map((src, index) => (
+              <button
+                type="button"
+                className="pdf-preview__overview-page"
+                key={src}
+                onClick={() => {
+                  setPageNumber(index + 1);
+                  setPageView("single");
+                }}
+                aria-label={`Page ${index + 1}`}
+              >
+                <img src={src} alt="" />
+                <span>{index + 1} / {pageThumbnails.length}</span>
+              </button>
+            ))}
           </div>
         ) : (
           <div
