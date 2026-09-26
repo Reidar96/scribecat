@@ -3,7 +3,6 @@ import { BookOpen, Columns2, Copy, Download, Eraser, ExternalLink, FileDown, Fil
 import { useTranslation } from "react-i18next";
 import { getVaultCapabilities, platform, vaultCapabilityHint } from "@/platform";
 import { dirname, join } from "@/platform/paths";
-import { carriesExternalFiles } from "@/lib/dragDrop/droppedSources";
 import { cn } from "@/lib/utils";
 
 import type { ExportMode } from "@/components/ExportDialog";
@@ -752,20 +751,12 @@ export function FileTree({
           )}
           aria-hidden="true"
           onDragOver={(event) => {
-            if (carriesExternalFiles(event.dataTransfer)) {
-              return;
-            }
-
             event.preventDefault();
             event.dataTransfer.dropEffect = "move";
             handleRowDropIndicatorChange(TREE_TAIL_KEY, "below");
           }}
           onDragLeave={() => handleRowDropIndicatorChange(TREE_TAIL_KEY, null)}
           onDrop={(event) => {
-            if (carriesExternalFiles(event.dataTransfer)) {
-              return;
-            }
-
             event.preventDefault();
             event.stopPropagation();
             handleTailDrop();
