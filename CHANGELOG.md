@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.25.8] - 2026-09-26
+
+### Fixed
+- Restore the inline PDF viewer when its split-view companion is closed.
+- Keep PDF all-pages view sized to its actual thumbnail content instead of inheriting the single-page viewer height.
+- Render PDF overview pages at higher resolution for sharper previews.
+- Make Word document text directly copyable from the preview.
+- Make PowerPoint slide text copyable from the preview while keeping the rendered slide artwork intact.
+- Preserve responsive one-column/two-column Office and PDF overview layouts.
+
 ## [0.25.7] - 2026-09-26
 
 ### Fixed

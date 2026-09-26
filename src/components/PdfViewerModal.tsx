@@ -384,11 +384,32 @@ export function PdfViewerSurface({
 
           const page = await document.getPage(pageIndex);
           const baseViewport = page.getViewport({ scale: 1 });
-          const scale = Math.min(0.32, 260 / Math.max(1, baseViewport.width));
+          const stage = stageRef.current;
+          const stageWidth = stage?.clientWidth || window.innerWidth;
+          const computedStage = stage ? window.getComputedStyle(stage) : null;
+          const horizontalPadding =
+            (Number.parseFloat(computedStage?.paddingLeft ?? "0") || 0) +
+            (Number.parseFloat(computedStage?.paddingRight ?? "0") || 0);
+          const contentWidth = Math.max(320, stageWidth - horizontalPadding - 32);
+          const columns = stageWidth >= 1000 ? 2 : 1;
+          const targetCssWidth = Math.min(
+            720,
+            Math.max(320, (contentWidth - (columns - 1) * 16) / columns)
+          );
+          const scale = Math.max(
+            0.45,
+            targetCssWidth / Math.max(1, baseViewport.width)
+          );
           const viewport = page.getViewport({ scale });
+          const qualityScale = Math.min(
+            2,
+            Math.max(1.5, window.devicePixelRatio || 1)
+          );
           const canvas = window.document.createElement("canvas");
-          canvas.width = Math.max(1, Math.ceil(viewport.width));
-          canvas.height = Math.max(1, Math.ceil(viewport.height));
+          canvas.width = Math.max(1, Math.ceil(viewport.width * qualityScale));
+          canvas.height = Math.max(1, Math.ceil(viewport.height * qualityScale));
+          canvas.style.width = String(Math.ceil(viewport.width)) + "px";
+          canvas.style.height = String(Math.ceil(viewport.height)) + "px";
           const context = canvas.getContext("2d");
 
           if (!context) {
@@ -398,7 +419,14 @@ export function PdfViewerSurface({
 
           context.fillStyle = "#ffffff";
           context.fillRect(0, 0, canvas.width, canvas.height);
-          await page.render({ canvasContext: context, viewport }).promise;
+          await page.render({
+            canvasContext: context,
+            viewport,
+            transform:
+              qualityScale === 1
+                ? undefined
+                : [qualityScale, 0, 0, qualityScale, 0, 0]
+          }).promise;
 
           if (!active) return;
           thumbnails.push(canvas.toDataURL("image/png"));
