@@ -49,6 +49,8 @@ import {
   isFolderNotePath
 } from "@/lib/folderNotes";
 import { getLastOpenedRelativePath, setLastOpenedRelativePath } from "@/lib/lastOpenedFile";
+import { isJournalRelativePath } from "@/lib/journal";
+import { isTasksContainerRelativePath } from "@/lib/tasks";
 import { getZenFontScale } from "@/lib/zenFontZoom";
 import { findStepIndex } from "@/lib/navigationHistory";
 import { downloadFolderAsArchive, downloadNoteAsMarkdown } from "@/lib/export/markdownDownload";
@@ -132,6 +134,8 @@ function App() {
   const refreshDocumentLocks = useAppStore((state) => state.refreshDocumentLocks);
   const filePaths = useAppStore((state) => state.filePaths);
   const folderPath = useAppStore((state) => state.folderPath);
+  const taskSettings = useEditorSettingsStore((state) => state.taskSettings);
+  const journalSettings = useEditorSettingsStore((state) => state.journalSettings);
   const isLoading = useAppStore((state) => state.isLoading);
   const isFileLoading = useAppStore((state) => state.isFileLoading);
   const isSaving = useAppStore((state) => state.isSaving);
@@ -246,17 +250,46 @@ function App() {
     setEntryClipboard([]);
   }, [folderPath]);
 
-  useEffect(() => {
-    if (!selectedFilePath) return;
-    setOpenTabs((tabs) => (tabs.includes(selectedFilePath) ? tabs : [...tabs, selectedFilePath]));
-  }, [selectedFilePath]);
+  const isHiddenAppDocument = (filePath: string): boolean => {
+    if (!folderPath) return false;
+
+    const relativePath = getRelativeDisplayPath(folderPath, filePath);
+    return (
+      isTasksContainerRelativePath(relativePath, taskSettings.folder) ||
+      isJournalRelativePath(relativePath, journalSettings)
+    );
+  };
 
   useEffect(() => {
-    setOpenTabs((tabs) => tabs.filter((filePath) => filePaths.includes(filePath) || fileDocuments[filePath]));
+    if (!selectedFilePath) return;
+
+    if (isHiddenAppDocument(selectedFilePath)) {
+      setOpenTabs((tabs) => tabs.filter((path) => path !== selectedFilePath));
+      return;
+    }
+
+    setOpenTabs((tabs) => (tabs.includes(selectedFilePath) ? tabs : [...tabs, selectedFilePath]));
+  }, [selectedFilePath, folderPath, taskSettings.folder, journalSettings]);
+
+  useEffect(() => {
+    setOpenTabs((tabs) =>
+      tabs.filter(
+        (filePath) =>
+          (filePaths.includes(filePath) || fileDocuments[filePath]) &&
+          !isHiddenAppDocument(filePath)
+      )
+    );
     if (secondaryFilePath && !filePaths.includes(secondaryFilePath) && !fileDocuments[secondaryFilePath]) {
       setSecondaryFilePath(null);
     }
-  }, [filePaths, fileDocuments, secondaryFilePath]);
+  }, [
+    filePaths,
+    fileDocuments,
+    secondaryFilePath,
+    folderPath,
+    taskSettings.folder,
+    journalSettings
+  ]);
 
 
   const toggleSidebarVisible = () => {
@@ -623,7 +656,11 @@ function App() {
   };
 
   const openSecondaryDocument = async (filePath: string) => {
-    if (layout !== "desktop" || filePath === selectedFilePath) {
+    if (
+      layout !== "desktop" ||
+      filePath === selectedFilePath ||
+      isHiddenAppDocument(filePath)
+    ) {
       return;
     }
 
@@ -652,6 +689,10 @@ function App() {
   };
 
   const openDocumentsAsTabs = async (filePathsToOpen: [string, string]) => {
+    if (filePathsToOpen.some((filePath) => isHiddenAppDocument(filePath))) {
+      return;
+    }
+
     const loaded = await Promise.all(filePathsToOpen.map((filePath) => loadFileDocument(filePath)));
     if (loaded.some((success) => !success)) {
       return;
@@ -668,6 +709,10 @@ function App() {
 
   const openDocumentsAsSplit = async (filePathsToOpen: [string, string]) => {
     if (layout !== "desktop") {
+      return;
+    }
+
+    if (filePathsToOpen.some((filePath) => isHiddenAppDocument(filePath))) {
       return;
     }
 
