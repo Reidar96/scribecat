@@ -59,8 +59,8 @@ async function parseSlides(data: Uint8Array): Promise<PptxSlide[]> {
   const zip = unzipSync(data);
   const decoder = new TextDecoder();
   const slideNames = Object.keys(zip)
-    .filter((name) => /^ppt\\/slides\\/slide\\d+\\.xml$/.test(name))
-    .sort((a, b) => Number(a.match(/\\d+/)?.[0] ?? 0) - Number(b.match(/\\d+/)?.[0] ?? 0));
+    .filter((name) => /^ppt\/slides\/slide\d+\.xml$/.test(name))
+    .sort((a, b) => Number(a.match(/\d+/)?.[0] ?? 0) - Number(b.match(/\d+/)?.[0] ?? 0));
   const slides: PptxSlide[] = [];
 
   for (const slideName of slideNames) {
