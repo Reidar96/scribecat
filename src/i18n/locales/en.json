@@ -1374,6 +1374,9 @@
     "copyPage": "Copy text from this page",
     "copied": "Page text copied",
     "openInSplit": "Open PDF beside this note",
+  "fullscreen": "Open PDF in fullscreen",
+  "exitFullscreen": "Exit PDF fullscreen",
+  "zoom": "Zoom PDF",
     "attached": "PDF attached to this tab",
     "selectableText": "Selectable text on the PDF page"
   },
