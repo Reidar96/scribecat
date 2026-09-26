@@ -230,6 +230,18 @@ export function PdfViewerSurface({
   }, [zoom, renderZoom]);
 
   useEffect(() => {
+    if (
+      mode === "inline" &&
+      restoreMinimizedRequestId > 0 &&
+      restoreMinimizedRequestId !== lastRestoreMinimizedRequestIdRef.current
+    ) {
+      setIsMinimized(false);
+    }
+
+    lastRestoreMinimizedRequestIdRef.current = restoreMinimizedRequestId;
+  }, [mode, restoreMinimizedRequestId]);
+
+  useEffect(() => {
     return () => {
       if (zoomRenderTimerRef.current !== null) {
         window.clearTimeout(zoomRenderTimerRef.current);
