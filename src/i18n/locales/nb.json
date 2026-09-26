@@ -638,7 +638,7 @@
     "heading6": "Overskrift 6",
     "indentDecrease": "Reduser innrykk",
     "indentIncrease": "Øk innrykk",
-    "insertImage": "Sett inn bilde",
+    "insertImage": "Sett inn bilde eller PDF",
     "calloutMenu": "Sett inn merknadsboks",
     "calloutSuccess": "Suksess",
     "calloutInfo": "Info",
@@ -761,13 +761,14 @@
   },
   "editor": {
     "unserializableContent": "Lagring er satt på pause: redigereren kan ikke skrive dette notatet som Markdown ({{nodes}}). Angre siste endring for å unngå datatap, og rapporter gjerne feilen.",
-    "imageRequiresFile": "Bilder kan bare settes inn når du redigerer en fil i en åpen mappe.",
+    "imageRequiresFile": "Bilder og PDF-er kan bare settes inn når du redigerer en fil i en åpen mappe.",
     "imageInsertFailed": "Kunne ikke sette inn bildet «{{fileName}}»: {{error}}",
-    "imageDialogTitle": "Velg bilde",
-    "imageDialogFilter": "Bilder",
+    "pdfInsertFailed": "Kunne ikke sette inn PDF-en «{{fileName}}» som bilder: {{error}}",
+    "imageDialogTitle": "Velg bilde eller PDF",
+    "imageDialogFilter": "Bilder og PDF",
     "linkRequiresFile": "Filer kan bare lenkes når du redigerer en fil i en åpen mappe.",
     "linkTargetMissing": "Den lenkede filen «{{href}}» ble ikke funnet.",
-    "dropDocumentHint": "Dokumenter settes ikke inn i teksten — slipp dem på fillisten for å importere dem som notat."
+    "dropDocumentHint": "PDF-er kan settes inn som sidebilder. Slipp andre dokumenter på fillisten for å importere dem som notater."
   },
   "editorContextMenu": {
     "copyFormatted": "Kopier tekst med formatering",

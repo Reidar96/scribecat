@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.24.4] - 2026-09-26
+
+### New features and improvements
+- Let the editor's existing image button select PDF files in addition to images.
+- Let pasted and dropped PDFs be inserted directly into the current note.
+- Render every PDF page to a PNG attachment and embed those pages as normal Markdown images, so the PDF is shown inline rather than as a link.
+- Keep the existing PDF import flow unchanged: importing from the file list still converts a PDF into its own Markdown note.
+- Keep non-PDF documents on the existing import-as-note path.
+
 ## [0.24.3] - 2026-09-26
 
 ### New features and improvements
