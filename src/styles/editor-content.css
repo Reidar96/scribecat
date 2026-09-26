@@ -1971,3 +1971,71 @@
 .document-preview__office-page > .document-preview__word-sheet {
   will-change: transform;
 }
+
+
+/* 0.25.13: multi-page previews use one stable thumbnail frame. The document
+   itself keeps its native aspect ratio and is fitted inside the frame, so PDF,
+   Word and PowerPoint cards have consistent heights without stretching. */
+.pdf-preview__overview-page {
+  aspect-ratio: 4 / 3;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.pdf-preview__overview-page-frame {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: #fff;
+}
+
+.pdf-preview__overview-page-frame > img {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.pdf-preview__overview-page-frame--slide > .document-preview__slide-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  transform: none;
+}
+
+.pdf-preview__overview-page-frame--slide > .document-preview__slide-svg > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+}
+
+.pdf-preview__word-sheet--overview {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  max-width: none;
+  min-height: 0;
+  margin: 0;
+  overflow: hidden;
+  transform-origin: 50% 50%;
+}
+
+.pdf-preview__word-sheet--overview .document-preview__word-sheet-content {
+  width: 100%;
+  height: 100%;
+}
+
+.document-preview__office-page {
+  overflow: visible;
+}
