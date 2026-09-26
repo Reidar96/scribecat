@@ -529,7 +529,6 @@ export function TreeNodeRow({
           )}
           style={{ paddingLeft }}
           title={node.relativePath}
-          {...{ [DROP_DIRECTORY_ATTRIBUTE]: dropDirectory }}
           tabIndex={tabIndex}
           ref={(element) => registerItemRef(key, element)}
           onClick={(event) => onRowClick(node, event)}
