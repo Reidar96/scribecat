@@ -14,7 +14,7 @@ import {
 
 // What the file dialog offers. The conversion itself is decided in convert.ts,
 // which is also what the drag-and-drop path filters against.
-export const IMPORT_FILE_EXTENSIONS = [...CONVERTIBLE_EXTENSIONS, "doc"];
+export const IMPORT_FILE_EXTENSIONS = [...CONVERTIBLE_EXTENSIONS];
 
 export type ImportItemStatus = "pending" | "converting" | "done" | "error" | "cancelled";
 
