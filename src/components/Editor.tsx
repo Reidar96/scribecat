@@ -37,7 +37,6 @@ import {
   buildFileLinkHref,
   buildVaultFileOptions,
   decodeFileLinkHref,
-  encodeFileLinkHref,
   getDraggedVaultFilePaths,
   getFileLinkLabel,
   isFileLinkHref,
@@ -719,19 +718,19 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     return pos;
   };
 
-  const insertPdfPreviewPayload = async (
+  const insertPdfEmbedPayload = async (
     payload: MediaPayload,
     insertPos: number
-  ): Promise<{ pos: number; preview: PdfPreviewState | null }> => {
+  ): Promise<number> => {
     const currentEditor = editorRef.current;
 
     if (!currentEditor || !folderPath || !filePath) {
-      return { pos: insertPos, preview: null };
+      return insertPos;
     }
 
     if (!getVaultCapabilities().images) {
       setFeedback({ kind: "error", message: vaultCapabilityHint() });
-      return { pos: insertPos, preview: null };
+      return insertPos;
     }
 
     try {
@@ -747,27 +746,24 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         filePath,
         rootRelativePath
       );
-      const href = encodeFileLinkHref(markdownPath.replace(/\\/g, "/"));
-      const label = payload.fileName.replace(/\\/g, "/").split("/").pop() || payload.fileName;
+      const label =
+        payload.fileName.replace(/\\/g, "/").split("/").pop() || payload.fileName;
       const sizeBefore = currentEditor.state.doc.content.size;
 
+      // PDF embeds deliberately reuse the image/media node. The Markdown stays
+      // portable as ![name](relative/path.pdf), while ImageView recognizes the
+      // .pdf source and renders the existing ScribeCat PDF reader inline.
       currentEditor
         .chain()
         .focus()
         .insertContentAt(insertPos, {
-          type: "text",
-          text: label,
-          marks: [{ type: "link", attrs: { href } }]
+          type: "image",
+          attrs: { src: markdownPath, alt: label }
         })
         .run();
 
       const sizeAfter = currentEditor.state.doc.content.size;
-      const absolutePath = await join(await dirname(filePath), decodeFileLinkHref(href));
-
-      return {
-        pos: insertPos + (sizeAfter - sizeBefore),
-        preview: { absolutePath, label }
-      };
+      return insertPos + (sizeAfter - sizeBefore);
     } catch (error) {
       setFeedback({
         kind: "error",
@@ -776,7 +772,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
           error: extractErrorMessage(error, t)
         })
       });
-      return { pos: insertPos, preview: null };
+      return insertPos;
     }
   };
 
@@ -791,7 +787,6 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     }
 
     let pos = insertPos;
-    let previewToOpen: PdfPreviewState | null = null;
 
     for (const payload of payloads) {
       if (!isPdfPayload(payload)) {
@@ -800,9 +795,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       }
 
       if (pdfMode === "preview") {
-        const inserted = await insertPdfPreviewPayload(payload, pos);
-        pos = inserted.pos;
-        previewToOpen ??= inserted.preview;
+        pos = await insertPdfEmbedPayload(payload, pos);
         continue;
       }
 
@@ -825,9 +818,6 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       }
     }
 
-    if (previewToOpen) {
-      setPdfPreview(previewToOpen);
-    }
   };
 
   const insertMediaFiles = async (files: File[], insertPos: number) => {
@@ -1575,7 +1565,20 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 
       {hideToolbar ? null : toolbarContainer ? createPortal(toolbar, toolbarContainer) : toolbar}
 
-      <EditorFileContext.Provider value={{ folderPath, filePath }}>
+      <EditorFileContext.Provider
+        value={{
+          folderPath,
+          filePath,
+          onOpenPdfInSplit:
+            layout === "desktop" && filePath && onOpenPdfInSplit
+              ? (request) =>
+                  onOpenPdfInSplit({
+                    ...request,
+                    ownerFilePath: filePath
+                  })
+              : undefined
+        }}
+      >
         <div className="editor-view__body">
           <FindReplacePanel
             editor={editor}
