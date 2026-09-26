@@ -128,7 +128,6 @@
     "progress": "{{total}} 件中 {{completed}} 件をインポート中 …",
     "doneSummary": "インポート完了: {{doneCount}} 件成功、{{errorCount}} 件失敗。",
     "doneSummaryCancelled": "インポートを中止しました: {{doneCount}} 件成功、{{errorCount}} 件失敗、{{cancelledCount}} 件スキップ。",
-    "errorLegacyDoc": "旧形式の .doc はサポートされていません。ファイルを .docx として保存してから再度インポートしてください。",
     "errorUnsupported": "サポートされていないファイル形式です。",
     "errorConvert": "変換に失敗しました: {{message}}",
     "errorWrite": "ファイルを書き込めませんでした: {{message}}",
