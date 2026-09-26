@@ -10,11 +10,9 @@ export type SelectionContextMenuState = {
 };
 
 type SelectionContextMenuProps = SelectionContextMenuState & {
-  canPaste: boolean;
   onCopyFormatted: () => void;
   onCopyMarkdown: () => void;
   onCopyPlainText: () => void;
-  onPaste: () => void;
   onClose: () => void;
 };
 
@@ -22,11 +20,9 @@ export function SelectionContextMenu({
   x,
   y,
   hasSelection,
-  canPaste,
   onCopyFormatted,
   onCopyMarkdown,
   onCopyPlainText,
-  onPaste,
   onClose
 }: SelectionContextMenuProps) {
   const { t } = useTranslation();
