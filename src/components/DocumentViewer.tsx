@@ -1099,7 +1099,7 @@ export function DocumentViewer({
         <div className="pdf-preview__pager">
           <button
             type="button"
-            disabled={pageCount === 0 || pageNumber <= 1 || isWord}
+            disabled={pageCount === 0 || pageNumber <= 1}
             aria-label={t("pdfViewer.previous")}
             title={t("pdfViewer.previous")}
             onClick={previousPage}
@@ -1257,6 +1257,7 @@ export function DocumentViewer({
               onClick={() => onOpenInSplit(pageNumber)}
             >
               <Columns2 aria-hidden="true" />
+              <span className="pdf-preview__split-label">{t("pdfViewer.openInSplit")}</span>
             </button>
           ) : null}
 
