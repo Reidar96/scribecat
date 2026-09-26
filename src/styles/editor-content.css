@@ -825,6 +825,16 @@
   background: rgb(12 12 14 / 0.92);
 }
 
+.pdf-preview--split.pdf-preview--minimized {
+  grid-template-rows: auto;
+  height: auto;
+  align-self: start;
+}
+
+.pdf-preview--split.pdf-preview--minimized .pdf-preview__toolbar {
+  border-radius: 0;
+}
+
 .pdf-preview--inline {
   height: auto;
   min-height: 0;
