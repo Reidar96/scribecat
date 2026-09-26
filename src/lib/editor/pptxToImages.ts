@@ -590,9 +590,7 @@ function renderShapeTree(
 function slideSvg(
   source: SlideSource,
   contextBase: Omit<RenderContext, "relationships">,
-  relationships: RelationshipMap,
-  index: number,
-  total: number
+  relationships: RelationshipMap
 ): PptxSlide {
   const document = parseXml(source.xml);
   const slide = Array.from(document.getElementsByTagName("*")).find(
@@ -637,7 +635,6 @@ function slideSvg(
     "<rect width=\"100%\" height=\"100%\" fill=\"" +
     escapeXml(backgroundFill) + "\"/>" +
     rendered.svg +
-    footer +
     "</svg>";
 
   return {
@@ -714,9 +711,7 @@ async function parseSlides(data: Uint8Array): Promise<PptxSlide[]> {
     slideSvg(
       source,
       contextBase,
-      parseRelationships(source.relXml),
-      index,
-      sources.length
+      parseRelationships(source.relXml)
     )
   );
 }
