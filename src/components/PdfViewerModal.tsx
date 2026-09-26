@@ -995,7 +995,10 @@ export function PdfViewerSurface({
                   step="0.05"
                   value={zoom}
                   aria-label={t("pdfViewer.zoom")}
-                  onChange={(event) => setZoomValue(Number(event.target.value))}
+                  onChange={(event) => {
+                    captureViewportCenterAnchor();
+                    setZoomValue(Number(event.target.value));
+                  }}
                 />
               </div>
             ) : null}
