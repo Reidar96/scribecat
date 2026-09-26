@@ -1,4 +1,4 @@
-import { X } from "lucide-react";
+import { FileText, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { getFileLinkLabel } from "@/lib/editor/fileLinks";
@@ -10,6 +10,7 @@ type DocumentTabsProps = {
   filePaths: string[];
   activeFilePath: string | null;
   dirtyFilePaths: string[];
+  attachedPdfOwnerFilePath?: string | null;
   onSelect: (filePath: string) => void;
   onClose: (filePath: string) => void;
   onCloseAll: () => void;
@@ -20,6 +21,7 @@ export function DocumentTabs({
   filePaths,
   activeFilePath,
   dirtyFilePaths,
+  attachedPdfOwnerFilePath = null,
   onSelect,
   onClose,
   onCloseAll,
@@ -78,6 +80,16 @@ export function DocumentTabs({
               onClick={() => onSelect(filePath)}
             >
               <span className="document-tab__name">{label}</span>
+              {attachedPdfOwnerFilePath === filePath ? (
+                <span
+                  className="document-tab__attachment"
+                  aria-label={t("pdfViewer.attached")}
+                  title={t("pdfViewer.attached")}
+                >
+                  <FileText aria-hidden="true" />
+                  <span>PDF</span>
+                </span>
+              ) : null}
               {dirtySet.has(filePath) ? (
                 <span className="document-tab__dirty" aria-label={t("tabs.unsaved")} />
               ) : null}
