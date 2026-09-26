@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { FindReplacePanel } from "@/components/FindReplacePanel";
 import { LinkDialog, type LinkDialogResult } from "@/components/LinkDialog";
 import { Toolbar } from "@/components/Toolbar";
+import { PdfInsertChoiceDialog, type PdfInsertMode } from "@/components/PdfInsertChoiceDialog";
 import { PdfViewerModal } from "@/components/PdfViewerModal";
 import { TableEdgeControls } from "@/components/TableEdgeControls";
 import { FileLinkSuggestionPopover } from "@/components/editor/FileLinkSuggestionPopover";
@@ -36,6 +37,7 @@ import {
   buildFileLinkHref,
   buildVaultFileOptions,
   decodeFileLinkHref,
+  encodeFileLinkHref,
   getDraggedVaultFilePaths,
   getFileLinkLabel,
   isFileLinkHref,
@@ -142,6 +144,20 @@ type PdfPreviewState = {
   label: string;
 };
 
+type ImagePayload = {
+  fileName: string;
+  mimeType: string;
+  data: Uint8Array;
+  altText?: string;
+};
+
+type MediaPayload = Omit<ImagePayload, "altText">;
+
+type PendingMediaInsert = {
+  payloads: MediaPayload[];
+  insertPos: number;
+};
+
 function isLocalPdfHref(href: string): boolean {
   if (
     !href ||
@@ -235,6 +251,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   } = useDetailsPanelWidth();
   const [linkDialog, setLinkDialog] = useState<LinkDialogState | null>(null);
   const [pdfPreview, setPdfPreview] = useState<PdfPreviewState | null>(null);
+  const [pendingMediaInsert, setPendingMediaInsert] = useState<PendingMediaInsert | null>(null);
   // Node types the serializer replaced with a placeholder in the last
   // serialization (see lib/editor/serializationGuard). While the list is
   // not empty the document is not reported to the store, so nothing with a
@@ -633,23 +650,17 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     }
   };
 
-  type ImagePayload = {
-    fileName: string;
-    mimeType: string;
-    data: Uint8Array;
-    altText?: string;
-  };
-
-  type MediaPayload = Omit<ImagePayload, "altText">;
-
   const isPdfPayload = (payload: MediaPayload) =>
     payload.mimeType === "application/pdf" || /\.pdf$/i.test(payload.fileName);
 
-  const insertImagePayloads = async (payloads: ImagePayload[], insertPos: number) => {
+  const insertImagePayloads = async (
+    payloads: ImagePayload[],
+    insertPos: number
+  ): Promise<number> => {
     const currentEditor = editorRef.current;
 
     if (!currentEditor || payloads.length === 0) {
-      return;
+      return insertPos;
     }
 
     if (!folderPath || !filePath) {
@@ -657,14 +668,14 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         kind: "error",
         message: t("editor.imageRequiresFile")
       });
-      return;
+      return insertPos;
     }
 
     // Paste and drop cannot be disabled like a button; refuse up front with
     // the same hint instead of failing per image.
     if (!getVaultCapabilities().images) {
       setFeedback({ kind: "error", message: vaultCapabilityHint() });
-      return;
+      return insertPos;
     }
 
     let pos = insertPos;
@@ -704,14 +715,94 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         });
       }
     }
+
+    return pos;
   };
 
-  const insertMediaPayloads = async (payloads: MediaPayload[], insertPos: number) => {
-    const imagePayloads: ImagePayload[] = [];
+  const insertPdfPreviewPayload = async (
+    payload: MediaPayload,
+    insertPos: number
+  ): Promise<{ pos: number; preview: PdfPreviewState | null }> => {
+    const currentEditor = editorRef.current;
+
+    if (!currentEditor || !folderPath || !filePath) {
+      return { pos: insertPos, preview: null };
+    }
+
+    if (!getVaultCapabilities().images) {
+      setFeedback({ kind: "error", message: vaultCapabilityHint() });
+      return { pos: insertPos, preview: null };
+    }
+
+    try {
+      const rootRelativePath = await saveImageToFolder(
+        folderPath,
+        filePath,
+        payload.fileName,
+        "application/pdf",
+        payload.data
+      );
+      const markdownPath = await getRelativeImageMarkdownPath(
+        folderPath,
+        filePath,
+        rootRelativePath
+      );
+      const href = encodeFileLinkHref(markdownPath.replace(/\\/g, "/"));
+      const label = payload.fileName.replace(/\\/g, "/").split("/").pop() || payload.fileName;
+      const sizeBefore = currentEditor.state.doc.content.size;
+
+      currentEditor
+        .chain()
+        .focus()
+        .insertContentAt(insertPos, {
+          type: "text",
+          text: label,
+          marks: [{ type: "link", attrs: { href } }]
+        })
+        .run();
+
+      const sizeAfter = currentEditor.state.doc.content.size;
+      const absolutePath = await join(await dirname(filePath), decodeFileLinkHref(href));
+
+      return {
+        pos: insertPos + (sizeAfter - sizeBefore),
+        preview: { absolutePath, label }
+      };
+    } catch (error) {
+      setFeedback({
+        kind: "error",
+        message: t("editor.pdfInsertFailed", {
+          fileName: payload.fileName,
+          error: extractErrorMessage(error, t)
+        })
+      });
+      return { pos: insertPos, preview: null };
+    }
+  };
+
+  const insertMediaPayloads = async (
+    payloads: MediaPayload[],
+    insertPos: number,
+    pdfMode?: PdfInsertMode
+  ) => {
+    if (payloads.some(isPdfPayload) && !pdfMode) {
+      setPendingMediaInsert({ payloads, insertPos });
+      return;
+    }
+
+    let pos = insertPos;
+    let previewToOpen: PdfPreviewState | null = null;
 
     for (const payload of payloads) {
       if (!isPdfPayload(payload)) {
-        imagePayloads.push(payload);
+        pos = await insertImagePayloads([payload], pos);
+        continue;
+      }
+
+      if (pdfMode === "preview") {
+        const inserted = await insertPdfPreviewPayload(payload, pos);
+        pos = inserted.pos;
+        previewToOpen ??= inserted.preview;
         continue;
       }
 
@@ -722,7 +813,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
           throw new Error("The PDF has no renderable pages.");
         }
 
-        imagePayloads.push(...renderedPages);
+        pos = await insertImagePayloads(renderedPages, pos);
       } catch (error) {
         setFeedback({
           kind: "error",
@@ -734,7 +825,9 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       }
     }
 
-    await insertImagePayloads(imagePayloads, insertPos);
+    if (previewToOpen) {
+      setPdfPreview(previewToOpen);
+    }
   };
 
   const insertMediaFiles = async (files: File[], insertPos: number) => {
@@ -749,9 +842,9 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     await insertMediaPayloads(payloads, insertPos);
   };
 
-  // Toolbar image button: pick one or more image/PDF files through the shell's
-  // picker, then insert them like a paste/drop. PDFs are rendered to ordinary
-  // PNG page attachments before they enter the Markdown document.
+  // Toolbar media button: images insert directly. PDFs pause at the same
+  // two-choice dialog used by paste/drop so the user decides between rendered
+  // page images and the existing 0.24.3 PDF reader/split-view flow.
   const handleImageInsertRequest = async () => {
     const currentEditor = editorRef.current;
 
@@ -1418,6 +1511,23 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 
   return (
     <div className={cn("editor-view", documentLocked && "editor-view--locked", documentWidth === "compact" && "editor-view--compact")}>
+      <PdfInsertChoiceDialog
+        open={pendingMediaInsert !== null}
+        fileCount={pendingMediaInsert?.payloads.filter(isPdfPayload).length ?? 0}
+        firstFileName={
+          pendingMediaInsert?.payloads.find(isPdfPayload)?.fileName ?? ""
+        }
+        onChoose={(mode) => {
+          const pending = pendingMediaInsert;
+          setPendingMediaInsert(null);
+
+          if (pending) {
+            void insertMediaPayloads(pending.payloads, pending.insertPos, mode);
+          }
+        }}
+        onCancel={() => setPendingMediaInsert(null)}
+      />
+
       {pdfPreview ? (
         <PdfViewerModal
           absolutePath={pdfPreview.absolutePath}
