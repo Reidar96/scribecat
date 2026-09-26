@@ -637,26 +637,6 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     onRequestFileOpen?.(targetFilePath);
   };
 
-  const openLocalPdf = async (href: string) => {
-    if (!filePath) {
-      return;
-    }
-
-    const [rawPath] = href.split(/[?#]/);
-    const decodedPath = decodeFileLinkHref(rawPath);
-
-    try {
-      const absolutePath = await join(await dirname(filePath), decodedPath);
-      const label = decodedPath.replace(/\\/g, "/").split("/").pop() || decodedPath;
-      setPdfPreview({ absolutePath, label });
-    } catch {
-      setFeedback({
-        kind: "error",
-        message: t("pdfViewer.error")
-      });
-    }
-  };
-
   const openLocalDocument = async (href: string) => {
     if (!filePath) return;
 
