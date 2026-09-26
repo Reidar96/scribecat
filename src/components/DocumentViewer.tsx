@@ -1048,8 +1048,11 @@ export function DocumentViewer({
           }}
           aria-label={"Slide " + (index + 1)}
         >
-          <div className="document-preview__slide document-preview__slide--thumbnail">
-            <OfficeVisual svg={slideData.svg} className="document-preview__slide-svg" />
+          <div className="pdf-preview__overview-page-frame pdf-preview__overview-page-frame--slide">
+            <OfficeVisual
+              svg={slideData.svg}
+              className="document-preview__slide-svg document-preview__slide-svg--thumbnail"
+            />
           </div>
           <span>{index + 1} / {slides.length}</span>
         </button>
@@ -1068,9 +1071,10 @@ export function DocumentViewer({
           }}
           aria-label={"Page " + (index + 1)}
         >
-          <OfficeVisual
+          <WordOverviewPage
             html={pageHtml}
-            className="document-preview__word-sheet document-preview__word-sheet--thumbnail"
+            widthPx={mmToPixels(wordPageSize.widthMm)}
+            heightPx={mmToPixels(wordPageSize.heightMm)}
           />
           <span>{index + 1} / {wordPages.length}</span>
         </button>
