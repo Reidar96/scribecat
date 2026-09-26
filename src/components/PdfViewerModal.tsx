@@ -1242,7 +1242,7 @@ export function PdfViewerSurface({
               <button
                 type="button"
                 className="pdf-preview__overview-page"
-                key={src}
+                key={thumbnail.src}
                 onClick={() => {
                   setPageNumber(index + 1);
                   setPageView("single");
