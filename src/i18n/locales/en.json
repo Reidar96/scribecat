@@ -1399,5 +1399,13 @@
     "replace": "Replace this split document",
     "closePane": "Close this split pane",
     "openSelected": "Open selected in split view"
+  },
+  "pdfInsertChoice": {
+    "eyebrow": "PDF in document",
+    "title": "How should the PDF be inserted?",
+    "descriptionOne": "Choose how “{{name}}” should appear in this Markdown document.",
+    "descriptionMany": "Choose how {{count}} PDFs should appear in this Markdown document.",
+    "pages": "Individual pages",
+    "preview": "Combined view"
   }
 }
