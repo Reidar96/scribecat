@@ -53,11 +53,6 @@ import { useTagIndex } from "@/hooks/useTagIndex";
 import { useVaultSearch } from "@/hooks/useVaultSearch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useStoredCollapsed, useWorkingSetHeight } from "@/hooks/useWorkingSetHeight";
-import {
-  carriesExternalFiles,
-  readDropPayload,
-  type DropPayload
-} from "@/lib/dragDrop/droppedSources";
 import { canDownloadFolderArchive } from "@/lib/export/markdownDownload";
 import { formatFolderLabel, getFolderBasename, getRelativeDisplayPath } from "@/lib/fileSystem";
 import { isJournalRelativePath } from "@/lib/journal";
@@ -67,7 +62,6 @@ import { getVaultCapabilities, platform, vaultCapabilityHint } from "@/platform"
 import type { ManualOrderMap, SortMode } from "@/lib/vaultMeta";
 import { cn } from "@/lib/utils";
 import type { MoveTreeEntryInput, WorkingSetEntry } from "@/store/useAppStore";
-import { DROP_DIRECTORY_ATTRIBUTE, useImportDropStore } from "@/store/useImportDropStore";
 import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
 
 /** What the "In progress" section needs from the app (see WorkingSetPanel). */
@@ -107,7 +101,6 @@ type SidebarProps = {
   onCreateFileRequest: (targetDirectory: string) => void;
   onCreateFolder: () => void;
   onCreateFolderRequest: (targetDirectory: string) => void;
-  onImportRequest: () => void;
   onSelectFilePath: (filePath: string) => Promise<void>;
   onOpenFolderNote: (folderPath: string) => Promise<void>;
   onOpenFolderCollection: (relativePath: string) => void;
@@ -148,7 +141,6 @@ type SidebarProps = {
   fileTreeSelectionCount: number;
   // Files dragged in from outside the app, with the vault-relative folder they
   // were dropped on ("" is the vault root).
-  onFilesDropped: (payload: DropPayload, targetDirectory: string) => void;
   /** Set while the panel is a sheet (phone layout); renders the close button. */
   onClose?: () => void;
 };
@@ -177,7 +169,6 @@ export function Sidebar({
   onCreateFileRequest,
   onCreateFolder,
   onCreateFolderRequest,
-  onImportRequest,
   onSelectFilePath,
   onOpenFolderNote,
   onOpenFolderCollection,
@@ -216,7 +207,6 @@ export function Sidebar({
   onFileTreeSelectionChange,
   fileTreeSelection,
   fileTreeSelectionCount,
-  onFilesDropped,
   onClose
 }: SidebarProps) {
   const { t } = useTranslation();
@@ -358,57 +348,6 @@ export function Sidebar({
     setRootContextMenu({ x: event.clientX, y: event.clientY });
   };
 
-  // Files dragged in from outside the app land as imported notes. Drags that
-  // start inside the tree (reordering, or dragging a note into the editor) are
-  // none of this handler's business and are left to bubble untouched.
-  const importTargetDirectory = useImportDropStore((state) => state.targetDirectory);
-  const setImportTargetDirectory = useImportDropStore((state) => state.setTargetDirectory);
-  const isDropTarget = importTargetDirectory !== null;
-
-  const handleFileDragOver = (event: React.DragEvent<HTMLElement>) => {
-    if (folderPath === null || !carriesExternalFiles(event.dataTransfer)) {
-      return;
-    }
-
-    // Without this the webview handles the drop itself and navigates away from
-    // the app to the dropped file.
-    event.preventDefault();
-    event.dataTransfer.dropEffect = "copy";
-
-    // The row under the pointer decides the target folder; a file row hands the
-    // drop to the folder it lives in, and bare panel space to the vault root.
-    const target = event.target instanceof Element ? event.target : null;
-    const directory =
-      target?.closest(`[${DROP_DIRECTORY_ATTRIBUTE}]`)?.getAttribute(DROP_DIRECTORY_ATTRIBUTE) ?? "";
-
-    setImportTargetDirectory(directory);
-  };
-
-  const handleFileDragLeave = (event: React.DragEvent<HTMLElement>) => {
-    // Crossing from one child of the panel into the next fires dragleave on the
-    // one being left; only a pointer that really left the panel ends the state.
-    if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) {
-      return;
-    }
-
-    setImportTargetDirectory(null);
-  };
-
-  const handleFileDrop = (event: React.DragEvent<HTMLElement>) => {
-    if (folderPath === null || !carriesExternalFiles(event.dataTransfer)) {
-      return;
-    }
-
-    event.preventDefault();
-
-    const directory = importTargetDirectory ?? "";
-
-    setImportTargetDirectory(null);
-    // The transfer is emptied as soon as this handler returns, so what was
-    // dropped is taken out of it here and only walked afterwards.
-    onFilesDropped(readDropPayload(event.dataTransfer), directory);
-  };
-
   // Same dismissal rules as the tree's own menu (useTreeContextMenu): any
   // click, a competing right-click, a scroll or Escape closes it.
   useEffect(() => {
@@ -438,18 +377,9 @@ export function Sidebar({
 
   return (
     <aside
-      className={`sidebar-panel${isDropTarget ? " sidebar-panel--drop-target" : ""}`}
+      className="sidebar-panel"
       aria-label={t("sidebar.filesLabel")}
-      onDragOver={handleFileDragOver}
-      onDragLeave={handleFileDragLeave}
-      onDrop={handleFileDrop}
     >
-      {isDropTarget ? (
-        <div className="sidebar-panel__dropzone" aria-hidden="true">
-          <Import className="size-5" />
-          <span>{t("sidebar.dropImportHint")}</span>
-        </div>
-      ) : null}
 
       <div className="sidebar-panel__header">
         <div className="sidebar-panel__primary-actions">
@@ -515,19 +445,6 @@ export function Sidebar({
             <Plus />
           </Button>
 
-          {platform.features.importFiles ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={onImportRequest}
-              disabled={isLoading || folderPath === null}
-              aria-label={t("sidebar.importFiles")}
-              title={t("sidebar.importFiles")}
-            >
-              <Import />
-            </Button>
-          ) : null}
 
           <Menu>
             <MenuTrigger
