@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.25.3] - 2026-09-26
+
+### Fixed
+- Keep PDF zoom anchored to the pointer/viewport instead of jumping toward the top-left corner.
+- Make desktop drag-to-pan work reliably while preserving text selection when a drag starts on selectable PDF text.
+- Keep the PDF minimap fixed to the viewer while the page itself scrolls.
+- Make the zoom button reset from any zoom level, including values above 100%, without the viewer's pointer handler intercepting the button click.
+- Keep the zoom slider centered on the current viewport when changing zoom with the slider.
+
 ## [0.25.2] - 2026-09-26
 
 ### Fixed
