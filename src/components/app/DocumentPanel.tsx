@@ -24,6 +24,7 @@ import { FindReplacePanel } from "@/components/FindReplacePanel";
 import { VersionsPopover } from "@/components/VersionsPopover";
 import { DocumentMenu } from "@/components/app/DocumentMenu";
 import { DocumentTabs, TAB_DRAG_MIME } from "@/components/app/DocumentTabs";
+import { DocumentViewer, type DocumentPreviewRequest } from "@/components/DocumentViewer";
 import {
   PdfViewerSurface,
   type PdfPreviewRequest
@@ -258,10 +259,14 @@ export function DocumentPanel({
   const [splitPickerQuery, setSplitPickerQuery] = useState("");
   const [splitDropPreview, setSplitDropPreview] = useState<"left" | "right" | null>(null);
   const [attachedPdf, setAttachedPdf] = useState<
-    (PdfPreviewRequest & { ownerFilePath: string }) | null
+    (PdfPreviewRequest & { ownerFilePath: string; pageNumber: number }) | null
+  >(null);
+  const [attachedDocument, setAttachedDocument] = useState<
+    (DocumentPreviewRequest & { ownerFilePath: string; pageNumber: number }) | null
   >(null);
   const [pdfSplitRestoreRequest, setPdfSplitRestoreRequest] = useState<{
     absolutePath: string;
+    pageNumber: number;
     requestId: number;
   } | null>(null);
   const documentLocks = useAppStore((state) => state.documentLocks);
@@ -292,7 +297,10 @@ export function DocumentPanel({
     if (attachedPdf && !openTabs.includes(attachedPdf.ownerFilePath)) {
       setAttachedPdf(null);
     }
-  }, [attachedPdf, openTabs]);
+    if (attachedDocument && !openTabs.includes(attachedDocument.ownerFilePath)) {
+      setAttachedDocument(null);
+    }
+  }, [attachedPdf, attachedDocument, openTabs]);
 
   // A PDF companion is rendered only while its owning Markdown tab is
   // the active (primary) document. If that tab is merely kept open in the
@@ -302,8 +310,13 @@ export function DocumentPanel({
     attachedPdf && attachedPdf.ownerFilePath === selectedFilePath
       ? attachedPdf
       : null;
+  const visibleAttachedDocument =
+    attachedDocument && attachedDocument.ownerFilePath === selectedFilePath
+      ? attachedDocument
+      : null;
   const hasSplitContent =
-    layout === "desktop" && Boolean(secondaryFilePath || visibleAttachedPdf);
+    layout === "desktop" &&
+    Boolean(secondaryFilePath || visibleAttachedPdf || visibleAttachedDocument);
   const capabilities = getVaultCapabilities();
   const capabilityHint = vaultCapabilityHint();
   const versioningEnabled = useVersioningSettingsStore((state) => state.versioningEnabled);
@@ -429,6 +442,7 @@ export function DocumentPanel({
   ) => {
     setPdfSplitRestoreRequest((current) => ({
       absolutePath: request.absolutePath,
+      pageNumber: request.pageNumber ?? 1,
       requestId: (current?.requestId ?? 0) + 1
     }));
   };
@@ -445,11 +459,34 @@ export function DocumentPanel({
   };
 
   const openPdfInSplit = (
-    request: PdfPreviewRequest & { ownerFilePath: string }
+    request: PdfPreviewRequest & { ownerFilePath: string },
+    pageNumber = request.pageNumber ?? 1
   ) => {
     if (layout !== "desktop") return;
 
-    setAttachedPdf(request);
+    setAttachedDocument(null);
+    setAttachedPdf({ ...request, pageNumber });
+    setSecondarySide("right");
+    setSplitPickerOpen(false);
+    setSplitDropPreview(null);
+
+    if (request.ownerFilePath === secondaryFilePath) {
+      onClosePrimarySplit();
+    } else if (request.ownerFilePath === selectedFilePath) {
+      onCloseSecondary();
+    }
+  };
+
+  const openDocumentInSplit = (
+    request: DocumentPreviewRequest & { ownerFilePath: string }
+  ) => {
+    if (layout !== "desktop") return;
+
+    setAttachedPdf(null);
+    setAttachedDocument({
+      ...request,
+      pageNumber: request.pageNumber ?? 1
+    });
     setSecondarySide("right");
     setSplitPickerOpen(false);
     setSplitDropPreview(null);
@@ -884,6 +921,7 @@ export function DocumentPanel({
                   }
 
                   setAttachedPdf(null);
+                  setAttachedDocument(null);
                   setSecondarySide(side);
                   if (filePath !== secondaryFilePath) {
                     onOpenSecondary(filePath);
@@ -926,6 +964,11 @@ export function DocumentPanel({
                               closeAttachedPdf();
                               return;
                             }
+                            if (visibleAttachedDocument) {
+                              setAttachedDocument(null);
+                              setActiveEditorPane("primary");
+                              return;
+                            }
 
                             setActiveEditorPane("secondary");
                             onClosePrimarySplit();
@@ -950,6 +993,7 @@ export function DocumentPanel({
                     onRequestSidebarFocus={onRequestSidebarFocus}
                     onRequestFileOpen={onRequestFileOpen}
                     onOpenPdfInSplit={openPdfInSplit}
+                    onOpenDocumentInSplit={openDocumentInSplit}
                     pdfSplitRestoreRequest={pdfSplitRestoreRequest}
                     onZenModeRequest={onZenModeRequest}
                     onDeleteRequest={onDeleteRequest}
@@ -1015,7 +1059,36 @@ export function DocumentPanel({
                           mode="split"
                           absolutePath={visibleAttachedPdf.absolutePath}
                           label={visibleAttachedPdf.label}
+                          initialPageNumber={visibleAttachedPdf.pageNumber}
+                          onPageChange={(pageNumber) => {
+                            setAttachedPdf((current) =>
+                              current
+                                ? { ...current, pageNumber }
+                                : current
+                            );
+                          }}
                           onClose={closeAttachedPdf}
+                        />
+                      ) : visibleAttachedDocument ? (
+                        <DocumentViewer
+                          mode="split"
+                          absolutePath={visibleAttachedDocument.absolutePath}
+                          label={visibleAttachedDocument.label}
+                          initialPageNumber={visibleAttachedDocument.pageNumber}
+                          onPageChange={(pageNumber) => {
+                            setAttachedDocument((current) =>
+                              current
+                                ? { ...current, pageNumber }
+                                : current
+                            );
+                          }}
+                          onClose={() => {
+                            const request = visibleAttachedDocument;
+                            setAttachedDocument(null);
+                            if (request) {
+                              setActiveEditorPane("primary");
+                            }
+                          }}
                         />
                       ) : secondaryFilePath && secondaryDocument && secondaryMarkdown !== null ? (
                         <>

@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.25.11] - 2026-09-26
+
+### Fixed
+- Use the editor's synchronous copy-event fallback when the browser/webview Clipboard API rejects a write, preserving copy reliability after switching between previews.
+
+### Document preview
+- Build the Word and PowerPoint viewers from the PDF reader's interaction model instead of a separate toolbar implementation.
+- Keep the PDF viewer implementation unchanged while using its pager, page/grid view, zoom, fullscreen, minimize and split-view controls for Office documents.
+- Add the same touch pinch-to-zoom, zoom anchoring, mouse/trackpad zoom and drag-to-pan behavior to Word and PowerPoint previews.
+- Keep Word on a paper-sized document surface using the page size stored in the DOCX.
+- Allow Word and PowerPoint previews to open directly into the existing desktop split view.
+
+### Docker
+- Publish `ghcr.io/reidar96/scribecat-server:0.25.11`.
+
+
 ## [0.25.9] - 2026-09-26
 
 ### Fixed

@@ -1,32 +1,30 @@
 /**
- * Copy plain text without relying on one particular browser/webview clipboard path.
+ * Copy text through the browser/webview clipboard pipeline.
+ *
+ * The copy event route is deliberately used as the fallback: unlike a
+ * temporary textarea, it does not move focus away from the current document
+ * selection and matches the synchronous mechanism used by the editor itself.
  */
 function copyViaCommand(text: string): boolean {
-  const textarea = document.createElement("textarea");
-  const previousActive = document.activeElement as HTMLElement | null;
+  const handleCopy = (event: ClipboardEvent) => {
+    if (!event.clipboardData) {
+      return;
+    }
 
-  textarea.value = text;
-  textarea.setAttribute("readonly", "");
-  textarea.setAttribute("aria-hidden", "true");
-  textarea.style.position = "fixed";
-  textarea.style.left = "-9999px";
-  textarea.style.top = "0";
-  textarea.style.opacity = "0";
-  document.body.appendChild(textarea);
-  textarea.focus();
-  textarea.select();
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    event.clipboardData.setData("text/plain", text);
+  };
 
-  let copied = false;
+  document.addEventListener("copy", handleCopy, { capture: true, once: true });
+
   try {
-    copied = document.execCommand("copy");
+    return document.execCommand("copy");
   } catch {
-    copied = false;
+    return false;
   } finally {
-    textarea.remove();
-    previousActive?.focus?.({ preventScroll: true });
+    document.removeEventListener("copy", handleCopy, { capture: true });
   }
-
-  return copied;
 }
 
 export async function copyText(text: string): Promise<boolean> {
@@ -37,7 +35,8 @@ export async function copyText(text: string): Promise<boolean> {
       await navigator.clipboard.writeText(text);
       return true;
     } catch {
-      // Fall through: some webviews expose the API but reject this write.
+      // Permission denied or unavailable in this webview: use the same
+      // synchronous copy-event route as editor selections.
     }
   }
 

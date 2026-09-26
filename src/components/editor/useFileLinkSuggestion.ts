@@ -145,6 +145,22 @@ export function useFileLinkSuggestion({
         return false;
       }
 
+      // Only the live "[[" picker may own the vertical arrows. If focus,
+      // selection, or the trigger range moved since the popup was calculated,
+      // close the stale popup and let the editor handle the key normally.
+      const editor = editorRef.current;
+      const selection = editor?.state.selection;
+
+      if (
+        !editor ||
+        editor.isDestroyed ||
+        !selection?.empty ||
+        selection.from !== current.to
+      ) {
+        closeSuggestion();
+        return false;
+      }
+
       if (event.key === "ArrowDown" || event.key === "ArrowUp") {
         event.preventDefault();
 
