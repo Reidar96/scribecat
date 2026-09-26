@@ -5,10 +5,16 @@ export type InlinePdfPreviewRequest = {
   label: string;
 };
 
+export type InlinePdfSplitRestoreRequest = {
+  absolutePath: string;
+  requestId: number;
+};
+
 export type EditorFileContextValue = {
   folderPath: string | null;
   filePath: string | null;
   onOpenPdfInSplit?: (request: InlinePdfPreviewRequest) => void;
+  pdfSplitRestoreRequest?: InlinePdfSplitRestoreRequest | null;
 };
 
 export const EditorFileContext = createContext<EditorFileContextValue>({
