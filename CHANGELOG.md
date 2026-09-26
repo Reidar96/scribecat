@@ -1,3 +1,20 @@
+# ScribeCat 0.25.13
+
+### Document tabs
+- Journal entries and task documents stay out of the document tab bar because they belong to their dedicated Journal and Tasks views.
+
+### Office split view
+- Word and PowerPoint use the same “open beside this note” split path as PDF, including when the editor is already the secondary split pane.
+- Preserve the current Office page when opening the document beside the note.
+
+### Multi-page view
+- Give PDF, Word and PowerPoint overview cards a stable frame and fit the native page or slide into it without stretching.
+- Keep PowerPoint thumbnails on a fixed 16:9 canvas inside the overview frame.
+- Fit Word thumbnails using the actual DOCX page dimensions.
+
+### Office zoom
+- Keep the Word and PowerPoint viewer page slot at the fitted size while zooming the document inside it, instead of resizing the whole viewer.
+
 # Changelog
 
 ## [0.25.12] - 2026-09-26
