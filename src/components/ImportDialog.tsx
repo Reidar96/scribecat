@@ -19,11 +19,6 @@ type ImportDialogProps = {
   // Folder the new notes are written into; falls back to vaultRoot when null
   // (no specific folder selected in the tree).
   targetFolder: string | null;
-  // Files a dropped folder contained that no converter handles, and whether
-  // MAX_DROPPED_FILES cut the batch short. Both are zero/false for a pick made
-  // through the file dialog, which cannot select unsupported files.
-  skippedCount?: number;
-  limitReached?: boolean;
   onImported: (createdFilePaths: string[]) => void;
   onClose: () => void;
 };
@@ -52,8 +47,6 @@ export function ImportDialog({
   files,
   vaultRoot,
   targetFolder,
-  skippedCount = 0,
-  limitReached = false,
   onImported,
   onClose
 }: ImportDialogProps) {
@@ -178,14 +171,6 @@ export function ImportDialog({
                   ? t("importDialog.doneSummaryCancelled", { doneCount, errorCount, cancelledCount })
                   : t("importDialog.doneSummary", { doneCount, errorCount })}
         </p>
-
-        {limitReached || skippedCount > 0 ? (
-          <p className="import-dialog__notice">
-            {limitReached ? t("importDialog.limitReached", { max: MAX_DROPPED_FILES }) : null}
-            {limitReached && skippedCount > 0 ? " " : null}
-            {skippedCount > 0 ? t("importDialog.skippedFiles", { files: skippedCount }) : null}
-          </p>
-        ) : null}
 
         <ul className="import-dialog__list">
           {items.map((item) => (
