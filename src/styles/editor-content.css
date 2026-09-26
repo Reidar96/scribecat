@@ -95,3 +95,134 @@
   transform: rotate(var(--rotate)) scaleX(var(--scale-x))
     scale(var(--min-font-size-inv));
 }
+
+.document-preview {
+  width: 100%;
+  min-height: 320px;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  background: rgb(12 12 14 / 0.86);
+  border: 1px solid rgb(255 255 255 / 0.08);
+}
+
+.document-preview__toolbar {
+  min-height: 2.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.45rem 0.65rem;
+  border-bottom: 1px solid rgb(255 255 255 / 0.08);
+}
+
+.document-preview__toolbar strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.document-preview__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.document-preview__actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: 0.4rem;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.document-preview__actions button:hover {
+  background: rgb(255 255 255 / 0.1);
+}
+
+.document-preview__actions svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.document-preview__stage {
+  min-height: 280px;
+  max-height: 70vh;
+  overflow: auto;
+  display: grid;
+  place-items: start center;
+  padding: 1rem;
+}
+
+.document-preview__video {
+  display: block;
+  width: min(100%, 960px);
+  max-height: 65vh;
+  margin: auto;
+}
+
+.document-preview__word {
+  width: min(100%, 860px);
+  padding: 2.5rem;
+  background: #fff;
+  color: #111;
+  box-shadow: 0 12px 36px rgb(0 0 0 / 0.35);
+}
+
+.document-preview__word img {
+  max-width: 100%;
+}
+
+.document-preview__slide {
+  position: relative;
+  width: min(100%, 1100px);
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  padding: clamp(1rem, 4vw, 3rem);
+  background: #fff;
+  color: #111;
+  box-shadow: 0 12px 36px rgb(0 0 0 / 0.35);
+}
+
+.document-preview__slide img {
+  display: block;
+  max-width: 100%;
+  max-height: 55%;
+  object-fit: contain;
+  margin: 0 auto 1rem;
+}
+
+.document-preview__slide-text {
+  position: absolute;
+  inset: 30% 8% 8%;
+  overflow: auto;
+}
+
+.document-preview__slide-text p {
+  margin: 0 0 0.6rem;
+  font-size: clamp(0.9rem, 2vw, 1.35rem);
+}
+
+.document-preview__message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 220px;
+  color: rgb(255 255 255 / 0.7);
+}
+
+@media (max-width: 700px) {
+  .document-preview__stage {
+    padding: 0.5rem;
+  }
+
+  .document-preview__word {
+    padding: 1.25rem;
+  }
+}
