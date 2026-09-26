@@ -104,7 +104,10 @@ export function pdfLinkAsMediaMarkdownItPlugin(markdownit: MarkdownIt): void {
         open.type = "image";
         open.tag = "img";
         open.nesting = 0;
-        open.attrs = [["src", href]];
+        open.attrs = [
+          ["src", href],
+          ["alt", label]
+        ];
         open.children = labelChildren;
         open.content = label;
         open.markup = "";
