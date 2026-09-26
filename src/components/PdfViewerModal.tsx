@@ -1241,7 +1241,9 @@ export function PdfViewerSurface({
                 }}
                 aria-label={`Page ${index + 1}`}
               >
-                <img src={src} alt="" />
+                <div className="pdf-preview__overview-page-frame">
+                  <img src={src} alt="" />
+                </div>
                 <span>{index + 1} / {pageThumbnails.length}</span>
               </button>
             ))}
