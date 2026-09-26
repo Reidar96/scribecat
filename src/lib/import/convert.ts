@@ -14,14 +14,14 @@
 
 import { requireLocalFs } from "@/platform";
 
-import { allowFileAccess } from "@/lib/fileSystem";
+import { allowFileAccess, getRelativeImageMarkdownPath, guessImageMimeType, saveImageToFolder } from "@/lib/fileSystem";
 
 // Formats that carry structure a converter has to reconstruct.
-export const CONVERT_DOCUMENT_EXTENSIONS = ["docx", "pdf"] as const;
+export const CONVERT_DOCUMENT_EXTENSIONS = ["pdf"] as const;
 
 // Transcribed by the configured AI model, so these only work with a model set
 // up — the callers check isAiOcrConfigured() before offering them.
-export const CONVERT_IMAGE_EXTENSIONS = [] as const;
+export const CONVERT_IMAGE_EXTENSIONS = ["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "avif", "heic", "heif"] as const;
 
 // Read as text and either kept as-is, rendered into a table or fenced as code.
 // Anything not listed is refused rather than guessed at: a binary decoded as
@@ -334,17 +334,26 @@ export async function convertToMarkdown(
     return convertTextSource(source, extension);
   }
 
-  if (extension === "docx") {
-    const { convertDocxToMarkdown } = await import("./docxImporter");
+  if ((CONVERT_IMAGE_EXTENSIONS as readonly string[]).includes(extension)) {
+    if (!target.embedImages) {
+      return "![" + source.name.replace(/\.[^.]+$/, "") + "](" + source.name + ")";
+    }
 
-    return target.embedImages
-      ? convertDocxToMarkdown(
-          await source.bytes(),
-          target.vaultRoot,
-          target.targetFilePath,
-          target.imageBaseName
-        )
-      : convertDocxToMarkdown(await source.bytes());
+    const data = await source.bytes();
+    const relativePath = await saveImageToFolder(
+      target.vaultRoot,
+      target.targetFilePath,
+      source.name,
+      guessImageMimeType(source.name),
+      data
+    );
+    const markdownPath = await getRelativeImageMarkdownPath(
+      target.vaultRoot,
+      target.targetFilePath,
+      relativePath
+    );
+    const alt = source.name.replace(/\.[^.]+$/, "");
+    return "![" + alt + "](" + markdownPath + ")";
   }
 
   const { convertPdfToMarkdown } = await import("./pdfImporter");
