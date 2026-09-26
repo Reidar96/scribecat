@@ -1492,6 +1492,12 @@ function App() {
               onCloseAllTabs={closeAllDocumentTabs}
               onReorderTabs={reorderDocumentTabs}
               onOpenSecondary={(filePath) => void openSecondaryDocument(filePath)}
+              onOpenDocumentInSplit={(request) => {
+                // The document viewer owns the preview itself; App only needs
+                // to keep the owning note selected while DocumentPanel mounts
+                // the preview in the secondary pane.
+                void request;
+              }}
               onClosePrimarySplit={() => void closePrimarySplitPane()}
               onCloseSecondary={() => setSecondaryFilePath(null)}
               onSecondaryMarkdownChange={updateFileContent}
