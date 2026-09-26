@@ -1,0 +1,22 @@
+name: Validate ScribeCat 0.24.7
+
+on:
+  push:
+    branches:
+      - release/0.24.7-pdf-window-aspect
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
