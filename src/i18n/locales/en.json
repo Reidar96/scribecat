@@ -949,7 +949,8 @@
   "editor": {
     "unserializableContent": "Saving is paused: the editor cannot write this note as Markdown ({{nodes}}). Undo the last change so nothing is lost, and please report this.",
     "imageRequiresFile": "Images and PDFs can only be inserted while editing a file inside an open folder.",
-    "imageInsertFailed": "Could not insert image \"{{fileName}}\": {{error}}",\n    "pdfInsertFailed": "Could not insert PDF \"{{fileName}}\" as images: {{error}}",
+    "imageInsertFailed": "Could not insert image \"{{fileName}}\": {{error}}",
+    "pdfInsertFailed": "Could not insert PDF \"{{fileName}}\" as images: {{error}}",
     "imageDialogTitle": "Select image or PDF",
     "imageDialogFilter": "Images and PDF",
     "linkRequiresFile": "Files can only be linked while editing a file inside an open folder.",
