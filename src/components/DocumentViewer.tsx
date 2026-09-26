@@ -10,8 +10,7 @@ import {
   Grid2X2,
   Loader2,
   Maximize2,
-  Minimize2,
-  Play,
+  Minimize2 ,
   Square,
   X,
   ZoomIn
