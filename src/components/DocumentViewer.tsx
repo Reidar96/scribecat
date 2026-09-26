@@ -286,9 +286,14 @@ export function DocumentViewer({
 
     const pageWidthPx = mmToPixels(wordPageSize.widthMm);
     const pageHeightPx = mmToPixels(wordPageSize.heightMm);
+
+    source.style.width = pageWidthPx + "px";
+    source.style.height = pageHeightPx + "px";
+    source.style.minHeight = pageHeightPx + "px";
+    source.style.maxWidth = "none";
+    source.style.boxSizing = "border-box";
+
     const pageStyle = window.getComputedStyle(source);
-    const paddingTop = Number.parseFloat(pageStyle.paddingTop) || 0;
-    const paddingBottom = Number.parseFloat(pageStyle.paddingBottom) || 0;
     const children = Array.from(source.children);
 
     if (children.length === 0) {
@@ -483,10 +488,8 @@ export function DocumentViewer({
 
     page.style.width = Math.max(1, Math.round(naturalWidth * requestedScale)) + "px";
     page.style.height = Math.max(1, Math.round(naturalHeight * requestedScale)) + "px";
-    page.style.setProperty(
-      "--pdf-view-zoom",
-      String(zoomRef.current)
-    );
+    page.style.setProperty("--pdf-css-zoom", String(fitScale));
+    page.style.setProperty("--pdf-view-zoom", String(zoomRef.current));
   }, [
     html,
     isPowerPoint,
