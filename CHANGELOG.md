@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.25.12] - 2026-09-26
+
+### Office split view
+- Word and PowerPoint can be selected from the existing desktop split-view picker and render in the same split pane as PDF.
+- Leaving split view preserves the current document page instead of reopening at page one.
+
+### Word rendering
+- Paginate DOCX content into paper-sized pages before display, using the page dimensions from the DOCX.
+- Keep the paper surface fixed while fitting and zooming so the document does not reflow strangely during preview.
+
+### PowerPoint zoom
+- Reuse the PDF viewer zoom interaction model while memoizing slide SVG rendering so pinch, wheel and drag zoom do not re-render the slide tree on every movement.
+- Keep zoom anchored to the pointer or pinch midpoint and preserve panning at elevated zoom levels.
+
+### Editor
+- Prevent a stale link picker from intercepting arrow keys after the editor selection has moved.
+- Prevent Office preview navigation from consuming arrow keys while an editor contenteditable has focus.
+
+### Viewer UI
+- Keep the minimize action hidden from the toolbar.
+- Use the PDF reader's two-row narrow-toolbar layout inside narrow split panes.
+
 ## [0.25.11] - 2026-09-26
 
 ### Fixed
