@@ -80,7 +80,6 @@ type DocumentPanelProps = {
     position: "before" | "after"
   ) => void;
   onOpenSecondary: (filePath: string) => void;
-  onOpenDocumentInSplit: (request: DocumentPreviewRequest & { ownerFilePath: string }) => void;
   onClosePrimarySplit: () => void;
   onCloseSecondary: () => void;
   onSecondaryMarkdownChange: (filePath: string, markdown: string) => void;
@@ -205,7 +204,6 @@ export function DocumentPanel({
   onCloseAllTabs,
   onReorderTabs,
   onOpenSecondary,
-  onOpenDocumentInSplit,
   onClosePrimarySplit,
   onCloseSecondary,
   onSecondaryMarkdownChange,
