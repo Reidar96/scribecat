@@ -1008,7 +1008,8 @@
     "page": "Side",
     "copyPage": "Kopier tekst fra denne siden",
     "copied": "Teksten på siden er kopiert",
-    "openInSplit": "Åpne PDF ved siden av dette notatet"
+    "openInSplit": "Åpne PDF ved siden av dette notatet",
+    "attached": "PDF er knyttet til denne fanen"
   },
   "tabs": {
     "label": "Åpne dokumenter",
