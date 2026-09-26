@@ -288,10 +288,12 @@ export function DocumentPanel({
     }
   }, [attachedPdf, openTabs]);
 
+  // A PDF companion is rendered only while its owning Markdown tab is
+  // the active (primary) document. If that tab is merely kept open in the
+  // background, the attachment stays remembered but does not float beside
+  // another note.
   const visibleAttachedPdf =
-    attachedPdf &&
-    (attachedPdf.ownerFilePath === selectedFilePath ||
-      attachedPdf.ownerFilePath === secondaryFilePath)
+    attachedPdf && attachedPdf.ownerFilePath === selectedFilePath
       ? attachedPdf
       : null;
   const hasSplitContent =
