@@ -77,6 +77,7 @@ type PdfViewerSurfaceProps = PdfPreviewRequest & {
   onClose?: () => void;
   onOpenInSplit?: () => void;
   mode?: "modal" | "split" | "inline";
+  restoreMinimizedRequestId?: number;
 };
 
 async function copyText(text: string): Promise<void> {
@@ -153,7 +154,8 @@ export function PdfViewerSurface({
   label,
   onClose,
   onOpenInSplit,
-  mode = "modal"
+  mode = "modal",
+  restoreMinimizedRequestId = 0
 }: PdfViewerSurfaceProps) {
   const { t } = useTranslation();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -205,6 +207,7 @@ export function PdfViewerSurface({
   const [renderZoom, setRenderZoom] = useState(1);
   const [isPanning, setIsPanning] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+  const lastRestoreMinimizedRequestIdRef = useRef(restoreMinimizedRequestId);
   const [pageView, setPageView] = useState<"single" | "grid">("single");
   const [pageThumbnails, setPageThumbnails] = useState<string[]>([]);
   const [pageThumbnailLoading, setPageThumbnailLoading] = useState(false);
@@ -225,6 +228,18 @@ export function PdfViewerSurface({
     zoomRef.current = zoom;
     renderZoomRef.current = renderZoom;
   }, [zoom, renderZoom]);
+
+  useEffect(() => {
+    if (
+      mode === "inline" &&
+      restoreMinimizedRequestId > 0 &&
+      restoreMinimizedRequestId !== lastRestoreMinimizedRequestIdRef.current
+    ) {
+      setIsMinimized(false);
+    }
+
+    lastRestoreMinimizedRequestIdRef.current = restoreMinimizedRequestId;
+  }, [mode, restoreMinimizedRequestId]);
 
   useEffect(() => {
     return () => {
@@ -1003,7 +1018,7 @@ export function PdfViewerSurface({
   return (
     <div
       ref={rootRef}
-      className={`pdf-preview pdf-preview--${mode}${fallbackFullscreen ? " pdf-preview--fallback-fullscreen" : ""}${isMinimized ? " pdf-preview--minimized" : ""}`}
+      className={`pdf-preview pdf-preview--${mode}${pageView === "grid" ? " pdf-preview--grid" : ""}${fallbackFullscreen ? " pdf-preview--fallback-fullscreen" : ""}${isMinimized ? " pdf-preview--minimized" : ""}`}
       tabIndex={0}
       onKeyDown={handleViewerKeyDown}
       onPointerDown={handlePointerDown}

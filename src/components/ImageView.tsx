@@ -44,7 +44,7 @@ function localPdfLabel(src: string, alt: string): string {
 
 export function ImageView({ node, editor, getPos, updateAttributes, selected }: ReactNodeViewProps) {
   const { t } = useTranslation();
-  const { filePath, onOpenPdfInSplit } = useContext(EditorFileContext);
+  const { filePath, onOpenPdfInSplit, pdfSplitRestoreRequest } = useContext(EditorFileContext);
   const src = (node.attrs.src as string | null) ?? "";
   const alt = (node.attrs.alt as string | null) ?? "";
   const width = (node.attrs.width as number | null) ?? null;
@@ -301,6 +301,11 @@ export function ImageView({ node, editor, getPos, updateAttributes, selected }: 
               absolutePath={documentAbsolutePath}
               label={pdfLabel}
               mode="inline"
+              restoreMinimizedRequestId={
+                pdfSplitRestoreRequest?.absolutePath === documentAbsolutePath
+                  ? pdfSplitRestoreRequest.requestId
+                  : 0
+              }
               onOpenInSplit={
                 onOpenPdfInSplit
                   ? () =>

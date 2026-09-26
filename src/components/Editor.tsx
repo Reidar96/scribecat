@@ -30,7 +30,10 @@ import {
 import { useFileLinkSuggestion } from "@/components/editor/useFileLinkSuggestion";
 import { useContextMenuState } from "@/components/fileTree/useContextMenuState";
 import { CODE_LINK_ATTR } from "@/lib/editor/codeBlockLinks";
-import { EditorFileContext } from "@/lib/editorFileContext";
+import {
+  EditorFileContext,
+  type InlinePdfSplitRestoreRequest
+} from "@/lib/editorFileContext";
 import { buildEditorExtensions } from "@/lib/editor/extensions";
 import { hasHeading, type OutlineHeading } from "@/lib/editor/documentOutline";
 import { updateOutlineHighlight } from "@/lib/editor/outlineHighlight";
@@ -104,6 +107,7 @@ type EditorProps = {
   onRequestFileOpen?: (filePath: string) => void;
   /** Opens a local PDF linked from this note beside the owning Markdown document. */
   onOpenPdfInSplit?: (request: PdfPreviewState & { ownerFilePath: string }) => void;
+  pdfSplitRestoreRequest?: InlinePdfSplitRestoreRequest | null;
   onZenModeRequest: () => void;
   onDeleteRequest: () => void;
   deleteEnabled: boolean;
@@ -214,6 +218,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     onRequestSidebarFocus,
     onRequestFileOpen,
     onOpenPdfInSplit,
+    pdfSplitRestoreRequest = null,
     onZenModeRequest,
     onDeleteRequest,
     deleteEnabled,
@@ -1629,7 +1634,9 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
                     ...request,
                     ownerFilePath: filePath
                   })
-              : undefined
+              : undefined,
+          pdfSplitRestoreRequest:
+            layout === "desktop" ? pdfSplitRestoreRequest ?? null : null
         }}
       >
         <div className="editor-view__body">

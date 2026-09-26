@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.25.7] - 2026-09-26
+
+### Fixed
+- Restore an inline PDF viewer after its split-view pane is closed, without closing the owning note.
+- Fix PDF all-pages view height so inline multi-page previews use the thumbnail grid's content height and scroll naturally.
+- Keep the working PowerPoint multi-slide height/layout unchanged.
+
 ## [0.25.6] - 2026-09-26
 
 ### Fixed

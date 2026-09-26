@@ -260,6 +260,10 @@ export function DocumentPanel({
   const [attachedPdf, setAttachedPdf] = useState<
     (PdfPreviewRequest & { ownerFilePath: string }) | null
   >(null);
+  const [pdfSplitRestoreRequest, setPdfSplitRestoreRequest] = useState<{
+    absolutePath: string;
+    requestId: number;
+  } | null>(null);
   const documentLocks = useAppStore((state) => state.documentLocks);
   const setDocumentLocked = useAppStore((state) => state.setDocumentLocked);
   // Bumped by the header menu's "Versions" entry on the phone, where the
@@ -419,6 +423,26 @@ export function DocumentPanel({
 
   const splitDropFilePath = (dataTransfer: DataTransfer): string | null =>
     dataTransfer.getData(TAB_DRAG_MIME) || getDraggedVaultFilePaths(dataTransfer)[0] || null;
+
+  const restoreInlinePdfAfterSplitClose = (
+    request: PdfPreviewRequest & { ownerFilePath: string }
+  ) => {
+    setPdfSplitRestoreRequest((current) => ({
+      absolutePath: request.absolutePath,
+      requestId: (current?.requestId ?? 0) + 1
+    }));
+  };
+
+  const closeAttachedPdf = () => {
+    const request = attachedPdf;
+
+    if (request) {
+      restoreInlinePdfAfterSplitClose(request);
+    }
+
+    setAttachedPdf(null);
+    setActiveEditorPane("primary");
+  };
 
   const openPdfInSplit = (
     request: PdfPreviewRequest & { ownerFilePath: string }
@@ -898,12 +922,8 @@ export function DocumentPanel({
                           aria-label={t("split.closePane")}
                           title={t("split.closePane")}
                           onClick={() => {
-                            if (
-                              visibleAttachedPdf &&
-                              visibleAttachedPdf.ownerFilePath === selectedFilePath
-                            ) {
-                              setAttachedPdf(null);
-                              onCloseTab(selectedFilePath);
+                            if (visibleAttachedPdf) {
+                              closeAttachedPdf();
                               return;
                             }
 
@@ -930,6 +950,7 @@ export function DocumentPanel({
                     onRequestSidebarFocus={onRequestSidebarFocus}
                     onRequestFileOpen={onRequestFileOpen}
                     onOpenPdfInSplit={openPdfInSplit}
+                    pdfSplitRestoreRequest={pdfSplitRestoreRequest}
                     onZenModeRequest={onZenModeRequest}
                     onDeleteRequest={onDeleteRequest}
                     deleteEnabled={capabilities.delete}
@@ -994,7 +1015,7 @@ export function DocumentPanel({
                           mode="split"
                           absolutePath={visibleAttachedPdf.absolutePath}
                           label={visibleAttachedPdf.label}
-                          onClose={() => setAttachedPdf(null)}
+                          onClose={closeAttachedPdf}
                         />
                       ) : secondaryFilePath && secondaryDocument && secondaryMarkdown !== null ? (
                         <>
@@ -1046,6 +1067,7 @@ export function DocumentPanel({
                             onRequestSidebarFocus={onRequestSidebarFocus}
                             onRequestFileOpen={onRequestFileOpen}
                             onOpenPdfInSplit={openPdfInSplit}
+                            pdfSplitRestoreRequest={pdfSplitRestoreRequest}
                             onZenModeRequest={onZenModeRequest}
                             onDeleteRequest={() => onDeleteFileRequest(secondaryFilePath)}
                             deleteEnabled={capabilities.delete}
