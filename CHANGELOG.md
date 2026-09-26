@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.25.6] - 2026-09-26
+
+### Fixed
+- Keep PDF pinch/trackpad zoom anchored to the actual pointer position on desktop and mobile.
+- Minimize an inline PDF viewer automatically when opening that same PDF in split view.
+- Add single-page and all-pages PDF view with a two-column layout on wide screens.
+- Use one-square and four-square icons consistently for single/all page or slide views.
+- Render PowerPoint previews from the slide renderer so text and images stay together.
+- Show PowerPoint slides two-up on wide screens and one-up on narrow screens.
+
 ## [0.25.5] - 2026-09-26
 
 ### Fixed

@@ -10,10 +10,11 @@ import {
   Maximize2,
   Minimize2,
   X,
-  ZoomIn
+  ZoomIn,
+  Square,
+  Grid2X2
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-
 import { readFile } from "@/platform/vaultFs";
 
 type PdfTextItemLike = {
@@ -188,7 +189,6 @@ export function PdfViewerSurface({
     pageX: number;
     pageY: number;
   } | null>(null);
-  const renderedPageSizeRef = useRef({ width: 0, height: 0 });
   const [pageNumber, setPageNumber] = useState(1);
   const [pageInput, setPageInput] = useState("1");
   const [pageCount, setPageCount] = useState(0);
@@ -205,6 +205,9 @@ export function PdfViewerSurface({
   const [renderZoom, setRenderZoom] = useState(1);
   const [isPanning, setIsPanning] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [pageView, setPageView] = useState<"single" | "grid">("single");
+  const [pageThumbnails, setPageThumbnails] = useState<string[]>([]);
+  const [pageThumbnailLoading, setPageThumbnailLoading] = useState(false);
 
   const previousPage = () => {
     setPageNumber((page) => Math.max(1, page - 1));
@@ -275,6 +278,8 @@ export function PdfViewerSurface({
       try {
         setLoading(true);
         setError(false);
+        setPageView("single");
+        setPageThumbnails([]);
 
         const [data, pdfjsModule, worker] = await Promise.all([
           readFile(absolutePath),
@@ -340,6 +345,64 @@ export function PdfViewerSurface({
 
 
   useEffect(() => {
+    if (pageView !== "grid") {
+      setPageThumbnails([]);
+      setPageThumbnailLoading(false);
+      return;
+    }
+
+    const document = documentRef.current;
+    if (!document || pageCount === 0) {
+      return;
+    }
+
+    let active = true;
+    setPageThumbnailLoading(true);
+    setPageThumbnails([]);
+
+    void (async () => {
+      const thumbnails: string[] = [];
+
+      try {
+        for (let pageIndex = 1; pageIndex <= document.numPages; pageIndex += 1) {
+          if (!active) return;
+
+          const page = await document.getPage(pageIndex);
+          const baseViewport = page.getViewport({ scale: 1 });
+          const scale = Math.min(0.32, 260 / Math.max(1, baseViewport.width));
+          const viewport = page.getViewport({ scale });
+          const canvas = window.document.createElement("canvas");
+          canvas.width = Math.max(1, Math.ceil(viewport.width));
+          canvas.height = Math.max(1, Math.ceil(viewport.height));
+          const context = canvas.getContext("2d");
+
+          if (!context) {
+            canvas.remove();
+            continue;
+          }
+
+          context.fillStyle = "#ffffff";
+          context.fillRect(0, 0, canvas.width, canvas.height);
+          await page.render({ canvasContext: context, viewport }).promise;
+
+          if (!active) return;
+          thumbnails.push(canvas.toDataURL("image/png"));
+          canvas.width = 1;
+          canvas.height = 1;
+        }
+
+        if (active) setPageThumbnails(thumbnails);
+      } finally {
+        if (active) setPageThumbnailLoading(false);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [pageView, pageCount]);
+
+  useEffect(() => {
     const document = documentRef.current;
     const canvas = canvasRef.current;
     const stage = stageRef.current;
@@ -395,10 +458,6 @@ export function PdfViewerSurface({
 
       const renderedWidth = Math.floor(viewport.width * cssZoom);
       const renderedHeight = Math.floor(viewport.height * cssZoom);
-      renderedPageSizeRef.current = {
-        width: renderedWidth,
-        height: renderedHeight
-      };
       const visualRatio = zoom / Math.max(0.01, renderZoom);
       pageElement.style.width = `${Math.max(1, Math.round(renderedWidth * visualRatio))}px`;
       pageElement.style.height = `${Math.max(1, Math.round(renderedHeight * visualRatio))}px`;
@@ -484,22 +543,17 @@ export function PdfViewerSurface({
               const page = pageRef.current;
               if (!stage || !page) return;
 
-              const pageRect = page.getBoundingClientRect();
               const stageRect = stage.getBoundingClientRect();
-              const pageContentLeft =
-                pageRect.left - stageRect.left + stage.scrollLeft;
-              const pageContentTop =
-                pageRect.top - stageRect.top + stage.scrollTop;
               const pointerX = anchor.clientX - stageRect.left;
               const pointerY = anchor.clientY - stageRect.top;
 
               stage.scrollLeft = Math.max(
                 0,
-                pageContentLeft + pageRect.width * anchor.pageX - pointerX
+                page.offsetLeft + page.offsetWidth * anchor.pageX - pointerX
               );
               stage.scrollTop = Math.max(
                 0,
-                pageContentTop + pageRect.height * anchor.pageY - pointerY
+                page.offsetTop + page.offsetHeight * anchor.pageY - pointerY
               );
 
               zoomAnchorRef.current = null;
@@ -514,7 +568,7 @@ export function PdfViewerSurface({
       renderCancelRef.current?.();
       textLayerCancelRef.current?.();
     };
-  }, [pageNumber, pageCount, viewportVersion, renderZoom]);
+  }, [pageNumber, pageCount, viewportVersion, renderZoom, pageView]);
 
   useEffect(() => {
     if (mode !== "modal") return;
@@ -566,18 +620,31 @@ export function PdfViewerSurface({
   };
 
   const captureZoomAnchor = (clientX: number, clientY: number) => {
+    const stage = stageRef.current;
     const page = pageRef.current;
-    if (!page) return;
+    if (!stage || !page) return;
 
-    const rect = page.getBoundingClientRect();
+    const stageRect = stage.getBoundingClientRect();
+    const pointerX = clientX - stageRect.left;
+    const pointerY = clientY - stageRect.top;
+    const pageWidth = Math.max(1, page.offsetWidth);
+    const pageHeight = Math.max(1, page.offsetHeight);
+    const pageLeft = page.offsetLeft;
+    const pageTop = page.offsetTop;
+
     zoomAnchorRef.current = {
       clientX,
       clientY,
-      pageX: rect.width ? (clientX - rect.left) / rect.width : 0.5,
-      pageY: rect.height ? (clientY - rect.top) / rect.height : 0.5
+      pageX: Math.min(
+        1,
+        Math.max(0, (stage.scrollLeft + pointerX - pageLeft) / pageWidth)
+      ),
+      pageY: Math.min(
+        1,
+        Math.max(0, (stage.scrollTop + pointerY - pageTop) / pageHeight)
+      )
     };
   };
-
   const captureViewportCenterAnchor = () => {
     const stage = stageRef.current;
     if (!stage) return;
@@ -602,65 +669,57 @@ export function PdfViewerSurface({
     }, 140);
   };
 
-  const applyVisualZoom = (next: number) => {
+  const applyVisualZoom = (next: number, previousZoom = zoomRef.current) => {
     const stage = stageRef.current;
     const page = pageRef.current;
     if (!stage || !page) return;
 
     const anchor = zoomAnchorRef.current;
-    const beforeRect = page.getBoundingClientRect();
     const stageRect = stage.getBoundingClientRect();
-    const pageContentLeft =
-      beforeRect.left - stageRect.left + stage.scrollLeft;
-    const pageContentTop =
-      beforeRect.top - stageRect.top + stage.scrollTop;
-    const anchorX = anchor
-      ? pageContentLeft + beforeRect.width * anchor.pageX
-      : null;
-    const anchorY = anchor
-      ? pageContentTop + beforeRect.height * anchor.pageY
-      : null;
+    const pointerX = anchor
+      ? anchor.clientX - stageRect.left
+      : stageRect.width / 2;
+    const pointerY = anchor
+      ? anchor.clientY - stageRect.top
+      : stageRect.height / 2;
+    const currentZoom = Math.max(0.01, previousZoom);
+    const currentWidth = Math.max(1, page.offsetWidth);
+    const currentHeight = Math.max(1, page.offsetHeight);
+    const scale = next / currentZoom;
 
-    const baseWidth = renderedPageSizeRef.current.width || beforeRect.width;
-    const baseHeight = renderedPageSizeRef.current.height || beforeRect.height;
-    const visualRatio = next / Math.max(0.01, renderZoomRef.current);
+    page.style.width = String(Math.max(1, Math.round(currentWidth * scale))) + "px";
+    page.style.height = String(Math.max(1, Math.round(currentHeight * scale))) + "px";
+    page.style.setProperty("--pdf-view-zoom", String(
+      next / Math.max(0.01, renderZoomRef.current)
+    ));
 
-    page.style.width = `${Math.max(1, Math.round(baseWidth * visualRatio))}px`;
-    page.style.height = `${Math.max(1, Math.round(baseHeight * visualRatio))}px`;
-    page.style.setProperty("--pdf-view-zoom", String(visualRatio));
+    const pageLeft = page.offsetLeft;
+    const pageTop = page.offsetTop;
+    const pageX = pageLeft + page.offsetWidth * (anchor?.pageX ?? 0.5);
+    const pageY = pageTop + page.offsetHeight * (anchor?.pageY ?? 0.5);
 
-    if (anchor && anchorX !== null && anchorY !== null) {
-      const afterRect = page.getBoundingClientRect();
-      stage.scrollLeft = Math.max(
-        0,
-        anchorX -
-          (afterRect.left - stageRect.left) -
-          afterRect.width * anchor.pageX
-      );
-      stage.scrollTop = Math.max(
-        0,
-        anchorY -
-          (afterRect.top - stageRect.top) -
-          afterRect.height * anchor.pageY
-      );
-    }
+    stage.scrollLeft = Math.max(0, pageX - pointerX);
+    stage.scrollTop = Math.max(0, pageY - pointerY);
   };
-
   const setZoomValue = (value: number) => {
     const next = Math.round(clampZoom(value) * 100) / 100;
+    const previousZoom = zoomRef.current;
+
     if (next === 1) {
       resetZoom();
       return;
     }
+
     zoomRef.current = next;
     setZoom(next);
     setZoomOpen(true);
-    applyVisualZoom(next);
+    applyVisualZoom(next, previousZoom);
     scheduleRenderZoom(next);
   };
 
   const resetZoom = () => {
     zoomAnchorRef.current = null;
+    const previousZoom = zoomRef.current;
     zoomRef.current = 1;
     setZoom(1);
     setZoomOpen(false);
@@ -672,7 +731,7 @@ export function PdfViewerSurface({
 
     renderZoomRef.current = 1;
     setRenderZoom(1);
-    applyVisualZoom(1);
+    applyVisualZoom(1, previousZoom);
 
     requestAnimationFrame(() => {
       const stage = stageRef.current;
@@ -1023,7 +1082,7 @@ export function PdfViewerSurface({
             {isFullscreen ? <Minimize2 aria-hidden="true" /> : <Maximize2 aria-hidden="true" />}
           </button>
 
-          {mode === "split" ? (
+          {mode !== "modal" ? (
             <button
               type="button"
               aria-pressed={isMinimized}
@@ -1072,12 +1131,40 @@ export function PdfViewerSurface({
             ) : null}
           </div>
 
+          <div className="pdf-preview__view-switch" role="group" aria-label="Page view">
+            <button
+              type="button"
+              className={pageView === "single" ? "pdf-preview__view-button pdf-preview__view-button--active" : "pdf-preview__view-button"}
+              aria-pressed={pageView === "single"}
+              aria-label="Single page"
+              title="Single page"
+              onClick={() => setPageView("single")}
+            >
+              <Square aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              className={pageView === "grid" ? "pdf-preview__view-button pdf-preview__view-button--active" : "pdf-preview__view-button"}
+              aria-pressed={pageView === "grid"}
+              aria-label="All pages"
+              title="All pages"
+              onClick={() => setPageView("grid")}
+            >
+              <Grid2X2 aria-hidden="true" />
+            </button>
+          </div>
+
           {onOpenInSplit ? (
             <button
               type="button"
               aria-label={t("pdfViewer.openInSplit")}
               title={t("pdfViewer.openInSplit")}
-              onClick={onOpenInSplit}
+              onClick={() => {
+                if (mode === "inline") {
+                  setIsMinimized(true);
+                }
+                onOpenInSplit();
+              }}
             >
               <Columns2 aria-hidden="true" />
             </button>
@@ -1098,7 +1185,10 @@ export function PdfViewerSurface({
       </div>
 
       {!isMinimized ? (
-        <div ref={stageRef} className={`pdf-preview__stage${zoom > 1 ? " pdf-preview__stage--zoomed" : ""}`}>
+        <div
+          ref={stageRef}
+          className={`pdf-preview__stage${zoom > 1 ? " pdf-preview__stage--zoomed" : ""}${pageView === "grid" ? " pdf-preview__stage--grid" : ""}`}
+        >
         {loading ? (
           <div className="pdf-preview__message">
             <Loader2 className="pdf-preview__spinner" aria-hidden="true" />
@@ -1107,6 +1197,30 @@ export function PdfViewerSurface({
         ) : error ? (
           <div className="pdf-preview__message" role="alert">
             {t("pdfViewer.error")}
+          </div>
+        ) : pageView === "grid" ? (
+          <div className="pdf-preview__overview">
+            {pageThumbnailLoading && pageThumbnails.length === 0 ? (
+              <div className="pdf-preview__message">
+                <Loader2 className="pdf-preview__spinner" aria-hidden="true" />
+                <span>Loading pages…</span>
+              </div>
+            ) : null}
+            {pageThumbnails.map((src, index) => (
+              <button
+                type="button"
+                className="pdf-preview__overview-page"
+                key={src}
+                onClick={() => {
+                  setPageNumber(index + 1);
+                  setPageView("single");
+                }}
+                aria-label={`Page ${index + 1}`}
+              >
+                <img src={src} alt="" />
+                <span>{index + 1} / {pageThumbnails.length}</span>
+              </button>
+            ))}
           </div>
         ) : (
           <div
