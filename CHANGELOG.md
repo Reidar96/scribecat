@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.25.10] - 2026-09-26
+
+### Fixed
+- Use the proven synchronous copy path for Office preview text, preserving the click user-activation context instead of awaiting a rejected Clipboard API first.
+- Reset preview state on document switches so copy, zoom, page view, fullscreen and minimized state cannot leak between PDF, DOCX and PowerPoint.
+
+### Unified document viewer
+- Word and PowerPoint now use the same toolbar structure and controls as the PDF reader.
+- Word is rendered on a real paper-sized sheet using dimensions stored in the DOCX document.
+- PowerPoint gets the same page navigation, view switch, zoom, fullscreen, copy and split controls as PDF.
+- Word and PowerPoint can be opened beside the Markdown note in the desktop split view.
+
+### Docker
+- Publish `ghcr.io/reidar96/scribecat-server:0.25.10`.
+- Pin Server Edition Compose defaults to `0.25.10`.
+
+
 ## [0.25.9] - 2026-09-26
 
 ### Fixed
