@@ -105,8 +105,8 @@ type EditorProps = {
   editorFocusRequestId?: number;
   onRequestSidebarFocus?: () => void;
   onRequestFileOpen?: (filePath: string) => void;
-  /** Opens a local PDF linked from this note beside the owning Markdown document. */
-  onOpenPdfInSplit?: (request: PdfPreviewState & { ownerFilePath: string }) => void;
+  /** Opens a linked document beside the owning Markdown document. */
+  onOpenDocumentInSplit?: (request: DocumentPreviewState & { ownerFilePath: string }) => void;
   pdfSplitRestoreRequest?: InlinePdfSplitRestoreRequest | null;
   onZenModeRequest: () => void;
   onDeleteRequest: () => void;
@@ -148,7 +148,7 @@ type PdfPreviewState = {
   label: string;
 };
 
-type DocumentPreviewState = {
+export type DocumentPreviewState = {
   absolutePath: string;
   label: string;
 };
@@ -217,7 +217,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     editorFocusRequestId,
     onRequestSidebarFocus,
     onRequestFileOpen,
-    onOpenPdfInSplit,
+    onOpenDocumentInSplit,
     pdfSplitRestoreRequest = null,
     onZenModeRequest,
     onDeleteRequest,
@@ -1572,6 +1572,17 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
               absolutePath={documentPreview.absolutePath}
               label={documentPreview.label}
               onClose={() => setDocumentPreview(null)}
+              onOpenInSplit={
+                layout === "desktop" && filePath && onOpenDocumentInSplit
+                  ? () => {
+                      onOpenDocumentInSplit({
+                        ...documentPreview,
+                        ownerFilePath: filePath
+                      });
+                      setDocumentPreview(null);
+                    }
+                  : undefined
+              }
             />
           </div>
         </div>
@@ -1582,9 +1593,9 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
           label={pdfPreview.label}
           onClose={() => setPdfPreview(null)}
           onOpenInSplit={
-            layout === "desktop" && filePath && onOpenPdfInSplit
+            layout === "desktop" && filePath && onOpenDocumentInSplit
               ? () => {
-                  onOpenPdfInSplit({ ...pdfPreview, ownerFilePath: filePath });
+                  onOpenDocumentInSplit({ ...pdfPreview, ownerFilePath: filePath });
                   setPdfPreview(null);
                 }
               : undefined
@@ -1627,10 +1638,10 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         value={{
           folderPath,
           filePath,
-          onOpenPdfInSplit:
-            layout === "desktop" && filePath && onOpenPdfInSplit
+          onOpenDocumentInSplit:
+            layout === "desktop" && filePath && onOpenDocumentInSplit
               ? (request) =>
-                  onOpenPdfInSplit({
+                  onOpenDocumentInSplit({
                     ...request,
                     ownerFilePath: filePath
                   })
