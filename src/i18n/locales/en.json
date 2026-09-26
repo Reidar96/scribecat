@@ -1372,7 +1372,8 @@
     "page": "Page",
     "copyPage": "Copy text from this page",
     "copied": "Page text copied",
-    "openInSplit": "Open PDF beside this note"
+    "openInSplit": "Open PDF beside this note",
+    "attached": "PDF attached to this tab"
   },
   "tabs": {
     "label": "Open documents",
