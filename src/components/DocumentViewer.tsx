@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Check,
   ChevronLeft,
@@ -83,6 +84,7 @@ export function DocumentViewer({
   onOpenInSplit,
   mode = "modal"
 }: Props) {
+  const { t } = useTranslation();
   const ext = extension(absolutePath);
   const rootRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -816,10 +818,8 @@ export function DocumentViewer({
   const copyLabel = copyFailed
     ? "Copy failed"
     : copied
-      ? "Text copied"
-      : isPowerPoint
-        ? "Copy slide"
-        : "Copy document";
+      ? t("pdfViewer.copied")
+      : t("pdfViewer.copyPage");
 
   return (
     <div
@@ -851,15 +851,15 @@ export function DocumentViewer({
           <button
             type="button"
             disabled={pageCount === 0 || pageNumber <= 1 || isWord}
-            aria-label="Previous page"
-            title="Previous page"
+            aria-label={t("pdfViewer.previous")}
+            title={t("pdfViewer.previous")}
             onClick={previousPage}
           >
             <ChevronLeft aria-hidden="true" />
           </button>
 
           <label className="pdf-preview__page-input">
-            <span className="sr-only">Page</span>
+            <span className="sr-only">{t("pdfViewer.page")}</span>
             <input
               type="number"
               min={1}
@@ -882,8 +882,8 @@ export function DocumentViewer({
           <button
             type="button"
             disabled={pageCount === 0 || pageNumber >= pageCount}
-            aria-label="Next page"
-            title="Next page"
+            aria-label={t("pdfViewer.next")}
+            title={t("pdfViewer.next")}
             onClick={nextPage}
           >
             <ChevronRight aria-hidden="true" />
@@ -943,8 +943,8 @@ export function DocumentViewer({
             <button
               type="button"
               aria-expanded={zoomOpen}
-              aria-label="Zoom"
-              title="Zoom"
+              aria-label={t("pdfViewer.zoom")}
+              title={t("pdfViewer.zoom")}
               onClick={toggleZoomControls}
             >
               <ZoomIn aria-hidden="true" />
@@ -953,7 +953,7 @@ export function DocumentViewer({
             {zoomOpen ? (
               <div className="pdf-preview__zoom-panel">
                 <label htmlFor="document-preview-zoom">
-                  <span>Zoom</span>
+                  <span>{t("pdfViewer.zoom")}</span>
                   <output>{Math.round(zoom * 100)}%</output>
                 </label>
                 <input
@@ -963,7 +963,7 @@ export function DocumentViewer({
                   max={MAX_ZOOM}
                   step="0.05"
                   value={zoom}
-                  aria-label="Zoom"
+                  aria-label={t("pdfViewer.zoom")}
                   onChange={(event) => {
                     captureViewportCenterAnchor();
                     setZoomValue(Number(event.target.value));
@@ -986,8 +986,8 @@ export function DocumentViewer({
                   : "pdf-preview__view-button"
               }
               aria-pressed={pageView === "single"}
-              aria-label="Single page"
-              title="Single page"
+              aria-label={t("pdfViewer.singlePage")}
+              title={t("pdfViewer.singlePage")}
               onClick={() => {
                 resetZoom();
                 setPageView("single");
@@ -1004,8 +1004,8 @@ export function DocumentViewer({
                   : "pdf-preview__view-button"
               }
               aria-pressed={pageView === "grid"}
-              aria-label="All pages"
-              title="All pages"
+              aria-label={t("pdfViewer.allPages")}
+              title={t("pdfViewer.allPages")}
               onClick={() => {
                 resetZoom();
                 setPageView("grid");
@@ -1018,8 +1018,8 @@ export function DocumentViewer({
           {onOpenInSplit ? (
             <button
               type="button"
-              aria-label="Open in split"
-              title="Open in split"
+              aria-label={t("pdfViewer.openInSplit")}
+              title={t("pdfViewer.openInSplit")}
               onClick={() => onOpenInSplit()}
             >
               <Columns2 aria-hidden="true" />
@@ -1030,8 +1030,8 @@ export function DocumentViewer({
             <button
               type="button"
               className="pdf-preview__close"
-              aria-label="Close"
-              title="Close"
+              aria-label={t("common.close")}
+              title={t("common.close")}
               onClick={onClose}
             >
               <X aria-hidden="true" />
@@ -1076,12 +1076,16 @@ export function DocumentViewer({
           ) : null}
 
           {isWord && html && pageView === "single" ? (
-            <article
+            <div
               ref={pageRef}
-              className="pdf-preview__page document-preview__word-sheet"
+              className="pdf-preview__page document-preview__office-page"
               style={pageStyle}
-              dangerouslySetInnerHTML={{ __html: html }}
-            />
+            >
+              <article
+                className="document-preview__word-sheet"
+                dangerouslySetInnerHTML={{ __html: html }}
+              />
+            </div>
           ) : null}
 
           {isPowerPoint && pageView === "single" && slides.length > 0 ? (
