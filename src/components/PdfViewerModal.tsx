@@ -6,6 +6,7 @@ import {
   ChevronRight,
   Columns2,
   Copy,
+  Download,
   Loader2,
   Maximize2,
   Minimize2,
@@ -16,7 +17,10 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { readFile } from "@/platform/vaultFs";
+import { platform } from "@/platform";
 import { copyText } from "@/lib/clipboard";
+import { ContextMenuSurface } from "@/components/fileTree/ContextMenuSurface";
+import { useContextMenuState } from "@/components/fileTree/useContextMenuState";
 
 type PdfTextItemLike = {
   str?: string;
@@ -196,6 +200,10 @@ export function PdfViewerSurface({
   const [renderZoom, setRenderZoom] = useState(1);
   const [isPanning, setIsPanning] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [downloadBusy, setDownloadBusy] = useState(false);
+  const [downloadError, setDownloadError] = useState(false);
+  const { contextMenu: documentMenu, setContextMenu: setDocumentMenu } =
+    useContextMenuState<{ x: number; y: number }>();
   const lastRestoreMinimizedRequestIdRef = useRef(restoreMinimizedRequestId);
   const [pageView, setPageView] = useState<"single" | "grid">("single");
   const [overviewPage, setOverviewPage] = useState(0);
@@ -847,6 +855,30 @@ export function PdfViewerSurface({
     setIsFullscreen(true);
   };
 
+  const downloadDocument = async () => {
+    if (downloadBusy || !platform.downloads) return;
+
+    try {
+      setDownloadBusy(true);
+      setDownloadError(false);
+      const data = await readFile(absolutePath);
+      const fileName = /\.pdf$/i.test(label) ? label : `${label}.pdf`;
+      const saved = await platform.downloads.saveFile({
+        fileName,
+        data,
+        mimeType: "application/pdf"
+      });
+
+      if (saved) {
+        setDocumentMenu(null);
+      }
+    } catch {
+      setDownloadError(true);
+    } finally {
+      setDownloadBusy(false);
+    }
+  };
+
   const copyCurrentPage = async () => {
     const document = documentRef.current;
     if (!document || pageCount === 0) return;
@@ -1088,6 +1120,15 @@ export function PdfViewerSurface({
       onPointerCancel={handlePointerCancel}
       onMouseDown={(event) => event.stopPropagation()}
       onClick={(event) => event.stopPropagation()}
+      onContextMenu={(event) => {
+        const target = event.target instanceof Element ? event.target : null;
+        if (!target?.closest(".pdf-preview__stage")) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+        setDownloadError(false);
+        setDocumentMenu({ x: event.clientX, y: event.clientY });
+      }}
     >
       <div className="pdf-preview__toolbar">
         <strong className="pdf-preview__name" title={label}>
@@ -1357,6 +1398,34 @@ export function PdfViewerSurface({
           </div>
         )}
         </div>
+      ) : null}
+
+      {documentMenu ? (
+        <ContextMenuSurface
+          x={documentMenu.x}
+          y={documentMenu.y}
+          title={label}
+          onMouseDown={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+          }}
+        >
+          <button
+            type="button"
+            role="menuitem"
+            className="file-tree-context-menu__item"
+            disabled={downloadBusy || !platform.downloads}
+            onClick={() => void downloadDocument()}
+          >
+            <Download aria-hidden="true" />
+            <span>{t("pdfViewer.download")}</span>
+          </button>
+          {downloadError ? (
+            <div className="file-tree-context-menu__error" role="alert">
+              {t("pdfViewer.downloadFailed")}
+            </div>
+          ) : null}
+        </ContextMenuSurface>
       ) : null}
 
     </div>
