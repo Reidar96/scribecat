@@ -146,7 +146,7 @@ signed in for 60 days of use. More in [Phones and tablets](phones-and-tablets.md
 ## On your computer, in the desktop app
 
 If you use ScribeCat on the desktop, you do not have to use the browser at
-all: the desktop app can open the server's vault directly, with AI and
+all: the desktop app can open the server's vault directly, with offline
 dictation running on your computer. See
 [The desktop app as a client](desktop-app.md).
 
@@ -154,6 +154,5 @@ dictation running on your computer. See
 
 - [Configuration](configuration.md) if the box is reached under a name or
   IP, if you want a path prefix, or several people share one host.
-- [AI](ai.md) to connect a cloud provider or a model on your own device.
 - [Your data and backups](data-and-backups.md) before the notes become
   important.

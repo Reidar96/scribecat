@@ -17,31 +17,18 @@ for when you need it.
 3. [Configuration](configuration.md): every setting, running under a path
    prefix, TLS and reverse proxies.
 4. [The desktop app as a client](desktop-app.md): open the server vault in
-   ScribeCat on your computer, with AI and dictation running locally.
+   ScribeCat on your computer, with local desktop dictation.
 5. [Phones and tablets](phones-and-tablets.md): how the app lays itself out
    on a small screen, and how to dictate.
-6. [AI](ai.md): cloud providers through the server, a model on your own
-   device, the chat agent, what stays desktop only.
-7. [Security](security.md): the password, sessions, access keys for the
+6. [Security](security.md): the password, sessions, access keys for the
    desktop app, what is and is not protected.
-8. [Your data and backups](data-and-backups.md): what is in the data folder,
+7. [Your data and backups](data-and-backups.md): what is in the data folder,
    editing from more than one place, how to back it up.
-9. [Updating](updating.md): versions, moving forward and back.
-10. [API](api.md): every route, for scripts and your own tools.
-11. [Development](development.md): running from source, tests.
-12. [FAQ](faq.md): short answers to the questions that come up.
+8. [Updating](updating.md): versions, moving forward and back.
+9. [API](api.md): every route, for scripts and your own tools.
+10. [Development](development.md): running from source, tests.
+11. [FAQ](faq.md): short answers to the questions that come up.
 
 ## In one paragraph
 
-You run one container (plus Caddy for HTTPS) with a folder of Markdown files
-mounted into it. The web app is the desktop app's own frontend, so it looks
-and works the same on a desktop browser, a phone or a tablet: the file tree,
-notes and folders, images, sort order, version history, live updates when a
-file changes on disk, export as a download (PDF, DOCX, ODT, HTML, EPUB, or
-the notes themselves as Markdown), and the AI features including the chat
-agent. The desktop app can open the same folder over the network as a
-"server vault", keeping its AI and dictation on your computer. Three things
-stay desktop only: the knowledge base (its search index runs inside the
-desktop app), built-in dictation (the web app uses what your device already
-has) and importing files (the desktop app does that, also into a server
-vault).
+Run ScribeCat with Docker and Caddy for HTTPS, mounting an ordinary folder of Markdown files. The browser client provides the core writing, file organization, calendar, tasks, graph and PDF-viewing workspace on desktops, phones and tablets. The desktop app can connect to the same server vault. Local offline dictation is a desktop feature; AI writing and chat integrations are not included in ScribeCat. Back up the mounted data folder with your own tools.

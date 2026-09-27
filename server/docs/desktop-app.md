@@ -2,7 +2,7 @@
 
 The ScribeCat desktop app can open a vault that lives on a ScribeCat server,
 the same way it opens a folder on your disk. Your notes stay on the server;
-everything else, including AI with a local model, dictation, import and
+everything else, including offline dictation, import and
 export, keeps running on your computer. The browser is not involved.
 
 This is the way to use one set of notes from your desk and from your phone
@@ -27,8 +27,7 @@ the same server.
    startup like any other last-used vault.
 
 The access key is kept in the operating system's credential store (Windows
-Credential Manager, macOS Keychain, Linux Secret Service), where the desktop
-app also keeps API keys. It does not expire; it ends when you disconnect, when
+Credential Manager, macOS Keychain, Linux Secret Service). It does not expire; it ends when you disconnect, when
 you revoke it from another device, or when the server's password changes.
 See [Security](security.md) for what a key can and cannot do.
 
@@ -45,7 +44,7 @@ is not enough for the app. There is no option to skip the check.
 
 Everything works as with a local folder: the file tree, creating, renaming,
 moving and deleting notes and folders, images, sort order, the version
-history, the chat agent with its proposals and checkpoints, export and
+history, export and
 import. Every read and write is a request to the server, so a large vault
 over Wi-Fi feels a little slower than a local folder, and a vault with many
 notes takes a moment to open.
@@ -69,11 +68,6 @@ notes, images and subfolders, without the `.scribecat` metadata. That ZIP
 is packed by the server (`GET /api/export/zip`), so it is quick even over a
 slow connection. The rendered export (PDF, DOCX, ODT, HTML, EPUB) works as
 for a local folder and writes into a folder you pick.
-
-**The knowledge base is not available for a server vault.** Its search index
-runs inside the desktop app and reads the notes from your disk, which a
-server vault is not on. The settings tab says so. The chat agent's own
-search and read tools work as usual.
 
 ## Signing in again
 
@@ -102,8 +96,8 @@ lost laptop can be signed out from a phone.
 ## What stays on your computer
 
 The server holds the notes and everything that belongs to the vault (images,
-version history, the agent's proposals and checkpoints, chat sessions). The
+version history and vault metadata). The
 desktop app keeps on your computer what is about the app rather than the
-vault: the list of servers, the AI settings and API keys, the theme and
+vault: the list of servers, the theme and
 language, keyboard shortcuts, the Whisper model. Two desktop apps on two
 computers therefore share the notes but not the settings.
