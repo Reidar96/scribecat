@@ -285,10 +285,19 @@ export function PdfViewerSurface({
   }, []);
 
   useEffect(() => {
+    const refreshViewport = () => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setViewportVersion((version) => version + 1);
+        });
+      });
+    };
+
     const handleFullscreenChange = () => {
       const active = document.fullscreenElement === rootRef.current;
       setIsFullscreen(active);
       if (active) setFallbackFullscreen(false);
+      refreshViewport();
     };
     document.addEventListener("fullscreenchange", handleFullscreenChange);
     return () => {
@@ -298,6 +307,14 @@ export function PdfViewerSurface({
       }
     };
   }, []);
+
+  useEffect(() => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setViewportVersion((version) => version + 1);
+      });
+    });
+  }, [fallbackFullscreen]);
 
   useEffect(() => {
     let active = true;
@@ -479,6 +496,13 @@ export function PdfViewerSurface({
   }, [pageView, pageCount, overviewPage, overviewPageSize]);
 
   useEffect(() => {
+    if (pageView !== "single" || isMinimized) {
+      renderCancelRef.current?.();
+      textLayerCancelRef.current?.();
+      setRendering(false);
+      return;
+    }
+
     const document = documentRef.current;
     const canvas = canvasRef.current;
     const stage = stageRef.current;
@@ -528,7 +552,7 @@ export function PdfViewerSurface({
         availableWidth / baseViewport.width,
         availableHeight / baseViewport.height
       );
-      const requestedScale = Math.max(0.3, fitScale * renderZoom);
+      const requestedScale = Math.max(0.05, fitScale * renderZoom);
       const renderScale = Math.min(requestedScale, MAX_RENDER_SCALE);
       const cssZoom = requestedScale / renderScale;
       const viewport = page.getViewport({ scale: renderScale });
@@ -650,8 +674,9 @@ export function PdfViewerSurface({
       active = false;
       renderCancelRef.current?.();
       textLayerCancelRef.current?.();
+      textLayerElement.replaceChildren();
     };
-  }, [pageNumber, pageCount, viewportVersion, renderZoom, pageView, isMinimized]);
+  }, [pageNumber, pageCount, viewportVersion, renderZoom, pageView, isMinimized, isFullscreen, fallbackFullscreen]);
 
   useEffect(() => {
     if (mode !== "modal") return;
