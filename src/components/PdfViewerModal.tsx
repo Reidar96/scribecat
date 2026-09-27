@@ -6,6 +6,7 @@ import {
   ChevronRight,
   Columns2,
   Copy,
+  Download,
   Loader2,
   Maximize2,
   Minimize2,
@@ -16,7 +17,10 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { readFile } from "@/platform/vaultFs";
+import { platform } from "@/platform";
 import { copyText } from "@/lib/clipboard";
+import { ContextMenuSurface } from "@/components/fileTree/ContextMenuSurface";
+import { useContextMenuState } from "@/components/fileTree/useContextMenuState";
 
 type PdfTextItemLike = {
   str?: string;
@@ -121,7 +125,7 @@ function isFormControl(target: EventTarget | null): boolean {
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 3;
 const MAX_RENDER_SCALE = 3.5;
-const OVERVIEW_PAGE_SIZE = 6;
+const MAX_OVERVIEW_PAGE_SIZE = 6;
 const OVERVIEW_THUMBNAIL_WIDTH = 220;
 
 function clampZoom(value: number): number {
@@ -196,9 +200,14 @@ export function PdfViewerSurface({
   const [renderZoom, setRenderZoom] = useState(1);
   const [isPanning, setIsPanning] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [downloadBusy, setDownloadBusy] = useState(false);
+  const [downloadError, setDownloadError] = useState(false);
+  const { contextMenu: documentMenu, setContextMenu: setDocumentMenu } =
+    useContextMenuState<{ x: number; y: number }>();
   const lastRestoreMinimizedRequestIdRef = useRef(restoreMinimizedRequestId);
   const [pageView, setPageView] = useState<"single" | "grid">("single");
   const [overviewPage, setOverviewPage] = useState(0);
+  const [overviewPageSize, setOverviewPageSize] = useState(MAX_OVERVIEW_PAGE_SIZE);
   const [pageThumbnails, setPageThumbnails] = useState<Array<{
     pageNumber: number;
     src: string;
@@ -206,9 +215,9 @@ export function PdfViewerSurface({
     height: number;
   }>>([]);
   const [pageThumbnailLoading, setPageThumbnailLoading] = useState(false);
-  const overviewPageCount = Math.max(1, Math.ceil(pageCount / OVERVIEW_PAGE_SIZE));
-  const overviewStartPage = overviewPage * OVERVIEW_PAGE_SIZE + 1;
-  const overviewEndPage = Math.min(pageCount, overviewStartPage + OVERVIEW_PAGE_SIZE - 1);
+  const overviewPageCount = Math.max(1, Math.ceil(pageCount / overviewPageSize));
+  const overviewStartPage = overviewPage * overviewPageSize + 1;
+  const overviewEndPage = Math.min(pageCount, overviewStartPage + overviewPageSize - 1);
 
   const previousPage = () => {
     setPageNumber((page) => Math.max(1, page - 1));
@@ -353,7 +362,17 @@ export function PdfViewerSurface({
 
     if (!stage) return;
 
-    const update = () => setViewportVersion((version) => version + 1);
+    const update = () => {
+      setViewportVersion((version) => version + 1);
+
+      const width = stage.clientWidth || window.innerWidth;
+      const height = stage.clientHeight || window.innerHeight;
+      const columns = width >= 900 ? 3 : width >= 520 ? 2 : 1;
+      const rows = height >= 560 ? 2 : 1;
+      setOverviewPageSize(Math.max(1, Math.min(MAX_OVERVIEW_PAGE_SIZE, columns * rows)));
+    };
+
+    update();
     const observer =
       typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
 
@@ -379,10 +398,10 @@ export function PdfViewerSurface({
       return;
     }
 
-    const maxOverviewPage = Math.max(0, Math.ceil(pageCount / OVERVIEW_PAGE_SIZE) - 1);
+    const maxOverviewPage = Math.max(0, Math.ceil(pageCount / overviewPageSize) - 1);
     const pageIndex = Math.min(overviewPage, maxOverviewPage);
-    const startPage = pageIndex * OVERVIEW_PAGE_SIZE + 1;
-    const endPage = Math.min(document.numPages, startPage + OVERVIEW_PAGE_SIZE - 1);
+    const startPage = pageIndex * overviewPageSize + 1;
+    const endPage = Math.min(document.numPages, startPage + overviewPageSize - 1);
 
     if (pageIndex !== overviewPage) {
       setOverviewPage(pageIndex);
@@ -457,7 +476,7 @@ export function PdfViewerSurface({
     return () => {
       active = false;
     };
-  }, [pageView, pageCount, overviewPage]);
+  }, [pageView, pageCount, overviewPage, overviewPageSize]);
 
   useEffect(() => {
     const document = documentRef.current;
@@ -496,8 +515,15 @@ export function PdfViewerSurface({
       );
       const stageWidth = stage.clientWidth || window.innerWidth;
       const stageHeight = stage.clientHeight || window.innerHeight;
-      const availableWidth = Math.max(240, stageWidth - 32);
-      const availableHeight = Math.max(260, stageHeight - 32);
+      const stageStyle = window.getComputedStyle(stage);
+      const horizontalPadding =
+        (Number.parseFloat(stageStyle.paddingLeft) || 0) +
+        (Number.parseFloat(stageStyle.paddingRight) || 0);
+      const verticalPadding =
+        (Number.parseFloat(stageStyle.paddingTop) || 0) +
+        (Number.parseFloat(stageStyle.paddingBottom) || 0);
+      const availableWidth = Math.max(1, stageWidth - horizontalPadding);
+      const availableHeight = Math.max(1, stageHeight - verticalPadding);
       const fitScale = Math.min(
         availableWidth / baseViewport.width,
         availableHeight / baseViewport.height
@@ -829,6 +855,30 @@ export function PdfViewerSurface({
     setIsFullscreen(true);
   };
 
+  const downloadDocument = async () => {
+    if (downloadBusy || !platform.downloads) return;
+
+    try {
+      setDownloadBusy(true);
+      setDownloadError(false);
+      const data = await readFile(absolutePath);
+      const fileName = /\.pdf$/i.test(label) ? label : `${label}.pdf`;
+      const saved = await platform.downloads.saveFile({
+        fileName,
+        data,
+        mimeType: "application/pdf"
+      });
+
+      if (saved) {
+        setDocumentMenu(null);
+      }
+    } catch {
+      setDownloadError(true);
+    } finally {
+      setDownloadBusy(false);
+    }
+  };
+
   const copyCurrentPage = async () => {
     const document = documentRef.current;
     if (!document || pageCount === 0) return;
@@ -1070,6 +1120,15 @@ export function PdfViewerSurface({
       onPointerCancel={handlePointerCancel}
       onMouseDown={(event) => event.stopPropagation()}
       onClick={(event) => event.stopPropagation()}
+      onContextMenu={(event) => {
+        const target = event.target instanceof Element ? event.target : null;
+        if (!target?.closest(".pdf-preview__stage")) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+        setDownloadError(false);
+        setDocumentMenu({ x: event.clientX, y: event.clientY });
+      }}
     >
       <div className="pdf-preview__toolbar">
         <strong className="pdf-preview__name" title={label}>
@@ -1088,10 +1147,13 @@ export function PdfViewerSurface({
           </button>
         ) : (
           <>
-            <div className="pdf-preview__pager">
+            <div
+              className={`pdf-preview__pager${pageView === "grid" ? " pdf-preview__pager--disabled" : ""}`}
+              aria-disabled={pageView === "grid"}
+            >
               <button
                 type="button"
-                disabled={loading || pageNumber <= 1}
+                disabled={pageView === "grid" || loading || pageNumber <= 1}
                 aria-label={t("pdfViewer.previous")}
                 title={t("pdfViewer.previous")}
                 onClick={previousPage}
@@ -1106,7 +1168,7 @@ export function PdfViewerSurface({
                   min={1}
                   max={Math.max(1, pageCount)}
                   value={pageInput}
-                  disabled={loading || pageCount === 0}
+                  disabled={pageView === "grid" || loading || pageCount === 0}
                   onChange={(event) => setPageInput(event.target.value)}
                   onBlur={commitPageInput}
                   onKeyDown={(event) => {
@@ -1122,7 +1184,7 @@ export function PdfViewerSurface({
 
               <button
                 type="button"
-                disabled={loading || pageCount === 0 || pageNumber >= pageCount}
+                disabled={pageView === "grid" || loading || pageCount === 0 || pageNumber >= pageCount}
                 aria-label={t("pdfViewer.next")}
                 title={t("pdfViewer.next")}
                 onClick={nextPage}
@@ -1205,7 +1267,7 @@ export function PdfViewerSurface({
                   aria-label="All pages"
                   title="All pages"
                   onClick={() => {
-                    setOverviewPage(Math.floor((pageNumber - 1) / OVERVIEW_PAGE_SIZE));
+                    setOverviewPage(Math.floor((pageNumber - 1) / overviewPageSize));
                     setPageView("grid");
                   }}
                 >
@@ -1336,6 +1398,34 @@ export function PdfViewerSurface({
           </div>
         )}
         </div>
+      ) : null}
+
+      {documentMenu ? (
+        <ContextMenuSurface
+          x={documentMenu.x}
+          y={documentMenu.y}
+          title={label}
+          onMouseDown={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+          }}
+        >
+          <button
+            type="button"
+            role="menuitem"
+            className="file-tree-context-menu__item"
+            disabled={downloadBusy || !platform.downloads}
+            onClick={() => void downloadDocument()}
+          >
+            <Download aria-hidden="true" />
+            <span>{t("pdfViewer.download")}</span>
+          </button>
+          {downloadError ? (
+            <div className="file-tree-context-menu__error" role="alert">
+              {t("pdfViewer.downloadFailed")}
+            </div>
+          ) : null}
+        </ContextMenuSurface>
       ) : null}
 
     </div>

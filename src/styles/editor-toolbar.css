@@ -356,3 +356,25 @@
   --rgb-color: var(--text-rgb);
   --rgb-accent: var(--accent-light-rgb);
 }
+
+
+/* A split editor on a narrow desktop needs two stable rows, not a row that
+   happens to overflow differently as the split ratio changes. */
+@media (min-width: 921px) and (max-width: 1200px) {
+  .detail-panel__card--document:has(.split-workspace--active)
+    > .detail-panel__toolbar
+    .editor-toolbar__separator--split-wrap {
+    flex-basis: 100%;
+    width: 100%;
+    height: 0;
+    min-height: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  .detail-panel__card--document:has(.split-workspace--active)
+    > .detail-panel__toolbar
+    .editor-toolbar {
+    row-gap: 0.45rem;
+  }
+}

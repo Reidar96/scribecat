@@ -795,10 +795,14 @@
   background: rgb(12 12 14 / 0.92);
 }
 
-.pdf-preview:fullscreen {
+.pdf-preview:fullscreen,
+.pdf-preview--fallback-fullscreen {
   width: 100vw;
-  height: 100vh;
+  height: 100dvh;
+  min-height: 100dvh;
+  gap: 0;
   border-radius: 0;
+  padding: 0;
   background: rgb(12 12 14);
 }
 
@@ -806,19 +810,13 @@
   position: fixed;
   inset: 0;
   z-index: 10000;
-  width: 100vw;
-  height: 100vh;
-  gap: 0.7rem;
-  padding: 0.75rem;
-  background: rgb(12 12 14);
 }
 
-.pdf-preview--fallback-fullscreen .pdf-preview__toolbar {
-  border-radius: 0.7rem;
-}
-
+.pdf-preview:fullscreen .pdf-preview__toolbar,
+.pdf-preview--fallback-fullscreen .pdf-preview__toolbar,
+.pdf-preview:fullscreen .pdf-preview__stage,
 .pdf-preview--fallback-fullscreen .pdf-preview__stage {
-  border-radius: 0.7rem;
+  border-radius: 0;
 }
 
 .pdf-preview--split {
@@ -916,6 +914,11 @@
   gap: 0.4rem;
   font-size: 0.8rem;
   font-variant-numeric: tabular-nums;
+}
+
+.pdf-preview__pager--disabled {
+  opacity: 0.38;
+  pointer-events: none;
 }
 
 .pdf-preview__actions {
@@ -1118,15 +1121,11 @@
 }
 
 .pdf-preview--inline.pdf-preview--grid .pdf-preview__stage {
-  aspect-ratio: auto;
+  width: 100%;
   height: auto;
-  max-height: none;
-  overflow: visible;
-  align-content: start;
-}
-
-.pdf-preview--inline.pdf-preview--grid .pdf-preview__overview {
-  align-content: start;
+  min-height: 0;
+  aspect-ratio: var(--pdf-page-aspect-ratio, 16 / 9);
+  overflow: auto;
 }
 
 .document-preview__slide-svg {
@@ -1154,7 +1153,16 @@
   overscroll-behavior: contain;
 }
 
+/* At fitted zoom the whole PDF page stays visible and centered. Tall pages
+   therefore get black bars on the sides instead of being cropped. Once the
+   user zooms in, the stage returns to a normal scroll surface for panning. */
+.pdf-preview__stage:not(.pdf-preview__stage--grid):not(.pdf-preview__stage--zoomed) {
+  display: grid;
+  place-items: center;
+}
+
 .pdf-preview__stage--zoomed {
+  display: block;
   touch-action: none;
 }
 
@@ -1164,8 +1172,11 @@
 
 .pdf-preview__overview-wrap {
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   gap: 0.85rem;
   width: 100%;
+  height: 100%;
+  min-height: 100%;
 }
 
 .pdf-preview__overview-nav {
@@ -1212,9 +1223,13 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 220px));
   justify-content: center;
+  align-content: center;
   align-items: start;
+  align-self: stretch;
   gap: 1rem;
   width: 100%;
+  height: 100%;
+  min-height: 0;
 }
 
 .pdf-preview__overview-page {
@@ -1418,6 +1433,39 @@
   }
 }
 
+
+/* Narrow split panes use the same two-row PDF toolbar structure as mobile. */
+@container (max-width: 760px) {
+  .pdf-preview--split .pdf-preview__toolbar {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
+  }
+
+  .pdf-preview--split .pdf-preview__name {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+
+  .pdf-preview--split .pdf-preview__pager {
+    grid-column: 1;
+    grid-row: 2;
+    justify-self: start;
+  }
+
+  .pdf-preview--split .pdf-preview__actions {
+    grid-column: 2;
+    grid-row: 2;
+    justify-self: end;
+    flex-wrap: nowrap;
+  }
+}
+
+@container (max-width: 520px) {
+  .pdf-preview--split .pdf-preview__copy-button {
+    display: none;
+  }
+}
+
 @media (max-width: 720px) {
   .media-preview {
     padding: 3.2rem 0.75rem 0.75rem;
@@ -1503,6 +1551,29 @@
 
   .document-preview-modal .document-preview {
     max-height: 96vh;
+  }
+}
+
+
+@media (max-width: 720px) {
+  .pdf-preview:fullscreen,
+  .pdf-preview--fallback-fullscreen {
+    width: 100vw;
+    height: 100dvh;
+    min-height: 100dvh;
+    padding: 0;
+  }
+
+  .pdf-preview:fullscreen .pdf-preview__toolbar,
+  .pdf-preview--fallback-fullscreen .pdf-preview__toolbar {
+    padding-top: max(0.45rem, env(safe-area-inset-top));
+    padding-left: max(0.55rem, env(safe-area-inset-left));
+    padding-right: max(0.55rem, env(safe-area-inset-right));
+  }
+
+  .pdf-preview:fullscreen .pdf-preview__stage,
+  .pdf-preview--fallback-fullscreen .pdf-preview__stage {
+    padding: 0;
   }
 }
 

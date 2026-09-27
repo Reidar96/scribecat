@@ -1015,7 +1015,9 @@
   "zoom": "Zoom PDF",
     "attached": "PDF er knyttet til denne fanen",
     "selectableText": "Markerbar tekst på PDF-siden",
-    "restore": "Vis PDF igjen"
+    "restore": "Vis PDF igjen",
+    "download": "Last ned PDF",
+    "downloadFailed": "PDF-en kunne ikke lastes ned."
   },
   "tabs": {
     "label": "Åpne dokumenter",

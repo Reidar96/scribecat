@@ -1378,7 +1378,9 @@
     "zoom": "Zoom PDF",
     "attached": "PDF attached to this tab",
     "selectableText": "Selectable text on the PDF page",
-    "restore": "Show PDF again"
+    "restore": "Show PDF again",
+    "download": "Download PDF",
+    "downloadFailed": "The PDF could not be downloaded."
   },
   "tabs": {
     "label": "Open documents",

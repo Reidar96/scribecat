@@ -1,6 +1,11 @@
 ## [0.25.17] - 2026-09-27
 
 ### Changes
+- Keep PDF multi-page view at the same viewer height, center its thumbnails vertically and adapt how many pages are shown before paging.
+- Use the mobile-style two-row PDF toolbar in narrow split panes and disable the normal page pager while multi-page view is active.
+- Make mobile PDF fullscreen edge-to-edge and fit tall pages fully with black side bars instead of cropping.
+- Add a PDF right-click action to download/save the original document.
+- Force the editor toolbar into two stable rows on narrow desktop split layouts.
 - Make the PDF split-view action icon-only so toolbar labels never overlap controls.
 - Replace oversized PDF multi-page previews with correctly proportioned thumbnails and six-page browsing.
 - Collapse minimized inline PDFs to the document title plus a single restore button.

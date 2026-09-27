@@ -609,7 +609,10 @@ export function Toolbar({
         </ToggleButton>
       </div>
 
-      <div className="editor-toolbar__separator" aria-hidden="true" />
+      <div
+        className="editor-toolbar__separator editor-toolbar__separator--split-wrap"
+        aria-hidden="true"
+      />
 
       <div className="editor-toolbar__group" inert={documentLocked}>
         <ToggleButton
