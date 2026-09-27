@@ -1167,14 +1167,20 @@
 /* At fitted zoom the whole PDF page stays visible and centered. Tall pages
    therefore get black bars on the sides instead of being cropped. Once the
    user zooms in, the stage returns to a normal scroll surface for panning. */
-.pdf-preview__stage:not(.pdf-preview__stage--grid):not(.pdf-preview__stage--zoomed) {
-  display: grid;
-  place-items: center;
+.pdf-preview__stage:not(.pdf-preview__stage--grid) {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
   overflow: hidden;
 }
 
+.pdf-preview__stage:not(.pdf-preview__stage--grid) .pdf-preview__page {
+  flex: 0 0 auto;
+  margin: auto;
+}
+
 .pdf-preview__stage--zoomed {
-  display: block;
+  display: flex;
   overflow: auto;
   touch-action: none;
 }
@@ -1242,13 +1248,17 @@
   height: 100%;
   min-width: 0;
   min-height: 0;
+  padding-inline: 1.5rem;
+  box-sizing: border-box;
 }
 
 .pdf-preview__overview-row {
-  display: flex;
+  display: grid;
   align-items: center;
   justify-content: center;
+  justify-items: center;
   gap: 1rem;
+  width: 100%;
   min-width: 0;
   min-height: 0;
 }
@@ -1256,6 +1266,7 @@
 .pdf-preview__overview-page {
   position: relative;
   display: block;
+  box-sizing: border-box;
   flex: 0 0 auto;
   max-width: 100%;
   max-height: 100%;
@@ -1478,14 +1489,16 @@
   padding: 0;
   overflow: hidden;
   background: #000;
+  touch-action: none;
 }
 
 .pdf-preview.pdf-preview--fallback-fullscreen
-  .pdf-preview__stage:not(.pdf-preview__stage--grid):not(.pdf-preview__stage--zoomed),
+  .pdf-preview__stage:not(.pdf-preview__stage--grid),
 .pdf-preview:fullscreen
-  .pdf-preview__stage:not(.pdf-preview__stage--grid):not(.pdf-preview__stage--zoomed) {
-  display: grid;
-  place-items: center;
+  .pdf-preview__stage:not(.pdf-preview__stage--grid) {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
 }
 
 /* Any narrow PDF surface uses two stable toolbar rows. This covers split

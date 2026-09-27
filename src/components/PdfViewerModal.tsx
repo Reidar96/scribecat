@@ -131,6 +131,8 @@ const OVERVIEW_GAP = 16;
 const OVERVIEW_NAV_HEIGHT = 48;
 const MAX_INLINE_STAGE_HEIGHT = 760;
 const INLINE_STAGE_VIEWPORT_RATIO = 0.72;
+const INLINE_PAGE_HEIGHT_USAGE = 0.9;
+const OVERVIEW_HORIZONTAL_GUTTER = 24;
 
 function clampZoom(value: number): number {
   return Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, value));
@@ -422,9 +424,10 @@ export function PdfViewerSurface({
         1,
         Math.min(MAX_OVERVIEW_PAGE_SIZE, columns * rows)
       );
+      const overviewWidth = Math.max(120, width - OVERVIEW_HORIZONTAL_GUTTER * 2);
       const cellWidth = Math.max(
         120,
-        (width - OVERVIEW_GAP * Math.max(0, columns - 1)) / columns
+        (overviewWidth - OVERVIEW_GAP * Math.max(0, columns - 1)) / columns
       );
       const cellHeight = Math.max(
         120,
@@ -617,9 +620,13 @@ export function PdfViewerSurface({
         );
       }
       const availableHeight = Math.max(1, stageHeight - verticalPadding);
+      const heightFit =
+        mode === "inline" && !isFullscreen && !fallbackFullscreen
+          ? (availableHeight * INLINE_PAGE_HEIGHT_USAGE) / baseViewport.height
+          : availableHeight / baseViewport.height;
       const fitScale = Math.min(
         availableWidth / baseViewport.width,
-        availableHeight / baseViewport.height
+        heightFit
       );
       const requestedScale = Math.max(0.05, fitScale * renderZoom);
       const renderScale = Math.min(requestedScale, MAX_RENDER_SCALE);
@@ -838,6 +845,17 @@ export function PdfViewerSurface({
       rect.left + rect.width / 2,
       rect.top + rect.height / 2
     );
+  };
+
+  const moveZoomAnchorPointer = (clientX: number, clientY: number) => {
+    const anchor = zoomAnchorRef.current;
+    if (!anchor) {
+      captureZoomAnchor(clientX, clientY);
+      return;
+    }
+
+    anchor.clientX = clientX;
+    anchor.clientY = clientY;
   };
 
   const scheduleRenderZoom = (next: number) => {
@@ -1163,7 +1181,7 @@ export function PdfViewerSurface({
     const distance = Math.max(1, pointerDistance(first, second));
     const midpointX = (first.x + second.x) / 2;
     const midpointY = (first.y + second.y) / 2;
-    captureZoomAnchor(midpointX, midpointY);
+    moveZoomAnchorPointer(midpointX, midpointY);
     setZoomValue(
       pinchRef.current.zoom * (distance / pinchRef.current.distance)
     );
@@ -1503,14 +1521,26 @@ export function PdfViewerSurface({
                   rowIndex * overviewColumns + overviewColumns
                 )
               ).map((row) => (
-                <div className="pdf-preview__overview-row" key={row[0]?.pageNumber ?? 0}>
+                <div
+                  className="pdf-preview__overview-row"
+                  key={row[0]?.pageNumber ?? 0}
+                  style={{
+                    gridTemplateColumns: `repeat(${row.length}, minmax(0, ${overviewCellSize.width}px))`
+                  }}
+                >
                   {row.map((thumbnail) => {
                     const scale = Math.min(
                       overviewCellSize.width / Math.max(1, thumbnail.width),
                       overviewCellSize.height / Math.max(1, thumbnail.height)
                     );
-                    const width = Math.max(96, Math.floor(thumbnail.width * scale));
-                    const height = Math.max(96, Math.floor(thumbnail.height * scale));
+                    const width = Math.max(
+                      96,
+                      Math.min(overviewCellSize.width - 2, Math.floor(thumbnail.width * scale))
+                    );
+                    const height = Math.max(
+                      96,
+                      Math.min(overviewCellSize.height - 2, Math.floor(thumbnail.height * scale))
+                    );
 
                     return (
                       <button
