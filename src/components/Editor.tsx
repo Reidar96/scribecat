@@ -1052,11 +1052,15 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
             }
 
             event.preventDefault();
+            event.stopPropagation();
+            event.stopImmediatePropagation();
             void platform.shell.openUrl(codeLink);
             return true;
           }
 
           event.preventDefault();
+          event.stopPropagation();
+          event.stopImmediatePropagation();
 
           // A plain click follows the link — a note opens in the editor, any
           // other target in the system browser. The raw attribute is what a
