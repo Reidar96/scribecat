@@ -13,6 +13,8 @@ vi.mock("pdfjs-dist", () => ({
   getDocument: () => ({ promise: Promise.resolve({ numPages: 7, getPage: pdf.getPage, destroy: vi.fn() }) })
 }));
 import { PdfViewerSurface } from "./PdfViewerModal";
+import { readFileSync } from "node:fs";
+const viewerStyles = readFileSync("src/styles/editor-content.css", "utf8");
 
 let host: HTMLDivElement;
 let root: Root;
@@ -46,6 +48,34 @@ afterEach(async () => {
 });
 
 describe("PDF view transitions", () => {
+  it.each(["close split", "restore while split stays open"])("keeps an explicit overview height after %s", async (transition) => {
+    const styles = document.createElement("style");
+    styles.textContent = viewerStyles;
+    document.head.append(styles);
+    try {
+      await click('.pdf-preview__view-button[aria-pressed="false"]');
+      await click(".pdf-preview__split-button");
+      expect(document.querySelector(".pdf-preview__stage")).toBeNull();
+      if (transition === "close split") {
+        await act(async () => root.render(createElement(PdfViewerSurface, {
+          absolutePath: "sample.pdf", label: "Sample", mode: "inline",
+          onOpenInSplit: vi.fn(), restoreMinimizedRequestId: 1
+        })));
+      } else {
+        await click(".pdf-preview__restore-button");
+      }
+      const stage = document.querySelector<HTMLElement>(".pdf-preview__stage")!;
+      // Restoring creates a fresh stage without the single-page renderer's
+      // custom property. The CSS must size the grid independently of it.
+      expect(stage.style.getPropertyValue("--pdf-inline-stage-height")).toBe("");
+      expect(getComputedStyle(stage).height).toBe("54dvh");
+      expect(getComputedStyle(stage).maxHeight).toBe("570px");
+      expect(document.querySelectorAll(".pdf-preview__overview-page")).toHaveLength(6);
+      expect(observed.has(stage)).toBe(true);
+    } finally {
+      styles.remove();
+    }
+  });
   it("does not reuse the rendered page's pixel dimensions for the overview", async () => {
     const page = document.querySelector<HTMLElement>(".pdf-preview__page")!;
     expect(page.style.width).toMatch(/px$/);

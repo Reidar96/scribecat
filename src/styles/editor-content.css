@@ -1132,8 +1132,11 @@
 
 .pdf-preview--inline.pdf-preview--grid .pdf-preview__stage {
   width: 100%;
-  height: var(--pdf-inline-stage-height, auto);
-  max-height: min(54dvh, 570px);
+  /* The stage is recreated after minimize/split. Overview thumbnails are
+     absolutely positioned, so auto height collapses their grid to zero.
+     Size the overview from the viewer, independently of single-page render. */
+  height: 54dvh;
+  max-height: 570px;
   min-height: 0;
   aspect-ratio: auto;
   overflow: hidden;

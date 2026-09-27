@@ -559,8 +559,8 @@ export function PdfViewerSurface({
 
       // Inline PDFs are document blocks, not letterboxed viewports. Give the
       // block enough height for the complete fitted page so the editor never
-      // crops the bottom half of a portrait document. Grid mode reuses this
-      // exact height, so switching view mode cannot resize the document block.
+      // crops the bottom half of a portrait document. The overview has its
+      // own CSS viewport height, including when restored on a fresh stage.
       let stageHeight = stage.clientHeight || window.innerHeight;
       if (mode === "inline" && !isFullscreen && !fallbackFullscreen) {
         const fittedContentHeight =

@@ -1,3 +1,11 @@
+
+## [0.26.1] - 2026-09-27
+
+- Fix inline PDF multi-view collapsing to thin lines after closing split view or restoring a minimized viewer while split view remains open.
+- Give the overview a viewport-based height independent of single-page rendering.
+- Add regression coverage for both restore paths.
+
+
 ## [0.26.0] - 2026-09-27
 
 ### PDF viewer
