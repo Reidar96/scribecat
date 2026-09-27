@@ -72,6 +72,7 @@ type DocumentPanelProps = {
   openTabs: string[];
   secondaryFilePath: string | null;
   onSelectTab: (filePath: string) => void;
+  onActivateTab: (filePath: string) => void;
   onCloseTab: (filePath: string) => void;
   onCloseAllTabs: () => void;
   onReorderTabs: (
@@ -200,6 +201,7 @@ export function DocumentPanel({
   openTabs,
   secondaryFilePath,
   onSelectTab,
+  onActivateTab,
   onCloseTab,
   onCloseAllTabs,
   onReorderTabs,
@@ -838,6 +840,7 @@ export function DocumentPanel({
           <DocumentTabs
             filePaths={openTabs}
             activeFilePath={selectedFilePath}
+            secondaryFilePath={secondaryFilePath}
             dirtyFilePaths={dirtyFilePaths}
             attachedPdfOwnerFilePath={attachedPdf?.ownerFilePath ?? null}
             onSelect={onSelectTab}
@@ -977,7 +980,10 @@ export function DocumentPanel({
                     deleteEnabled={capabilities.delete}
                     documentLocked={documentLocked}
                     onDocumentLockToggle={toggleDocumentLocked}
-                    onEditorFocus={() => setActiveEditorPane("primary")}
+                    onEditorFocus={() => {
+                      setActiveEditorPane("primary");
+                      onActivateTab(selectedFilePath);
+                    }}
                     hideToolbar={
                       layout === "desktop" &&
                       Boolean(secondaryFilePath) &&
@@ -1107,7 +1113,10 @@ export function DocumentPanel({
                                 !secondaryDocumentLocked
                               )
                             }
-                            onEditorFocus={() => setActiveEditorPane("secondary")}
+                            onEditorFocus={() => {
+                              setActiveEditorPane("secondary");
+                              onActivateTab(secondaryFilePath);
+                            }}
                             hideToolbar={activeEditorPane !== "secondary"}
                             toolbarContainer={toolbarSlot}
                           />
