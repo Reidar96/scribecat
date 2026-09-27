@@ -1153,7 +1153,16 @@
   overscroll-behavior: contain;
 }
 
+/* At fitted zoom the whole PDF page stays visible and centered. Tall pages
+   therefore get black bars on the sides instead of being cropped. Once the
+   user zooms in, the stage returns to a normal scroll surface for panning. */
+.pdf-preview__stage:not(.pdf-preview__stage--grid):not(.pdf-preview__stage--zoomed) {
+  display: grid;
+  place-items: center;
+}
+
 .pdf-preview__stage--zoomed {
+  display: block;
   touch-action: none;
 }
 
