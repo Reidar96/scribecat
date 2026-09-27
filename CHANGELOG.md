@@ -1,3 +1,13 @@
+## [0.25.19] - 2026-09-27
+
+### Changes
+- Make inline PDF previews in the text editor tall enough to show the complete fitted page instead of cropping the bottom.
+- Keep multi-page overview rows consistently centered and size thumbnails to use the available viewer width and height more efficiently.
+- Keep the overview viewer height stable while paging through additional PDF pages.
+- Make mobile fallback fullscreen occupy the full dynamic viewport and vertically center the fitted PDF page.
+- Keep desktop/native fullscreen fitting behavior unchanged while sharing the same centered black letterbox surface.
+- Bump desktop, server and Docker release metadata to 0.25.19.
+
 ## [0.25.18] - 2026-09-27
 
 ### Changes
