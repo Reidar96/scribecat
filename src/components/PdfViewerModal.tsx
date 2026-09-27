@@ -496,8 +496,15 @@ export function PdfViewerSurface({
       );
       const stageWidth = stage.clientWidth || window.innerWidth;
       const stageHeight = stage.clientHeight || window.innerHeight;
-      const availableWidth = Math.max(240, stageWidth - 32);
-      const availableHeight = Math.max(260, stageHeight - 32);
+      const stageStyle = window.getComputedStyle(stage);
+      const horizontalPadding =
+        (Number.parseFloat(stageStyle.paddingLeft) || 0) +
+        (Number.parseFloat(stageStyle.paddingRight) || 0);
+      const verticalPadding =
+        (Number.parseFloat(stageStyle.paddingTop) || 0) +
+        (Number.parseFloat(stageStyle.paddingBottom) || 0);
+      const availableWidth = Math.max(1, stageWidth - horizontalPadding);
+      const availableHeight = Math.max(1, stageHeight - verticalPadding);
       const fitScale = Math.min(
         availableWidth / baseViewport.width,
         availableHeight / baseViewport.height
