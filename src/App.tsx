@@ -261,7 +261,10 @@ function App() {
       return;
     }
 
-    setOpenTabs((tabs) => (tabs.includes(selectedFilePath) ? tabs : [...tabs, selectedFilePath]));
+    setOpenTabs((tabs) => [
+      selectedFilePath,
+      ...tabs.filter((path) => path !== selectedFilePath)
+    ]);
   }, [selectedFilePath, folderPath, taskSettings.folder, journalSettings]);
 
   useEffect(() => {
@@ -569,6 +572,13 @@ function App() {
     await openFolderAtPath(targetFolderPath);
   };
 
+  const activateDocumentTab = (filePath: string) => {
+    setOpenTabs((tabs) => [
+      filePath,
+      ...tabs.filter((path) => path !== filePath)
+    ]);
+  };
+
   const selectFilePathSafely = async (filePath: string) => {
     if (filePath === secondaryFilePath) {
       setSecondaryFilePath(
@@ -577,6 +587,7 @@ function App() {
     }
 
     if (filePath === selectedFilePath) {
+      activateDocumentTab(filePath);
       setCollectionView(null);
       setGraphViewOpen(false);
       setJournalViewOpen(false);
@@ -660,7 +671,7 @@ function App() {
     const loaded = await loadFileDocument(filePath);
     if (!loaded) return;
 
-    setOpenTabs((tabs) => (tabs.includes(filePath) ? tabs : [...tabs, filePath]));
+    activateDocumentTab(filePath);
     setSecondaryFilePath(filePath);
     setCollectionView(null);
     setGraphViewOpen(false);
@@ -676,9 +687,7 @@ function App() {
     const remainingFilePath = secondaryFilePath;
     setSecondaryFilePath(null);
     await selectFilePath(remainingFilePath);
-    setOpenTabs((tabs) =>
-      tabs.includes(remainingFilePath) ? tabs : [...tabs, remainingFilePath]
-    );
+    activateDocumentTab(remainingFilePath);
   };
 
   const openDocumentsAsTabs = async (filePathsToOpen: [string, string]) => {
