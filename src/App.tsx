@@ -1502,6 +1502,7 @@ function App() {
               openTabs={openTabs}
               secondaryFilePath={secondaryFilePath}
               onSelectTab={(filePath) => void selectFilePathSafely(filePath)}
+              onActivateTab={activateDocumentTab}
               onCloseTab={closeDocumentTab}
               onCloseAllTabs={closeAllDocumentTabs}
               onReorderTabs={reorderDocumentTabs}
