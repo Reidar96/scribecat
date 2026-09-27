@@ -1,3 +1,16 @@
+## [0.25.18] - 2026-09-27
+
+### Changes
+- Fix PDF single-page fitting in the editor and fullscreen so the whole page is visible at base zoom, including on mobile.
+- Prevent the selectable PDF text layer from leaking into multi-page overview mode.
+- Ship the final PDF viewer fixes that landed after the original 0.25.17 tag.
+- Keep PDF multi-page view at a stable height, center thumbnails vertically, and adapt the number of visible pages before paging.
+- Use two-row PDF controls in narrow split panes and gray out the single-page pager while overview mode is active.
+- Make mobile fullscreen edge-to-edge and fit tall PDF pages fully with black side bars instead of cropping.
+- Add right-click download/save for the original PDF document.
+- Use two stable rows for the editor toolbar in narrow desktop split view.
+- Publish desktop, server and Docker metadata as 0.25.18.
+
 ## [0.25.17] - 2026-09-27
 
 ### Changes
