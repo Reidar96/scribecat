@@ -982,7 +982,9 @@ export function DocumentPanel({
                     onDocumentLockToggle={toggleDocumentLocked}
                     onEditorFocus={() => {
                       setActiveEditorPane("primary");
-                      onActivateTab(selectedFilePath);
+                      if (selectedFilePath) {
+                        onActivateTab(selectedFilePath);
+                      }
                     }}
                     hideToolbar={
                       layout === "desktop" &&
