@@ -43,7 +43,11 @@ function buildContentExtensions(): Extensions {
     Link.configure({
       autolink: false,
       linkOnPaste: false,
-      openOnClick: false
+      openOnClick: false,
+      HTMLAttributes: {
+        target: null,
+        rel: "noopener noreferrer"
+      }
     }),
     // html: false — raw HTML in a note stays visible text instead of being
     // parsed into the document; the price is the placeholder fallback the
