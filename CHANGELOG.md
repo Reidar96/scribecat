@@ -1,3 +1,13 @@
+## [0.25.21] - 2026-09-27
+
+### Changes
+- Keep tall inline PDFs fully visible while fitting the page to roughly 90% of the available viewer height.
+- Center multi-page PDF overview rows consistently and add safe horizontal gutters so edge thumbnails are not clipped.
+- Keep incomplete overview rows centered instead of drifting to one side.
+- Stabilize mobile PDF zoom by preserving the same PDF point during the transition from fitted view to zoomed view.
+- Prevent native mobile pinch handling from competing with the PDF viewer in fullscreen.
+- Bump desktop, server, Tauri and Docker release metadata to 0.25.21.
+
 ## [0.25.20] - 2026-09-27
 
 ### Changes
