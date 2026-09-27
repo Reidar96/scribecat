@@ -1,3 +1,15 @@
+## [0.25.20] - 2026-09-27
+
+### Changes
+- Open external links only once in the web app instead of triggering both browser-native and app-managed navigation.
+- Mark both documents as active in the tab bar while split view is open, and move the most recently active tab to the front.
+- Make left/right arrow keys page through multi-page PDF overview instead of changing the underlying single-page selection.
+- Cap tall inline PDF viewers in the text editor and scale the whole page to fit inside that height.
+- Use two overview columns at narrower split/mobile widths and size overview pages from the viewer's available height.
+- Make PDF toolbars switch to a stable two-row layout before controls can overlap.
+- Keep the current zoom focus on mobile fullscreen when pinch zoom begins instead of jumping to the top.
+- Bump desktop, server and Docker release metadata to 0.25.20.
+
 ## [0.25.19] - 2026-09-27
 
 ### Changes
