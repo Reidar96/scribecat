@@ -121,7 +121,7 @@ function isFormControl(target: EventTarget | null): boolean {
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 3;
 const MAX_RENDER_SCALE = 3.5;
-const OVERVIEW_PAGE_SIZE = 6;
+const MAX_OVERVIEW_PAGE_SIZE = 6;
 const OVERVIEW_THUMBNAIL_WIDTH = 220;
 
 function clampZoom(value: number): number {
@@ -199,6 +199,7 @@ export function PdfViewerSurface({
   const lastRestoreMinimizedRequestIdRef = useRef(restoreMinimizedRequestId);
   const [pageView, setPageView] = useState<"single" | "grid">("single");
   const [overviewPage, setOverviewPage] = useState(0);
+  const [overviewPageSize, setOverviewPageSize] = useState(MAX_OVERVIEW_PAGE_SIZE);
   const [pageThumbnails, setPageThumbnails] = useState<Array<{
     pageNumber: number;
     src: string;
@@ -206,9 +207,9 @@ export function PdfViewerSurface({
     height: number;
   }>>([]);
   const [pageThumbnailLoading, setPageThumbnailLoading] = useState(false);
-  const overviewPageCount = Math.max(1, Math.ceil(pageCount / OVERVIEW_PAGE_SIZE));
-  const overviewStartPage = overviewPage * OVERVIEW_PAGE_SIZE + 1;
-  const overviewEndPage = Math.min(pageCount, overviewStartPage + OVERVIEW_PAGE_SIZE - 1);
+  const overviewPageCount = Math.max(1, Math.ceil(pageCount / overviewPageSize));
+  const overviewStartPage = overviewPage * overviewPageSize + 1;
+  const overviewEndPage = Math.min(pageCount, overviewStartPage + overviewPageSize - 1);
 
   const previousPage = () => {
     setPageNumber((page) => Math.max(1, page - 1));
@@ -353,7 +354,17 @@ export function PdfViewerSurface({
 
     if (!stage) return;
 
-    const update = () => setViewportVersion((version) => version + 1);
+    const update = () => {
+      setViewportVersion((version) => version + 1);
+
+      const width = stage.clientWidth || window.innerWidth;
+      const height = stage.clientHeight || window.innerHeight;
+      const columns = width >= 900 ? 3 : width >= 520 ? 2 : 1;
+      const rows = height >= 560 ? 2 : 1;
+      setOverviewPageSize(Math.max(1, Math.min(MAX_OVERVIEW_PAGE_SIZE, columns * rows)));
+    };
+
+    update();
     const observer =
       typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
 
@@ -379,10 +390,10 @@ export function PdfViewerSurface({
       return;
     }
 
-    const maxOverviewPage = Math.max(0, Math.ceil(pageCount / OVERVIEW_PAGE_SIZE) - 1);
+    const maxOverviewPage = Math.max(0, Math.ceil(pageCount / overviewPageSize) - 1);
     const pageIndex = Math.min(overviewPage, maxOverviewPage);
-    const startPage = pageIndex * OVERVIEW_PAGE_SIZE + 1;
-    const endPage = Math.min(document.numPages, startPage + OVERVIEW_PAGE_SIZE - 1);
+    const startPage = pageIndex * overviewPageSize + 1;
+    const endPage = Math.min(document.numPages, startPage + overviewPageSize - 1);
 
     if (pageIndex !== overviewPage) {
       setOverviewPage(pageIndex);
@@ -457,7 +468,7 @@ export function PdfViewerSurface({
     return () => {
       active = false;
     };
-  }, [pageView, pageCount, overviewPage]);
+  }, [pageView, pageCount, overviewPage, overviewPageSize]);
 
   useEffect(() => {
     const document = documentRef.current;
@@ -1215,7 +1226,7 @@ export function PdfViewerSurface({
                   aria-label="All pages"
                   title="All pages"
                   onClick={() => {
-                    setOverviewPage(Math.floor((pageNumber - 1) / OVERVIEW_PAGE_SIZE));
+                    setOverviewPage(Math.floor((pageNumber - 1) / overviewPageSize));
                     setPageView("grid");
                   }}
                 >
