@@ -127,12 +127,8 @@ const MAX_ZOOM = 3;
 const MAX_RENDER_SCALE = 3.5;
 const MAX_OVERVIEW_PAGE_SIZE = 6;
 const OVERVIEW_THUMBNAIL_WIDTH = 420;
-const OVERVIEW_GAP = 16;
-const OVERVIEW_NAV_HEIGHT = 48;
-const MAX_INLINE_STAGE_HEIGHT = 760;
-const INLINE_STAGE_VIEWPORT_RATIO = 0.72;
-const INLINE_PAGE_HEIGHT_USAGE = 0.9;
-const OVERVIEW_HORIZONTAL_GUTTER = 24;
+const MAX_INLINE_STAGE_HEIGHT = 570;
+const INLINE_STAGE_VIEWPORT_RATIO = 0.54;
 
 function clampZoom(value: number): number {
   return Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, value));
@@ -215,11 +211,6 @@ export function PdfViewerSurface({
   const [overviewPage, setOverviewPage] = useState(0);
   const [overviewPageSize, setOverviewPageSize] = useState(MAX_OVERVIEW_PAGE_SIZE);
   const [overviewColumns, setOverviewColumns] = useState(2);
-  const [overviewRows, setOverviewRows] = useState(2);
-  const [overviewCellSize, setOverviewCellSize] = useState({
-    width: 220,
-    height: 300
-  });
   const [pageThumbnails, setPageThumbnails] = useState<Array<{
     pageNumber: number;
     src: string;
@@ -398,46 +389,12 @@ export function PdfViewerSurface({
       const horizontalPadding =
         (Number.parseFloat(stageStyle.paddingLeft) || 0) +
         (Number.parseFloat(stageStyle.paddingRight) || 0);
-      const verticalPadding =
-        (Number.parseFloat(stageStyle.paddingTop) || 0) +
-        (Number.parseFloat(stageStyle.paddingBottom) || 0);
-      const width = Math.max(
-        1,
-        (stage.clientWidth || window.innerWidth) - horizontalPadding
-      );
-      const height = Math.max(
-        1,
-        (stage.clientHeight || window.innerHeight) - verticalPadding
-      );
-
-      // Deterministic overview: choose one grid shape for the available
-      // viewport, then center each row explicitly. This prevents the old
-      // flex-wrap behaviour where the same PDF could jump between left and
-      // centre alignment as thumbnails finished rendering.
-      const columns = width >= 1180 ? 3 : width >= 360 ? 2 : 1;
-      const usableHeight = Math.max(120, height - OVERVIEW_NAV_HEIGHT);
-      const rows =
-        columns === 1
-          ? Math.min(2, Math.max(1, Math.floor((usableHeight + OVERVIEW_GAP) / 280)))
-          : Math.min(2, Math.max(1, Math.floor((usableHeight + OVERVIEW_GAP) / 240)));
-      const pageSize = Math.max(
-        1,
-        Math.min(MAX_OVERVIEW_PAGE_SIZE, columns * rows)
-      );
-      const overviewWidth = Math.max(120, width - OVERVIEW_HORIZONTAL_GUTTER * 2);
-      const cellWidth = Math.max(
-        120,
-        (overviewWidth - OVERVIEW_GAP * Math.max(0, columns - 1)) / columns
-      );
-      const cellHeight = Math.max(
-        120,
-        (usableHeight - OVERVIEW_GAP * Math.max(0, rows - 1)) / rows
-      );
-
+      const width = Math.max(1, stage.clientWidth - horizontalPadding);
+      // Column count follows the viewer, never the document aspect ratio or
+      // available height. Keep two rows per batch and scroll tall pages.
+      const columns = width >= 900 ? 3 : 2;
       setOverviewColumns(columns);
-      setOverviewRows(rows);
-      setOverviewPageSize(pageSize);
-      setOverviewCellSize({ width: cellWidth, height: cellHeight });
+      setOverviewPageSize(columns * 2);
     };
 
     update();
@@ -451,7 +408,7 @@ export function PdfViewerSurface({
       observer?.disconnect();
       window.removeEventListener("resize", update);
     };
-  }, []);
+  }, [fallbackFullscreen]);
 
 
   useEffect(() => {
@@ -607,11 +564,11 @@ export function PdfViewerSurface({
         const fittedContentHeight =
           availableWidth * (baseViewport.height / Math.max(1, baseViewport.width));
         const viewportHeightCap = Math.max(
-          320,
+          1,
           Math.min(MAX_INLINE_STAGE_HEIGHT, window.innerHeight * INLINE_STAGE_VIEWPORT_RATIO)
         );
         stageHeight = Math.min(
-          Math.ceil(fittedContentHeight + verticalPadding),
+          Math.ceil(fittedContentHeight * 0.75 + verticalPadding),
           Math.floor(viewportHeightCap)
         );
         stage.style.setProperty(
@@ -620,10 +577,7 @@ export function PdfViewerSurface({
         );
       }
       const availableHeight = Math.max(1, stageHeight - verticalPadding);
-      const heightFit =
-        mode === "inline" && !isFullscreen && !fallbackFullscreen
-          ? (availableHeight * INLINE_PAGE_HEIGHT_USAGE) / baseViewport.height
-          : availableHeight / baseViewport.height;
+      const heightFit = availableHeight / baseViewport.height;
       const fitScale = Math.min(
         availableWidth / baseViewport.width,
         heightFit
@@ -1506,7 +1460,7 @@ export function PdfViewerSurface({
 
             <div
               className="pdf-preview__overview"
-              style={{ gridTemplateRows: `repeat(${overviewRows}, minmax(0, 1fr))` }}
+              style={{ gridTemplateColumns: `repeat(${overviewColumns}, minmax(0, 1fr))` }}
             >
               {pageThumbnailLoading && pageThumbnails.length === 0 ? (
                 <div className="pdf-preview__message">
@@ -1514,54 +1468,23 @@ export function PdfViewerSurface({
                   <span>{t("pdfViewer.loading")}</span>
                 </div>
               ) : null}
-              {Array.from(
-                { length: Math.ceil(pageThumbnails.length / overviewColumns) },
-                (_, rowIndex) => pageThumbnails.slice(
-                  rowIndex * overviewColumns,
-                  rowIndex * overviewColumns + overviewColumns
-                )
-              ).map((row) => (
-                <div
-                  className="pdf-preview__overview-row"
-                  key={row[0]?.pageNumber ?? 0}
-                  style={{
-                    gridTemplateColumns: `repeat(${row.length}, minmax(0, ${overviewCellSize.width}px))`
+              {pageThumbnails.map((thumbnail) => (
+                <button
+                  type="button"
+                  className="pdf-preview__overview-page"
+                  key={thumbnail.pageNumber}
+                  style={{ aspectRatio: `${thumbnail.width} / ${thumbnail.height}` }}
+                  onClick={() => {
+                    setPageNumber(thumbnail.pageNumber);
+                    setPageView("single");
                   }}
+                  aria-label={`${t("pdfViewer.page")} ${thumbnail.pageNumber}`}
                 >
-                  {row.map((thumbnail) => {
-                    const scale = Math.min(
-                      overviewCellSize.width / Math.max(1, thumbnail.width),
-                      overviewCellSize.height / Math.max(1, thumbnail.height)
-                    );
-                    const width = Math.max(
-                      96,
-                      Math.min(overviewCellSize.width - 2, Math.floor(thumbnail.width * scale))
-                    );
-                    const height = Math.max(
-                      96,
-                      Math.min(overviewCellSize.height - 2, Math.floor(thumbnail.height * scale))
-                    );
-
-                    return (
-                      <button
-                        type="button"
-                        className="pdf-preview__overview-page"
-                        key={thumbnail.pageNumber}
-                        style={{ width, height }}
-                        onClick={() => {
-                          setPageNumber(thumbnail.pageNumber);
-                          setPageView("single");
-                        }}
-                        aria-label={`${t("pdfViewer.page")} ${thumbnail.pageNumber}`}
-                      >
-                        <div className="pdf-preview__overview-page-frame">
-                          <img src={thumbnail.src} alt="" />
-                        </div>
-                        <span>{thumbnail.pageNumber} / {pageCount}</span>
-                      </button>
-                    );
-                  })}
-                </div>
+                  <div className="pdf-preview__overview-page-frame">
+                    <img src={thumbnail.src} alt="" />
+                  </div>
+                  <span>{thumbnail.pageNumber} / {pageCount}</span>
+                </button>
               ))}
             </div>
           </div>

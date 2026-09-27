@@ -1,3 +1,13 @@
+## [0.25.22] - 2026-09-27
+
+### Changes
+- Remove the inline PDF height cap in mobile and native fullscreen so the stage fills the remaining screen height.
+- Replace height-dependent PDF overview thumbnails with a fixed, full-width grid: two columns in narrow viewers and three from 900px, with two rows per batch and vertical scrolling for tall pages.
+- Preserve column positions on incomplete overview rows and remove editor image margins from PDF thumbnails.
+- Reduce inline PDF stage height to 75% of its previous size while fitting the complete page.
+- Reattach viewport observation when moving into or out of mobile fallback fullscreen.
+- Bump desktop, server, Tauri and Docker release metadata to 0.25.22.
+
 ## [0.25.21] - 2026-09-27
 
 ### Changes
