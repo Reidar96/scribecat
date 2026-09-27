@@ -273,7 +273,7 @@ export function PdfViewerSurface({
     const handleWheel = (event: WheelEvent) => {
       // Desktop trackpad pinch is exposed as Ctrl+wheel. Keep the browser
       // from applying its own page zoom and apply it only to this PDF.
-      if (!event.ctrlKey) return;
+      if (!event.ctrlKey || pageView !== "single") return;
 
       event.preventDefault();
       event.stopPropagation();
@@ -285,7 +285,7 @@ export function PdfViewerSurface({
 
     stage.addEventListener("wheel", handleWheel, { passive: false });
     return () => stage.removeEventListener("wheel", handleWheel);
-  }, []);
+  }, [fallbackFullscreen, isMinimized, pageView]);
 
   useEffect(() => {
     const refreshViewport = () => {
@@ -408,7 +408,7 @@ export function PdfViewerSurface({
       observer?.disconnect();
       window.removeEventListener("resize", update);
     };
-  }, [fallbackFullscreen]);
+  }, [fallbackFullscreen, isMinimized]);
 
 
   useEffect(() => {
@@ -419,7 +419,7 @@ export function PdfViewerSurface({
     }
 
     const document = documentRef.current;
-    if (!document || pageCount === 0) {
+    if (!document || pageCount === 0 || loading) {
       return;
     }
 
@@ -493,6 +493,8 @@ export function PdfViewerSurface({
         }
 
         if (active) setPageThumbnails(thumbnails);
+      } catch {
+        if (active) setError(true);
       } finally {
         if (active) setPageThumbnailLoading(false);
       }
@@ -501,10 +503,10 @@ export function PdfViewerSurface({
     return () => {
       active = false;
     };
-  }, [pageView, pageCount, overviewPage, overviewPageSize]);
+  }, [pageView, pageCount, overviewPage, overviewPageSize, loading]);
 
   useEffect(() => {
-    if (pageView !== "single" || isMinimized) {
+    if (pageView !== "single" || isMinimized || loading) {
       renderCancelRef.current?.();
       textLayerCancelRef.current?.();
       setRendering(false);
@@ -698,6 +700,11 @@ export function PdfViewerSurface({
           }
         }
       }
+    }).catch(() => {
+      if (active) {
+        setError(true);
+        setRendering(false);
+      }
     });
 
     return () => {
@@ -706,7 +713,7 @@ export function PdfViewerSurface({
       textLayerCancelRef.current?.();
       textLayerElement.replaceChildren();
     };
-  }, [pageNumber, pageCount, viewportVersion, renderZoom, pageView, isMinimized, isFullscreen, fallbackFullscreen]);
+  }, [pageNumber, pageCount, viewportVersion, renderZoom, pageView, isMinimized, isFullscreen, fallbackFullscreen, loading]);
 
   useEffect(() => {
     if (mode !== "modal") return;
@@ -1422,16 +1429,16 @@ export function PdfViewerSurface({
           className={`pdf-preview__stage${zoom > 1 ? " pdf-preview__stage--zoomed" : ""}${pageView === "grid" ? " pdf-preview__stage--grid" : ""}`}
         >
         {loading ? (
-          <div className="pdf-preview__message">
+          <div key="loading" className="pdf-preview__message">
             <Loader2 className="pdf-preview__spinner" aria-hidden="true" />
             <span>{t("pdfViewer.loading")}</span>
           </div>
         ) : error ? (
-          <div className="pdf-preview__message" role="alert">
+          <div key="error" className="pdf-preview__message" role="alert">
             {t("pdfViewer.error")}
           </div>
         ) : pageView === "grid" ? (
-          <div className="pdf-preview__overview-wrap">
+          <div key="overview" className="pdf-preview__overview-wrap">
             <div className="pdf-preview__overview-nav">
               <button
                 type="button"
@@ -1460,7 +1467,10 @@ export function PdfViewerSurface({
 
             <div
               className="pdf-preview__overview"
-              style={{ gridTemplateColumns: `repeat(${overviewColumns}, minmax(0, 1fr))` }}
+              style={{
+                gridTemplateColumns: `repeat(${overviewColumns * 2}, minmax(0, 1fr))`,
+                gridTemplateRows: `repeat(${Math.max(1, Math.ceil(pageThumbnails.length / overviewColumns))}, minmax(0, 1fr))`
+              }}
             >
               {pageThumbnailLoading && pageThumbnails.length === 0 ? (
                 <div className="pdf-preview__message">
@@ -1468,12 +1478,18 @@ export function PdfViewerSurface({
                   <span>{t("pdfViewer.loading")}</span>
                 </div>
               ) : null}
-              {pageThumbnails.map((thumbnail) => (
+              {pageThumbnails.map((thumbnail, index) => (
                 <button
                   type="button"
                   className="pdf-preview__overview-page"
                   key={thumbnail.pageNumber}
-                  style={{ aspectRatio: `${thumbnail.width} / ${thumbnail.height}` }}
+                  style={{
+                    // Two tracks per tile let a partial final row stay centered
+                    // without changing the size of its cells.
+                    gridColumn: index === Math.floor(pageThumbnails.length / overviewColumns) * overviewColumns
+                      ? `${overviewColumns - (pageThumbnails.length % overviewColumns) + 1} / span 2`
+                      : "span 2"
+                  }}
                   onClick={() => {
                     setPageNumber(thumbnail.pageNumber);
                     setPageView("single");
@@ -1490,6 +1506,7 @@ export function PdfViewerSurface({
           </div>
         ) : (
           <div
+            key="single-page"
             ref={pageRef}
             className={`pdf-preview__page${zoom > 1 ? " pdf-preview__page--zoomed" : ""}${isPanning ? " pdf-preview__page--panning" : ""}`}
           >

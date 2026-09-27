@@ -54,8 +54,15 @@ async function parseManagedAttachmentRefs(
       continue;
     }
 
+    let decodedTarget = rawTarget;
     try {
-      const absolutePath = await join(fileDirectory, rawTarget);
+      decodedTarget = decodeURIComponent(rawTarget);
+    } catch {
+      // A literal '%' in an existing filename is still a valid local path.
+    }
+
+    try {
+      const absolutePath = await join(fileDirectory, decodedTarget);
       if (!isPathInsideVault(folderPath, absolutePath)) continue;
 
       const rootRelativePath = normalizeDisplayPath(
@@ -63,8 +70,7 @@ async function parseManagedAttachmentRefs(
       );
       if (!isManagedAttachmentPath(rootRelativePath)) continue;
 
-      const targetOffset = match[0].indexOf(rawTarget);
-      if (targetOffset < 0) continue;
+      const targetOffset = match[0].indexOf("](") + 2;
 
       refs.push({
         rawTarget,
@@ -146,7 +152,10 @@ async function rewriteManagedAttachmentRefs(
     replacements.push({
       start: ref.start,
       end: ref.end,
-      value: await markdownPathToAttachment(folderPath, targetFilePath, nextRootPath)
+      value: (await markdownPathToAttachment(folderPath, targetFilePath, nextRootPath))
+        .split("/")
+        .map(segment => encodeURIComponent(segment).replace(/[()]/g, char => `%${char.charCodeAt(0).toString(16)}`))
+        .join("/")
     });
   }
 

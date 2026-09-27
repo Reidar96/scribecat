@@ -1,5 +1,6 @@
 import { lstat, mkdir, readdir, readFile, realpath, rename, rm, rmdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { randomUUID } from "node:crypto";
 
 import { DATA_VERSION_RELATIVE_PATH } from "./dataVersion.js";
 import { assertVaultPath, resolveVaultEntry, VAULT_META_DIR_NAME, VaultPathError } from "./paths.js";
@@ -152,7 +153,7 @@ export async function openVault(vaultPath: string): Promise<Vault> {
   // Write-then-rename so a container stopped mid-write leaves the old file
   // intact rather than a truncated one.
   async function writeAtomically(absolutePath: string, data: string | Buffer, relativePath: string) {
-    const tempPath = path.join(path.dirname(absolutePath), `.${path.basename(absolutePath)}.${process.pid}.tmp`);
+    const tempPath = path.join(path.dirname(absolutePath), `.${path.basename(absolutePath)}.${process.pid}.${randomUUID()}.tmp`);
 
     try {
       await writeFile(tempPath, data, typeof data === "string" ? "utf8" : undefined);

@@ -23,6 +23,16 @@ describe("file API", () => {
     await context.cleanup();
   });
 
+  it("keeps simultaneous saves to the same file complete and successful", async () => {
+    const contents = Array.from({ length: 8 }, (_, i) => `${i}`.repeat(100_000));
+    const responses = await Promise.all(contents.map(content =>
+      putJson("/api/fs/text", { path: "Notes/Idea.md", content })
+    ));
+    expect(responses.map(response => response.statusCode)).toEqual(contents.map(() => 200));
+    const saved = (await get(`/api/fs/text?${q("Notes/Idea.md")}`)).json().content;
+    expect(contents).toContain(saved);
+  });
+
   it("lists markdown files only, sorted, without the metadata directory", async () => {
     const response = await get("/api/files");
 

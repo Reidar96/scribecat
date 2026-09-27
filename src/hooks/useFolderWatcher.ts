@@ -28,7 +28,12 @@ export function useFolderWatcher(refreshFolderFiles: () => Promise<boolean>): vo
         }, 150);
       });
 
-      unlisten = cleanup;
+      // Registration crosses IPC; it can resolve after effect cleanup.
+      if (!isMounted) {
+        cleanup();
+      } else {
+        unlisten = cleanup;
+      }
     };
 
     void registerListener();

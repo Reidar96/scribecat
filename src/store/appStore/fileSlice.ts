@@ -49,6 +49,7 @@ import {
 
 export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
   loadFileDocument: async (filePath: string) => {
+    const loadingFolderPath = get().folderPath;
     if (get().fileDocuments[filePath]) {
       return true;
     }
@@ -60,6 +61,9 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
       ]);
 
       const currentState = get();
+      if (currentState.folderPath !== loadingFolderPath) return false;
+      // Another read may have finished and the user may already be editing it.
+      if (currentState.fileDocuments[filePath]) return true;
       set({
         fileDocuments: {
           ...currentState.fileDocuments,
@@ -72,6 +76,8 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
       });
       return true;
     } catch (error) {
+      if (get().folderPath !== loadingFolderPath) return false;
+      if (get().fileDocuments[filePath]) return true;
       set({ fileError: toErrorMessage(error, i18n.t("store.fileLoadError")) });
       return false;
     }
@@ -93,6 +99,7 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
     });
   },
   selectFilePath: async (filePath: string) => {
+    const loadingFolderPath = get().folderPath;
     // Leaving a note is one of the points where a pending draft goes out at once.
     void flushDrafts();
 
@@ -135,7 +142,8 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
       ]);
 
       const currentState = get();
-      const nextDocumentState = {
+      if (currentState.folderPath !== loadingFolderPath) return false;
+      const nextDocumentState = currentState.fileDocuments[filePath] ?? {
         content: markdown,
         baseContent: markdown,
         baseMtimeMs
@@ -157,11 +165,11 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
           ...currentState.fileDocuments,
           [filePath]: nextDocumentState
         },
-        selectedFileContent: markdown,
-        selectedFileBaseContent: markdown,
+        selectedFileContent: nextDocumentState.content,
+        selectedFileBaseContent: nextDocumentState.baseContent,
         isFileLoading: false,
         isSaving: false,
-        isDirty: false,
+        isDirty: isDocumentDirty(nextDocumentState),
         fileError: null,
         saveError: null
       });
@@ -169,6 +177,13 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
       return true;
     } catch (error) {
       const currentState = get();
+      if (currentState.folderPath !== loadingFolderPath) return false;
+      if (currentState.fileDocuments[filePath]) {
+        if (currentState.selectedFilePath === filePath) {
+          return get().selectFilePath(filePath);
+        }
+        return true;
+      }
 
       if (currentState.selectedFilePath === filePath) {
         set({
