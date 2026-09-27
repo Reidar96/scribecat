@@ -9,6 +9,7 @@ export const TAB_DRAG_MIME = "application/x-scribecat-tab";
 type DocumentTabsProps = {
   filePaths: string[];
   activeFilePath: string | null;
+  secondaryFilePath?: string | null;
   dirtyFilePaths: string[];
   attachedPdfOwnerFilePath?: string | null;
   onSelect: (filePath: string) => void;
@@ -20,6 +21,7 @@ type DocumentTabsProps = {
 export function DocumentTabs({
   filePaths,
   activeFilePath,
+  secondaryFilePath = null,
   dirtyFilePaths,
   attachedPdfOwnerFilePath = null,
   onSelect,
@@ -38,7 +40,8 @@ export function DocumentTabs({
     <div className="document-tabs-bar">
       <div className="document-tabs" role="tablist" aria-label={t("tabs.label")}>
         {filePaths.map((filePath) => {
-        const active = filePath === activeFilePath;
+        const active = filePath === activeFilePath || filePath === secondaryFilePath;
+        const primaryActive = filePath === activeFilePath;
         const label = getFileLinkLabel(filePath);
 
         return (
@@ -75,7 +78,7 @@ export function DocumentTabs({
               type="button"
               className="document-tab__select"
               role="tab"
-              aria-selected={active}
+              aria-selected={primaryActive}
               title={filePath}
               onClick={() => onSelect(filePath)}
             >
