@@ -129,6 +129,8 @@ const MAX_OVERVIEW_PAGE_SIZE = 6;
 const OVERVIEW_THUMBNAIL_WIDTH = 420;
 const OVERVIEW_GAP = 16;
 const OVERVIEW_NAV_HEIGHT = 48;
+const MAX_INLINE_STAGE_HEIGHT = 760;
+const INLINE_STAGE_VIEWPORT_RATIO = 0.72;
 
 function clampZoom(value: number): number {
   return Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, value));
@@ -410,7 +412,7 @@ export function PdfViewerSurface({
       // viewport, then center each row explicitly. This prevents the old
       // flex-wrap behaviour where the same PDF could jump between left and
       // centre alignment as thumbnails finished rendering.
-      const columns = width >= 1280 ? 3 : width >= 620 ? 2 : 1;
+      const columns = width >= 1180 ? 3 : width >= 360 ? 2 : 1;
       const usableHeight = Math.max(120, height - OVERVIEW_NAV_HEIGHT);
       const rows =
         columns === 1
@@ -601,7 +603,14 @@ export function PdfViewerSurface({
       if (mode === "inline" && !isFullscreen && !fallbackFullscreen) {
         const fittedContentHeight =
           availableWidth * (baseViewport.height / Math.max(1, baseViewport.width));
-        stageHeight = Math.ceil(fittedContentHeight + verticalPadding);
+        const viewportHeightCap = Math.max(
+          320,
+          Math.min(MAX_INLINE_STAGE_HEIGHT, window.innerHeight * INLINE_STAGE_VIEWPORT_RATIO)
+        );
+        stageHeight = Math.min(
+          Math.ceil(fittedContentHeight + verticalPadding),
+          Math.floor(viewportHeightCap)
+        );
         stage.style.setProperty(
           "--pdf-inline-stage-height",
           `${stageHeight}px`
@@ -765,16 +774,24 @@ export function PdfViewerSurface({
 
       if (event.key === "ArrowLeft") {
         event.preventDefault();
-        previousPage();
+        if (pageView === "grid") {
+          setOverviewPage((current) => Math.max(0, current - 1));
+        } else {
+          previousPage();
+        }
       } else if (event.key === "ArrowRight") {
         event.preventDefault();
-        nextPage();
+        if (pageView === "grid") {
+          setOverviewPage((current) => Math.min(overviewPageCount - 1, current + 1));
+        } else {
+          nextPage();
+        }
       }
     };
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [mode, onClose, pageCount, fallbackFullscreen]);
+  }, [mode, onClose, pageCount, fallbackFullscreen, pageView, overviewPageCount]);
 
   const commitPageInput = () => {
     const requested = Number.parseInt(pageInput, 10);
@@ -882,6 +899,23 @@ export function PdfViewerSurface({
     setZoom(next);
     setZoomOpen(true);
     applyVisualZoom(next, previousZoom);
+
+    requestAnimationFrame(() => {
+      const stage = stageRef.current;
+      const page = pageRef.current;
+      const anchor = zoomAnchorRef.current;
+      if (!stage || !page || !anchor) return;
+
+      const stageRect = stage.getBoundingClientRect();
+      const pointerX = anchor.clientX - stageRect.left;
+      const pointerY = anchor.clientY - stageRect.top;
+      const pageX = page.offsetLeft + page.offsetWidth * anchor.pageX;
+      const pageY = page.offsetTop + page.offsetHeight * anchor.pageY;
+
+      stage.scrollLeft = Math.max(0, pageX - pointerX);
+      stage.scrollTop = Math.max(0, pageY - pointerY);
+    });
+
     scheduleRenderZoom(next);
   };
 
@@ -1001,10 +1035,18 @@ export function PdfViewerSurface({
 
     if (event.key === "ArrowLeft") {
       event.preventDefault();
-      previousPage();
+      if (pageView === "grid") {
+        setOverviewPage((current) => Math.max(0, current - 1));
+      } else {
+        previousPage();
+      }
     } else if (event.key === "ArrowRight") {
       event.preventDefault();
-      nextPage();
+      if (pageView === "grid") {
+        setOverviewPage((current) => Math.min(overviewPageCount - 1, current + 1));
+      } else {
+        nextPage();
+      }
     }
   };
 
@@ -1169,8 +1211,17 @@ export function PdfViewerSurface({
       return;
     }
 
-    if (dx > 0) previousPage();
-    else nextPage();
+    if (pageView === "grid") {
+      if (dx > 0) {
+        setOverviewPage((current) => Math.max(0, current - 1));
+      } else {
+        setOverviewPage((current) => Math.min(overviewPageCount - 1, current + 1));
+      }
+    } else if (dx > 0) {
+      previousPage();
+    } else {
+      nextPage();
+    }
   };
 
   const handlePointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
