@@ -210,6 +210,8 @@ export function PdfViewerSurface({
   const [pageView, setPageView] = useState<"single" | "grid">("single");
   const [overviewPage, setOverviewPage] = useState(0);
   const [overviewPageSize, setOverviewPageSize] = useState(MAX_OVERVIEW_PAGE_SIZE);
+  const [overviewColumns, setOverviewColumns] = useState(2);
+  const [overviewRows, setOverviewRows] = useState(2);
   const [overviewCellSize, setOverviewCellSize] = useState({
     width: 220,
     height: 300
@@ -404,15 +406,20 @@ export function PdfViewerSurface({
         (stage.clientHeight || window.innerHeight) - verticalPadding
       );
 
-      // Keep overview placement predictable: 1 column on narrow/mobile,
-      // 2 in normal editor/split widths, 3 only when there is real room.
-      const columns = width >= 1080 ? 3 : width >= 560 ? 2 : 1;
-      const rows = columns === 1 ? 1 : height >= 650 ? 2 : 1;
+      // Deterministic overview: choose one grid shape for the available
+      // viewport, then center each row explicitly. This prevents the old
+      // flex-wrap behaviour where the same PDF could jump between left and
+      // centre alignment as thumbnails finished rendering.
+      const columns = width >= 1280 ? 3 : width >= 620 ? 2 : 1;
+      const usableHeight = Math.max(120, height - OVERVIEW_NAV_HEIGHT);
+      const rows =
+        columns === 1
+          ? Math.min(2, Math.max(1, Math.floor((usableHeight + OVERVIEW_GAP) / 280)))
+          : Math.min(2, Math.max(1, Math.floor((usableHeight + OVERVIEW_GAP) / 240)));
       const pageSize = Math.max(
         1,
         Math.min(MAX_OVERVIEW_PAGE_SIZE, columns * rows)
       );
-      const usableHeight = Math.max(120, height - OVERVIEW_NAV_HEIGHT);
       const cellWidth = Math.max(
         120,
         (width - OVERVIEW_GAP * Math.max(0, columns - 1)) / columns
@@ -422,6 +429,8 @@ export function PdfViewerSurface({
         (usableHeight - OVERVIEW_GAP * Math.max(0, rows - 1)) / rows
       );
 
+      setOverviewColumns(columns);
+      setOverviewRows(rows);
       setOverviewPageSize(pageSize);
       setOverviewCellSize({ width: cellWidth, height: cellHeight });
     };
@@ -1184,7 +1193,7 @@ export function PdfViewerSurface({
     panRef.current = null;
   };
 
-  return (
+  const viewer = (
     <div
       ref={rootRef}
       className={`pdf-preview pdf-preview--${mode}${pageView === "grid" ? " pdf-preview--grid" : ""}${fallbackFullscreen ? " pdf-preview--fallback-fullscreen" : ""}${isMinimized ? " pdf-preview--minimized" : ""}`}
@@ -1426,46 +1435,53 @@ export function PdfViewerSurface({
               </button>
             </div>
 
-            <div className="pdf-preview__overview">
+            <div
+              className="pdf-preview__overview"
+              style={{ gridTemplateRows: `repeat(${overviewRows}, minmax(0, 1fr))` }}
+            >
               {pageThumbnailLoading && pageThumbnails.length === 0 ? (
                 <div className="pdf-preview__message">
                   <Loader2 className="pdf-preview__spinner" aria-hidden="true" />
                   <span>{t("pdfViewer.loading")}</span>
                 </div>
               ) : null}
-              {pageThumbnails.map((thumbnail) => {
-                const scale = Math.min(
-                  overviewCellSize.width / Math.max(1, thumbnail.width),
-                  overviewCellSize.height / Math.max(1, thumbnail.height)
-                );
-                const width = Math.max(
-                  96,
-                  Math.floor(thumbnail.width * scale)
-                );
-                const height = Math.max(
-                  96,
-                  Math.floor(thumbnail.height * scale)
-                );
+              {Array.from(
+                { length: Math.ceil(pageThumbnails.length / overviewColumns) },
+                (_, rowIndex) => pageThumbnails.slice(
+                  rowIndex * overviewColumns,
+                  rowIndex * overviewColumns + overviewColumns
+                )
+              ).map((row) => (
+                <div className="pdf-preview__overview-row" key={row[0]?.pageNumber ?? 0}>
+                  {row.map((thumbnail) => {
+                    const scale = Math.min(
+                      overviewCellSize.width / Math.max(1, thumbnail.width),
+                      overviewCellSize.height / Math.max(1, thumbnail.height)
+                    );
+                    const width = Math.max(96, Math.floor(thumbnail.width * scale));
+                    const height = Math.max(96, Math.floor(thumbnail.height * scale));
 
-                return (
-                  <button
-                    type="button"
-                    className="pdf-preview__overview-page"
-                    key={thumbnail.pageNumber}
-                    style={{ width, height }}
-                    onClick={() => {
-                      setPageNumber(thumbnail.pageNumber);
-                      setPageView("single");
-                    }}
-                    aria-label={`${t("pdfViewer.page")} ${thumbnail.pageNumber}`}
-                  >
-                    <div className="pdf-preview__overview-page-frame">
-                      <img src={thumbnail.src} alt="" />
-                    </div>
-                    <span>{thumbnail.pageNumber} / {pageCount}</span>
-                  </button>
-                );
-              })}
+                    return (
+                      <button
+                        type="button"
+                        className="pdf-preview__overview-page"
+                        key={thumbnail.pageNumber}
+                        style={{ width, height }}
+                        onClick={() => {
+                          setPageNumber(thumbnail.pageNumber);
+                          setPageView("single");
+                        }}
+                        aria-label={`${t("pdfViewer.page")} ${thumbnail.pageNumber}`}
+                      >
+                        <div className="pdf-preview__overview-page-frame">
+                          <img src={thumbnail.src} alt="" />
+                        </div>
+                        <span>{thumbnail.pageNumber} / {pageCount}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ))}
             </div>
           </div>
         ) : (
@@ -1519,6 +1535,10 @@ export function PdfViewerSurface({
 
     </div>
   );
+
+  return fallbackFullscreen && typeof document !== "undefined"
+    ? createPortal(viewer, document.body)
+    : viewer;
 }
 
 type PdfViewerModalProps = PdfPreviewRequest & {
