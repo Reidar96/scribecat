@@ -1088,10 +1088,13 @@ export function PdfViewerSurface({
           </button>
         ) : (
           <>
-            <div className="pdf-preview__pager">
+            <div
+              className={`pdf-preview__pager${pageView === "grid" ? " pdf-preview__pager--disabled" : ""}`}
+              aria-disabled={pageView === "grid"}
+            >
               <button
                 type="button"
-                disabled={loading || pageNumber <= 1}
+                disabled={pageView === "grid" || loading || pageNumber <= 1}
                 aria-label={t("pdfViewer.previous")}
                 title={t("pdfViewer.previous")}
                 onClick={previousPage}
@@ -1106,7 +1109,7 @@ export function PdfViewerSurface({
                   min={1}
                   max={Math.max(1, pageCount)}
                   value={pageInput}
-                  disabled={loading || pageCount === 0}
+                  disabled={pageView === "grid" || loading || pageCount === 0}
                   onChange={(event) => setPageInput(event.target.value)}
                   onBlur={commitPageInput}
                   onKeyDown={(event) => {
@@ -1122,7 +1125,7 @@ export function PdfViewerSurface({
 
               <button
                 type="button"
-                disabled={loading || pageCount === 0 || pageNumber >= pageCount}
+                disabled={pageView === "grid" || loading || pageCount === 0 || pageNumber >= pageCount}
                 aria-label={t("pdfViewer.next")}
                 title={t("pdfViewer.next")}
                 onClick={nextPage}
