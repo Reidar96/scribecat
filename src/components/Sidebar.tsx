@@ -623,18 +623,7 @@ export function Sidebar({
           </label>
         ) : null}
 
-        {showDesktopVaultSwitcher ? (
-          <div className="sidebar-panel__folder-wrap">
-            <div
-              className="sidebar-panel__folder sidebar-panel__folder--static"
-              title={folderPath ?? t("sidebar.openFolder")}
-              onContextMenu={openRootContextMenu}
-              data-testid="vault-name"
-            >
-              {folderPath !== null ? folderLabelContent : t("sidebar.openFolder")}
-            </div>
-          </div>
-        ) : !isServerVault ? (
+        {!showDesktopVaultSwitcher && !isServerVault ? (
           <div className="sidebar-panel__folder-wrap">
             {platform.features.localFolders ? (
                 <Menu>
@@ -957,53 +946,82 @@ export function Sidebar({
       </ScrollArea>
       <div className="sidebar-panel__footer">
         {showDesktopVaultSwitcher ? (
-          <>
-            {recentVaults.length > 0 ? (
-              <div className="sidebar-panel__vault-list" aria-label={t("sidebar.vaults")}>
-                {recentVaults.map(({ path, remote }) => {
-                  const isOpen = path === folderPath;
-                  const isClosing = closingVaultPath === path;
-                  const label = remote ? remote.name : getFolderBasename(path);
-                  return (
-                    <div className={cn("sidebar-panel__vault-row", isOpen && "sidebar-panel__vault-row--active")} key={path}>
-                      <button
-                        type="button"
-                        className="sidebar-panel__vault-open"
-                        disabled={isLoading || isClosing}
-                        onClick={() => onOpenRecentFolder(path)}
+          <Menu>
+            <MenuTrigger
+              render={
+                <button
+                  type="button"
+                  className="sidebar-panel__vault-selector"
+                  disabled={isLoading}
+                  aria-label={t("sidebar.vaults")}
+                  title={folderPath ?? t("sidebar.openFolder")}
+                  onContextMenu={openRootContextMenu}
+                  data-testid="vault-name"
+                />
+              }
+            >
+              {folderPath !== null ? (
+                <>
+                  {isServerVault ? <Server aria-hidden="true" /> : <FolderOpen aria-hidden="true" />}
+                  <span className="sidebar-panel__vault-selector-name">
+                    {isServerVault ? remoteVaultFor(folderPath)?.name ?? folderLabel : getFolderBasename(folderPath)}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <FolderOpen aria-hidden="true" />
+                  <span className="sidebar-panel__vault-selector-name">{t("sidebar.openFolder")}</span>
+                </>
+              )}
+              <ChevronDown aria-hidden="true" />
+            </MenuTrigger>
+            <MenuPortal>
+              <MenuPositioner side="top" align="start" sideOffset={6}>
+                <MenuPopup className="sidebar-panel__vault-popup">
+                  {recentVaults.map(({ path, remote }) => {
+                    const isOpen = path === folderPath;
+                    const label = remote ? remote.name : getFolderBasename(path);
+                    return (
+                      <MenuItem
+                        key={path}
+                        className="sidebar-panel__vault-menu-item"
+                        closeOnClick={false}
                         title={remote ? remote.url : path}
-                        aria-current={isOpen ? "true" : undefined}
+                        onClick={() => onOpenRecentFolder(path)}
+                        data-testid={remote ? "recent-remote-vault" : undefined}
                       >
-                        {remote ? <Server aria-hidden="true" /> : <FolderOpen aria-hidden="true" />}
-                        <span>{label}</span>
-                      </button>
-                      <button
-                        type="button"
-                        className="sidebar-panel__vault-close"
-                        disabled={closingVaultPath !== null}
-                        onClick={() => void closeRecentVault(path, remote !== null)}
-                        aria-label={remote ? t("remoteVaults.disconnectNamed", { name: label }) : t("sidebar.closeLocalFolder", { name: label })}
-                        title={remote ? t("remoteVaults.disconnect") : t("sidebar.closeLocalFolder", { name: label })}
-                      >
-                        <X aria-hidden="true" />
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : null}
-            {vaultActionError ? <p className="sidebar-panel__message sidebar-panel__message--error" role="alert">{vaultActionError}</p> : null}
-            <div className="sidebar-panel__vault-actions">
-              <Button type="button" size="sm" variant="ghost" onClick={onOpenFolder} disabled={isLoading}>
-                <FolderOpen aria-hidden="true" />
-                {t("sidebar.browseForFolder")}
-              </Button>
-              <Button type="button" size="sm" variant="ghost" onClick={onServerSettingsRequest}>
-                <Settings2 aria-hidden="true" />
-                {t("remoteVaults.settingsTitle")}
-              </Button>
-            </div>
-          </>
+                        {isOpen ? <Check aria-hidden="true" /> : remote ? <Server aria-hidden="true" /> : <FolderOpen aria-hidden="true" />}
+                        <span className="sidebar-panel__vault-menu-name">{label}</span>
+                        <button
+                          type="button"
+                          className="sidebar-panel__vault-close"
+                          disabled={closingVaultPath !== null}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            void closeRecentVault(path, remote !== null);
+                          }}
+                          aria-label={remote ? t("remoteVaults.disconnectNamed", { name: label }) : t("sidebar.closeLocalFolder", { name: label })}
+                          title={remote ? t("remoteVaults.disconnect") : t("sidebar.closeLocalFolder", { name: label })}
+                        >
+                          <X aria-hidden="true" />
+                        </button>
+                      </MenuItem>
+                    );
+                  })}
+                  {vaultActionError ? <p className="sidebar-panel__message sidebar-panel__message--error" role="alert">{vaultActionError}</p> : null}
+                  {recentVaults.length > 0 ? <div className="editor-toolbar__menu-separator" role="separator" /> : null}
+                  <MenuItem onClick={onOpenFolder}>
+                    <FolderOpen aria-hidden="true" />
+                    {t("sidebar.browseForFolder")}
+                  </MenuItem>
+                  <MenuItem onClick={onServerSettingsRequest}>
+                    <Settings2 aria-hidden="true" />
+                    {t("remoteVaults.settingsTitle")}
+                  </MenuItem>
+                </MenuPopup>
+              </MenuPositioner>
+            </MenuPortal>
+          </Menu>
         ) : null}
         {appVersion ? <div className="sidebar-panel__version">v{appVersion}</div> : null}
       </div>

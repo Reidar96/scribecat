@@ -267,12 +267,13 @@ export async function signInRemoteVault(root: string, password: string, deviceNa
 }
 
 /**
- * Forgets a server: revokes this device's token on the server (best effort,
- * the server may be away), deletes it from the credential store and drops
- * the entry. The per-vault markers in localStorage stay, so adding the same
- * server again picks up where it left off.
+ * Forgets a server locally. Removing a server must work while it is offline
+ * and must not read its credential (macOS can prompt for Keychain access when
+ * doing so). The local token is deleted best-effort; the server-side token can
+ * be revoked later from another signed-in device. Per-vault markers stay so
+ * adding the same server again picks up where it left off.
  */
-export async function removeRemoteVault(root: string, { revoke = true }: { revoke?: boolean } = {}): Promise<void> {
+export async function removeRemoteVault(root: string, { revoke = false }: { revoke?: boolean } = {}): Promise<void> {
   const entry = remoteVaultFor(root);
 
   if (!entry) {
@@ -291,7 +292,15 @@ export async function removeRemoteVault(root: string, { revoke = true }: { revok
     }
   }
 
-  await shell.deleteToken(root);
+  // Forgetting the connection is a local action. In particular, a locked
+  // Keychain or a server that has gone away must not prevent the user from
+  // removing it from ScribeCat.
+  try {
+    await shell.deleteToken(root);
+  } catch {
+    // A stale OS credential is harmless; the registry entry and live client
+    // are still removed below.
+  }
   clients.delete(root);
   writeEntries(readEntries().filter((existing) => existing.root !== root));
 }

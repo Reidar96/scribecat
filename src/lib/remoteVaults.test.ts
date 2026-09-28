@@ -192,7 +192,7 @@ describe("remote vault registry and token flow", () => {
     window.localStorage.setItem(`scribecat-last-file:${entry.root}`, "Idea.md");
 
     shell.setResponder(() => new Response(null, { status: 204 }));
-    await remoteVaults.removeRemoteVault(entry.root);
+    await remoteVaults.removeRemoteVault(entry.root, { revoke: true });
 
     const revoke = shell.requests[shell.requests.length - 1];
     expect(revoke?.method).toBe("DELETE");
@@ -200,6 +200,29 @@ describe("remote vault registry and token flow", () => {
     expect(shell.tokens.has(entry.root)).toBe(false);
     expect(remoteVaults.listRemoteVaults()).toEqual([]);
     expect(window.localStorage.getItem(`scribecat-last-file:${entry.root}`)).toBe("Idea.md");
+  });
+
+  it("forgets a server without reading its credential or contacting the server", async () => {
+    shell.setResponder(() => json({ id: "own", name: "d", token: "sdt_own_s", createdAt: "" }, 201));
+    const entry = await remoteVaults.addRemoteVault({ url: "https://notes.example.com", password: "pw", name: "", deviceName: "d" });
+    shell.requests.length = 0;
+    shell.api.getToken.mockClear();
+    shell.api.getToken.mockRejectedValueOnce(new Error("Keychain access denied"));
+
+    await remoteVaults.removeRemoteVault(entry.root);
+
+    expect(shell.api.getToken).not.toHaveBeenCalled();
+    expect(shell.requests).toEqual([]);
+    expect(remoteVaults.listRemoteVaults()).toEqual([]);
+  });
+
+  it("forgets a server even if the operating system refuses to delete its saved credential", async () => {
+    shell.setResponder(() => json({ id: "own", name: "d", token: "sdt_own_s", createdAt: "" }, 201));
+    const entry = await remoteVaults.addRemoteVault({ url: "https://notes.example.com", password: "pw", name: "", deviceName: "d" });
+    shell.api.deleteToken.mockRejectedValueOnce(new Error("Keychain is locked"));
+
+    await expect(remoteVaults.removeRemoteVault(entry.root)).resolves.toBeUndefined();
+    expect(remoteVaults.listRemoteVaults()).toEqual([]);
   });
 
   it("starts the live connection with the server's event stream and the token", async () => {
