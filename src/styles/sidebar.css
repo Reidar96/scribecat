@@ -513,4 +513,18 @@
 .sidebar-panel__sections { display: flex; flex-direction: column; min-height: 0; }
 .sidebar-panel__tree { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; }
 .sidebar-panel__scroll { flex: 1 1 auto; }
+.sidebar-panel__footer { display: flex; flex-direction: column; gap: 0.35rem; min-width: 0; align-self: end; }
+.sidebar-panel__vault-list { display: flex; flex-direction: column; gap: 0.12rem; max-height: min(9rem, 24vh); overflow-y: auto; }
+.sidebar-panel__vault-row { display: flex; align-items: center; gap: 0.15rem; min-width: 0; border-radius: 0.45rem; }
+.sidebar-panel__vault-row--active { background: rgba(var(--surface-hover-rgb), 0.7); }
+.sidebar-panel__vault-open { display: flex; align-items: center; gap: 0.45rem; flex: 1 1 auto; min-width: 0; padding: 0.35rem 0.45rem; border: 0; border-radius: 0.4rem; background: transparent; color: inherit; font: inherit; font-size: var(--font-ui-xs); text-align: left; cursor: pointer; }
+.sidebar-panel__vault-open:hover, .sidebar-panel__vault-open:focus-visible, .sidebar-panel__vault-close:hover, .sidebar-panel__vault-close:focus-visible { background: rgba(var(--surface-hover-rgb), 0.9); }
+.sidebar-panel__vault-open svg { flex: none; width: 0.9rem; height: 0.9rem; color: rgba(var(--muted-rgb), 0.9); }
+.sidebar-panel__vault-open span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sidebar-panel__vault-close { display: grid; place-items: center; flex: none; width: 1.8rem; height: 1.8rem; padding: 0; border: 0; border-radius: 0.4rem; background: transparent; color: #d14a4a; cursor: pointer; }
+.sidebar-panel__vault-close svg { width: 0.95rem; height: 0.95rem; }
+.sidebar-panel__vault-close:disabled, .sidebar-panel__vault-open:disabled { opacity: 0.55; cursor: wait; }
+.sidebar-panel__vault-actions { display: flex; gap: 0.2rem; }
+.sidebar-panel__vault-actions > button { flex: 1 1 0; min-width: 0; gap: 0.3rem; padding-inline: 0.35rem; font-size: var(--font-ui-xs); }
+.sidebar-panel__vault-actions svg { flex: none; width: 0.9rem; height: 0.9rem; }
 .sidebar-panel__version { flex: none; padding-top: 0.35rem; color: rgba(var(--muted-rgb), 0.65); font-size: var(--font-ui-xs); text-align: left; }

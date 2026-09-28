@@ -1,4 +1,11 @@
 
+## [0.27.4] - 2026-09-28
+
+- Add save and cancel controls when creating or renaming a task category, and add a quick action for a new task beside the new subcategory action.
+- Restore the desktop local/server vault switcher at the bottom of the sidebar, add close/disconnect controls, and keep the app version pinned below it.
+- Let task notes expand to show their full text on desktop and mobile; support mobile category reordering with touch drag handles and a clear way to exit reorder mode.
+- Add right-click and long-press actions to rename or delete a subcategory.
+
 ## [0.27.3] - 2026-09-28
 
 - Keep move-folder choices collapsed by default and fit the move dialog within small mobile screens.

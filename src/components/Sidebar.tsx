@@ -55,10 +55,10 @@ import { useVaultSearch } from "@/hooks/useVaultSearch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useStoredCollapsed, useWorkingSetHeight } from "@/hooks/useWorkingSetHeight";
 import { canDownloadFolderArchive } from "@/lib/export/markdownDownload";
-import { formatFolderLabel, getFolderBasename, getRelativeDisplayPath } from "@/lib/fileSystem";
+import { formatFolderLabel, getFolderBasename, getRecentFolderPaths, getRelativeDisplayPath, removeRecentFolderPath } from "@/lib/fileSystem";
 import { isJournalRelativePath } from "@/lib/journal";
 import { isTasksContainerRelativePath } from "@/lib/tasks";
-import { isRemoteVaultPath, remoteVaultFor } from "@/lib/remoteVaults";
+import { isRemoteVaultPath, remoteVaultFor, removeRemoteVault } from "@/lib/remoteVaults";
 import { getVaultCapabilities, platform, vaultCapabilityHint } from "@/platform";
 import type { ManualOrderMap, SortMode } from "@/lib/vaultMeta";
 import { cn } from "@/lib/utils";
@@ -99,6 +99,8 @@ type SidebarProps = {
   onOpenFolder: () => void;
   recentFolderPaths: string[];
   onOpenRecentFolder: (folderPath: string) => void;
+  onCloseFolderRequest: () => Promise<boolean>;
+  onServerSettingsRequest: () => void;
   onCreateFile: () => void;
   onCreateFileRequest: (targetDirectory: string) => void;
   onCreateFolder: () => void;
@@ -166,6 +168,8 @@ export function Sidebar({
   onOpenFolder,
   recentFolderPaths,
   onOpenRecentFolder,
+  onCloseFolderRequest,
+  onServerSettingsRequest,
   onCreateFile,
   onCreateFileRequest,
   onCreateFolder,
@@ -215,6 +219,9 @@ export function Sidebar({
   const appVersion = useAppVersion();
   const [selectionMode, setSelectionMode] = useState(false);
   const [trashOpen, setTrashOpen] = useState(false);
+  const [recentFolderList, setRecentFolderList] = useState(recentFolderPaths);
+  const [closingVaultPath, setClosingVaultPath] = useState<string | null>(null);
+  const [vaultActionError, setVaultActionError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [collapseFoldersRequestId, setCollapseFoldersRequestId] = useState(0);
   const journalSettings = useEditorSettingsStore((state) => state.journalSettings);
@@ -286,9 +293,11 @@ export function Sidebar({
   const searchActive = searchQuery.trim().length > 0;
   // A server vault whose entry is gone (forgotten in the settings) has
   // nothing to open; the recent list is cleaned on forget, this is the net.
-  const recentVaults = recentFolderPaths
+  const recentVaults = recentFolderList
     .map((path) => ({ path, remote: remoteVaultFor(path) }))
     .filter(({ path, remote }) => remote !== null || !isRemoteVaultPath(path));
+  const showDesktopVaultSwitcher =
+    platform.kind === "desktop" && platform.features.localFolders && platform.features.remoteVaults;
   const folderLabel = formatFolderLabel(folderPath);
   // A vault on a server, whether this is the browser (always) or the desktop
   // app opened one: the name gets the same server mark the recent list uses.
@@ -351,6 +360,27 @@ export function Sidebar({
     event.preventDefault();
     setRootContextMenu({ x: event.clientX, y: event.clientY });
   };
+
+  const closeRecentVault = async (path: string, isRemote: boolean) => {
+    if (closingVaultPath) return;
+    setClosingVaultPath(path);
+    setVaultActionError(null);
+
+    try {
+      if (path === folderPath && !(await onCloseFolderRequest())) return;
+      if (isRemote) await removeRemoteVault(path);
+      removeRecentFolderPath(path);
+      setRecentFolderList(getRecentFolderPaths());
+    } catch (error) {
+      setVaultActionError(error instanceof Error ? error.message : t("remoteVaults.removeFailed"));
+    } finally {
+      setClosingVaultPath(null);
+    }
+  };
+
+  useEffect(() => {
+    setRecentFolderList(recentFolderPaths);
+  }, [recentFolderPaths.join("\u0000")]);
 
   // Same dismissal rules as the tree's own menu (useTreeContextMenu): any
   // click, a competing right-click, a scroll or Escape closes it.
@@ -593,7 +623,18 @@ export function Sidebar({
           </label>
         ) : null}
 
-        {!isServerVault ? (
+        {showDesktopVaultSwitcher ? (
+          <div className="sidebar-panel__folder-wrap">
+            <div
+              className="sidebar-panel__folder sidebar-panel__folder--static"
+              title={folderPath ?? t("sidebar.openFolder")}
+              onContextMenu={openRootContextMenu}
+              data-testid="vault-name"
+            >
+              {folderPath !== null ? folderLabelContent : t("sidebar.openFolder")}
+            </div>
+          </div>
+        ) : !isServerVault ? (
           <div className="sidebar-panel__folder-wrap">
             {platform.features.localFolders ? (
                 <Menu>
@@ -914,7 +955,58 @@ export function Sidebar({
           />
         ) : null}
       </ScrollArea>
-      {appVersion ? <div className="sidebar-panel__version">v{appVersion}</div> : null}
+      <div className="sidebar-panel__footer">
+        {showDesktopVaultSwitcher ? (
+          <>
+            {recentVaults.length > 0 ? (
+              <div className="sidebar-panel__vault-list" aria-label={t("sidebar.vaults")}>
+                {recentVaults.map(({ path, remote }) => {
+                  const isOpen = path === folderPath;
+                  const isClosing = closingVaultPath === path;
+                  const label = remote ? remote.name : getFolderBasename(path);
+                  return (
+                    <div className={cn("sidebar-panel__vault-row", isOpen && "sidebar-panel__vault-row--active")} key={path}>
+                      <button
+                        type="button"
+                        className="sidebar-panel__vault-open"
+                        disabled={isLoading || isClosing}
+                        onClick={() => onOpenRecentFolder(path)}
+                        title={remote ? remote.url : path}
+                        aria-current={isOpen ? "true" : undefined}
+                      >
+                        {remote ? <Server aria-hidden="true" /> : <FolderOpen aria-hidden="true" />}
+                        <span>{label}</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="sidebar-panel__vault-close"
+                        disabled={closingVaultPath !== null}
+                        onClick={() => void closeRecentVault(path, remote !== null)}
+                        aria-label={remote ? t("remoteVaults.disconnectNamed", { name: label }) : t("sidebar.closeLocalFolder", { name: label })}
+                        title={remote ? t("remoteVaults.disconnect") : t("sidebar.closeLocalFolder", { name: label })}
+                      >
+                        <X aria-hidden="true" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : null}
+            {vaultActionError ? <p className="sidebar-panel__message sidebar-panel__message--error" role="alert">{vaultActionError}</p> : null}
+            <div className="sidebar-panel__vault-actions">
+              <Button type="button" size="sm" variant="ghost" onClick={onOpenFolder} disabled={isLoading}>
+                <FolderOpen aria-hidden="true" />
+                {t("sidebar.browseForFolder")}
+              </Button>
+              <Button type="button" size="sm" variant="ghost" onClick={onServerSettingsRequest}>
+                <Settings2 aria-hidden="true" />
+                {t("remoteVaults.settingsTitle")}
+              </Button>
+            </div>
+          </>
+        ) : null}
+        {appVersion ? <div className="sidebar-panel__version">v{appVersion}</div> : null}
+      </div>
         </section>
       </div>
       )}
