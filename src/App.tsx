@@ -123,6 +123,7 @@ function App() {
 
   const openFolder = useAppStore((state) => state.openFolder);
   const openFolderAtPath = useAppStore((state) => state.openFolderAtPath);
+  const closeFolder = useAppStore((state) => state.closeFolder);
   const refreshFolderFiles = useAppStore((state) => state.refreshFolderFiles);
   const refreshDocumentLocks = useAppStore((state) => state.refreshDocumentLocks);
   const filePaths = useAppStore((state) => state.filePaths);
@@ -571,6 +572,20 @@ function App() {
     }
 
     await openFolderAtPath(targetFolderPath);
+  };
+
+  const closeCurrentFolderSafely = async () => {
+    if (!(await leaveCurrentNote())) {
+      return false;
+    }
+
+    closeFolder();
+    setSecondaryFilePath(null);
+    setCollectionView(null);
+    setGraphViewOpen(false);
+    setJournalViewOpen(false);
+    setTasksViewOpen(false);
+    return true;
   };
 
   const activateDocumentTab = (filePath: string) => {
@@ -1213,6 +1228,11 @@ function App() {
       onOpenFolder={openFolderSafely}
       recentFolderPaths={getRecentFolderPaths()}
       onOpenRecentFolder={(targetFolderPath) => void openRecentFolderSafely(targetFolderPath)}
+      onCloseFolderRequest={closeCurrentFolderSafely}
+      onServerSettingsRequest={() => {
+        setSettingsInitialTab("server");
+        setIsSettingsOpen(true);
+      }}
       onCreateFile={() => void handleCreateFile()}
       onCreateFileRequest={(targetDirectory) => void handleCreateFile(targetDirectory)}
       onCreateFolder={() => void handleCreateFolder()}

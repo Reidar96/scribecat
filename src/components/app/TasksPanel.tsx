@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import {
   ArrowDownAZ,
   ArrowUpDown,
   CalendarClock,
+  Check,
   ChevronDown,
   ChevronRight,
   Copy,
@@ -17,7 +18,8 @@ import {
   Plus,
   SquareCheck,
   Tag,
-  Trash2
+  Trash2,
+  X
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -254,6 +256,7 @@ function TaskRow({
   const { t } = useTranslation();
   const [textDraft, setTextDraft] = useState(task.text);
   const [noteDraft, setNoteDraft] = useState(task.note);
+  const noteInputRef = useRef<HTMLTextAreaElement>(null);
   const [tagsDraft, setTagsDraft] = useState(
     task.tags.map((tag) => `#${tag}`).join(" ")
   );
@@ -269,6 +272,24 @@ function TaskRow({
   useEffect(() => {
     setNoteDraft(task.note);
   }, [task.note]);
+
+  useLayoutEffect(() => {
+    const input = noteInputRef.current;
+    if (!input) return;
+    let previousWidth = -1;
+    const resizeToContent = () => {
+      const width = input.clientWidth;
+      if (width === previousWidth) return;
+      previousWidth = width;
+      input.style.height = "auto";
+      input.style.height = `${input.scrollHeight}px`;
+    };
+    resizeToContent();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(resizeToContent);
+    observer.observe(input.parentElement ?? input);
+    return () => observer.disconnect();
+  }, [noteDraft]);
 
   useEffect(() => {
     setTagsDraft(task.tags.map((tag) => `#${tag}`).join(" "));
@@ -476,9 +497,10 @@ function TaskRow({
         />
 
         <textarea
+          ref={noteInputRef}
           className="tasks-item__note"
           value={noteDraft}
-          rows={noteDraft ? 2 : 1}
+          rows={1}
           onChange={(event) => setNoteDraft(event.target.value)}
           onBlur={commitNote}
           placeholder={t("tasks.notePlaceholder")}
@@ -605,6 +627,8 @@ export function TasksPanel({
   const [dragOverCategory, setDragOverCategory] = useState<string | null>(null);
   const [categoryDropPlacement, setCategoryDropPlacement] = useState<"before" | "after">("before");
   const [draggedCategory, setDraggedCategory] = useState<string | null>(null);
+  const [reorderingCategories, setReorderingCategories] = useState(false);
+  const [pointerDraggedCategory, setPointerDraggedCategory] = useState<string | null>(null);
   const [dragOverSection, setDragOverSection] = useState<string | null>(null);
   const [dragOverSectionPosition, setDragOverSectionPosition] = useState<"before" | "after" | null>(null);
   const [categoryDraft, setCategoryDraft] = useState<{ original: string | null; value: string } | null>(null);
@@ -618,11 +642,18 @@ export function TasksPanel({
   const [draggedRootKey, setDraggedRootKey] = useState<string | null>(null);
   const { contextMenu: categoryContextMenu, setContextMenu: setCategoryContextMenu } =
     useContextMenuState<{ category: string; x: number; y: number }>();
+  const { contextMenu: sectionContextMenu, setContextMenu: setSectionContextMenu } =
+    useContextMenuState<{ category: string; section: string; x: number; y: number }>();
   const { getLongPressProps: getCategoryLongPressProps } =
     useLongPressContextMenu<string>((category, x, y) =>
       setCategoryContextMenu({ category, x, y })
     );
+  const { getLongPressProps: getSectionLongPressProps } =
+    useLongPressContextMenu<{ category: string; section: string }>((target, x, y) =>
+      setSectionContextMenu({ ...target, x, y })
+    );
   const pendingMarkdownByPathRef = useRef(new Map<string, string>());
+  const lastPointerOrderTargetRef = useRef<string | null>(null);
 
   useEffect(() => {
     setRecentlyCreatedRootKey(null);
@@ -1075,6 +1106,11 @@ export function TasksPanel({
     setCategoryDraft(null);
     setSectionDraft({ original, value: original ?? "" });
   };
+  const cancelCategoryName = () => {
+    skipNameBlurRef.current = true;
+    setCategoryDraft(null);
+    setNameError(null);
+  };
   const commitCategoryName = async () => {
     if (!categoryDraft || saving || skipNameBlurRef.current) return;
     const { original } = categoryDraft;
@@ -1129,6 +1165,53 @@ export function TasksPanel({
     order.splice(index + (placement === "after" ? 1 : 0), 0, source);
     setTaskSettings({ categoryOrder: order });
   };
+
+  useEffect(() => {
+    if (!pointerDraggedCategory) return;
+
+    const handlePointerMove = (event: PointerEvent) => {
+      const targetRow = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-task-category]");
+      const target = targetRow?.dataset.taskCategory;
+      if (!target || target === pointerDraggedCategory || target === lastPointerOrderTargetRef.current) return;
+      event.preventDefault();
+      const rect = targetRow.getBoundingClientRect();
+      const horizontal = window.getComputedStyle(targetRow.parentElement!).display === "flex";
+      const placement = (horizontal ? event.clientX < rect.left + rect.width / 2 : event.clientY < rect.top + rect.height / 2) ? "before" : "after";
+      const orderTarget = `${target}:${placement}`;
+      if (orderTarget === lastPointerOrderTargetRef.current) return;
+      lastPointerOrderTargetRef.current = orderTarget;
+      setDragOverCategory(target);
+      setCategoryDropPlacement(placement);
+      moveCategoryOrder(pointerDraggedCategory, target, placement);
+    };
+    const finishPointerDrag = () => {
+      setPointerDraggedCategory(null);
+      lastPointerOrderTargetRef.current = null;
+      setDragOverCategory(null);
+    };
+
+    window.addEventListener("pointermove", handlePointerMove, { passive: false });
+    window.addEventListener("pointerup", finishPointerDrag, { once: true });
+    window.addEventListener("pointercancel", finishPointerDrag, { once: true });
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", finishPointerDrag);
+      window.removeEventListener("pointercancel", finishPointerDrag);
+    };
+  }, [pointerDraggedCategory, categories, taskSettings.categoryOrder]);
+
+  useEffect(() => {
+    if (!reorderingCategories) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setReorderingCategories(false);
+        setPointerDraggedCategory(null);
+        setDragOverCategory(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [reorderingCategories]);
   const moveSection = async (sourceCategory: string, section: string, targetCategory: string, targetSection?: string, placement: "before" | "after" = "before") => {
     const source = documents[sourceCategory];
     const target = documents[targetCategory];
@@ -1745,6 +1828,7 @@ export function TasksPanel({
           <div className="tasks-filter-section">
             <div className="tasks-filter-section__heading">
               <span>{t("tasks.categories")}</span>
+              {reorderingCategories ? <Button type="button" size="sm" variant="ghost" className="tasks-category-reorder-done" onClick={() => { setReorderingCategories(false); setPointerDraggedCategory(null); setDragOverCategory(null); }} aria-label={t("tasks.finishReorderingCategories")} title={t("tasks.finishReorderingCategories")}><Check aria-hidden="true" />{t("tasks.doneReordering")}</Button> : null}
               <button type="button" className="tasks-category-add" onClick={() => beginCategoryName()} disabled={saving || categoryDraft !== null} aria-label={t("tasks.newCategory")} title={t("tasks.newCategory")}><Plus aria-hidden="true" /></button>
             </div>
 
@@ -1752,7 +1836,15 @@ export function TasksPanel({
               <input autoFocus value={categoryDraft.value} placeholder={t("tasks.newCategory")} aria-label={t("tasks.newCategory")}
                 onChange={(event) => { setCategoryDraft({ ...categoryDraft, value: event.target.value }); setNameError(null); }}
                 onBlur={() => void commitCategoryName()}
-                onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); void commitCategoryName(); } else if (event.key === "Escape") { event.preventDefault(); skipNameBlurRef.current = true; setCategoryDraft(null); setNameError(null); } }} />
+                onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); void commitCategoryName(); } else if (event.key === "Escape") { event.preventDefault(); cancelCategoryName(); } }} />
+              <div className="tasks-category-name-edit__actions">
+                <Button type="button" size="icon-sm" variant="ghost" disabled={saving || !categoryDraft.value.trim()}
+                  onPointerDown={(event) => event.preventDefault()} onClick={() => void commitCategoryName()}
+                  aria-label={t("common.save")} title={t("common.save")}><Check /></Button>
+                <Button type="button" size="icon-sm" variant="ghost" disabled={saving}
+                  onPointerDown={(event) => event.preventDefault()} onClick={cancelCategoryName}
+                  aria-label={t("common.cancel")} title={t("common.cancel")}><X /></Button>
+              </div>
               {nameError ? <small role="alert">{nameError}</small> : null}
             </div> : null}
 
@@ -1763,9 +1855,12 @@ export function TasksPanel({
               return (
                 <div
                   key={category}
+                  data-task-category={category}
                   className={cn(
                     "tasks-category-row",
-                    dropActive && `tasks-category-row--drop-${categoryDropPlacement}`
+                    reorderingCategories && "tasks-category-row--reorder-mode",
+                    dropActive && `tasks-category-row--drop-${categoryDropPlacement}`,
+                    pointerDraggedCategory === category && "tasks-category-row--pointer-dragging"
                   )}
                   onContextMenu={(event) => {
                     event.preventDefault();
@@ -1808,22 +1903,39 @@ export function TasksPanel({
                     <input autoFocus value={categoryDraft.value} aria-label={t("tasks.renameCategoryAction")}
                       onChange={(event) => { setCategoryDraft({ ...categoryDraft, value: event.target.value }); setNameError(null); }}
                       onBlur={() => void commitCategoryName()}
-                      onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); void commitCategoryName(); } else if (event.key === "Escape") { event.preventDefault(); skipNameBlurRef.current = true; setCategoryDraft(null); setNameError(null); } }} />
+                      onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); void commitCategoryName(); } else if (event.key === "Escape") { event.preventDefault(); cancelCategoryName(); } }} />
+                    <div className="tasks-category-name-edit__actions">
+                      <Button type="button" size="icon-sm" variant="ghost" disabled={saving || !categoryDraft.value.trim()}
+                        onPointerDown={(event) => event.preventDefault()} onClick={() => void commitCategoryName()}
+                        aria-label={t("common.save")} title={t("common.save")}><Check /></Button>
+                      <Button type="button" size="icon-sm" variant="ghost" disabled={saving}
+                        onPointerDown={(event) => event.preventDefault()} onClick={cancelCategoryName}
+                        aria-label={t("common.cancel")} title={t("common.cancel")}><X /></Button>
+                    </div>
                     {nameError ? <small role="alert">{nameError}</small> : null}
-                  </div> : <button
+                  </div> : <>
+                  {reorderingCategories ? <button type="button" className="tasks-category__reorder" aria-label={t("tasks.dragCategory")} title={t("tasks.dragCategory")} onPointerDown={(event) => {
+                    if (event.button !== 0 || saving) return;
+                    event.preventDefault();
+                    lastPointerOrderTargetRef.current = null;
+                    setPointerDraggedCategory(category);
+                  }}><GripVertical aria-hidden="true" /></button> : null}
+                  <button
                     type="button"
                     className={cn(
                       "tasks-category tasks-category--managed",
-                      active && "tasks-category--active"
+                      active && "tasks-category--active",
+                      reorderingCategories && "tasks-category--reordering"
                     )}
-                    onClick={() => setSelectedView(categoryView(category))}
-                    draggable={!saving}
+                    onClick={() => { if (!reorderingCategories) setSelectedView(categoryView(category)); }}
+                    draggable={!saving && !reorderingCategories}
                     onDragStart={(event) => { setDraggedCategory(category); event.dataTransfer.setData(CATEGORY_DRAG_MIME, category); event.dataTransfer.setData("text/plain", category); event.dataTransfer.effectAllowed = "move"; }}
                     onDragEnd={() => { setDraggedCategory(null); setDragOverCategory(null); }}
                   >
                     <span>{category}</span>
                     <small>{categoryCounts.get(category) ?? 0}</small>
-                  </button>}
+                  </button>
+                  </>}
                 </div>
               );
             })}
@@ -1908,6 +2020,10 @@ export function TasksPanel({
               </Menu>
               {selectedCategory ? (
                 <>
+                  <Button type="button" size="icon-sm" variant="ghost" disabled={saving || sectionDraft !== null}
+                    onClick={() => void addTask()} aria-label={t("tasks.newTask")} title={t("tasks.newTask")}>
+                    <Plus />
+                  </Button>
                   <Button type="button" size="icon-sm" variant="ghost" disabled={saving || sectionDraft !== null}
                     onClick={() => beginSectionName()} aria-label={t("tasks.newSection")} title={t("tasks.newSection")}>
                     <ListPlus />
@@ -1997,6 +2113,8 @@ export function TasksPanel({
                     dragOverSection === section && dragOverSectionPosition === "before" && "tasks-item--drop-before",
                     dragOverSection === section && dragOverSectionPosition === "after" && "tasks-item--drop-after"
                   )}
+                    onContextMenu={(event) => { event.preventDefault(); setSectionContextMenu({ category, section, x: event.clientX, y: event.clientY }); }}
+                    {...getSectionLongPressProps({ category, section })}
                     draggable={!saving && sectionDraft?.original !== section}
                     onDragStart={(event) => { event.dataTransfer.setData(SECTION_DRAG_MIME, JSON.stringify([category, section])); event.dataTransfer.effectAllowed = "move"; }}
                     onDragOver={(event) => { if (event.dataTransfer.types.includes(SECTION_DRAG_MIME) || event.dataTransfer.types.includes(TASK_DRAG_MIME)) { event.preventDefault(); const rect = event.currentTarget.getBoundingClientRect(); setDragOverSection(section); setDragOverSectionPosition(event.clientY < rect.top + rect.height / 2 ? "before" : "after"); } }}
@@ -2221,6 +2339,13 @@ export function TasksPanel({
             <Pencil aria-hidden="true" />
             {t("tasks.renameCategoryAction")}
           </button> : null}
+          <button type="button" role="menuitem" className="file-tree-context-menu__item" onClick={() => {
+            setCategoryContextMenu(null);
+            setReorderingCategories(true);
+          }}>
+            <ArrowUpDown aria-hidden="true" />
+            {t("tasks.reorderCategories")}
+          </button>
           <button
             type="button"
             role="menuitem"
@@ -2262,6 +2387,27 @@ export function TasksPanel({
               {t("tasks.deleteCategoryAction")}
             </button>
           ) : null}
+        </ContextMenuSurface>
+      ) : null}
+
+      {sectionContextMenu ? (
+        <ContextMenuSurface x={sectionContextMenu.x} y={sectionContextMenu.y} title={sectionContextMenu.section} onClick={(event) => event.stopPropagation()}>
+          <button type="button" role="menuitem" className="file-tree-context-menu__item" onClick={() => {
+            const { section } = sectionContextMenu;
+            setSectionContextMenu(null);
+            beginSectionName(section);
+          }}>
+            <Pencil aria-hidden="true" />
+            {t("tasks.renameCategoryAction")}
+          </button>
+          <button type="button" role="menuitem" className="file-tree-context-menu__item file-tree-context-menu__item--danger" onClick={() => {
+            const { category, section } = sectionContextMenu;
+            setSectionContextMenu(null);
+            void deleteSection(category, section);
+          }}>
+            <Trash2 aria-hidden="true" />
+            {t("tasks.deleteSection")}
+          </button>
         </ContextMenuSurface>
       ) : null}
 
