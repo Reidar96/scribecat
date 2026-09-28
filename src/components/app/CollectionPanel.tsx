@@ -1,6 +1,7 @@
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
   type DragEvent,
   type KeyboardEvent,
@@ -295,6 +296,10 @@ export function CollectionPanel({
   const [tagsByPath, setTagsByPath] = useState<Record<string, string[]>>({});
   const [createKind, setCreateKind] = useState<"folder" | "note" | null>(null);
   const [createDraft, setCreateDraft] = useState("");
+  const [renamingKey, setRenamingKey] = useState<string | null>(null);
+  const [renameDraft, setRenameDraft] = useState("");
+  const renameInputRef = useRef<HTMLInputElement>(null);
+  const skipRenameCommitRef = useRef(false);
   const [isCreating, setIsCreating] = useState(false);
   const [draggedCardKey, setDraggedCardKey] = useState<string | null>(null);
   const [dropIndicator, setDropIndicator] = useState<{
@@ -674,20 +679,51 @@ export function CollectionPanel({
   const absoluteFolderPath = (relativePath: string) =>
     join(folderPath, ...relativePath.split("/").filter(Boolean));
 
-  const renameCard = async (card: CollectionCard) => {
-    if (!capabilities.rename) return;
+  useEffect(() => {
+    if (!renamingKey) return;
+    renameInputRef.current?.focus();
+    renameInputRef.current?.select();
+  }, [renamingKey]);
 
-    const entered = window.prompt(t("fileTree.rename"), card.title);
-    if (entered === null || !entered.trim() || entered.trim() === card.title) {
+  const renameCard = (card: CollectionCard) => {
+    if (!capabilities.rename) return;
+    skipRenameCommitRef.current = false;
+    setRenameDraft(card.title);
+    setRenamingKey(collectionCardKey(card));
+  };
+
+  const commitCardRename = async (card: CollectionCard) => {
+    if (skipRenameCommitRef.current || renamingKey !== collectionCardKey(card)) return;
+    skipRenameCommitRef.current = true;
+    const name = renameDraft.trim();
+    if (!name || name === card.title) {
+      setRenamingKey(null);
       return;
     }
-
-    if (card.kind === "folder") {
-      await onRenameFolder(await absoluteFolderPath(card.relativePath), entered.trim());
-    } else {
-      await onRenameFile(card.filePath, entered.trim());
-    }
+    const ok = card.kind === "folder"
+      ? await onRenameFolder(await absoluteFolderPath(card.relativePath), name)
+      : await onRenameFile(card.filePath, name);
+    if (ok) setRenamingKey(null);
+    else { skipRenameCommitRef.current = false; renameInputRef.current?.focus(); }
   };
+
+  const cardTitle = (card: CollectionCard) => renamingKey === collectionCardKey(card) ? (
+    <input
+      ref={renameInputRef}
+      className="collection-card__rename-input"
+      value={renameDraft}
+      onChange={(event) => setRenameDraft(event.target.value)}
+      onPointerDown={(event) => event.stopPropagation()}
+      onClick={(event) => event.stopPropagation()}
+      onBlur={() => void commitCardRename(card)}
+      onKeyDown={(event) => {
+        event.stopPropagation();
+        if (event.key === "Enter") { event.preventDefault(); void commitCardRename(card); }
+        if (event.key === "Escape") { event.preventDefault(); skipRenameCommitRef.current = true; setRenamingKey(null); }
+      }}
+      aria-label={t("fileTree.rename")}
+    />
+  ) : <h3>{card.title}</h3>;
 
   const resolveCardEntry = async (
     card: CollectionCard
@@ -837,7 +873,7 @@ export function CollectionPanel({
 
     if (event.key === "F2" && selectedCards.length === 1) {
       event.preventDefault();
-      void renameCard(selectedCards[0]);
+      renameCard(selectedCards[0]);
       return;
     }
 
@@ -1326,7 +1362,7 @@ export function CollectionPanel({
                           </span>
                         ) : null}
                       </div>
-                      <h3>{card.title}</h3>
+                      {cardTitle(card)}
                       <div className="collection-card__footer">
                         <span className="collection-card__summary">
                           {t("collection.folderSummary", {
@@ -1428,7 +1464,7 @@ export function CollectionPanel({
                         </span>
                       ) : null}
                     </div>
-                    <h3>{card.title}</h3>
+                    {cardTitle(card)}
                     {request.kind === "tag" ? (
                       <nav
                         className="collection-card__path"
@@ -1706,7 +1742,7 @@ export function CollectionPanel({
               onRename={() => {
                 const card = contextCard;
                 setContextMenu(null);
-                void renameCard(card);
+                renameCard(card);
               }}
               onDuplicate={() => {
                 const card = contextCard;

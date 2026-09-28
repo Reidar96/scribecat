@@ -13,6 +13,8 @@ import {
 } from "@/components/ReplaceConfirmDialog";
 import { getRelativeDisplayPath, readMarkdownFile } from "@/lib/fileSystem";
 import { describeNotePath } from "@/lib/folderNotes";
+import { isJournalRelativePath } from "@/lib/journal";
+import { isTasksContainerRelativePath } from "@/lib/tasks";
 import { updateSearchHighlight } from "@/lib/searchHighlight";
 import {
   applyTextReplacements,
@@ -23,6 +25,7 @@ import {
   type TextMatch
 } from "@/lib/textSearch";
 import { useAppStore } from "@/store/useAppStore";
+import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
 import { useSearchStore } from "@/store/useSearchStore";
 
 type FindReplacePanelProps = {
@@ -64,6 +67,8 @@ export function FindReplacePanel({
   onRequestFileOpen
 }: FindReplacePanelProps) {
   const { t } = useTranslation();
+  const journalSettings = useEditorSettingsStore((state) => state.journalSettings);
+  const taskSettings = useEditorSettingsStore((state) => state.taskSettings);
   const labelNotePath = (rootPath: string, filePath: string) =>
     describeNotePath(getRelativeDisplayPath(rootPath, filePath), (folder) =>
       t("app.folderNoteLabel", { path: folder })
@@ -194,6 +199,11 @@ export function FindReplacePanel({
         if (path === filePath) {
           continue;
         }
+        const relativePath = getRelativeDisplayPath(folderPath, path);
+        if ((journalSettings.hideFromSidebar && isJournalRelativePath(relativePath, journalSettings)) ||
+            (taskSettings.hideFromSidebar && isTasksContainerRelativePath(relativePath, taskSettings.folder))) {
+          continue;
+        }
 
         let content: string;
 
@@ -228,7 +238,7 @@ export function FindReplacePanel({
       isStale = true;
       window.clearTimeout(handle);
     };
-  }, [open, allFiles, query, options, folderPath, filePath, refreshId]);
+  }, [open, allFiles, query, options, folderPath, filePath, refreshId, journalSettings, taskSettings]);
 
   // Publishes the per-file match counts (current file included) for the
   // sidebar badges.

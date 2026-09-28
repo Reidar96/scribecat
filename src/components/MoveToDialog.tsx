@@ -4,6 +4,9 @@ import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import { listMoveTargets, type MoveSource } from "@/lib/moveTargets";
+import { isJournalRelativePath } from "@/lib/journal";
+import { isTasksContainerRelativePath } from "@/lib/tasks";
+import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
 import { cn } from "@/lib/utils";
 
 /** Beyond this many folders the list gets a filter field. */
@@ -38,14 +41,19 @@ export function MoveToDialog({
   onCancel
 }: MoveToDialogProps) {
   const { t } = useTranslation();
+  const journalSettings = useEditorSettingsStore((state) => state.journalSettings);
+  const taskSettings = useEditorSettingsStore((state) => state.taskSettings);
   const [filter, setFilter] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
   const targets = useMemo(
     () =>
-      request ? listMoveTargets(fileRelativePaths, emptyFolderRelativePaths, request.sources) : [],
-    [request, fileRelativePaths, emptyFolderRelativePaths]
+      request ? listMoveTargets(fileRelativePaths, emptyFolderRelativePaths, request.sources).filter((target) =>
+        !(journalSettings.hideFromSidebar && isJournalRelativePath(target.relativePath, journalSettings)) &&
+        !(taskSettings.hideFromSidebar && isTasksContainerRelativePath(target.relativePath, taskSettings.folder))
+      ) : [],
+    [request, fileRelativePaths, emptyFolderRelativePaths, journalSettings, taskSettings]
   );
 
   const showFilter = targets.length > FILTER_THRESHOLD;

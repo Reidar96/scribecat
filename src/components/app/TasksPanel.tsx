@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import {
   ArrowDownAZ,
-  ArrowDown,
-  ArrowUp,
   ArrowUpDown,
   CalendarClock,
   ChevronDown,
@@ -48,7 +46,8 @@ import {
   insertSubtaskInMarkdown,
   mergeTaskDocuments,
   moveTaskToSection,
-  reorderTaskSection,
+  moveTaskSection,
+  transferTaskSection,
   moveSiblingTaskInMarkdown,
   moveSubtaskInMarkdown,
   normalizeTaskTags,
@@ -104,6 +103,8 @@ const CATEGORY_PREFIX = "category:";
 const SECTION_PREFIX = "section:";
 const TAG_PREFIX = "tag:";
 const TASK_DRAG_MIME = "application/x-scribecat-task";
+const CATEGORY_DRAG_MIME = "application/x-scribecat-category";
+const SECTION_DRAG_MIME = "application/x-scribecat-section";
 const TASK_SUBTASK_DRAG_MIME = "application/x-scribecat-subtask";
 
 function categoryView(category: string): string {
@@ -483,21 +484,17 @@ function TaskRow({
 
         {!isSubtask ? (
           <div className="tasks-item__meta">
-            <select
-              className="tasks-item__category"
-              value={JSON.stringify([task.category, task.section])}
-              aria-label={t("tasks.categories")}
-              onChange={(event) => onCategoryChange(event.target.value)}
-            >
-              {[...new Set([UNCATEGORIZED_TASK_CATEGORY, ...categories])].map((category) => (
-                <optgroup key={category} label={category}>
-                  <option value={JSON.stringify([category, null])}>{category}</option>
-                  {(sectionsByCategory[category] ?? []).map((section) => (
-                    <option key={section} value={JSON.stringify([category, section])}>{category} / {section}</option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
+            <Menu>
+              <MenuTrigger render={<button type="button" className="tasks-item__category" aria-label={t("tasks.categories")}><span>{task.category}{task.section ? ` / ${task.section}` : ""}</span><ChevronDown aria-hidden="true" /></button>} />
+              <MenuPortal><MenuPositioner align="start"><MenuPopup>
+                <MenuRadioGroup value={JSON.stringify([task.category, task.section ?? null])} onValueChange={onCategoryChange}>
+                  {[...new Set([UNCATEGORIZED_TASK_CATEGORY, ...categories])].flatMap((category) => [
+                    <MenuRadioItem key={category} value={JSON.stringify([category, null])}>{category}<MenuRadioItemIndicator /></MenuRadioItem>,
+                    ...(sectionsByCategory[category] ?? []).map((section) => <MenuRadioItem key={`${category}/${section}`} value={JSON.stringify([category, section])} className="tasks-category-picker__section">{category} / {section}<MenuRadioItemIndicator /></MenuRadioItem>)
+                  ])}
+                </MenuRadioGroup>
+              </MenuPopup></MenuPositioner></MenuPortal>
+            </Menu>
 
             <label
               className="tasks-item__deadline"
@@ -603,6 +600,7 @@ export function TasksPanel({
   const [selectedView, setSelectedView] = useState(ALL_TASKS);
   const [saving, setSaving] = useState(false);
   const [dragOverCategory, setDragOverCategory] = useState<string | null>(null);
+  const [dragOverSection, setDragOverSection] = useState<string | null>(null);
   const [categoryDelete, setCategoryDelete] = useState<string | null>(null);
   const [completedOpen, setCompletedOpen] = useState(false);
   const [focusTaskKey, setFocusTaskKey] = useState<string | null>(null);
@@ -1075,24 +1073,44 @@ export function TasksPanel({
     setSaving(true);
     try {
       if (await persistCategory(category, `${documents[category].markdown.trimEnd()}\n\n## ${section}\n`)) {
-        setSelectedView(`${SECTION_PREFIX}${JSON.stringify([category, section])}`);
+        setSelectedView(categoryView(category));
       }
     } finally { setSaving(false); }
   };
-  const reorderCategory = (category: string, direction: -1 | 1) => {
-    const order = [...categories];
-    const index = order.indexOf(category);
-    const other = index + direction;
-    if (index < 0 || other < 0 || other >= order.length) return;
-    [order[index], order[other]] = [order[other], order[index]];
+  const moveCategoryOrder = (source: string, target: string) => {
+    const order = categories.filter((category) => category !== source);
+    const index = order.indexOf(target);
+    if (source === target || index < 0) return;
+    order.splice(index, 0, source);
     setTaskSettings({ categoryOrder: order });
   };
-  const reorderSection = async (category: string, section: string, direction: -1 | 1) => {
-    const document = documents[category];
-    if (!document || saving) return;
+  const moveSection = async (sourceCategory: string, section: string, targetCategory: string, targetSection?: string, placement: "before" | "after" = "before") => {
+    const source = documents[sourceCategory];
+    const target = documents[targetCategory];
+    if (!source || !target || saving) return;
+    if (sourceCategory === targetCategory) {
+      if (!targetSection) return;
+      const markdown = moveTaskSection(source.markdown, section, targetSection, placement);
+      if (markdown === source.markdown) return;
+      setSaving(true);
+      try { await persistCategory(sourceCategory, markdown); } finally { setSaving(false); }
+      return;
+    }
+    const moved = transferTaskSection(source.markdown, target.markdown, section);
+    if (!moved) { window.alert(t("tasks.categoryExists", { category: section })); return; }
     setSaving(true);
-    try { await persistCategory(category, reorderTaskSection(document.markdown, section, direction)); }
-    finally { setSaving(false); }
+    try {
+      if (await persistCategory(targetCategory, moved.target)) {
+        if (!(await persistCategory(sourceCategory, moved.source))) await persistCategory(targetCategory, target.markdown);
+        else setSelectedView(categoryView(targetCategory));
+      }
+    } finally { setSaving(false); setDragOverSection(null); setDragOverCategory(null); }
+  };
+  const sectionFromDrop = (event: DragEvent): [string, string] | null => {
+    try {
+      const value = JSON.parse(event.dataTransfer.getData(SECTION_DRAG_MIME)) as unknown;
+      return Array.isArray(value) && value.length === 2 && value.every((item) => typeof item === "string") ? value as [string, string] : null;
+    } catch { return null; }
   };
 
   const addSubtask = async (parent: TaskItem): Promise<void> => {
@@ -1214,13 +1232,16 @@ export function TasksPanel({
       taskSettings.sortMode !== "manual" ||
       source.parentLineIndex !== null ||
       target.parentLineIndex !== null ||
-      source.filePath !== target.filePath ||
-      source.lineIndex === target.lineIndex ||
+      (source.filePath === target.filePath && source.lineIndex === target.lineIndex) ||
       (timeBasedView && source.deadline !== target.deadline)
     ) {
       return;
     }
 
+    if (source.filePath !== target.filePath) {
+      await moveTask(source, target.category, target.section ?? null);
+      return;
+    }
     const document = documents[source.category];
     if (!document) return;
 
@@ -1688,10 +1709,9 @@ export function TasksPanel({
           <div className="tasks-filter-section">
             <div className="tasks-filter-section__heading">
               <span>{t("tasks.categories")}</span>
-              <button type="button" className="tasks-category-add" onClick={() => void addCategory()} disabled={saving} aria-label={t("tasks.newCategory")} title={t("tasks.newCategory")}><Plus aria-hidden="true" /></button>
             </div>
 
-            {categories.map((category, categoryIndex) => {
+            {categories.map((category) => {
               const active = selectedView === categoryView(category);
               const dropActive = dragOverCategory === category;
 
@@ -1712,7 +1732,7 @@ export function TasksPanel({
                   }}
                   {...getCategoryLongPressProps(category)}
                   onDragOver={(event) => {
-                    if (!event.dataTransfer.types.includes(TASK_DRAG_MIME)) return;
+                    if (![TASK_DRAG_MIME, CATEGORY_DRAG_MIME, SECTION_DRAG_MIME].some((type) => event.dataTransfer.types.includes(type))) return;
                     if (event.dataTransfer.types.includes(TASK_SUBTASK_DRAG_MIME)) return;
                     event.preventDefault();
                     event.dataTransfer.dropEffect = "move";
@@ -1725,8 +1745,12 @@ export function TasksPanel({
                   }}
                   onDrop={(event) => {
                     event.preventDefault();
-                    const task = taskFromDrop(event);
                     setDragOverCategory(null);
+                    const sourceCategory = event.dataTransfer.getData(CATEGORY_DRAG_MIME);
+                    if (sourceCategory) { moveCategoryOrder(sourceCategory, category); return; }
+                    const sourceSection = sectionFromDrop(event);
+                    if (sourceSection) { void moveSection(sourceSection[0], sourceSection[1], category); return; }
+                    const task = taskFromDrop(event);
                     if (task?.parentLineIndex === null) {
                       void moveTask(task, category);
                     }
@@ -1739,19 +1763,12 @@ export function TasksPanel({
                       active && "tasks-category--active"
                     )}
                     onClick={() => setSelectedView(categoryView(category))}
+                    draggable={!saving}
+                    onDragStart={(event) => { event.dataTransfer.setData(CATEGORY_DRAG_MIME, category); event.dataTransfer.effectAllowed = "move"; }}
                   >
                     <span>{category}</span>
                     <small>{categoryCounts.get(category) ?? 0}</small>
                   </button>
-                  <div className="tasks-order-actions">
-                    <button type="button" disabled={categoryIndex === 0} onClick={() => reorderCategory(category, -1)} aria-label={`${t("tasks.moveUp")}: ${category}`}><ArrowUp aria-hidden="true" /></button>
-                    <button type="button" disabled={categoryIndex === categories.length - 1} onClick={() => reorderCategory(category, 1)} aria-label={`${t("tasks.moveDown")}: ${category}`}><ArrowDown aria-hidden="true" /></button>
-                  </div>
-                  <button type="button" className="tasks-category-add" onClick={() => void addSection(category)} disabled={saving} aria-label={`${t("tasks.newSection")}: ${category}`} title={t("tasks.newSection")}><Plus aria-hidden="true" /></button>
-                  {(sectionsByCategory[category] ?? []).map((section, sectionIndex) => {
-                    const view = `${SECTION_PREFIX}${JSON.stringify([category, section])}`;
-                    return <div key={section} className="tasks-section-row"><button type="button" className={cn("tasks-category tasks-category--section", selectedView === view && "tasks-category--active")} onClick={() => setSelectedView(view)} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); const task = taskFromDrop(event); if (task) void moveTask(task, category, section); }}><span>{section}</span><small>{rootTasks.filter((task) => task.category === category && task.section === section).length}</small></button><div className="tasks-order-actions"><button type="button" disabled={sectionIndex === 0 || saving} onClick={() => void reorderSection(category, section, -1)} aria-label={`${t("tasks.moveUp")}: ${section}`}><ArrowUp aria-hidden="true" /></button><button type="button" disabled={sectionIndex === sectionsByCategory[category].length - 1 || saving} onClick={() => void reorderSection(category, section, 1)} aria-label={`${t("tasks.moveDown")}: ${section}`}><ArrowDown aria-hidden="true" /></button></div></div>;
-                  })}
                 </div>
               );
             })}
@@ -1836,38 +1853,6 @@ export function TasksPanel({
               </Menu>
               {selectedCategory ? (
                 <>
-                  <div className="tasks-category-actions__desktop">
-                    {selectedCategory !== UNCATEGORIZED_TASK_CATEGORY ? (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="tasks-category-view-action"
-                      onClick={() => void renameCategory(selectedCategory)}
-                      disabled={saving}
-                      aria-label={t("tasks.renameCategory", { category: selectedCategory })}
-                      title={t("tasks.renameCategory", { category: selectedCategory })}
-                    >
-                      <Pencil />
-                      <span>{t("tasks.renameCategoryAction")}</span>
-                    </Button>
-                    ) : null}
-                    {selectedCategory !== UNCATEGORIZED_TASK_CATEGORY ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        className="tasks-category-view-action tasks-category-view-action--danger"
-                        onClick={() => deleteCategory(selectedCategory)}
-                        disabled={saving}
-                        aria-label={t("tasks.deleteCategory", { category: selectedCategory })}
-                        title={t("tasks.deleteCategory", { category: selectedCategory })}
-                      >
-                        <Trash2 />
-                        <span>{t("tasks.deleteCategoryAction")}</span>
-                      </Button>
-                    ) : null}
-                  </div>
                   <Menu>
                     <MenuTrigger
                       render={
@@ -1888,7 +1873,6 @@ export function TasksPanel({
                       <MenuPositioner align="end">
                         <MenuPopup>
                           {selectedCategory !== UNCATEGORIZED_TASK_CATEGORY ? <MenuItem
-                            className="tasks-category-actions__mobile-item"
                             onClick={() => void renameCategory(selectedCategory)}
                           >
                             <Pencil className="size-4" aria-hidden="true" />
@@ -1904,7 +1888,7 @@ export function TasksPanel({
                           </MenuItem>
                           {selectedCategory !== UNCATEGORIZED_TASK_CATEGORY ? (
                             <MenuItem
-                              className="tasks-category-actions__mobile-item tasks-category-actions__danger"
+                              className="tasks-category-actions__danger"
                               onClick={() => deleteCategory(selectedCategory)}
                             >
                               <Trash2 className="size-4" aria-hidden="true" />
@@ -1920,16 +1904,12 @@ export function TasksPanel({
             </div>
           </div>
 
-          {selectedCategory ? <div className="tasks-sections-main" aria-label={t("tasks.newSection")}>
-            {(sectionsByCategory[selectedCategory] ?? []).map((section, index, list) => <div key={section} className="tasks-sections-main__item">
-              <button type="button" onClick={() => setSelectedView(`${SECTION_PREFIX}${JSON.stringify([selectedCategory, section])}`)}>{section}</button>
-              <button type="button" disabled={index === 0 || saving} onClick={() => void reorderSection(selectedCategory, section, -1)} aria-label={`${t("tasks.moveUp")}: ${section}`}><ArrowUp aria-hidden="true" /></button>
-              <button type="button" disabled={index === list.length - 1 || saving} onClick={() => void reorderSection(selectedCategory, section, 1)} aria-label={`${t("tasks.moveDown")}: ${section}`}><ArrowDown aria-hidden="true" /></button>
-            </div>)}
-            <button type="button" onClick={() => void addSection(selectedCategory)} disabled={saving}><Plus aria-hidden="true" />{t("tasks.newSection")}</button>
-          </div> : null}
+          <div className="tasks-main__create-actions">
+            {selectedCategory ? <Button type="button" size="sm" variant="ghost" onClick={() => void addSection(selectedCategory)} disabled={saving}><Plus aria-hidden="true" />{t("tasks.newSection")}</Button> : null}
+            {selectedView === ALL_TASKS ? <Button type="button" size="sm" variant="ghost" onClick={() => void addCategory()} disabled={saving}><Plus aria-hidden="true" />{t("tasks.newCategory")}</Button> : null}
+          </div>
 
-          {visibleActiveTasks.length === 0 ? (
+          {visibleActiveTasks.length === 0 && !selectedCategory ? (
             <div className="tasks-empty tasks-empty--active">
               <SquareCheck aria-hidden="true" />
               <p>
@@ -1940,7 +1920,25 @@ export function TasksPanel({
             </div>
           ) : (
             <div className="tasks-list">
-              {visibleActiveTasks.map((task) => {
+              {(selectedCategory
+                ? [null, ...(sectionsByCategory[selectedCategory] ?? [])].flatMap((section) => [
+                    { kind: "heading" as const, section },
+                    ...visibleActiveTasks.filter((task) => (task.section ?? null) === section).map((task) => ({ kind: "task" as const, task }))
+                  ])
+                : visibleActiveTasks.map((task) => ({ kind: "task" as const, task }))).map((entry) => {
+                if (entry.kind === "heading") {
+                  if (entry.section === null) return null;
+                  const section = entry.section;
+                  const category = selectedCategory!;
+                  return <div key={`section:${section}`} className={cn("tasks-section-heading", dragOverSection === section && "tasks-section-heading--drop")}
+                    draggable={!saving}
+                    onDragStart={(event) => { event.dataTransfer.setData(SECTION_DRAG_MIME, JSON.stringify([category, section])); event.dataTransfer.effectAllowed = "move"; }}
+                    onDragOver={(event) => { if (event.dataTransfer.types.includes(SECTION_DRAG_MIME) || event.dataTransfer.types.includes(TASK_DRAG_MIME)) { event.preventDefault(); setDragOverSection(section); } }}
+                    onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragOverSection(null); }}
+                    onDrop={(event) => { event.preventDefault(); setDragOverSection(null); const source = sectionFromDrop(event); if (source) { void moveSection(source[0], source[1], category, section, event.clientY < event.currentTarget.getBoundingClientRect().top + event.currentTarget.clientHeight / 2 ? "before" : "after"); return; } const task = taskFromDrop(event); if (task) void moveTask(task, category, section); }}
+                  ><h4>{section}</h4></div>;
+                }
+                const task = entry.task;
                 const isSubtask =
                   task.parentLineIndex !== null &&
                   visibleActiveTasks.some(
@@ -1954,7 +1952,6 @@ export function TasksPanel({
                   draggedRootTask !== null &&
                   key !== taskItemKey(draggedRootTask) &&
                   taskSettings.sortMode === "manual" &&
-                  draggedRootTask.filePath === task.filePath &&
                   (!timeBasedView || draggedRootTask.deadline === task.deadline);
                 const rootDropBlocked =
                   !isSubtask &&
@@ -2060,7 +2057,6 @@ export function TasksPanel({
                       draggedRootTask !== null &&
                       key !== taskItemKey(draggedRootTask) &&
                       taskSettings.sortMode === "manual" &&
-                      draggedRootTask.filePath === task.filePath &&
                       (!timeBasedView || draggedRootTask.deadline === task.deadline);
                     const rootDropBlocked =
                       !isSubtask &&
