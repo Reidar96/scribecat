@@ -20,13 +20,33 @@
 
 use std::{collections::HashSet, sync::Mutex, time::Duration};
 
+#[cfg(any(target_os = "macos", test))]
+use std::{
+    collections::BTreeMap,
+    fs::{self, OpenOptions},
+    io::Write,
+    path::Path,
+};
+
+#[cfg(all(target_os = "macos", unix))]
+use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
+
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 use tokio_tungstenite::tungstenite::{client::IntoClientRequest, http::HeaderValue, Error as WsError, Message};
 
-use crate::{FolderWatchState, FOLDER_FILES_CHANGED_EVENT, KEYRING_SERVICE};
+use crate::{FolderWatchState, FOLDER_FILES_CHANGED_EVENT};
+
+#[cfg(not(target_os = "macos"))]
+use crate::KEYRING_SERVICE;
+
+#[cfg(target_os = "macos")]
+const REMOTE_TOKEN_FILE: &str = "remote-vault-tokens.json";
+
+#[cfg(target_os = "macos")]
+static REMOTE_TOKEN_FILE_LOCK: Mutex<()> = Mutex::new(());
 
 /// Emitted with the vault root when the server refuses the token on the live
 /// connection: the one moment an idle app learns that its key was revoked.
@@ -145,34 +165,158 @@ pub async fn remote_vault_request(
     })
 }
 
-// Tokens live next to the API keys in the OS credential store, under their
-// own account name so the two namespaces never meet.
+// Non-macOS desktop tokens live in the OS credential store. macOS Keychain
+// access prompts for the login-keychain password when this unsigned build's
+// identity changes, so macOS stores tokens in a private app-data file instead.
+// The directory and file are restricted to the current user. Old Keychain
+// entries are intentionally not read: the app asks the user to sign in to the
+// server once, then saves the replacement token without a Keychain prompt.
+#[cfg(not(target_os = "macos"))]
 fn token_entry(vault_root: &str) -> Result<keyring::Entry, String> {
     let account = format!("remote-vault-token:{vault_root}");
     keyring::Entry::new(KEYRING_SERVICE, &account).map_err(|error| error.to_string())
 }
 
-#[tauri::command]
-pub fn store_remote_vault_token(vault_root: String, token: String) -> Result<(), String> {
-    token_entry(&vault_root)?
-        .set_password(&token)
-        .map_err(|error| error.to_string())
-}
-
-#[tauri::command]
-pub fn get_remote_vault_token(vault_root: String) -> Result<Option<String>, String> {
-    match token_entry(&vault_root)?.get_password() {
-        Ok(token) => Ok(Some(token)),
-        Err(keyring::Error::NoEntry) => Ok(None),
+#[cfg(any(target_os = "macos", test))]
+fn read_token_map(path: &Path) -> Result<BTreeMap<String, String>, String> {
+    match fs::read(path) {
+        Ok(bytes) => serde_json::from_slice(&bytes).map_err(|error| error.to_string()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(BTreeMap::new()),
         Err(error) => Err(error.to_string()),
     }
 }
 
+#[cfg(any(target_os = "macos", test))]
+fn write_token_map(path: &Path, tokens: &BTreeMap<String, String>) -> Result<(), String> {
+    let parent = path.parent().ok_or_else(|| "Token store has no parent directory".to_string())?;
+    fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+
+    #[cfg(all(target_os = "macos", unix))]
+    fs::set_permissions(parent, fs::Permissions::from_mode(0o700)).map_err(|error| error.to_string())?;
+
+    let temp_path = path.with_extension(format!("{}.json.tmp", std::process::id()));
+    let mut options = OpenOptions::new();
+    options.write(true).create(true).truncate(true);
+    #[cfg(all(target_os = "macos", unix))]
+    options.mode(0o600);
+
+    let mut file = options.open(&temp_path).map_err(|error| error.to_string())?;
+    #[cfg(all(target_os = "macos", unix))]
+    file.set_permissions(fs::Permissions::from_mode(0o600))
+        .map_err(|error| error.to_string())?;
+    let bytes = serde_json::to_vec(tokens).map_err(|error| error.to_string())?;
+    file.write_all(&bytes).map_err(|error| error.to_string())?;
+    file.sync_all().map_err(|error| error.to_string())?;
+    drop(file);
+    fs::rename(temp_path, path).map_err(|error| error.to_string())
+}
+
+#[cfg(target_os = "macos")]
+fn token_file_path(app: &AppHandle) -> Result<std::path::PathBuf, String> {
+    let directory = app
+        .path()
+        .app_data_dir()
+        .map_err(|error| error.to_string())?
+        .join("credentials");
+    Ok(directory.join(REMOTE_TOKEN_FILE))
+}
+
+#[cfg(target_os = "macos")]
+fn get_file_token(path: &Path, vault_root: &str) -> Result<Option<String>, String> {
+    let _guard = REMOTE_TOKEN_FILE_LOCK.lock().map_err(|error| error.to_string())?;
+    Ok(read_token_map(path)?.remove(vault_root))
+}
+
+#[cfg(target_os = "macos")]
+fn set_file_token(path: &Path, vault_root: &str, token: Option<&str>) -> Result<(), String> {
+    let _guard = REMOTE_TOKEN_FILE_LOCK.lock().map_err(|error| error.to_string())?;
+    let mut tokens = read_token_map(path)?;
+    if let Some(token) = token {
+        tokens.insert(vault_root.to_string(), token.to_string());
+    } else {
+        tokens.remove(vault_root);
+    }
+    write_token_map(path, &tokens)
+}
+
 #[tauri::command]
-pub fn delete_remote_vault_token(vault_root: String) -> Result<(), String> {
-    match token_entry(&vault_root)?.delete_credential() {
-        Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
-        Err(error) => Err(error.to_string()),
+pub fn store_remote_vault_token(app: AppHandle, vault_root: String, token: String) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    {
+        return set_file_token(&token_file_path(&app)?, &vault_root, Some(&token));
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = app;
+        token_entry(&vault_root)?.set_password(&token).map_err(|error| error.to_string())
+    }
+}
+
+#[tauri::command]
+pub fn get_remote_vault_token(app: AppHandle, vault_root: String) -> Result<Option<String>, String> {
+    #[cfg(target_os = "macos")]
+    {
+        return get_file_token(&token_file_path(&app)?, &vault_root);
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = app;
+        match token_entry(&vault_root)?.get_password() {
+            Ok(token) => Ok(Some(token)),
+            Err(keyring::Error::NoEntry) => Ok(None),
+            Err(error) => Err(error.to_string()),
+        }
+    }
+}
+
+#[tauri::command]
+pub fn delete_remote_vault_token(app: AppHandle, vault_root: String) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    {
+        return set_file_token(&token_file_path(&app)?, &vault_root, None);
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = app;
+        match token_entry(&vault_root)?.delete_credential() {
+            Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
+            Err(error) => Err(error.to_string()),
+        }
+    }
+}
+
+#[cfg(test)]
+mod token_file_tests {
+    use super::*;
+    use std::{fs, path::PathBuf, sync::atomic::{AtomicU64, Ordering}};
+
+    static NEXT_ID: AtomicU64 = AtomicU64::new(0);
+
+    fn temp_file() -> PathBuf {
+        std::env::temp_dir()
+            .join(format!("scribecat-token-store-{}-{}", std::process::id(), NEXT_ID.fetch_add(1, Ordering::Relaxed)))
+            .join("remote-vault-tokens.json")
+    }
+
+    #[test]
+    fn token_map_persists_and_removes_per_server_entries() {
+        let path = temp_file();
+        let mut tokens = BTreeMap::new();
+        tokens.insert("/@remote/one".to_string(), "secret-one".to_string());
+        tokens.insert("/@remote/two".to_string(), "secret-two".to_string());
+
+        write_token_map(&path, &tokens).unwrap();
+        let mut loaded = read_token_map(&path).unwrap();
+        assert_eq!(loaded.remove("/@remote/one").as_deref(), Some("secret-one"));
+        assert_eq!(loaded.get("/@remote/two").map(String::as_str), Some("secret-two"));
+
+        loaded.remove("/@remote/one");
+        write_token_map(&path, &loaded).unwrap();
+        assert_eq!(read_token_map(&path).unwrap().len(), 1);
+        fs::remove_dir_all(path.parent().unwrap()).unwrap();
     }
 }
 
