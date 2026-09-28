@@ -7,7 +7,9 @@
 # build context.
 
 # ---- web: the shared frontend, built for the browser -------------------------
-FROM node:24-alpine AS web
+# The browser bundle is architecture-independent. Build it on the runner's
+# native CPU so npm does not run under QEMU for the arm64 image.
+FROM --platform=$BUILDPLATFORM node:24-alpine AS web
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
