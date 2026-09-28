@@ -606,6 +606,7 @@ export function TasksPanel({
   const [categoryDropPlacement, setCategoryDropPlacement] = useState<"before" | "after">("before");
   const [draggedCategory, setDraggedCategory] = useState<string | null>(null);
   const [dragOverSection, setDragOverSection] = useState<string | null>(null);
+  const [dragOverSectionPosition, setDragOverSectionPosition] = useState<"before" | "after" | null>(null);
   const [categoryDraft, setCategoryDraft] = useState<{ original: string | null; value: string } | null>(null);
   const [sectionDraft, setSectionDraft] = useState<{ original: string | null; value: string } | null>(null);
   const [nameError, setNameError] = useState<string | null>(null);
@@ -1990,12 +1991,17 @@ export function TasksPanel({
                       onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); void commitSectionName(); } else if (event.key === "Escape") { event.preventDefault(); skipNameBlurRef.current = true; setSectionDraft(null); setNameError(null); } }} />
                     {nameError ? <small role="alert">{nameError}</small> : null}
                   </div>;
-                  return <div key={`section:${section}`} className={cn("tasks-section-heading", dragOverSection === section && "tasks-section-heading--drop")}
+                  return <div key={`section:${section}`} className={cn(
+                    "tasks-section-heading",
+                    dragOverSection === section && "tasks-section-heading--drop",
+                    dragOverSection === section && dragOverSectionPosition === "before" && "tasks-item--drop-before",
+                    dragOverSection === section && dragOverSectionPosition === "after" && "tasks-item--drop-after"
+                  )}
                     draggable={!saving && sectionDraft?.original !== section}
                     onDragStart={(event) => { event.dataTransfer.setData(SECTION_DRAG_MIME, JSON.stringify([category, section])); event.dataTransfer.effectAllowed = "move"; }}
-                    onDragOver={(event) => { if (event.dataTransfer.types.includes(SECTION_DRAG_MIME) || event.dataTransfer.types.includes(TASK_DRAG_MIME)) { event.preventDefault(); setDragOverSection(section); } }}
-                    onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragOverSection(null); }}
-                    onDrop={(event) => { event.preventDefault(); setDragOverSection(null); const source = sectionFromDrop(event); if (source) { void moveSection(source[0], source[1], category, section, event.clientY < event.currentTarget.getBoundingClientRect().top + event.currentTarget.clientHeight / 2 ? "before" : "after"); return; } const task = taskFromDrop(event); if (task) void moveTask(task, category, section); }}
+                    onDragOver={(event) => { if (event.dataTransfer.types.includes(SECTION_DRAG_MIME) || event.dataTransfer.types.includes(TASK_DRAG_MIME)) { event.preventDefault(); const rect = event.currentTarget.getBoundingClientRect(); setDragOverSection(section); setDragOverSectionPosition(event.clientY < rect.top + rect.height / 2 ? "before" : "after"); } }}
+                    onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) { setDragOverSection(null); setDragOverSectionPosition(null); } }}
+                    onDrop={(event) => { event.preventDefault(); const rect = event.currentTarget.getBoundingClientRect(); const placement = event.clientY < rect.top + rect.height / 2 ? "before" : "after"; setDragOverSection(null); setDragOverSectionPosition(null); const source = sectionFromDrop(event); if (source) { void moveSection(source[0], source[1], category, section, placement); return; } const task = taskFromDrop(event); if (task) void moveTask(task, category, section); }}
                   >{sectionDraft?.original === section ? <input autoFocus value={sectionDraft.value} aria-label={t("tasks.renameSection")}
                     onChange={(event) => { setSectionDraft({ ...sectionDraft, value: event.target.value }); setNameError(null); }}
                     onBlur={() => void commitSectionName()}

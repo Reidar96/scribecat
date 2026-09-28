@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Folder, FolderOpen, Home } from "lucide-react";
+import { ChevronDown, ChevronRight, Folder, FolderOpen, Home } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
@@ -45,6 +45,7 @@ export function MoveToDialog({
   const taskSettings = useEditorSettingsStore((state) => state.taskSettings);
   const [filter, setFilter] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const listRef = useRef<HTMLDivElement>(null);
 
   const targets = useMemo(
@@ -61,11 +62,32 @@ export function MoveToDialog({
   const visibleTargets = query
     ? targets.filter((target) => target.relativePath.toLowerCase().includes(query))
     : targets;
+  const displayRows = useMemo(() => {
+    if (query) return visibleTargets.map((target) => ({ target, depth: target.depth, expandable: false }));
+    const childrenOf = (parent: string) => targets.filter((target) => {
+      if (!target.relativePath) return false;
+      const slash = target.relativePath.lastIndexOf("/");
+      return (slash < 0 ? "" : target.relativePath.slice(0, slash)) === parent;
+    });
+    const rows: { target: typeof targets[number]; depth: number; expandable: boolean }[] = [];
+    const visit = (parent: string, depth: number) => {
+      for (const target of childrenOf(parent)) {
+        const expandable = childrenOf(target.relativePath).length > 0;
+        rows.push({ target, depth, expandable });
+        if (expanded.has(target.relativePath)) visit(target.relativePath, depth + 1);
+      }
+    };
+    const rootTarget = targets.find((target) => target.relativePath === "");
+    if (rootTarget) rows.push({ target: rootTarget, depth: 0, expandable: false });
+    visit("", 0);
+    return rows;
+  }, [query, visibleTargets, targets, expanded]);
 
   useEffect(() => {
     if (request) {
       setFilter("");
       setSelected(null);
+      setExpanded(new Set());
     }
   }, [request]);
 
@@ -147,7 +169,7 @@ export function MoveToDialog({
           aria-label={t("moveDialog.listLabel")}
           tabIndex={0}
           onKeyDown={(event) => {
-            const enabled = visibleTargets.filter((target) => !target.disabled);
+            const enabled = displayRows.map(({ target }) => target).filter((target) => !target.disabled);
 
             if (enabled.length === 0) {
               return;
@@ -170,7 +192,7 @@ export function MoveToDialog({
           {visibleTargets.length === 0 ? (
             <p className="move-dialog__empty">{t("moveDialog.noMatch")}</p>
           ) : (
-            visibleTargets.map((target) => {
+            displayRows.map(({ target, depth, expandable }) => {
               const isSelected = target.relativePath === selected;
 
               return (
@@ -179,17 +201,29 @@ export function MoveToDialog({
                   type="button"
                   role="option"
                   aria-selected={isSelected}
+                  aria-expanded={expandable ? expanded.has(target.relativePath) : undefined}
                   disabled={target.disabled}
                   className={cn("move-dialog__item", isSelected && "move-dialog__item--selected")}
-                  style={{ paddingLeft: `${0.6 + target.depth * 1.1}rem` }}
+                  style={{ paddingLeft: `${0.6 + depth * 1.1}rem` }}
                   title={target.relativePath || t("moveDialog.root")}
-                  onClick={() => setSelected(target.relativePath)}
+                  onClick={() => {
+                    setSelected(target.relativePath);
+                    if (expandable && target.relativePath) {
+                      setExpanded((current) => {
+                        const next = new Set(current);
+                        if (next.has(target.relativePath)) next.delete(target.relativePath);
+                        else next.add(target.relativePath);
+                        return next;
+                      });
+                    }
+                  }}
                   onDoubleClick={() => {
                     if (!target.disabled) {
                       onConfirm(target.relativePath);
                     }
                   }}
                 >
+                  {expandable && target.relativePath ? (expanded.has(target.relativePath) ? <ChevronDown aria-hidden="true" /> : <ChevronRight aria-hidden="true" />) : null}
                   {target.relativePath === "" ? (
                     <Home aria-hidden="true" />
                   ) : isSelected ? (

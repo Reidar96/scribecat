@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { platform } from "@/platform";
 
@@ -69,6 +69,17 @@ export function useZenMode({ canEnter }: UseZenModeOptions): UseZenModeResult {
       }
     })();
   }, []);
+
+  useEffect(() => {
+    if (!isZenMode) return;
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      exitZenMode();
+    };
+    window.addEventListener("keydown", handleEscape, true);
+    return () => window.removeEventListener("keydown", handleEscape, true);
+  }, [isZenMode, exitZenMode]);
 
   // The keyboard binding itself lives in useGlobalShortcuts so it can be
   // remapped like every other shortcut.

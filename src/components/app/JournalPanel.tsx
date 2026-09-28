@@ -51,6 +51,7 @@ import {
   type JournalImage
 } from "@/lib/journal";
 import { suggestedImageFileName } from "@/lib/imageFileName";
+import { readJournalCache, removeJournalCacheEntries, writeJournalCache } from "@/lib/journalCache";
 import { cn } from "@/lib/utils";
 import { classifyHorizontalSwipe, isTouchInHorizontalScroller, type SwipePoint } from "@/lib/swipeGesture";
 import { getVaultCapabilities, platform, vaultCapabilityHint } from "@/platform";
@@ -67,6 +68,7 @@ const JOURNAL_IMAGE_ROOT_MARGIN = "360px 0px";
 type JournalPanelProps = {
   folderPath: string;
   filePaths: string[];
+  fileMtimeMs: Record<string, number>;
   selectedFilePath: string | null;
   selectedFileContent: string | null;
   sidebarVisible: boolean;
@@ -1513,6 +1515,7 @@ function JournalResults({
 export function JournalPanel({
   folderPath,
   filePaths,
+  fileMtimeMs,
   selectedFilePath,
   selectedFileContent,
   sidebarVisible,
@@ -1566,23 +1569,41 @@ export function JournalPanel({
 
   useEffect(() => {
     let active = true;
+    const paths = new Set(journalFiles.map(({ filePath }) => filePath));
+    const scope = `${folderPath}\u0000${settings.folder}\u0000${settings.structure}`;
 
-    void Promise.all(
-      journalFiles.map(async ({ filePath }) => {
+    void (async () => {
+      let cached: Awaited<ReturnType<typeof readJournalCache>> = [];
+      try { cached = await readJournalCache(scope); } catch { /* continue with the live files */ }
+      if (!active) return;
+
+      const cachedByPath = new Map(cached.map((entry) => [entry.path, entry]));
+      const retained = cached.filter((entry) => paths.has(entry.path));
+      setMarkdownByPath((current) => ({
+        ...Object.fromEntries(retained.map((entry) => [entry.path, entry.markdown])),
+        ...(activeFilePath && current[activeFilePath] !== undefined ? { [activeFilePath]: current[activeFilePath] } : {})
+      }));
+      void removeJournalCacheEntries(scope, cached.filter((entry) => !paths.has(entry.path)).map((entry) => entry.path)).catch(() => undefined);
+
+      const changed = journalFiles.filter(({ filePath }) =>
+        cachedByPath.get(filePath)?.mtimeMs !== (fileMtimeMs[filePath] ?? 0)
+      );
+      const fresh = await Promise.all(changed.map(async ({ filePath }) => {
         try {
-          return [filePath, await readMarkdownFile(filePath)] as const;
-        } catch {
-          return [filePath, ""] as const;
-        }
-      })
-    ).then((entries) => {
-      if (active) setMarkdownByPath(Object.fromEntries(entries));
-    });
+          const markdown = await readMarkdownFile(filePath);
+          return { path: filePath, mtimeMs: fileMtimeMs[filePath] ?? 0, markdown, firstImage: parseJournalMarkdown(markdown).images[0] ?? null };
+        } catch { return null; }
+      }));
+      if (!active) return;
+      const successful = fresh.filter((entry): entry is NonNullable<typeof entry> => entry !== null);
+      if (successful.length) {
+        setMarkdownByPath((current) => ({ ...current, ...Object.fromEntries(successful.map((entry) => [entry.path, entry.markdown])) }));
+        void writeJournalCache(scope, successful).catch(() => undefined);
+      }
+    })();
 
-    return () => {
-      active = false;
-    };
-  }, [journalFiles]);
+    return () => { active = false; };
+  }, [journalFiles, folderPath, settings.folder, settings.structure, fileMtimeMs, activeFilePath]);
 
   const activeMarkdown =
     activeFilePath && selectedFilePath === activeFilePath
@@ -1598,6 +1619,19 @@ export function JournalPanel({
         : { ...current, [activeFilePath]: activeMarkdown }
     );
   }, [activeFilePath, activeMarkdown]);
+
+  useEffect(() => {
+    if (!activeFilePath || activeMarkdown === null) return;
+    const relativePath = getRelativeDisplayPath(folderPath, activeFilePath);
+    if (!journalDateFromRelativePath(relativePath, settings)) return;
+    const scope = `${folderPath}\u0000${settings.folder}\u0000${settings.structure}`;
+    void writeJournalCache(scope, [{
+      path: activeFilePath,
+      mtimeMs: fileMtimeMs[activeFilePath] ?? 0,
+      markdown: activeMarkdown,
+      firstImage: parseJournalMarkdown(activeMarkdown).images[0] ?? null
+    }]).catch(() => undefined);
+  }, [activeFilePath, activeMarkdown, folderPath, settings, fileMtimeMs]);
 
   useEffect(() => {
     if (!selectedFilePath) return;

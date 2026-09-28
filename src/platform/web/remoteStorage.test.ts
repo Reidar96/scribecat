@@ -14,12 +14,27 @@ const api = vi.hoisted(() => ({
   remove: vi.fn(),
   packFolder: vi.fn()
 }));
+const offline = vi.hoisted(() => ({
+  records: new Map<string, { kind: string; [key: string]: unknown }>(),
+  index: null as { relativePath: string; mtimeMs: number }[] | null
+}));
 
 vi.mock("./serverApi", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./serverApi")>();
 
   return { ...actual, serverApi: { ...actual.serverApi, ...api } };
 });
+
+vi.mock("@/platform/remote/offlineCache", () => ({
+  cachedFileInfo: (raw: unknown) => {
+    const info = raw as { mtimeMs: number | null; birthtimeMs: number | null; [key: string]: unknown };
+    return { ...info, mtime: info.mtimeMs === null ? null : new Date(info.mtimeMs), birthtime: info.birthtimeMs === null ? null : new Date(info.birthtimeMs) };
+  },
+  getCached: async (_root: string, path: string) => offline.records.get(path) ?? null,
+  putCached: async (_root: string, path: string, value: { kind: string; [key: string]: unknown }) => { offline.records.set(path, value); },
+  getCachedMarkdownIndex: async () => offline.index,
+  setCachedMarkdownIndex: async (_root: string, entries: { relativePath: string; mtimeMs: number }[]) => { offline.index = entries; }
+}));
 
 const { ApiError } = await import("./serverApi");
 const { PlatformUnavailableError } = await import("@/platform/errors");
@@ -30,6 +45,8 @@ describe("remote vault storage (web platform)", () => {
     for (const fn of Object.values(api)) {
       fn.mockReset();
     }
+    offline.records.clear();
+    offline.index = null;
   });
 
   it("maps the server's relative paths onto the virtual root and back", async () => {
@@ -123,5 +140,17 @@ describe("remote vault storage (web platform)", () => {
   it("passes server errors through unchanged", async () => {
     api.writeText.mockRejectedValue(new ApiError(500, "internal", "boom"));
     await expect(remoteVaultStorage.writeTextFile("/vault/a.md", "")).rejects.toBeInstanceOf(ApiError);
+  });
+
+  it("uses the persistent file index and cached note text when the server is unreachable", async () => {
+    offline.index = [{ relativePath: "Notes/Idea.md", mtimeMs: 42 }];
+    offline.records.set("Notes/Idea.md", { kind: "text", content: "# Cached", mtimeMs: 42 });
+    api.listFiles.mockRejectedValue(new Error("offline"));
+    api.readText.mockRejectedValue(new Error("offline"));
+
+    await expect(remoteVaultStorage.listMarkdownFiles(REMOTE_VAULT_ROOT)).resolves.toEqual([
+      { filePath: "/vault/Notes/Idea.md", relativePath: "Notes/Idea.md", mtimeMs: 42 }
+    ]);
+    await expect(remoteVaultStorage.readTextFile("/vault/Notes/Idea.md")).resolves.toBe("# Cached");
   });
 });

@@ -1384,6 +1384,7 @@ function App() {
             <JournalPanel
               folderPath={folderPath}
               filePaths={filePaths}
+              fileMtimeMs={fileMtimeMs}
               selectedFilePath={selectedFilePath}
               selectedFileContent={selectedFileContent}
               sidebarVisible={sidebarVisible}

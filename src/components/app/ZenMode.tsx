@@ -1,4 +1,5 @@
 import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from "react";
+import { useLayoutEffect } from "react";
 import { ArrowLeft } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -20,6 +21,10 @@ export function ZenMode({ onExit, isDirty }: ZenModeProps) {
   const zenWidth = useEditorSettingsStore((state) => state.zenWidth);
   const setZenWidth = useEditorSettingsStore((state) => state.setZenWidth);
   const readoutSizePt = useZenFontZoom(true);
+
+  useLayoutEffect(() => {
+    document.querySelector<HTMLElement>(".editor-view__scroll")?.scrollTo({ top: 0 });
+  }, []);
 
   // The text column is centred on the viewport, so its half-width equals the
   // pointer's distance from the horizontal centre — the same math for either

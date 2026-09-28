@@ -2,12 +2,30 @@ import i18n from "@/i18n";
 import { sortMarkdownRecords } from "@/lib/vaultPaths";
 import { PlatformUnavailableError } from "@/platform/errors";
 import { ALL_VAULT_CAPABILITIES, type FileInfo, type VaultStorage } from "@/platform/types";
+import { cachedFileInfo, getCached, getCachedMarkdownIndex, putCached, setCachedMarkdownIndex } from "./offlineCache";
 
 import { joinPosixPath } from "./paths";
-import type { ServerApi } from "./serverApi";
+import type { RemoteMarkdownFileRecord, ServerApi } from "./serverApi";
 
 function toDate(ms: number | null): Date | null {
   return ms === null ? null : new Date(ms);
+}
+
+function firstRelativeImagePath(markdown: string, markdownPath: string): string | null {
+  const match = /!\[[^\]]*\]\(\s*<?([^()< >\s]+)>?/.exec(markdown);
+  const raw = match?.[1];
+  if (!raw || /^(?:[a-z][a-z\d+.-]*:|\/\/)/i.test(raw)) return null;
+  let source = raw.split(/[?#]/, 1)[0];
+  try { source = decodeURIComponent(source); } catch { /* retain literal percent escapes */ }
+  const parts = raw.startsWith("/") ? [] : markdownPath.split("/").slice(0, -1);
+  for (const part of source.replace(/\\/g, "/").replace(/^\/+/, "").split("/")) {
+    if (!part || part === ".") continue;
+    if (part === "..") {
+      if (parts.length === 0) return null;
+      parts.pop();
+    } else parts.push(part);
+  }
+  return parts.join("/") || null;
 }
 
 /**
@@ -44,41 +62,153 @@ export function createRemoteVaultStorage(api: ServerApi, root: string): VaultSto
     capabilities: ALL_VAULT_CAPABILITIES,
 
     async listMarkdownFiles(rootPath) {
-      const records = (await api.listFiles()).map((file) => ({
-        filePath: joinPosixPath(rootPath, file.relativePath),
-        relativePath: file.relativePath,
-        mtimeMs: file.mtimeMs
+      let remoteFiles: RemoteMarkdownFileRecord[];
+      try {
+        remoteFiles = await api.listFiles();
+        void setCachedMarkdownIndex(root, remoteFiles).catch(() => undefined);
+      } catch (error) {
+        const cachedFiles = await getCachedMarkdownIndex(root).catch(() => null);
+        if (!cachedFiles) throw error;
+        remoteFiles = cachedFiles;
+      }
+
+      const records = remoteFiles.map((file) => ({
+        filePath: joinPosixPath(rootPath, file.relativePath), relativePath: file.relativePath, mtimeMs: file.mtimeMs
       }));
+
+      // Hydrate the persistent cache after the listing returns. The first
+      // open stays responsive while every note and directory is copied for
+      // the next offline launch.
+      void (async () => {
+        const pending = remoteFiles;
+        let cursor = 0;
+        const hydrateDirectory = async (path: string): Promise<void> => {
+          let entries;
+          try { entries = await api.readDir(path); } catch { return; }
+          if (!Array.isArray(entries)) return;
+          const info = await Promise.resolve().then(() => api.stat(path)).catch(() => null);
+          await putCached(root, path, { kind: "directory", entries, info }).catch(() => undefined);
+          if (info) void putCached(root, `${path}\u0000stat`, { kind: "stat", info }).catch(() => undefined);
+          for (const entry of entries) {
+            if (entry.isDirectory && !entry.isSymlink && entry.name !== ".scribecat") {
+              await hydrateDirectory(path ? `${path}/${entry.name}` : entry.name);
+            }
+          }
+        };
+        const directoryHydration = hydrateDirectory("");
+        const workers = Array.from({ length: 6 }, async () => {
+          while (cursor < pending.length) {
+            const file = pending[cursor++];
+            const previous = await getCached(root, file.relativePath).catch(() => null);
+            if (previous?.kind === "text" && previous.mtimeMs === file.mtimeMs) continue;
+            try {
+              const markdown = await api.readText(file.relativePath);
+              await putCached(root, file.relativePath, { kind: "text", content: markdown, mtimeMs: file.mtimeMs });
+              const firstImage = firstRelativeImagePath(markdown, file.relativePath);
+              if (firstImage) {
+                const cachedImage = await getCached(root, firstImage).catch(() => null);
+                if (cachedImage?.kind !== "bytes") {
+                  try { await putCached(root, firstImage, { kind: "bytes", bytes: Array.from(await api.readBytes(firstImage)), mtimeMs: null }); }
+                  catch { /* image remains available online; text cache is still valid */ }
+                }
+              }
+            }
+            catch { /* the online listing is still useful if a file disappears during hydration */ }
+          }
+        });
+        await Promise.all([...workers, directoryHydration]);
+      })().catch(() => undefined);
 
       return sortMarkdownRecords(records);
     },
 
     // All async so a path outside the root rejects instead of throwing
     // synchronously into a caller that expects a promise.
-    exists: async (path) => api.exists(toVaultRelative(path)),
+    async exists(path) {
+      const relative = toVaultRelative(path);
+      try { return await api.exists(relative); }
+      catch {
+        const cached = await getCached(root, relative).catch(() => null);
+        return cached !== null;
+      }
+    },
 
     async stat(path): Promise<FileInfo> {
-      const info = await api.stat(toVaultRelative(path));
-
-      return {
-        isFile: info.isFile,
-        isDirectory: info.isDirectory,
-        isSymlink: info.isSymlink,
-        size: info.size,
-        mtime: toDate(info.mtimeMs),
-        birthtime: toDate(info.birthtimeMs)
-      };
+      const relative = toVaultRelative(path);
+      try {
+        const info = await api.stat(relative);
+        void putCached(root, `${relative}\u0000stat`, { kind: "stat", info }).catch(() => undefined);
+        return cachedFileInfo(info);
+      } catch (error) {
+        const cached = await getCached(root, `${relative}\u0000stat`).catch(() => null);
+        if (cached?.kind === "stat") return cachedFileInfo(cached.info);
+        const content = await getCached(root, relative).catch(() => null);
+        if ((content?.kind === "text" || content?.kind === "bytes") && content.mtimeMs !== null) {
+          return { isFile: true, isDirectory: false, isSymlink: false, size: content.kind === "text" ? new TextEncoder().encode(content.content).length : content.bytes.length, mtime: toDate(content.mtimeMs), birthtime: null };
+        }
+        throw error;
+      }
     },
 
-    readDir: async (path) => api.readDir(toVaultRelative(path)),
+    async readDir(path) {
+      const relative = toVaultRelative(path);
+      try {
+        const entries = await api.readDir(relative);
+        const info = await Promise.resolve().then(() => api.stat(relative)).catch(() => null);
+        void putCached(root, relative, { kind: "directory", entries, info }).catch(() => undefined);
+        if (info) void putCached(root, `${relative}\u0000stat`, { kind: "stat", info }).catch(() => undefined);
+        return entries;
+      } catch (error) {
+        const cached = await getCached(root, relative).catch(() => null);
+        if (cached?.kind === "directory") return cached.entries;
+        throw error;
+      }
+    },
     mkdir: async (path, options) => api.mkdir(toVaultRelative(path), options?.recursive === true),
-    readTextFile: async (path) => api.readText(toVaultRelative(path)),
-    async writeTextFile(path, contents) {
-      await api.writeText(toVaultRelative(path), contents);
+    async readTextFile(path) {
+      const relative = toVaultRelative(path);
+      try {
+        const content = await api.readText(relative);
+        const previous = await getCached(root, relative).catch(() => null);
+        const knownMtime = previous?.kind === "text" || previous?.kind === "bytes" ? previous.mtimeMs : null;
+        void putCached(root, relative, { kind: "text", content, mtimeMs: knownMtime }).catch(() => undefined);
+        return content;
+      } catch (error) {
+        const cached = await getCached(root, relative).catch(() => null);
+        if (cached?.kind === "text") return cached.content;
+        throw error;
+      }
     },
-    readFile: async (path) => api.readBytes(toVaultRelative(path)),
+    async writeTextFile(path, contents) {
+      const relative = toVaultRelative(path);
+      // Offline edits stay in the persistent draft store. Keep this cached
+      // server copy intact as the baseline for the later conflict comparison.
+      const result = await api.writeText(relative, contents);
+      void putCached(root, relative, { kind: "text", content: contents, mtimeMs: result.mtimeMs }).catch(() => undefined);
+    },
+    async readFile(path) {
+      const relative = toVaultRelative(path);
+      try {
+        const bytes = await api.readBytes(relative);
+        const previous = await getCached(root, relative).catch(() => null);
+        const knownMtime = previous?.kind === "text" || previous?.kind === "bytes" ? previous.mtimeMs : null;
+        void putCached(root, relative, { kind: "bytes", bytes: Array.from(bytes), mtimeMs: knownMtime }).catch(() => undefined);
+        return bytes;
+      } catch (error) {
+        const cached = await getCached(root, relative).catch(() => null);
+        if (cached?.kind === "bytes") return new Uint8Array(cached.bytes);
+        throw error;
+      }
+    },
     async writeFile(path, data) {
-      await api.writeBytes(toVaultRelative(path), data);
+      const relative = toVaultRelative(path);
+      try {
+        const result = await api.writeBytes(relative, data);
+        void putCached(root, relative, { kind: "bytes", bytes: Array.from(data), mtimeMs: result.mtimeMs }).catch(() => undefined);
+      } catch (error) {
+        void putCached(root, relative, { kind: "bytes", bytes: Array.from(data), mtimeMs: null }).catch(() => undefined);
+        throw error;
+      }
     },
     rename: async (oldPath, newPath) => api.rename(toVaultRelative(oldPath), toVaultRelative(newPath)),
     remove: async (path, options) => api.remove(toVaultRelative(path), options?.recursive === true),

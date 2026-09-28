@@ -97,7 +97,7 @@
 .tasks-category-name-edit small, .tasks-section-heading small { display: block; color: rgb(205 78 78); font-size: var(--font-ui-xs); }
 .tasks-category-row--drop-before { box-shadow: 0 -3px 0 rgba(var(--accent-rgb),0.82); }
 .tasks-category-row--drop-after { box-shadow: 0 3px 0 rgba(var(--accent-rgb),0.82); }
-.tasks-section-heading { display: flex; align-items: center; gap: 0.5rem; margin: 1.25rem 0 0.4rem; padding: 0.55rem 0.3rem; border-bottom: 1px solid rgba(var(--overlay-rgb),0.14); cursor: grab; }
+.tasks-section-heading { position: relative; display: flex; align-items: center; gap: 0.5rem; margin: 1.25rem 0 0.4rem; padding: 0.55rem 0.3rem; border-bottom: 1px solid rgba(var(--overlay-rgb),0.14); cursor: grab; }
 .tasks-section-heading:active { cursor: grabbing; }
 .tasks-section-heading--drop { background: rgba(var(--accent-rgb),0.12); border-color: rgba(var(--accent-rgb),0.65); }
 .tasks-section-heading h4 { margin: 0; font-size: var(--font-ui-md); font-weight: 650; }
