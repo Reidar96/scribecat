@@ -1828,7 +1828,7 @@ export function TasksPanel({
           <div className="tasks-filter-section">
             <div className="tasks-filter-section__heading">
               <span>{t("tasks.categories")}</span>
-              {reorderingCategories ? <Button type="button" size="icon-xs" variant="ghost" onClick={() => { setReorderingCategories(false); setPointerDraggedCategory(null); setDragOverCategory(null); }} aria-label={t("tasks.finishReorderingCategories")} title={t("tasks.finishReorderingCategories")}><Check aria-hidden="true" /></Button> : null}
+              {reorderingCategories ? <Button type="button" size="sm" variant="ghost" className="tasks-category-reorder-done" onClick={() => { setReorderingCategories(false); setPointerDraggedCategory(null); setDragOverCategory(null); }} aria-label={t("tasks.finishReorderingCategories")} title={t("tasks.finishReorderingCategories")}><Check aria-hidden="true" />{t("tasks.doneReordering")}</Button> : null}
               <button type="button" className="tasks-category-add" onClick={() => beginCategoryName()} disabled={saving || categoryDraft !== null} aria-label={t("tasks.newCategory")} title={t("tasks.newCategory")}><Plus aria-hidden="true" /></button>
             </div>
 

@@ -511,6 +511,7 @@
     "newTask": "Nytt gjøremål",
     "reorderCategories": "Endre rekkefølge på kategorier",
     "finishReorderingCategories": "Ferdig med å endre rekkefølge",
+    "doneReordering": "Ferdig",
     "dragCategory": "Dra for å endre rekkefølge",
     "categoryOptional": "Kategori (valgfritt)",
     "deadline": "Deadline",

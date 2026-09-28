@@ -665,6 +665,7 @@
     "newTask": "New task",
     "reorderCategories": "Reorder categories",
     "finishReorderingCategories": "Finish reordering",
+    "doneReordering": "Done",
     "dragCategory": "Drag to change order",
     "categoryOptional": "Category (optional)",
     "deadline": "Deadline",
