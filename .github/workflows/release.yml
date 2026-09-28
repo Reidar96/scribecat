@@ -25,11 +25,10 @@ env:
 
 jobs:
   build:
-    if: ${{ !inputs.version || matrix.platform == 'macos-latest' }}
     strategy:
       fail-fast: false
       matrix:
-        platform: [windows-latest, ubuntu-latest, macos-latest]
+        platform: ${{ inputs.version && fromJSON('["macos-latest"]') || fromJSON('["windows-latest","ubuntu-latest","macos-latest"]') }}
     runs-on: ${{ matrix.platform }}
     permissions:
       contents: write
