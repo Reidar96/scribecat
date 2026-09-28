@@ -28,7 +28,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: ${{ inputs.version && fromJSON('["macos-15-intel"]') || fromJSON('["windows-latest","ubuntu-latest","macos-latest","macos-15-intel"]') }}
+        platform: [windows-latest, ubuntu-latest, macos-latest, macos-15-intel]
     runs-on: ${{ matrix.platform }}
     permissions:
       contents: write
