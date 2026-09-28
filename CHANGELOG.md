@@ -1,4 +1,9 @@
 
+## [0.27.5] - 2026-09-28
+
+- Remove a server connection locally without prompting for Keychain access or requiring the server to be online; retain the local cleanup even if the OS credential store refuses deletion.
+- Replace the sidebar's expanding vault list with a stable, left-aligned dropdown at the bottom that shows the active folder or server name and keeps the version left-aligned below it.
+
 ## [0.27.4] - 2026-09-28
 
 - Add save and cancel controls when creating or renaming a task category, and add a quick action for a new task beside the new subcategory action.
