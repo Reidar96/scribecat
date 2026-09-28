@@ -15,6 +15,7 @@ export function NoteTrashDialog({ root, onClose }: { root: string; onClose: () =
   const [children, setChildren] = useState<Record<string, TrashedChild[]>>({});
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [deleteTarget, setDeleteTarget] = useState<TrashedNote | null>(null);
+  const [deleteAllOpen, setDeleteAllOpen] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -55,6 +56,21 @@ export function NoteTrashDialog({ root, onClose }: { root: string; onClose: () =
     } catch (cause) { setError(String(cause)); }
   };
 
+  const deleteAll = async () => {
+    setBusy(true);
+    setError("");
+    try {
+      for (const note of notes) await permanentlyDeleteTrashedNote(root, note);
+      setNotes(await listTrashedNotes(root));
+      setChildren({});
+      setExpanded(new Set());
+      setDeleteAllOpen(false);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+      setNotes(await listTrashedNotes(root).catch(() => notes));
+    } finally { setBusy(false); }
+  };
+
   const renderRow = (note: TrashedNote, subpath = "", kind = note.kind ?? "file", depth = 0): ReactNode => {
     const key = `${note.id}/${subpath}`;
     const label = subpath ? subpath.slice(subpath.lastIndexOf("/") + 1) : note.relativePath;
@@ -77,9 +93,13 @@ export function NoteTrashDialog({ root, onClose }: { root: string; onClose: () =
         <h3 id="note-trash-title">{t("trash.title")}</h3>
         {error ? <p className="note-trash__error" role="alert">{error}</p> : null}
         {loading ? <p>{t("trash.loading")}</p> : notes.length === 0 ? <p>{t("trash.empty")}</p> : <div className="note-trash__list">{notes.map((note) => renderRow(note))}</div>}
-        <div className="unsaved-dialog__actions"><Button type="button" variant="outline" onClick={onClose} disabled={busy}>{t("common.close")}</Button></div>
+        <div className="unsaved-dialog__actions">
+          {notes.length > 0 ? <Button type="button" variant="destructive" onClick={() => setDeleteAllOpen(true)} disabled={busy}>{t("trash.deleteAll")}</Button> : null}
+          <Button type="button" variant="outline" onClick={onClose} disabled={busy}>{t("common.close")}</Button>
+        </div>
       </div>
     </div>
     <DeleteFileDialog open={deleteTarget !== null} permanent kind={deleteTarget?.kind ?? "file"} fileLabel={deleteTarget?.relativePath ?? null} isDeleting={busy} onConfirm={() => { if (deleteTarget) void act(deleteTarget, "delete"); }} onCancel={() => setDeleteTarget(null)} />
+    <DeleteFileDialog open={deleteAllOpen} permanent count={notes.length} fileLabel={null} isDeleting={busy} onConfirm={() => void deleteAll()} onCancel={() => setDeleteAllOpen(false)} />
   </>, document.body);
 }

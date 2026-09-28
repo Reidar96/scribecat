@@ -789,3 +789,27 @@
   color: rgba(var(--text-rgb), 0.6);
   font-size: 0.9rem;
 }
+
+@media (max-width: 640px) {
+  .move-dialog__panel {
+    width: 100%;
+    max-width: 100%;
+    max-height: calc(100dvh - 1rem - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    padding: 1rem;
+  }
+
+  .move-dialog__list {
+    min-height: 5rem;
+    max-height: none;
+    flex: 1 1 auto;
+  }
+
+  .move-dialog__panel .unsaved-dialog__actions {
+    flex: none;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}

@@ -73,6 +73,8 @@
     "empty": "Papirkurven er tom.",
     "restore": "Gjenopprett",
     "deleteForever": "Slett permanent",
+    "deleteAll": "Tøm papirkurven",
+    "confirmDeleteAll": "Slette alle {{count}} elementene i papirkurven permanent? Dette kan ikke angres.",
     "confirmDelete": "Slette {{name}} og eventuelt gjenværende innhold permanent? Dette kan ikke angres.",
     "loading": "Laster papirkurven …"
   },

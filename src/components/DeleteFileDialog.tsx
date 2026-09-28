@@ -95,7 +95,7 @@ export function DeleteFileDialog({
                 : t("deleteDialog.eyebrow")}
         </p>
         <h3 id="delete-dialog-title">
-          {permanent ? t("trash.deleteForever") : count !== undefined && count > 1
+          {permanent && count !== undefined ? t("trash.deleteAll") : permanent ? t("trash.deleteForever") : count !== undefined && count > 1
             ? t("deleteDialog.titleMultiple")
             : kind === "folder"
               ? t("deleteDialog.titleFolder")
@@ -104,7 +104,7 @@ export function DeleteFileDialog({
                 : t("deleteDialog.title")}
         </h3>
         <p id="delete-dialog-description" className="unsaved-dialog__description">
-          {permanent ? t("trash.confirmDelete", { name: fileLabel ?? "" }) : count !== undefined && count > 1
+          {permanent && count !== undefined ? t("trash.confirmDeleteAll", { count }) : permanent ? t("trash.confirmDelete", { name: fileLabel ?? "" }) : count !== undefined && count > 1
             ? t("deleteDialog.descriptionMultiple", { count })
             : kind === "folder"
               ? fileLabel
@@ -138,7 +138,7 @@ export function DeleteFileDialog({
             onKeyDown={focusOtherButton}
             disabled={isDeleting}
           >
-            {isDeleting ? t("common.deleting") : t(permanent ? "trash.deleteForever" : "common.delete")}
+            {isDeleting ? t("common.deleting") : t(permanent && count !== undefined ? "trash.deleteAll" : permanent ? "trash.deleteForever" : "common.delete")}
           </Button>
         </div>
       </div>

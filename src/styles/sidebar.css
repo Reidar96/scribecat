@@ -2,7 +2,7 @@
 
 .sidebar-panel {
   display: grid;
-  grid-template-rows: auto auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
   /* Explicit `minmax(0, 1fr)` instead of the implicit `auto` column: an auto
      track never shrinks below the min-content contribution of its items, so a
      long vault path in the header would widen the whole column past the panel
@@ -510,3 +510,7 @@
 .sidebar-panel__trash { display: flex; align-items: center; gap: 0.5rem; width: 100%; margin-top: 0.45rem; padding: 0.55rem 0.7rem; border: 0; border-radius: 0.5rem; background: transparent; color: rgba(var(--muted-rgb),0.9); font: inherit; text-align: left; cursor: pointer; }
 .sidebar-panel__trash:hover, .sidebar-panel__trash:focus-visible { background: rgba(var(--surface-hover-rgb),0.9); color: inherit; }
 .sidebar-panel__trash svg { width: 1rem; height: 1rem; }
+.sidebar-panel__sections { display: flex; flex-direction: column; min-height: 0; }
+.sidebar-panel__tree { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; }
+.sidebar-panel__scroll { flex: 1 1 auto; }
+.sidebar-panel__version { flex: none; padding-top: 0.35rem; color: rgba(var(--muted-rgb), 0.65); font-size: var(--font-ui-xs); text-align: left; }

@@ -64,6 +64,7 @@ import type { ManualOrderMap, SortMode } from "@/lib/vaultMeta";
 import { cn } from "@/lib/utils";
 import type { MoveTreeEntryInput, WorkingSetEntry } from "@/store/useAppStore";
 import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
+import { useAppVersion } from "@/hooks/useAppVersion";
 
 /** What the "In progress" section needs from the app (see WorkingSetPanel). */
 export type WorkingSetHandlers = {
@@ -211,6 +212,7 @@ export function Sidebar({
   onClose
 }: SidebarProps) {
   const { t } = useTranslation();
+  const appVersion = useAppVersion();
   const [selectionMode, setSelectionMode] = useState(false);
   const [trashOpen, setTrashOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -912,6 +914,7 @@ export function Sidebar({
           />
         ) : null}
       </ScrollArea>
+      {appVersion ? <div className="sidebar-panel__version">v{appVersion}</div> : null}
         </section>
       </div>
       )}

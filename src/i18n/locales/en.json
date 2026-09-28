@@ -77,6 +77,8 @@
     "empty": "Trash is empty.",
     "restore": "Restore",
     "deleteForever": "Delete forever",
+    "deleteAll": "Empty trash",
+    "confirmDeleteAll": "Permanently delete all {{count}} items in Trash? This cannot be undone.",
     "confirmDelete": "Permanently delete {{name}} and any remaining contents? This cannot be undone.",
     "loading": "Loading trash …"
   },

@@ -1,4 +1,13 @@
 
+## [0.27.3] - 2026-09-28
+
+- Keep move-folder choices collapsed by default and fit the move dialog within small mobile screens.
+- Add an empty-trash action, show the app version in the sidebar, and make Zen mode start at the top and exit with Escape.
+- Cache remote-vault notes, folder listings and first journal images locally in IndexedDB for offline browsing; keep offline edits as persistent drafts so reconnecting can compare against the server version.
+- Cache journal entries and their first images in IndexedDB, refreshing entries whose file modification time changed.
+- Build macOS releases on explicit Apple Silicon and Intel runners, with Apple signing and notarization credentials supported by the release workflow.
+- Update desktop, server and Tauri release metadata to 0.27.3.
+
 ## [0.27.0] - 2026-09-28
 
 ### Desktop and server vaults
