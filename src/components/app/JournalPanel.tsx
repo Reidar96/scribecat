@@ -52,6 +52,7 @@ import {
 } from "@/lib/journal";
 import { suggestedImageFileName } from "@/lib/imageFileName";
 import { cn } from "@/lib/utils";
+import { classifyHorizontalSwipe, isTouchInHorizontalScroller, type SwipePoint } from "@/lib/swipeGesture";
 import { getVaultCapabilities, platform, vaultCapabilityHint } from "@/platform";
 import { dirname, join } from "@/platform/paths";
 import type { PickedImageFile } from "@/platform/types";
@@ -661,6 +662,23 @@ function JournalEntryView({
   const [imageError, setImageError] = useState<string | null>(null);
   const [imageDropActive, setImageDropActive] = useState(false);
   const textEditorRef = useRef<HTMLTextAreaElement>(null);
+  const swipeStart = useRef<SwipePoint | null>(null);
+  useEffect(() => {
+    const onArrow = (event: KeyboardEvent) => {
+      if (document.querySelector('[role="dialog"], [role="alertdialog"]')) return;
+      if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey ||
+        (event.target instanceof Element && event.target.closest("input, textarea, select, button, [contenteditable], [role='dialog']"))) return;
+      if (event.key === "ArrowLeft" && canPreviousDay) {
+        event.preventDefault();
+        onPreviousDay();
+      } else if (event.key === "ArrowRight" && canNextDay) {
+        event.preventDefault();
+        onNextDay();
+      }
+    };
+    window.addEventListener("keydown", onArrow);
+    return () => window.removeEventListener("keydown", onArrow);
+  }, [canPreviousDay, canNextDay, onPreviousDay, onNextDay]);
   const galleryRef = useRef<HTMLDivElement>(null);
   const addCardRef = useMasonrySpan<HTMLButtonElement>();
   const galleryItemsRef = useRef(galleryItems);
@@ -1026,7 +1044,26 @@ function JournalEntryView({
       : t("journal.nextDay");
 
   return (
-    <section className="journal-entry">
+    <section
+      className="journal-entry"
+      onTouchStart={(event) => {
+        swipeStart.current = null;
+        if (!isPhone || event.touches.length !== 1 || isTouchInHorizontalScroller(event.target)) return;
+        if ((event.target as Element).closest("textarea, input, button, [contenteditable], .journal-entry__gallery")) return;
+        const touch = event.touches[0];
+        swipeStart.current = { x: touch.clientX, y: touch.clientY, time: event.timeStamp };
+      }}
+      onTouchEnd={(event) => {
+        const start = swipeStart.current;
+        swipeStart.current = null;
+        if (!start || event.changedTouches.length !== 1) return;
+        const touch = event.changedTouches[0];
+        const direction = classifyHorizontalSwipe(start, { x: touch.clientX, y: touch.clientY, time: event.timeStamp });
+        if (direction === "right" && canPreviousDay) onPreviousDay();
+        if (direction === "left" && canNextDay) onNextDay();
+      }}
+      onTouchCancel={() => { swipeStart.current = null; }}
+    >
       {isPhone ? (
         <div className="journal-entry__mobile-nav">
           <Button
@@ -1949,7 +1986,19 @@ export function JournalPanel({
             ))}
           </div>
 
-          <div className="journal-calendar__grid">
+          <div className="journal-calendar__grid" onKeyDown={(event) => {
+            if (!(event.target instanceof HTMLButtonElement) || !event.target.classList.contains("journal-calendar__day")) return;
+            const offset = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : event.key === "ArrowDown" ? 7 : event.key === "ArrowUp" ? -7 : 0;
+            if (offset) {
+              const days = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>(".journal-calendar__day"));
+              const next = days[days.indexOf(event.target) + offset];
+              if (next) { event.preventDefault(); event.stopPropagation(); next.focus(); }
+            } else if (event.key === "Escape") {
+              event.preventDefault();
+              event.stopPropagation();
+              (event.currentTarget.parentElement?.querySelector(".journal-calendar__today-button") as HTMLElement | null)?.focus();
+            }
+          }}>
             {slots.map((day, index) => {
               if (day === null) {
                 return (

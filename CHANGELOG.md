@@ -1,4 +1,15 @@
 
+## [0.27.0] - 2026-09-28
+
+### Desktop and server vaults
+- Allow HTTP server addresses for trusted private networks such as Tailscale; keep HTTPS for public bare domains.
+- Add task categories, category order, Markdown subcategory headings and heading order, task category selection, and a configurable uncategorized task filename.
+- Show Markdown differences when a note changed on the server; keep either version and retain the other in version history when enabled.
+- Move deleted notes to a recoverable vault trash with restore and permanent deletion.
+- Enable journal swipes and keyboard navigation, keyboard navigation in tasks and calendar, the mobile PDF overview, and the note rename button on mobile.
+- Extend the graph settling animation.
+- Update desktop, server, Tauri and Docker release metadata to 0.27.0.
+
 ## [0.26.2] - 2026-09-28
 
 ### Desktop

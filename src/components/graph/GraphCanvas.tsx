@@ -418,8 +418,8 @@ export function GraphCanvas({
       const dragging = nodeDragRef.current !== null;
       if (
         dragging ||
-        (iterations < 190 &&
-          (iterations < 70 || movement > nodes.length * 0.014))
+        (iterations < 300 &&
+          (iterations < 125 || movement > nodes.length * 0.01))
       ) {
         animationFrame = window.requestAnimationFrame(step);
       }

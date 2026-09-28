@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Info } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -7,6 +7,8 @@ import { VaultScopeHeader } from "@/components/settings/VaultScopeHeader";
 import { countFolderNotes } from "@/lib/folderNotes";
 import { HEADING_NUMBERING_DEPTH_MAX } from "@/lib/editor/headingNumbers";
 import { getRelativeDisplayPath } from "@/lib/fileSystem";
+import { sanitizeTaskCategory, taskRelativePath } from "@/lib/tasks";
+import { join } from "@/platform/paths";
 import { useAppStore } from "@/store/useAppStore";
 import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
 
@@ -27,6 +29,9 @@ export function VaultSettings() {
   const setTaskSettings = useEditorSettingsStore((state) => state.setTaskSettings);
   const folderPath = useAppStore((state) => state.folderPath);
   const filePaths = useAppStore((state) => state.filePaths);
+  const renameFilePath = useAppStore((state) => state.renameFilePath);
+  const [uncategorizedDraft, setUncategorizedDraft] = useState(taskSettings.uncategorizedFileName);
+  useEffect(() => setUncategorizedDraft(taskSettings.uncategorizedFileName), [taskSettings.uncategorizedFileName]);
   const emptyFolderPaths = useAppStore((state) => state.emptyFolderPaths);
   const hiddenFolderNoteCount = useAppStore((state) => countFolderNotes(state.filePaths));
 
@@ -294,6 +299,37 @@ export function VaultSettings() {
                   ))}
                 </datalist>
               </>
+            </SettingRow>
+            <SettingRow
+              label={t("tasks.uncategorizedFileName")}
+              hint={t("tasks.uncategorizedFileHint")}
+            >
+              <input
+                type="text"
+                value={uncategorizedDraft}
+                disabled={disabled}
+                onChange={(event) => setUncategorizedDraft(event.target.value)}
+                onBlur={() => {
+                  if (!folderPath) return;
+                  const next = sanitizeTaskCategory(uncategorizedDraft);
+                  const previous = taskSettings.uncategorizedFileName;
+                  if (next === previous) return;
+                  void (async () => {
+                    const oldPath = await join(folderPath, taskRelativePath("Uten kategori", taskSettings.folder, previous));
+                    const targetPath = await join(folderPath, taskRelativePath("Uten kategori", taskSettings.folder, next));
+                    if (filePaths.includes(targetPath)) {
+                      setUncategorizedDraft(previous);
+                      window.alert(t("tasks.categoryExists", { category: next }));
+                      return;
+                    }
+                    if (filePaths.includes(oldPath) && !(await renameFilePath(oldPath, `${next}.md`))) {
+                      setUncategorizedDraft(previous);
+                      return;
+                    }
+                    setTaskSettings({ uncategorizedFileName: next });
+                  })();
+                }}
+              />
             </SettingRow>
           </div>
         </section>

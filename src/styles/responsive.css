@@ -650,13 +650,11 @@
     height: 1.05rem;
   }
 
-  /* Renaming happens in the tree on touch, next to the row being renamed:
-     the title row is the first thing truncated here, and a target that small
-     between the path and the status icons is one a finger keeps missing. The
-     pencil stays on the desktop, where it is the shortcut for the note that
-     is already open. */
+  /* Keep rename available in the open document on touch as well. */
   .detail-panel__title-edit-button {
-    display: none;
+    display: inline-flex;
+    min-width: 2.5rem;
+    min-height: 2.5rem;
   }
 
   .detail-panel__status-group button,

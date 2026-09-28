@@ -104,7 +104,7 @@ describe("saveSelectedFile with an external change", () => {
 
     expect(fsMock.writeMarkdownFile).not.toHaveBeenCalled();
     const state = useAppStore.getState();
-    expect(state.saveConflict).toEqual({ filePath: NOTE });
+    expect(state.saveConflict).toEqual({ filePath: NOTE, diskMtimeMs: 50000 });
     expect(state.isDirty).toBe(true);
     expect(state.isSaving).toBe(false);
     expect(state.saveError).toBeNull();
@@ -135,6 +135,27 @@ describe("saveSelectedFile with an external change", () => {
     expect(disk.content).toBe("# Note\n\nmine");
     expect(useAppStore.getState().saveConflict).toBeNull();
     expect(useAppStore.getState().isDirty).toBe(false);
+  });
+
+  it("keeps the disk version while preserving the local edit in version history", async () => {
+    disk.content = "# Note\n\ntheirs";
+    disk.mtimeMs = 50_000;
+    await useAppStore.getState().saveSelectedFile();
+    expect(await useAppStore.getState().keepDiskFileVersion(NOTE)).toBe(true);
+    expect(versioning.snapshotFileVersionNow).toHaveBeenCalledWith(VAULT, NOTE, "# Note\n\nmine");
+    expect(useAppStore.getState().selectedFileContent).toBe("# Note\n\ntheirs");
+    expect(useAppStore.getState().isDirty).toBe(false);
+    expect(fsMock.writeMarkdownFile).not.toHaveBeenCalled();
+  });
+
+  it("asks again when the server version changes after the conflict was shown", async () => {
+    disk.content = "# Note\n\ntheirs";
+    disk.mtimeMs = 50_000;
+    await useAppStore.getState().saveSelectedFile();
+    disk.mtimeMs = 60_000;
+    expect(await useAppStore.getState().saveSelectedFile({ force: true })).toBe(false);
+    expect(useAppStore.getState().saveConflict?.diskMtimeMs).toBe(60_000);
+    expect(fsMock.writeMarkdownFile).not.toHaveBeenCalled();
   });
 
   it("dismissSaveConflict leaves the document dirty", async () => {

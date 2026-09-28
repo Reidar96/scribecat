@@ -475,6 +475,12 @@ export function FileTree({
   };
 
   const handleTreeKeyDown = (event: React.KeyboardEvent<HTMLUListElement>) => {
+    if (event.key === "Escape" && event.target instanceof HTMLElement && event.target.getAttribute("role") === "treeitem") {
+      event.preventDefault();
+      setSelectedKeys(new Set());
+      setRangeFocusKey(null);
+      return;
+    }
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       if (flatNodes.length === 0) {
         return;

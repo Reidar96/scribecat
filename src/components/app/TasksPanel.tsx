@@ -1,6 +1,8 @@
-import { useEffect, useMemo, useRef, useState, type DragEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import {
   ArrowDownAZ,
+  ArrowDown,
+  ArrowUp,
   ArrowUpDown,
   CalendarClock,
   ChevronDown,
@@ -41,9 +43,12 @@ import { getRelativeDisplayPath, readMarkdownFile } from "@/lib/fileSystem";
 import {
   UNCATEGORIZED_TASK_CATEGORY,
   appendTaskToMarkdown,
+  appendTaskToSection,
   createTaskDocument,
   insertSubtaskInMarkdown,
   mergeTaskDocuments,
+  moveTaskToSection,
+  reorderTaskSection,
   moveSiblingTaskInMarkdown,
   moveSubtaskInMarkdown,
   normalizeTaskTags,
@@ -55,6 +60,7 @@ import {
   sanitizeTaskCategory,
   taskCategoryFromRelativePath,
   taskRelativePath,
+  taskSections,
   updateTaskInMarkdown,
   type MarkdownTask,
   type TaskPriority,
@@ -95,6 +101,7 @@ const WEEK_TASKS = "__week__";
 const MONTH_TASKS = "__month__";
 const NEXT_MONTH_TASKS = "__next-month__";
 const CATEGORY_PREFIX = "category:";
+const SECTION_PREFIX = "section:";
 const TAG_PREFIX = "tag:";
 const TASK_DRAG_MIME = "application/x-scribecat-task";
 const TASK_SUBTASK_DRAG_MIME = "application/x-scribecat-subtask";
@@ -198,6 +205,9 @@ function TaskRow({
   onNoteChange,
   onTagsChange,
   onPriorityChange,
+  categories,
+  sectionsByCategory,
+  onCategoryChange,
   onAddSubtask,
   onSubtaskDrop,
   rootDropAllowed = false,
@@ -218,6 +228,9 @@ function TaskRow({
   onNoteChange: (note: string) => void;
   onTagsChange: (tags: string[]) => void;
   onPriorityChange: (priority: TaskPriority) => void;
+  categories: string[];
+  sectionsByCategory: Record<string, string[]>;
+  onCategoryChange: (category: string) => void;
   onAddSubtask?: () => void;
   onSubtaskDrop?: (
     event: DragEvent<HTMLElement>,
@@ -265,6 +278,20 @@ function TaskRow({
   }, [autoFocusText, onAutoFocusHandled]);
 
   const todayKey = dateKey(new Date());
+  const handleRowKeyDown = (event: ReactKeyboardEvent<HTMLElement>) => {
+    if (event.target !== event.currentTarget) return;
+    if (event.key === "Enter") {
+      event.preventDefault();
+      (event.currentTarget.querySelector(".tasks-item__text, .tasks-item__check input") as HTMLElement | null)?.focus();
+    } else if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      const rows = Array.from(event.currentTarget.closest(".tasks-list")?.querySelectorAll<HTMLElement>(".tasks-item") ?? []);
+      const next = rows[rows.indexOf(event.currentTarget) + (event.key === "ArrowDown" ? 1 : -1)];
+      if (next) { event.preventDefault(); next.focus(); }
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      (event.currentTarget.closest(".tasks-view")?.querySelector(".tasks-new-trigger") as HTMLElement | null)?.focus();
+    }
+  };
   const overdue = Boolean(!task.checked && task.deadline && task.deadline < todayKey);
 
   const commitText = () => {
@@ -352,7 +379,7 @@ function TaskRow({
 
   if (isSubtask && task.checked) {
     return (
-      <article
+      <article tabIndex={0} onKeyDown={handleRowKeyDown}
         className={cn(
           "tasks-item tasks-item--subtask tasks-item--subtask-completed",
           isDragSource && "tasks-item--drag-source",
@@ -390,7 +417,7 @@ function TaskRow({
   }
 
   return (
-    <article
+    <article tabIndex={0} onKeyDown={handleRowKeyDown}
       className={cn(
         "tasks-item",
         isSubtask && "tasks-item--subtask",
@@ -456,7 +483,21 @@ function TaskRow({
 
         {!isSubtask ? (
           <div className="tasks-item__meta">
-            <span className="tasks-item__category">{task.category}</span>
+            <select
+              className="tasks-item__category"
+              value={JSON.stringify([task.category, task.section])}
+              aria-label={t("tasks.categories")}
+              onChange={(event) => onCategoryChange(event.target.value)}
+            >
+              {[...new Set([UNCATEGORIZED_TASK_CATEGORY, ...categories])].map((category) => (
+                <optgroup key={category} label={category}>
+                  <option value={JSON.stringify([category, null])}>{category}</option>
+                  {(sectionsByCategory[category] ?? []).map((section) => (
+                    <option key={section} value={JSON.stringify([category, section])}>{category} / {section}</option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
 
             <label
               className="tasks-item__deadline"
@@ -585,11 +626,12 @@ export function TasksPanel({
         const relativePath = getRelativeDisplayPath(folderPath, filePath);
         const category = taskCategoryFromRelativePath(
           relativePath,
-          taskSettings.folder
+          taskSettings.folder,
+          taskSettings.uncategorizedFileName
         );
         return category ? [{ category, filePath }] : [];
       }),
-    [filePaths, folderPath, taskSettings.folder]
+    [filePaths, folderPath, taskSettings.folder, taskSettings.uncategorizedFileName]
   );
 
   const taskFileSignature = useMemo(
@@ -672,13 +714,19 @@ export function TasksPanel({
     () =>
       Object.values(documents)
         .map((document) => document.category)
-        .sort((left, right) =>
-          left.localeCompare(right, i18n.resolvedLanguage ?? i18n.language, {
+        .sort((left, right) => {
+          const leftIndex = taskSettings.categoryOrder.indexOf(left);
+          const rightIndex = taskSettings.categoryOrder.indexOf(right);
+          if (leftIndex !== rightIndex && (leftIndex >= 0 || rightIndex >= 0)) return leftIndex < 0 ? 1 : rightIndex < 0 ? -1 : leftIndex - rightIndex;
+          return left.localeCompare(right, i18n.resolvedLanguage ?? i18n.language, {
             sensitivity: "base"
-          })
-        ),
-    [documents, i18n.language, i18n.resolvedLanguage]
+          });
+        }),
+    [documents, i18n.language, i18n.resolvedLanguage, taskSettings.categoryOrder]
   );
+  const sectionsByCategory = useMemo(() => Object.fromEntries(
+    Object.values(documents).map((document) => [document.category, taskSections(document.markdown)])
+  ) as Record<string, string[]>, [documents]);
 
   const allTasks = useMemo<TaskItem[]>(
     () =>
@@ -721,6 +769,12 @@ export function TasksPanel({
   const nextMonthKey = dateKey(nextMonthDate).slice(0, 7);
 
   const filteredRootTasks = useMemo(() => {
+    if (selectedView.startsWith(SECTION_PREFIX)) {
+      try {
+        const [category, section] = JSON.parse(selectedView.slice(SECTION_PREFIX.length)) as [string, string];
+        return rootTasks.filter((task) => task.category === category && task.section === section);
+      } catch { return rootTasks; }
+    }
     if (selectedView === TODAY_TASKS) {
       return rootTasks.filter((task) => task.deadline === todayKey);
     }
@@ -745,6 +799,13 @@ export function TasksPanel({
     if (selectedView.startsWith(CATEGORY_PREFIX)) {
       const category = selectedView.slice(CATEGORY_PREFIX.length);
       return rootTasks.filter((task) => task.category === category);
+    }
+
+    if (selectedView.startsWith(SECTION_PREFIX)) {
+      try {
+        const [category, section] = JSON.parse(selectedView.slice(SECTION_PREFIX.length)) as [string, string];
+        return rootTasks.filter((task) => task.category === category && task.section === section);
+      } catch { return rootTasks; }
     }
 
     if (selectedView.startsWith(TAG_PREFIX)) {
@@ -879,7 +940,7 @@ export function TasksPanel({
 
     return join(
       folderPath,
-      ...taskRelativePath(category, taskSettings.folder).split("/").filter(Boolean)
+      ...taskRelativePath(category, taskSettings.folder, taskSettings.uncategorizedFileName).split("/").filter(Boolean)
     );
   };
 
@@ -940,6 +1001,8 @@ export function TasksPanel({
       category = sanitizeTaskCategory(
         selectedView.slice(CATEGORY_PREFIX.length)
       );
+    } else if (selectedView.startsWith(SECTION_PREFIX)) {
+      category = (JSON.parse(selectedView.slice(SECTION_PREFIX.length)) as [string, string])[0];
     } else if (selectedView === TODAY_TASKS || selectedView === WEEK_TASKS) {
       deadline = todayKey;
     } else if (selectedView === MONTH_TASKS) {
@@ -959,9 +1022,14 @@ export function TasksPanel({
       modifiedAt: new Date().toISOString()
     };
     const existing = documents[category]?.markdown;
-    const markdown = existing
+    let markdown = existing
       ? prependTaskToMarkdown(existing, task)
       : createTaskDocument(category, task);
+    if (selectedView.startsWith(SECTION_PREFIX) && existing) {
+      const section = JSON.parse(selectedView.slice(SECTION_PREFIX.length))[1] as string;
+      const insertedTask = parseTaskMarkdown(markdown).find((candidate) => candidate.parentLineIndex === null);
+      if (insertedTask) markdown = moveTaskToSection(markdown, insertedTask.lineIndex, section);
+    }
     const inserted = parseTaskMarkdown(markdown).find(
       (candidate) => candidate.parentLineIndex === null
     );
@@ -981,6 +1049,50 @@ export function TasksPanel({
     } finally {
       setSaving(false);
     }
+  };
+
+  const addCategory = async () => {
+    if (saving) return;
+    const entered = window.prompt(t("tasks.newCategory"));
+    if (entered === null || !entered.trim()) return;
+    const category = sanitizeTaskCategory(entered);
+    if (documents[category] || category === UNCATEGORIZED_TASK_CATEGORY || category === taskSettings.uncategorizedFileName) {
+      window.alert(t("tasks.categoryExists", { category }));
+      return;
+    }
+    setSaving(true);
+    try {
+      if (await persistCategory(category, createTaskDocument(category))) setSelectedView(categoryView(category));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const addSection = async (category: string) => {
+    const entered = window.prompt(t("tasks.newSection"));
+    const section = entered?.trim().replace(/[\r\n#]+/g, " ").trim();
+    if (!section || !documents[category] || taskSections(documents[category].markdown).includes(section)) return;
+    setSaving(true);
+    try {
+      if (await persistCategory(category, `${documents[category].markdown.trimEnd()}\n\n## ${section}\n`)) {
+        setSelectedView(`${SECTION_PREFIX}${JSON.stringify([category, section])}`);
+      }
+    } finally { setSaving(false); }
+  };
+  const reorderCategory = (category: string, direction: -1 | 1) => {
+    const order = [...categories];
+    const index = order.indexOf(category);
+    const other = index + direction;
+    if (index < 0 || other < 0 || other >= order.length) return;
+    [order[index], order[other]] = [order[other], order[index]];
+    setTaskSettings({ categoryOrder: order });
+  };
+  const reorderSection = async (category: string, section: string, direction: -1 | 1) => {
+    const document = documents[category];
+    if (!document || saving) return;
+    setSaving(true);
+    try { await persistCategory(category, reorderTaskSection(document.markdown, section, direction)); }
+    finally { setSaving(false); }
   };
 
   const addSubtask = async (parent: TaskItem): Promise<void> => {
@@ -1164,10 +1276,10 @@ export function TasksPanel({
     }
   };
 
-  const moveTask = async (task: TaskItem, targetCategory: string) => {
+  const moveTask = async (task: TaskItem, targetCategory: string, targetSection: string | null = null) => {
     if (
       task.parentLineIndex !== null ||
-      task.category === targetCategory ||
+      (task.category === targetCategory && task.section === targetSection) ||
       saving
     ) {
       return;
@@ -1175,6 +1287,13 @@ export function TasksPanel({
 
     const sourceDocument = documents[task.category];
     if (!sourceDocument) return;
+
+    if (task.category === targetCategory) {
+      setSaving(true);
+      try { await persistCategory(task.category, moveTaskToSection(sourceDocument.markdown, task.lineIndex, targetSection)); }
+      finally { setSaving(false); }
+      return;
+    }
 
     const targetDocument = documents[targetCategory];
     const taskData = {
@@ -1188,7 +1307,7 @@ export function TasksPanel({
     };
 
     let targetMarkdown = targetDocument
-      ? appendTaskToMarkdown(targetDocument.markdown, taskData)
+      ? targetSection ? appendTaskToSection(targetDocument.markdown, taskData, targetSection) : appendTaskToMarkdown(targetDocument.markdown, taskData)
       : createTaskDocument(targetCategory, taskData);
 
     if (task.parentLineIndex === null) {
@@ -1196,7 +1315,7 @@ export function TasksPanel({
         .filter((candidate) => candidate.parentLineIndex === task.lineIndex)
         .sort((left, right) => left.lineIndex - right.lineIndex);
       const insertedParents = parseTaskMarkdown(targetMarkdown).filter(
-        (candidate) => candidate.parentLineIndex === null
+        (candidate) => candidate.parentLineIndex === null && candidate.text === task.text
       );
       const insertedParent = insertedParents[insertedParents.length - 1];
 
@@ -1258,6 +1377,7 @@ export function TasksPanel({
   };
 
   const renameCategory = async (category: string) => {
+    if (category === UNCATEGORIZED_TASK_CATEGORY) return;
     const document = documents[category];
     if (!document || saving) return;
 
@@ -1267,7 +1387,7 @@ export function TasksPanel({
     const nextCategory = sanitizeTaskCategory(entered);
     if (nextCategory === category) return;
 
-    if (documents[nextCategory]) {
+    if (documents[nextCategory] || nextCategory === UNCATEGORIZED_TASK_CATEGORY || nextCategory === taskSettings.uncategorizedFileName) {
       window.alert(t("tasks.categoryExists", { category: nextCategory }));
       return;
     }
@@ -1282,7 +1402,7 @@ export function TasksPanel({
 
       const nextFilePath = await join(
         folderPath,
-        ...taskRelativePath(nextCategory, taskSettings.folder).split("/").filter(Boolean)
+        ...taskRelativePath(nextCategory, taskSettings.folder, taskSettings.uncategorizedFileName).split("/").filter(Boolean)
       );
       const nextMarkdown = renameTaskDocumentHeading(
         document.markdown,
@@ -1432,6 +1552,10 @@ export function TasksPanel({
   };
 
   const heading = useMemo(() => {
+    if (selectedView.startsWith(SECTION_PREFIX)) {
+      try { return (JSON.parse(selectedView.slice(SECTION_PREFIX.length)) as [string, string])[1]; }
+      catch { return t("tasks.all"); }
+    }
     if (selectedView === TODAY_TASKS) return t("tasks.today");
     if (selectedView === WEEK_TASKS) return t("tasks.week");
     if (selectedView === MONTH_TASKS) return t("tasks.month");
@@ -1500,7 +1624,17 @@ export function TasksPanel({
       </header>
 
       <div className="tasks-view__layout">
-        <aside className="tasks-categories">
+        <aside className="tasks-categories" onKeyDown={(event) => {
+          if (!(event.target instanceof HTMLButtonElement)) return;
+          if (event.key === "Escape") {
+            event.preventDefault();
+            event.currentTarget.querySelector<HTMLButtonElement>(".tasks-new-trigger")?.focus();
+          } else if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+            const buttons = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>("button:not(:disabled)"));
+            const next = buttons[buttons.indexOf(event.target) + (event.key === "ArrowDown" ? 1 : -1)];
+            if (next) { event.preventDefault(); next.focus(); }
+          }
+        }}>
           <div className="tasks-filter-section">
             <Button
               type="button"
@@ -1554,9 +1688,10 @@ export function TasksPanel({
           <div className="tasks-filter-section">
             <div className="tasks-filter-section__heading">
               <span>{t("tasks.categories")}</span>
+              <button type="button" className="tasks-category-add" onClick={() => void addCategory()} disabled={saving} aria-label={t("tasks.newCategory")} title={t("tasks.newCategory")}><Plus aria-hidden="true" /></button>
             </div>
 
-            {categories.map((category) => {
+            {categories.map((category, categoryIndex) => {
               const active = selectedView === categoryView(category);
               const dropActive = dragOverCategory === category;
 
@@ -1608,6 +1743,15 @@ export function TasksPanel({
                     <span>{category}</span>
                     <small>{categoryCounts.get(category) ?? 0}</small>
                   </button>
+                  <div className="tasks-order-actions">
+                    <button type="button" disabled={categoryIndex === 0} onClick={() => reorderCategory(category, -1)} aria-label={`${t("tasks.moveUp")}: ${category}`}><ArrowUp aria-hidden="true" /></button>
+                    <button type="button" disabled={categoryIndex === categories.length - 1} onClick={() => reorderCategory(category, 1)} aria-label={`${t("tasks.moveDown")}: ${category}`}><ArrowDown aria-hidden="true" /></button>
+                  </div>
+                  <button type="button" className="tasks-category-add" onClick={() => void addSection(category)} disabled={saving} aria-label={`${t("tasks.newSection")}: ${category}`} title={t("tasks.newSection")}><Plus aria-hidden="true" /></button>
+                  {(sectionsByCategory[category] ?? []).map((section, sectionIndex) => {
+                    const view = `${SECTION_PREFIX}${JSON.stringify([category, section])}`;
+                    return <div key={section} className="tasks-section-row"><button type="button" className={cn("tasks-category tasks-category--section", selectedView === view && "tasks-category--active")} onClick={() => setSelectedView(view)} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); const task = taskFromDrop(event); if (task) void moveTask(task, category, section); }}><span>{section}</span><small>{rootTasks.filter((task) => task.category === category && task.section === section).length}</small></button><div className="tasks-order-actions"><button type="button" disabled={sectionIndex === 0 || saving} onClick={() => void reorderSection(category, section, -1)} aria-label={`${t("tasks.moveUp")}: ${section}`}><ArrowUp aria-hidden="true" /></button><button type="button" disabled={sectionIndex === sectionsByCategory[category].length - 1 || saving} onClick={() => void reorderSection(category, section, 1)} aria-label={`${t("tasks.moveDown")}: ${section}`}><ArrowDown aria-hidden="true" /></button></div></div>;
+                  })}
                 </div>
               );
             })}
@@ -1693,6 +1837,7 @@ export function TasksPanel({
               {selectedCategory ? (
                 <>
                   <div className="tasks-category-actions__desktop">
+                    {selectedCategory !== UNCATEGORIZED_TASK_CATEGORY ? (
                     <Button
                       type="button"
                       size="sm"
@@ -1706,6 +1851,7 @@ export function TasksPanel({
                       <Pencil />
                       <span>{t("tasks.renameCategoryAction")}</span>
                     </Button>
+                    ) : null}
                     {selectedCategory !== UNCATEGORIZED_TASK_CATEGORY ? (
                       <Button
                         type="button"
@@ -1741,13 +1887,13 @@ export function TasksPanel({
                     <MenuPortal>
                       <MenuPositioner align="end">
                         <MenuPopup>
-                          <MenuItem
+                          {selectedCategory !== UNCATEGORIZED_TASK_CATEGORY ? <MenuItem
                             className="tasks-category-actions__mobile-item"
                             onClick={() => void renameCategory(selectedCategory)}
                           >
                             <Pencil className="size-4" aria-hidden="true" />
                             {t("tasks.renameCategoryAction")}
-                          </MenuItem>
+                          </MenuItem> : null}
                           <MenuItem onClick={() => void duplicateCategory(selectedCategory)}>
                             <Copy className="size-4" aria-hidden="true" />
                             {t("tasks.duplicateCategoryAction")}
@@ -1773,6 +1919,15 @@ export function TasksPanel({
               ) : null}
             </div>
           </div>
+
+          {selectedCategory ? <div className="tasks-sections-main" aria-label={t("tasks.newSection")}>
+            {(sectionsByCategory[selectedCategory] ?? []).map((section, index, list) => <div key={section} className="tasks-sections-main__item">
+              <button type="button" onClick={() => setSelectedView(`${SECTION_PREFIX}${JSON.stringify([selectedCategory, section])}`)}>{section}</button>
+              <button type="button" disabled={index === 0 || saving} onClick={() => void reorderSection(selectedCategory, section, -1)} aria-label={`${t("tasks.moveUp")}: ${section}`}><ArrowUp aria-hidden="true" /></button>
+              <button type="button" disabled={index === list.length - 1 || saving} onClick={() => void reorderSection(selectedCategory, section, 1)} aria-label={`${t("tasks.moveDown")}: ${section}`}><ArrowDown aria-hidden="true" /></button>
+            </div>)}
+            <button type="button" onClick={() => void addSection(selectedCategory)} disabled={saving}><Plus aria-hidden="true" />{t("tasks.newSection")}</button>
+          </div> : null}
 
           {visibleActiveTasks.length === 0 ? (
             <div className="tasks-empty tasks-empty--active">
@@ -1822,6 +1977,9 @@ export function TasksPanel({
                     onPriorityChange={(priority) =>
                       void mutateTask(task, "priority", priority)
                     }
+                    categories={categories}
+                    sectionsByCategory={sectionsByCategory}
+                    onCategoryChange={(value) => { const [category, section] = JSON.parse(value) as [string, string | null]; void moveTask(task, category, section); }}
                     autoFocusText={focusTaskKey === taskItemKey(task)}
                     onAutoFocusHandled={() => setFocusTaskKey(null)}
                     onAddSubtask={
@@ -1925,6 +2083,9 @@ export function TasksPanel({
                         onPriorityChange={(priority) =>
                           void mutateTask(task, "priority", priority)
                         }
+                        categories={categories}
+                        sectionsByCategory={sectionsByCategory}
+                        onCategoryChange={(value) => { const [category, section] = JSON.parse(value) as [string, string | null]; void moveTask(task, category, section); }}
                         onSubtaskDrop={
                           isSubtask
                             ? (event, placement) => {
@@ -1976,7 +2137,7 @@ export function TasksPanel({
           title={categoryContextMenu.category}
           onClick={(event) => event.stopPropagation()}
         >
-          <button
+          {categoryContextMenu.category !== UNCATEGORIZED_TASK_CATEGORY ? <button
             type="button"
             role="menuitem"
             className="file-tree-context-menu__item"
@@ -1988,7 +2149,7 @@ export function TasksPanel({
           >
             <Pencil aria-hidden="true" />
             {t("tasks.renameCategoryAction")}
-          </button>
+          </button> : null}
           <button
             type="button"
             role="menuitem"

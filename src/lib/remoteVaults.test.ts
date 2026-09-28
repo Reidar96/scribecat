@@ -78,13 +78,14 @@ describe("normalizeServerUrl", () => {
   it("accepts https, bare hosts and localhost over http, and strips what is not identity", () => {
     expect(remoteVaults.normalizeServerUrl("https://notes.example.com/")).toBe("https://notes.example.com");
     expect(remoteVaults.normalizeServerUrl("notes.example.com/anna/")).toBe("https://notes.example.com/anna");
-    expect(remoteVaults.normalizeServerUrl("192.168.1.50:8443")).toBe("https://192.168.1.50:8443");
+    expect(remoteVaults.normalizeServerUrl("192.168.1.50:8443")).toBe("http://192.168.1.50:8443");
+    expect(remoteVaults.normalizeServerUrl("host.tailnet.ts.net:3000")).toBe("http://host.tailnet.ts.net:3000");
     expect(remoteVaults.normalizeServerUrl("https://Notes.Example.com:9443/?x=1#y")).toBe("https://notes.example.com:9443");
     expect(remoteVaults.normalizeServerUrl("http://localhost:3000")).toBe("http://localhost:3000");
   });
 
-  it("refuses plain http elsewhere and non-URLs", () => {
-    expect(() => remoteVaults.normalizeServerUrl("http://192.168.1.5")).toThrow("remoteVaults.urlMustBeHttps");
+  it("allows an explicit HTTP address and refuses non-URLs", () => {
+    expect(remoteVaults.normalizeServerUrl("http://192.168.1.5")).toBe("http://192.168.1.5");
     expect(() => remoteVaults.normalizeServerUrl("ftp://notes.example.com")).toThrow("remoteVaults.invalidUrl");
     expect(() => remoteVaults.normalizeServerUrl("")).toThrow("remoteVaults.invalidUrl");
   });

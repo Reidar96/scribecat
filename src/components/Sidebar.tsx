@@ -45,6 +45,7 @@ import {
   MenuTrigger
 } from "@/components/ui/menu";
 import { FileTree, type BatchEntry, type PendingEntryRename } from "@/components/FileTree";
+import { NoteTrashDialog } from "@/components/NoteTrashDialog";
 import type { VaultIconMap } from "@/lib/vaultIcons";
 import { WorkingSetPanel } from "@/components/sidebar/WorkingSetPanel";
 import { TagsOverview } from "@/components/sidebar/TagsOverview";
@@ -211,6 +212,7 @@ export function Sidebar({
 }: SidebarProps) {
   const { t } = useTranslation();
   const [selectionMode, setSelectionMode] = useState(false);
+  const [trashOpen, setTrashOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [collapseFoldersRequestId, setCollapseFoldersRequestId] = useState(0);
   const journalSettings = useEditorSettingsStore((state) => state.journalSettings);
@@ -421,6 +423,7 @@ export function Sidebar({
         </div>
 
         <div className="sidebar-panel__actions">
+          <Button type="button" variant="outline" size="sm" disabled={!folderPath} onClick={() => setTrashOpen(true)} aria-label={t("trash.title")} title={t("trash.title")}><Trash2 /></Button>
           <Button
             type="button"
             variant="outline"
@@ -682,6 +685,7 @@ export function Sidebar({
         </div>
       ) : null}
 
+      {trashOpen && folderPath ? <NoteTrashDialog root={folderPath} onClose={() => setTrashOpen(false)} /> : null}
       {rootContextMenu && folderPath !== null && (offersExport || offersVaultArchive)
         ? createPortal(
             <div

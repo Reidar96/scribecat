@@ -141,6 +141,7 @@ function App() {
   const saveError = useAppStore((state) => state.saveError);
   const saveConflict = useAppStore((state) => state.saveConflict);
   const dismissSaveConflict = useAppStore((state) => state.dismissSaveConflict);
+  const keepDiskFileVersion = useAppStore((state) => state.keepDiskFileVersion);
   const workingSet = useAppStore((state) => state.workingSet);
   const pinWorkingSetEntry = useAppStore((state) => state.pinWorkingSetEntry);
   const unpinWorkingSetEntry = useAppStore((state) => state.unpinWorkingSetEntry);
@@ -1597,6 +1598,9 @@ function App() {
         onDiscardAndClose={workingSetActions.discardAndClose}
         onCancelClose={workingSetActions.cancelClose}
         saveConflictFileLabel={saveConflict ? labelNotePath(saveConflict.filePath) : null}
+        saveConflictFilePath={saveConflict?.filePath ?? null}
+        saveConflictDiskMtimeMs={saveConflict?.diskMtimeMs}
+        saveConflictLocalContent={saveConflict?.filePath === selectedFilePath ? selectedFileContent ?? "" : saveConflict ? useAppStore.getState().fileDocuments[saveConflict.filePath]?.content ?? "" : ""}
         isSaving={isSaving}
         onOverwriteConflict={() => {
           // The answer belongs to the note the question was asked about.
@@ -1607,6 +1611,7 @@ function App() {
           }
         }}
         onDismissConflict={dismissSaveConflict}
+        onKeepDiskConflict={() => { if (saveConflict) void keepDiskFileVersion(saveConflict.filePath); }}
         isSettingsOpen={isSettingsOpen}
         settingsInitialTab={settingsInitialTab}
         onCloseSettings={() => setIsSettingsOpen(false)}

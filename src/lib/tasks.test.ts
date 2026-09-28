@@ -11,6 +11,9 @@ import {
   insertSubtaskInMarkdown,
   moveSiblingTaskInMarkdown,
   moveSubtaskInMarkdown,
+  moveTaskToSection,
+  reorderTaskSection,
+  taskSections,
   prependTaskToMarkdown,
   removeTaskFromMarkdown,
   renameTaskDocumentHeading,
@@ -353,6 +356,8 @@ describe("tasks markdown", () => {
   it("normalizes vault task settings with folder and hidden storage defaults", () => {
     expect(normalizeTaskSettings(undefined)).toEqual({
       folder: "Gjøremål",
+      uncategorizedFileName: "Uten kategori",
+      categoryOrder: [],
       hideFromSidebar: true,
       sortMode: "manual"
     });
@@ -364,6 +369,8 @@ describe("tasks markdown", () => {
       })
     ).toEqual({
       folder: "Oppgaver / Privat",
+      uncategorizedFileName: "Uten kategori",
+      categoryOrder: [],
       hideFromSidebar: false,
       sortMode: "date"
     });
@@ -376,6 +383,8 @@ describe("tasks markdown", () => {
       })
     ).toEqual({
       folder: "Oppgaver / Privat",
+      uncategorizedFileName: "Uten kategori",
+      categoryOrder: [],
       hideFromSidebar: false,
       sortMode: "date"
     });
@@ -385,6 +394,14 @@ describe("tasks markdown", () => {
     expect(renameTaskDocumentHeading("# Jobb\n\n- [ ] Lever\n", "Kunder")).toBe(
       "# Kunder\n\n- [ ] Lever\n"
     );
+  });
+
+  it("keeps subcategory order and task membership in Markdown", () => {
+    const source = "# Jobb\n\n- [ ] Uten\n\n## Først\n\n- [ ] A\n  - [ ] Barn\n\n## Sist\n\n- [ ] B\n";
+    expect(taskSections(source)).toEqual(["Først", "Sist"]);
+    const moved = moveTaskToSection(source, 2, "Sist");
+    expect(parseTaskMarkdown(moved).find((task) => task.text === "Uten")?.section).toBe("Sist");
+    expect(reorderTaskSection(source, "Sist", -1).indexOf("## Sist")).toBeLessThan(reorderTaskSection(source, "Sist", -1).indexOf("## Først"));
   });
 
   it("merges category bodies without losing task markdown", () => {

@@ -7,12 +7,16 @@ export type TaskSortMode = "name" | "date" | "manual";
 
 export type TaskSettings = {
   folder: string;
+  uncategorizedFileName: string;
+  categoryOrder: string[];
   hideFromSidebar: boolean;
   sortMode: TaskSortMode;
 };
 
 export const DEFAULT_TASK_SETTINGS: TaskSettings = {
   folder: TASKS_FOLDER_NAME,
+  uncategorizedFileName: UNCATEGORIZED_TASK_CATEGORY,
+  categoryOrder: [],
   hideFromSidebar: true,
   sortMode: "manual"
 };
@@ -36,6 +40,13 @@ export function normalizeTaskSettings(value: unknown): TaskSettings {
       typeof record.folder === "string" && cleanTaskFolder(record.folder)
         ? cleanTaskFolder(record.folder)
         : DEFAULT_TASK_SETTINGS.folder,
+    uncategorizedFileName:
+      typeof record.uncategorizedFileName === "string"
+        ? sanitizeTaskCategory(record.uncategorizedFileName)
+        : UNCATEGORIZED_TASK_CATEGORY,
+    categoryOrder: Array.isArray(record.categoryOrder)
+      ? [...new Set(record.categoryOrder.filter((name): name is string => typeof name === "string").map(sanitizeTaskCategory))]
+      : [],
     hideFromSidebar: record.hideFromSidebar !== false,
     sortMode:
       record.sortMode === "name" || record.sortMode === "date" || record.sortMode === "manual"
@@ -64,6 +75,8 @@ export type MarkdownTask = {
   indent: number;
   /** The nearest preceding task with a smaller indent, when this is a subtask. */
   parentLineIndex: number | null;
+  /** Nearest level-two Markdown heading in the category file. */
+  section?: string;
 };
 
 export type NewMarkdownTask = {
@@ -137,15 +150,18 @@ export function normalizeTaskTags(tags: string[]): string[] {
 
 export function taskRelativePath(
   category: string,
-  folder = TASKS_FOLDER_NAME
+  folder = TASKS_FOLDER_NAME,
+  uncategorizedFileName = UNCATEGORIZED_TASK_CATEGORY
 ): string {
   const normalizedFolder = cleanTaskFolder(folder) || TASKS_FOLDER_NAME;
-  return `${normalizedFolder}/${sanitizeTaskCategory(category)}.md`;
+  const name = category === UNCATEGORIZED_TASK_CATEGORY ? uncategorizedFileName : category;
+  return `${normalizedFolder}/${sanitizeTaskCategory(name)}.md`;
 }
 
 export function taskCategoryFromRelativePath(
   relativePath: string,
-  folder = TASKS_FOLDER_NAME
+  folder = TASKS_FOLDER_NAME,
+  uncategorizedFileName = UNCATEGORIZED_TASK_CATEGORY
 ): string | null {
   const normalized = normalizeRelativePath(relativePath);
   const normalizedFolder = cleanTaskFolder(folder) || TASKS_FOLDER_NAME;
@@ -160,7 +176,8 @@ export function taskCategoryFromRelativePath(
     return null;
   }
 
-  return sanitizeTaskCategory(tail);
+  const name = sanitizeTaskCategory(tail);
+  return name === sanitizeTaskCategory(uncategorizedFileName) ? UNCATEGORIZED_TASK_CATEGORY : name;
 }
 
 export function isTaskRelativePath(
@@ -256,10 +273,13 @@ export function parseTaskMarkdown(markdown: string): MarkdownTask[] {
   const lines = markdown.split(/\r?\n/);
   const tasks: MarkdownTask[] = [];
   const stack: Array<{ lineIndex: number; indent: number }> = [];
+  let section: string | null = null;
 
   for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
     const match = TASK_LINE_PATTERN.exec(lines[lineIndex]);
     if (!match) {
+      const heading = /^##\s+(.+?)\s*$/.exec(lines[lineIndex]);
+      if (heading) section = heading[1];
       if (lines[lineIndex].trim() && !TASK_NOTE_PATTERN.test(lines[lineIndex])) {
         stack.length = 0;
       }
@@ -287,7 +307,8 @@ export function parseTaskMarkdown(markdown: string): MarkdownTask[] {
       priority: parsed.priority,
       ...(parsed.modifiedAt ? { modifiedAt: parsed.modifiedAt } : {}),
       indent,
-      parentLineIndex
+      parentLineIndex,
+      ...(section ? { section } : {})
     });
 
     stack.push({ lineIndex, indent });
@@ -295,6 +316,57 @@ export function parseTaskMarkdown(markdown: string): MarkdownTask[] {
   }
 
   return tasks;
+}
+
+export function taskSections(markdown: string): string[] {
+  return [...new Set(markdown.split(/\r?\n/).flatMap((line) => {
+    const heading = /^##\s+(.+?)\s*$/.exec(line);
+    return heading ? [heading[1]] : [];
+  }))];
+}
+
+export function reorderTaskSection(markdown: string, section: string, direction: -1 | 1): string {
+  const lines = markdown.split(/\r?\n/);
+  const starts = lines.flatMap((line, index) => /^##\s+/.test(line) ? [index] : []);
+  const index = starts.findIndex((start) => lines[start] === `## ${section}`);
+  const other = index + direction;
+  if (index < 0 || other < 0 || other >= starts.length) return markdown;
+  const preamble = lines.slice(0, starts[0]);
+  const blocks = starts.map((start, i) => lines.slice(start, starts[i + 1] ?? lines.length));
+  [blocks[index], blocks[other]] = [blocks[other], blocks[index]];
+  return [...preamble, ...blocks.flat()].join("\n");
+}
+
+/** Move a task and its subtasks under an existing Markdown heading. */
+export function moveTaskToSection(markdown: string, lineIndex: number, section: string | null): string {
+  const task = parseTaskMarkdown(markdown).find((item) => item.lineIndex === lineIndex);
+  if (!task || task.parentLineIndex !== null || (task.section ?? null) === section) return markdown;
+  const lines = markdown.split(/\r?\n/);
+  const following = parseTaskMarkdown(markdown).find((item) => item.lineIndex > lineIndex && item.parentLineIndex === null);
+  const nextHeading = lines.findIndex((line, index) => index > lineIndex && /^##\s+/.test(line));
+  const end = Math.min(following?.lineIndex ?? lines.length, nextHeading < 0 ? lines.length : nextHeading);
+  const blockEnd = end < 0 ? lines.length : end;
+  const block = lines.splice(lineIndex, blockEnd - lineIndex);
+  while (block.length && !block[block.length - 1].trim()) block.pop();
+  let insertAt = lines.length;
+  if (section !== null) {
+    const heading = lines.findIndex((line) => line === `## ${section}`);
+    if (heading < 0) return markdown;
+    const nextHeading = lines.findIndex((line, index) => index > heading && /^##\s+/.test(line));
+    insertAt = nextHeading < 0 ? lines.length : nextHeading;
+  } else {
+    const firstHeading = lines.findIndex((line) => /^##\s+/.test(line));
+    if (firstHeading >= 0) insertAt = firstHeading;
+  }
+  lines.splice(insertAt, 0, "", ...block, "");
+  return `${lines.join("\n").trimEnd()}\n`;
+}
+
+export function appendTaskToSection(markdown: string, task: NewMarkdownTask, section: string): string {
+  const appended = appendTaskToMarkdown(markdown, task);
+  const parsed = parseTaskMarkdown(appended);
+  const inserted = parsed[parsed.length - 1];
+  return inserted ? moveTaskToSection(appended, inserted.lineIndex, section) : appended;
 }
 
 export function formatTaskLine(task: NewMarkdownTask): string {

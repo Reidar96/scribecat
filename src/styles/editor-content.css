@@ -1629,10 +1629,10 @@
 
 @media (max-width: 700px) {
   .pdf-preview__actions > .pdf-preview__copy-button,
-  .pdf-preview__actions > .pdf-preview__view-switch,
   .pdf-preview__actions > .pdf-preview__split-button {
     display: none;
   }
+  .pdf-preview__actions > .pdf-preview__split-button { display: none !important; }
 
   .document-preview-modal {
     padding: 0.45rem;
@@ -1745,9 +1745,9 @@
   }
 
   .pdf-preview__actions > .pdf-preview__copy-button,
-  .pdf-preview__actions > .pdf-preview__view-switch,
   .pdf-preview__actions > .pdf-preview__split-button {
     display: none;
   }
+  .pdf-preview__actions > .pdf-preview__split-button { display: none !important; }
 
 }
