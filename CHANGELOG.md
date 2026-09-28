@@ -1,3 +1,8 @@
+## [0.27.6] - 2026-09-28
+
+- Save macOS server access tokens in an app-private file with current-user-only permissions to avoid login-keychain password prompts. Existing server connections need one sign-in after updating; the password is exchanged for a token and is not stored. Windows and Linux continue using their OS credential stores.
+- Add breathing room above the sidebar folder/server selector and pin the selector and version label to the bottom of the sidebar.
+
 
 ## [0.27.5] - 2026-09-28
 
