@@ -212,6 +212,10 @@
   font-size: 0.8rem;
   line-height: 1.55;
 }
+.note-trash { width: min(42rem, 96vw); }
+.note-trash__list { max-height: 50vh; overflow: auto; }
+.note-trash__row { display: flex; align-items: center; gap: 0.4rem; padding: 0.4rem 0; }
+.note-trash__row span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 
 .version-diff__message {
   margin: 0;

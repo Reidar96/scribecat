@@ -7,23 +7,6 @@ import { isRemoteVaultPath, remoteVaultRootFor } from "@/platform/remote/vaultRo
 export { isRemoteVaultPath };
 export type { RemoteAccessToken };
 
-function isHttpsUrl(input: string): boolean {
-  try {
-    return new URL(input).protocol === "https:";
-  } catch {
-    return false;
-  }
-}
-
-function isLocalServerUrl(input: string): boolean {
-  try {
-    const host = new URL(input).hostname.toLowerCase();
-    return host === "localhost" || host === "127.0.0.1" || host === "::1";
-  } catch {
-    return false;
-  }
-}
-
 /**
  * Server vaults in the desktop app: the list of servers the user added, the
  * token flow against each, and the switch that makes the store read and write
@@ -53,26 +36,21 @@ export type RemoteVaultEntry = {
 
 const STORAGE_KEY = "scribecat:remoteVaults";
 
-/**
- * Remote vaults require HTTPS except for a server on the same machine. Returns the URL in the form
- * the identity is built from.
- */
+/** Preserve an explicit transport choice, including HTTP on a trusted Tailscale network. */
 export function normalizeServerUrl(input: string): string {
   const trimmed = input.trim();
   let url: URL;
 
   try {
-    url = new URL(/^[a-z]+:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`);
+    const bareHost = trimmed.split(/[/:]/, 1)[0].toLowerCase();
+    const trustedNetwork = bareHost === "localhost" || /^(?:\d{1,3}\.){3}\d{1,3}$/.test(bareHost) || bareHost.endsWith(".ts.net");
+    url = new URL(/^[a-z]+:\/\//i.test(trimmed) ? trimmed : `${trustedNetwork ? "http" : "https"}://${trimmed}`);
   } catch {
     throw new Error(i18n.t("remoteVaults.invalidUrl"));
   }
 
   if (url.protocol !== "https:" && url.protocol !== "http:") {
     throw new Error(i18n.t("remoteVaults.invalidUrl"));
-  }
-
-  if (!isHttpsUrl(url.toString()) && !isLocalServerUrl(url.toString())) {
-    throw new Error(i18n.t("remoteVaults.urlMustBeHttps"));
   }
 
   url.search = "";

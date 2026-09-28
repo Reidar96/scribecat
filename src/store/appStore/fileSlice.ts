@@ -13,6 +13,7 @@ import {
   writeMarkdownFile
 } from "@/lib/fileSystem";
 import { readVersionContent } from "@/lib/fileVersions";
+import { trashNote } from "@/lib/noteTrash";
 import { getFolderNotePath, isFolderNotePath } from "@/lib/folderNotes";
 import { removeDocumentLockPath, renameDocumentLockPath, setDocumentLock as updateDocumentLockMap } from "@/lib/documentLocks";
 import { readDocumentLocks, writeDocumentLocks } from "@/lib/vaultMeta";
@@ -41,7 +42,6 @@ import type { AppSlice, FileSlice } from "./types";
 import { addWorkingSetEntry, hasWorkingSetEntry, remapWorkingSetPaths, removeWorkingSetEntry } from "./workingSet";
 import { persistWorkingSet, shouldAutoAdmitWorkingSet } from "./workingSetSlice";
 import {
-  deleteFileVersionHistory,
   moveFileVersionHistory,
   snapshotFileVersion,
   snapshotFileVersionNow
@@ -370,10 +370,16 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
 
     const previousBaseContent = previousDocument?.baseContent ?? selectedFileContent;
 
+    const pendingConflict = get().saveConflict;
     set({ isSaving: true, saveError: null, saveConflict: null });
 
     try {
       const currentMtimeMs = await readMarkdownFileMtime(selectedFilePath);
+
+      if (options?.force && pendingConflict?.filePath === selectedFilePath && pendingConflict.diskMtimeMs !== currentMtimeMs) {
+        set({ isSaving: false, saveConflict: { filePath: selectedFilePath, diskMtimeMs: currentMtimeMs } });
+        return false;
+      }
 
       if (!options?.force && isExternallyModified(previousDocument?.baseMtimeMs, currentMtimeMs)) {
         // Someone else's version is on disk. A manual save asks; an
@@ -382,7 +388,7 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
         // (the draft carries it) until the next manual save.
         set({
           isSaving: false,
-          saveConflict: options?.trigger === "auto" ? null : { filePath: selectedFilePath }
+          saveConflict: options?.trigger === "auto" ? null : { filePath: selectedFilePath, diskMtimeMs: currentMtimeMs }
         });
 
         return false;
@@ -488,6 +494,30 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
   },
   dismissSaveConflict: () => {
     set({ saveConflict: null });
+  },
+  keepDiskFileVersion: async (filePath) => {
+    const { folderPath, fileDocuments } = get();
+    const local = filePath === get().selectedFilePath ? get().selectedFileContent : fileDocuments[filePath]?.content;
+    try {
+      const [disk, mtime] = await Promise.all([readMarkdownFile(filePath), readMarkdownFileMtime(filePath)]);
+      if (local !== null && local !== undefined && local !== disk) {
+        await snapshotFileVersionNow(folderPath, filePath, local);
+      }
+      discardDraft(folderPath, filePath);
+      const current = get();
+      set({
+        fileDocuments: { ...current.fileDocuments, [filePath]: { content: disk, baseContent: disk, baseMtimeMs: mtime } },
+        ...(current.selectedFilePath === filePath ? {
+          selectedFileContent: disk, selectedFileBaseContent: disk, isDirty: false
+        } : {}),
+        saveConflict: null,
+        saveError: null
+      });
+      return true;
+    } catch (error) {
+      set({ saveError: toErrorMessage(error, i18n.t("store.fileReadError")) });
+      return false;
+    }
   },
   // Restoring writes the version's content into the open document and saves
   // it, which creates a *new* version on top of the history. Nothing in the
@@ -971,8 +1001,6 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
     const { fileDocuments, selectedFilePath, folderPath } = get();
 
     try {
-      const contentBeforeDelete =
-        fileDocuments[filePath]?.baseContent ?? (await readMarkdownFile(filePath).catch(() => ""));
       // A folder note that was opened but never saved has nothing on disk;
       // "deleting" it only closes the empty document.
       const isUnwrittenFolderNote =
@@ -980,26 +1008,11 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
         !get().filePaths.some((path) => normalizePathKey(path) === normalizePathKey(filePath));
 
       if (!isUnwrittenFolderNote) {
-        await deleteMarkdownFile(filePath);
+        if (folderPath) await trashNote(folderPath, filePath);
+        else await deleteMarkdownFile(filePath);
       }
 
-      deleteFileVersionHistory(folderPath, filePath);
       discardDraft(folderPath, filePath);
-
-      if (folderPath) {
-        void cleanupOrphanedImages(
-          folderPath,
-          filePath,
-          contentBeforeDelete,
-          "",
-          Object.fromEntries(
-            Object.entries(fileDocuments).map(([path, document]) => [
-              path,
-              document.content
-            ])
-          )
-        ).catch(() => undefined);
-      }
 
       const nextDocuments = { ...fileDocuments };
       delete nextDocuments[filePath];

@@ -1,6 +1,6 @@
 [package]
 name = "scribecat"
-version = "0.26.2"
+version = "0.27.0"
 description = "A local Markdown editor"
 authors = ["snooky234"]
 license = "MIT"
@@ -53,4 +53,3 @@ base64 = "0.22"
 [target.'cfg(windows)'.dependencies]
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
-

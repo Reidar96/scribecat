@@ -23,8 +23,12 @@ type AppDialogsProps = {
 
   // A save that met an external change to the file (store: saveConflict)
   saveConflictFileLabel: string | null;
+  saveConflictFilePath: string | null;
+  saveConflictDiskMtimeMs?: number | null;
+  saveConflictLocalContent: string;
   isSaving: boolean;
   onOverwriteConflict: () => void;
+  onKeepDiskConflict: () => void;
   onDismissConflict: () => void;
 
   // Settings
@@ -80,8 +84,12 @@ export function AppDialogs({
   onDiscardAndClose,
   onCancelClose,
   saveConflictFileLabel,
+  saveConflictFilePath,
+  saveConflictDiskMtimeMs,
+  saveConflictLocalContent,
   isSaving,
   onOverwriteConflict,
+  onKeepDiskConflict,
   onDismissConflict,
   isSettingsOpen,
   settingsInitialTab,
@@ -130,8 +138,12 @@ export function AppDialogs({
       <SaveConflictDialog
         open={saveConflictFileLabel !== null}
         fileLabel={saveConflictFileLabel}
+        filePath={saveConflictFilePath}
+        diskMtimeMs={saveConflictDiskMtimeMs}
+        localContent={saveConflictLocalContent}
         isSaving={isSaving}
         onOverwrite={onOverwriteConflict}
+        onKeepDisk={onKeepDiskConflict}
         onCancel={onDismissConflict}
       />
 

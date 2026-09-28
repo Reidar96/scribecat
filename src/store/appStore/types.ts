@@ -25,6 +25,7 @@ export type FileDocumentState = {
  */
 export type SaveConflict = {
   filePath: string;
+  diskMtimeMs?: number | null;
 };
 
 export type MoveTreeEntryInput = {
@@ -133,6 +134,7 @@ export type FileSlice = {
   saveFilePath: (filePath: string, options?: SaveOptions) => Promise<boolean>;
   /** The user chose not to overwrite; the document stays dirty. */
   dismissSaveConflict: () => void;
+  keepDiskFileVersion: (filePath: string) => Promise<boolean>;
   restoreFileVersion: (versionId: string) => Promise<boolean>;
   createNewFile: (targetDirectory?: string, insertAfterBasename?: string | null) => Promise<string | null>;
   /**

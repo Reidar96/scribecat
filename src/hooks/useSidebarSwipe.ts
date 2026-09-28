@@ -59,6 +59,11 @@ export function useSidebarSwipe({ enabled, isOpen, onOpen, onClose }: UseSidebar
         return;
       }
 
+      // The journal owns horizontal gestures within its entry on phones.
+      if (!isOpen && event.target instanceof Element && event.target.closest(".journal-entry")) {
+        return;
+      }
+
       const touch = event.touches[0];
       start = { x: touch.clientX, y: touch.clientY, time: event.timeStamp };
     };
