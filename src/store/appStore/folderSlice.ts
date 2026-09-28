@@ -4,6 +4,7 @@ import { isRemoteVaultPath } from "@/platform/remote/vaultRoot";
 
 import i18n from "@/i18n";
 import { copyVaultDirectory } from "@/lib/attachmentOps";
+import { trashNote } from "@/lib/noteTrash";
 import {
   addRecentFolderPath,
   allowMarkdownFolderAccess,
@@ -59,7 +60,6 @@ import {
 } from "./pathUtils";
 import type { AppSlice, FileDocumentState, FolderSlice } from "./types";
 import {
-  deleteFolderVersionHistory,
   moveFolderVersionHistory,
   snapshotFileVersion
 } from "./versioning";
@@ -657,8 +657,9 @@ export const createFolderSlice: AppSlice<FolderSlice> = (set, get) => ({
   },
   deleteFolderPath: async (folderPath: string) => {
     try {
-      await deleteMarkdownFolder(folderPath);
-      deleteFolderVersionHistory(get().folderPath, folderPath);
+      const root = get().folderPath;
+      if (root) await trashNote(root, folderPath, "folder");
+      else await deleteMarkdownFolder(folderPath);
       deleteFolderDraftsFor(get().folderPath, folderPath);
 
       const currentState = get();

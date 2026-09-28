@@ -423,7 +423,6 @@ export function Sidebar({
         </div>
 
         <div className="sidebar-panel__actions">
-          <Button type="button" variant="outline" size="sm" disabled={!folderPath} onClick={() => setTrashOpen(true)} aria-label={t("trash.title")} title={t("trash.title")}><Trash2 /></Button>
           <Button
             type="button"
             variant="outline"
@@ -888,6 +887,9 @@ export function Sidebar({
             onSelectionChange={onFileTreeSelectionChange}
             selectionMode={selectionMode}
           />
+        ) : null}
+        {folderPath !== null ? (
+          <button type="button" className="sidebar-panel__trash" onClick={() => setTrashOpen(true)}><Trash2 aria-hidden="true" /><span>{t("trash.title")}</span></button>
         ) : null}
         {folderPath !== null ? (
           <TagsOverview

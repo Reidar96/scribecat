@@ -363,6 +363,32 @@ export function transferTaskSection(source: string, target: string, section: str
   return { source: `${lines.join("\n").trimEnd()}\n`, target: `${target.trimEnd()}\n\n${block}\n` };
 }
 
+export function renameTaskSection(markdown: string, section: string, newName: string): string {
+  if (section !== newName && taskSections(markdown).includes(newName)) return markdown;
+  const lines = markdown.split(/\r?\n/);
+  const index = lines.findIndex((line) => line === `## ${section}`);
+  if (index < 0) return markdown;
+  lines[index] = `## ${newName}`;
+  return lines.join("\n");
+}
+
+/** Remove a heading without deleting its tasks: they become unsectioned. */
+export function removeTaskSection(markdown: string, section: string): string {
+  const lines = markdown.split(/\r?\n/);
+  const starts = lines.flatMap((line, index) => /^##\s+/.test(line) ? [index] : []);
+  const index = starts.findIndex((start) => lines[start] === `## ${section}`);
+  if (index < 0) return markdown;
+  const start = starts[index];
+  const end = starts[index + 1] ?? lines.length;
+  const content = lines.slice(start + 1, end).join("\n").trim();
+  lines.splice(start, end - start);
+  if (content) {
+    const firstHeading = lines.findIndex((line) => /^##\s+/.test(line));
+    lines.splice(firstHeading < 0 ? lines.length : firstHeading, 0, "", ...content.split("\n"), "");
+  }
+  return `${lines.join("\n").trimEnd()}\n`;
+}
+
 /** Move a task and its subtasks under an existing Markdown heading. */
 export function moveTaskToSection(markdown: string, lineIndex: number, section: string | null): string {
   const task = parseTaskMarkdown(markdown).find((item) => item.lineIndex === lineIndex);

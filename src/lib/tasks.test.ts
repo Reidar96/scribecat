@@ -19,6 +19,8 @@ import {
   prependTaskToMarkdown,
   removeTaskFromMarkdown,
   renameTaskDocumentHeading,
+  renameTaskSection,
+  removeTaskSection,
   setTaskSubtreeCheckedInMarkdown,
   sanitizeTaskCategory,
   taskCategoryFromRelativePath,
@@ -427,4 +429,18 @@ describe("tasks markdown", () => {
       "# Uten kategori\n\n- [ ] Fra før\n\n- [ ] Flyttes\n  - [ ] Underoppgave\n"
     );
   });
+});
+
+
+it("renames and removes section headings while preserving tasks and nested task membership", () => {
+  const markdown = "# Work\n\n## First\n- [ ] One\n\n## Second\n- [ ] Two\n  - [ ] Child\n";
+  const renamed = renameTaskSection(markdown, "Second", "Later");
+  expect(taskSections(renamed)).toEqual(["First", "Later"]);
+  expect(parseTaskMarkdown(renamed).find((task) => task.text === "Child")?.section).toBe("Later");
+  expect(renameTaskSection(markdown, "Second", "First")).toBe(markdown);
+  const removed = removeTaskSection(renamed, "Later");
+  expect(taskSections(removed)).toEqual(["First"]);
+  expect(parseTaskMarkdown(removed).find((task) => task.text === "Two")?.section).toBeUndefined();
+  expect(removed).toContain("- [ ] Two\n  - [ ] Child");
+  expect(parseTaskMarkdown(removed).find((task) => task.text === "One")?.section).toBe("First");
 });
