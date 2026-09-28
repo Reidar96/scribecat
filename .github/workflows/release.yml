@@ -25,6 +25,7 @@ env:
 
 jobs:
   build:
+    if: ${{ !inputs.version || matrix.platform == 'macos-latest' }}
     strategy:
       fail-fast: false
       matrix:
@@ -37,6 +38,10 @@ jobs:
         uses: actions/checkout@v7
         with:
           ref: ${{ inputs.version && format('v{0}', inputs.version) || github.ref }}
+
+      - name: Set macOS minimum version
+        if: matrix.platform == 'macos-latest'
+        run: node -e "const fs=require('fs'); const p='src-tauri/tauri.conf.json'; const c=JSON.parse(fs.readFileSync(p,'utf8')); c.bundle.macOS={...c.bundle.macOS, minimumSystemVersion:'10.15'}; fs.writeFileSync(p, JSON.stringify(c,null,2)+'\\n');"
 
       - name: Setup Node.js
         uses: actions/setup-node@v7
