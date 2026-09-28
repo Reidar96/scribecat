@@ -173,8 +173,8 @@ pub async fn remote_vault_request(
 // server once, then saves the replacement token without a Keychain prompt.
 #[cfg(not(target_os = "macos"))]
 fn token_entry(vault_root: &str) -> Result<keyring::Entry, String> {
-  let account = format!("remote-vault-token:{vault_root}");
-  keyring::Entry::new(KEYRING_SERVICE, &account).map_err(|error| error.to_string())
+    let account = format!("remote-vault-token:{vault_root}");
+    keyring::Entry::new(KEYRING_SERVICE, &account).map_err(|error| error.to_string())
 }
 
 #[cfg(any(target_os = "macos", test))]
@@ -194,13 +194,16 @@ fn write_token_map(path: &Path, tokens: &BTreeMap<String, String>) -> Result<(),
     #[cfg(all(target_os = "macos", unix))]
     fs::set_permissions(parent, fs::Permissions::from_mode(0o700)).map_err(|error| error.to_string())?;
 
-    let temp_path = path.with_extension("json.tmp");
+    let temp_path = path.with_extension(format!("{}.json.tmp", std::process::id()));
     let mut options = OpenOptions::new();
     options.write(true).create(true).truncate(true);
     #[cfg(all(target_os = "macos", unix))]
     options.mode(0o600);
 
     let mut file = options.open(&temp_path).map_err(|error| error.to_string())?;
+    #[cfg(all(target_os = "macos", unix))]
+    file.set_permissions(fs::Permissions::from_mode(0o600))
+        .map_err(|error| error.to_string())?;
     let bytes = serde_json::to_vec(tokens).map_err(|error| error.to_string())?;
     file.write_all(&bytes).map_err(|error| error.to_string())?;
     file.sync_all().map_err(|error| error.to_string())?;
