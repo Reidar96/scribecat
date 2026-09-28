@@ -337,6 +337,32 @@ export function reorderTaskSection(markdown: string, section: string, direction:
   return [...preamble, ...blocks.flat()].join("\n");
 }
 
+/** Move an entire heading block, including its tasks and ordinary Markdown. */
+export function moveTaskSection(markdown: string, section: string, target: string, placement: "before" | "after"): string {
+  const lines = markdown.split(/\r?\n/);
+  const starts = lines.flatMap((line, index) => /^##\s+/.test(line) ? [index] : []);
+  const from = starts.findIndex((index) => lines[index] === `## ${section}`);
+  const to = starts.findIndex((index) => lines[index] === `## ${target}`);
+  if (from < 0 || to < 0 || from === to) return markdown;
+  const blocks = starts.map((start, index) => lines.slice(start, starts[index + 1] ?? lines.length));
+  const [block] = blocks.splice(from, 1);
+  const targetIndex = blocks.findIndex((candidate) => candidate[0] === `## ${target}`);
+  blocks.splice(targetIndex + (placement === "after" ? 1 : 0), 0, block);
+  return [...lines.slice(0, starts[0]), ...blocks.flat()].join("\n");
+}
+
+/** Transfer a section verbatim between category Markdown documents. */
+export function transferTaskSection(source: string, target: string, section: string): { source: string; target: string } | null {
+  if (taskSections(target).includes(section)) return null;
+  const lines = source.split(/\r?\n/);
+  const start = lines.findIndex((line) => line === `## ${section}`);
+  if (start < 0) return null;
+  const end = lines.findIndex((line, index) => index > start && /^##\s+/.test(line));
+  const block = lines.slice(start, end < 0 ? lines.length : end).join("\n").trimEnd();
+  lines.splice(start, (end < 0 ? lines.length : end) - start);
+  return { source: `${lines.join("\n").trimEnd()}\n`, target: `${target.trimEnd()}\n\n${block}\n` };
+}
+
 /** Move a task and its subtasks under an existing Markdown heading. */
 export function moveTaskToSection(markdown: string, lineIndex: number, section: string | null): string {
   const task = parseTaskMarkdown(markdown).find((item) => item.lineIndex === lineIndex);

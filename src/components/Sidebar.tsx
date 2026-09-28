@@ -277,7 +277,7 @@ export function Sidebar({
   const vaultSearch = useVaultSearch(
     searchQuery,
     folderPath,
-    filePaths,
+    visibleSidebarFilePaths,
     selectedFilePath,
     selectedFileContent
   );

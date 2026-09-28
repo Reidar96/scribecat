@@ -603,11 +603,11 @@ function App() {
     // A file the agent has only proposed is in the tree but not on disk; this
     // gives it an in-memory document so opening it shows the proposal instead
     // of a read error.
-    await selectFilePath(filePath);
     setCollectionView(null);
     setGraphViewOpen(false);
     setJournalViewOpen(false);
     setTasksViewOpen(false);
+    await selectFilePath(filePath);
   };
 
   const closeDocumentTab = (filePath: string) => {

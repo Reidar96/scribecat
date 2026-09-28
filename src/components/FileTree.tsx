@@ -358,6 +358,12 @@ export function FileTree({
     );
   }, [folderPath, selectedFilePath, expandAncestorsOf]);
 
+  useEffect(() => {
+    if (!activeCollectionFolderPath) return;
+    expandAncestorsOf(activeCollectionFolderPath);
+    expandFolders([activeCollectionFolderPath]);
+  }, [activeCollectionFolderPath, expandAncestorsOf, expandFolders]);
+
   // A freshly created file or folder is named where it lives, next to its
   // siblings: the tree is the only place that can do both, and it shows the
   // names the new one has to be distinct from while it is being typed.
@@ -464,10 +470,15 @@ export function FileTree({
     setRangeFocusKey(null);
 
     if (node.kind === "folder") {
-      // Folder names are navigation now: the main area becomes a collection
-      // grid. Expanding/collapsing remains the chevron's job, so opening a
-      // collection never changes the tree structure as a side effect.
-      onOpenFolderCollection(node.relativePath);
+      // Keep the tree and the collection view in step when a folder is opened
+      // or closed from either view. The chevron still toggles the tree alone.
+      toggleFolder(node.relativePath);
+      if (activeCollectionFolderPath === node.relativePath && expandedFolderPaths.has(node.relativePath)) {
+        const parent = node.relativePath.split("/").slice(0, -1).join("/");
+        onOpenFolderCollection(parent);
+      } else {
+        onOpenFolderCollection(node.relativePath);
+      }
     } else {
       setSelectedKeys(new Set([key]));
       void onSelectFilePath(node.filePath);

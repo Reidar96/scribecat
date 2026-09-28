@@ -12,6 +12,8 @@ import {
   moveSiblingTaskInMarkdown,
   moveSubtaskInMarkdown,
   moveTaskToSection,
+  moveTaskSection,
+  transferTaskSection,
   reorderTaskSection,
   taskSections,
   prependTaskToMarkdown,
@@ -25,6 +27,16 @@ import {
 } from "@/lib/tasks";
 
 describe("tasks markdown", () => {
+  it("moves whole section blocks within and between category documents", () => {
+    const source = "# Jobb\n\n## Først\n- [ ] En\n  - [ ] Barn\n\n## Senere\n- [ ] To\n";
+    const reordered = moveTaskSection(source, "Senere", "Først", "before");
+    expect(taskSections(reordered)).toEqual(["Senere", "Først"]);
+    expect(reordered).toContain("## Først\n- [ ] En\n  - [ ] Barn");
+    const transferred = transferTaskSection(source, "# Privat\n", "Først");
+    expect(transferred?.source).not.toContain("## Først");
+    expect(transferred?.target).toContain("## Først\n- [ ] En\n  - [ ] Barn");
+    expect(transferTaskSection(source, source, "Først")).toBeNull();
+  });
   it("parses portable checkbox tasks with deadline, priority, tags and notes", () => {
     const markdown = [
       "# Jobb",

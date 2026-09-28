@@ -666,6 +666,11 @@ function JournalEntryView({
   useEffect(() => {
     const onArrow = (event: KeyboardEvent) => {
       if (document.querySelector('[role="dialog"], [role="alertdialog"]')) return;
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onShowOverview();
+        return;
+      }
       if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey ||
         (event.target instanceof Element && event.target.closest("input, textarea, select, button, [contenteditable], [role='dialog']"))) return;
       if (event.key === "ArrowLeft" && canPreviousDay) {
@@ -678,7 +683,7 @@ function JournalEntryView({
     };
     window.addEventListener("keydown", onArrow);
     return () => window.removeEventListener("keydown", onArrow);
-  }, [canPreviousDay, canNextDay, onPreviousDay, onNextDay]);
+  }, [canPreviousDay, canNextDay, onPreviousDay, onNextDay, onShowOverview]);
   const galleryRef = useRef<HTMLDivElement>(null);
   const addCardRef = useMasonrySpan<HTMLButtonElement>();
   const galleryItemsRef = useRef(galleryItems);
