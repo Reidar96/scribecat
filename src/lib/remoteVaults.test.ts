@@ -78,6 +78,7 @@ describe("normalizeServerUrl", () => {
   it("accepts https, bare hosts and localhost over http, and strips what is not identity", () => {
     expect(remoteVaults.normalizeServerUrl("https://notes.example.com/")).toBe("https://notes.example.com");
     expect(remoteVaults.normalizeServerUrl("notes.example.com/anna/")).toBe("https://notes.example.com/anna");
+    expect(remoteVaults.normalizeServerUrl("192.168.1.50:8443")).toBe("https://192.168.1.50:8443");
     expect(remoteVaults.normalizeServerUrl("https://Notes.Example.com:9443/?x=1#y")).toBe("https://notes.example.com:9443");
     expect(remoteVaults.normalizeServerUrl("http://localhost:3000")).toBe("http://localhost:3000");
   });

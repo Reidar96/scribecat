@@ -143,7 +143,10 @@ export function RemoteVaultDialog({ request, onDone, onCancel }: RemoteVaultDial
             <span>{t("remoteVaults.serverUrl")}</span>
             <input
               ref={isSignIn ? undefined : firstFieldRef}
-              type="url"
+              // The server URL normalizer deliberately accepts a bare host
+              // or host:port and adds https://, so native URL validation
+              // would reject inputs this dialog supports.
+              type="text"
               inputMode="url"
               autoComplete="url"
               placeholder="https://notes.example.com"

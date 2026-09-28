@@ -1,4 +1,13 @@
 
+## [0.26.2] - 2026-09-28
+
+### Desktop
+- Add macOS desktop releases and microphone permission for local dictation.
+- Accept bare server addresses and host:port values when connecting to a server vault.
+
+### Release
+- Update desktop, server, Tauri and Docker release metadata to 0.26.2.
+
 ## [0.26.1] - 2026-09-27
 
 - Fix inline PDF multi-view collapsing to thin lines after closing split view or restoring a minimized viewer while split view remains open.
