@@ -17,6 +17,9 @@ on:
       version:
         description: 'Version to build and push, e.g. 0.11.0'
         required: true
+      source_ref:
+        description: 'Optional source ref for a packaging-only rebuild of the current version'
+        required: false
 
 # A tag pushed twice starts a second build of the very same image tag, and the
 # two then race on the ghcr push — which is how the v0.14.1 run sat there for
@@ -41,7 +44,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
-          ref: ${{ inputs.version && format('v{0}', inputs.version) || github.ref }}
+          ref: ${{ inputs.source_ref || (inputs.version && format('v{0}', inputs.version) || github.ref) }}
 
       - name: Determine version
         id: version

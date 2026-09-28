@@ -140,5 +140,5 @@ jobs:
           fi
 
           if [ "$SERVER_DISPATCH" = "true" ]; then
-            gh workflow run release-server.yml --ref main -f version="$VERSION"
+            gh workflow run release-server.yml --ref main -f version="$VERSION" -f source_ref=main
           fi
