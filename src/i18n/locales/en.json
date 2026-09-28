@@ -77,7 +77,8 @@
     "empty": "Trash is empty.",
     "restore": "Restore",
     "deleteForever": "Delete forever",
-    "confirmDelete": "Permanently delete {{name}}?"
+    "confirmDelete": "Permanently delete {{name}} and any remaining contents? This cannot be undone.",
+    "loading": "Loading trash …"
   },
   "deleteDialog": {
     "eyebrow": "Delete file",
@@ -85,17 +86,17 @@
     "descriptionWithName": "The file {{fileLabel}} will be moved to Trash.",
     "descriptionGeneric": "The file will be moved to Trash.",
     "eyebrowFolder": "Delete folder",
-    "titleFolder": "Delete folder permanently?",
-    "descriptionFolderWithName": "The folder {{folderLabel}} and all files it contains will be permanently deleted from disk.",
-    "descriptionFolderGeneric": "The folder and all files it contains will be permanently deleted from disk.",
+    "titleFolder": "Move folder to Trash?",
+    "descriptionFolderWithName": "The folder {{folderLabel}} and all its contents will move to the trash and can be restored.",
+    "descriptionFolderGeneric": "The folder and all its contents will move to the trash and can be restored.",
     "eyebrowCategory": "Delete category",
     "titleCategory": "Delete category permanently?",
     "descriptionCategoryWithName": "The category “{{categoryLabel}}” will be deleted. Its tasks will be moved to “Uncategorized”.",
     "descriptionCategoryGeneric": "The category will be deleted. Its tasks will be moved to “Uncategorized”.",
     "eyebrowMultiple": "Delete items",
-    "titleMultiple": "Delete multiple items permanently?",
-    "descriptionMultiple_one": "{{count}} item (and everything it contains, if it's a folder) will be permanently deleted from disk.",
-    "descriptionMultiple_other": "{{count}} items (and everything they contain, for folders) will be permanently deleted from disk."
+    "titleMultiple": "Move items to Trash?",
+    "descriptionMultiple_one": "{{count}} item and its contents will move to the trash and can be restored.",
+    "descriptionMultiple_other": "{{count}} items and their contents will move to the trash and can be restored."
   },
   "exportDialog": {
     "eyebrowFile": "Export file",
@@ -651,6 +652,10 @@
     "uncategorizedFileHint": "Name of the Markdown file for uncategorized tasks. The category label stays unchanged.",
     "newCategory": "New category",
     "newSection": "New subcategory",
+    "renameSection": "Rename subcategory",
+    "deleteSection": "Delete subcategory",
+    "sectionMoreActions": "More subcategory actions",
+    "sectionExists": "The subcategory “{{section}}” already exists.",
     "moveUp": "Move up",
     "moveDown": "Move down",
     "newTask": "New task",

@@ -212,10 +212,17 @@
   font-size: 0.8rem;
   line-height: 1.55;
 }
-.note-trash { width: min(42rem, 96vw); }
-.note-trash__list { max-height: 50vh; overflow: auto; }
-.note-trash__row { display: flex; align-items: center; gap: 0.4rem; padding: 0.4rem 0; }
-.note-trash__row span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.note-trash { width: min(46rem, 100%); max-height: calc(100dvh - 2rem); display: flex; flex-direction: column; }
+.note-trash__list { min-height: 0; max-height: 55vh; overflow: auto; margin: 1rem 0; }
+.note-trash__row { display: flex; align-items: center; gap: 0.4rem; min-height: 2.8rem; padding: 0.4rem 0; border-bottom: 1px solid rgba(var(--overlay-rgb),0.08); }
+.note-trash__row > svg { width: 1rem; height: 1rem; flex: none; color: rgba(var(--muted-rgb),0.9); }
+.note-trash__name { flex: 1; min-width: 0; }
+.note-trash__name span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.note-trash__name small { display: block; color: rgba(var(--muted-rgb),0.8); font-size: var(--font-ui-xs); }
+.note-trash__expand { display: grid; place-items: center; border: 0; background: transparent; color: inherit; cursor: pointer; }
+.note-trash__expand, .note-trash__spacer { width: 1.3rem; flex: none; }
+.note-trash__expand svg { width: 1rem; height: 1rem; }
+.note-trash__error { color: rgb(205 78 78); overflow-wrap: anywhere; }
 
 .version-diff__message {
   margin: 0;

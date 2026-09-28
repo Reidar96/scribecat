@@ -708,6 +708,8 @@ export function CollectionPanel({
   };
 
   const cardTitle = (card: CollectionCard) => renamingKey === collectionCardKey(card) ? (
+    <form className="collection-card__create-form collection-card__rename-form" onSubmit={(event) => { event.preventDefault(); void commitCardRename(card); }}>
+    {card.kind === "folder" ? <Folder aria-hidden="true" /> : <FileText aria-hidden="true" />}
     <input
       ref={renameInputRef}
       className="collection-card__rename-input"
@@ -715,14 +717,15 @@ export function CollectionPanel({
       onChange={(event) => setRenameDraft(event.target.value)}
       onPointerDown={(event) => event.stopPropagation()}
       onClick={(event) => event.stopPropagation()}
-      onBlur={() => void commitCardRename(card)}
       onKeyDown={(event) => {
         event.stopPropagation();
-        if (event.key === "Enter") { event.preventDefault(); void commitCardRename(card); }
         if (event.key === "Escape") { event.preventDefault(); skipRenameCommitRef.current = true; setRenamingKey(null); }
       }}
       aria-label={t("fileTree.rename")}
     />
+    <Button type="submit" size="icon-sm" variant="ghost" disabled={!renameDraft.trim()} aria-label={t("common.save")} title={t("common.save")}><Check /></Button>
+    <Button type="button" size="icon-sm" variant="ghost" onClick={() => { skipRenameCommitRef.current = true; setRenamingKey(null); }} aria-label={t("common.cancel")} title={t("common.cancel")}><X /></Button>
+    </form>
   ) : <h3>{card.title}</h3>;
 
   const resolveCardEntry = async (
@@ -1305,6 +1308,7 @@ export function CollectionPanel({
                       key={`folder:${card.relativePath}`}
                       className={cn(
                         "collection-card collection-card--folder",
+                        renamingKey === key && "collection-card--renaming",
                         selectedKeys.has(key) && "collection-card--selected",
                         draggedCardKey === key && "collection-card--drag-source",
                         cardDropPosition === "before" && "collection-card--drop-before",
@@ -1405,6 +1409,7 @@ export function CollectionPanel({
                     key={`note:${card.filePath}`}
                     className={cn(
                       "collection-card collection-card--note",
+                      renamingKey === key && "collection-card--renaming",
                       selectedKeys.has(key) && "collection-card--selected",
                       draggedCardKey === key && "collection-card--drag-source",
                       cardDropPosition === "before" && "collection-card--drop-before",
