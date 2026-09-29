@@ -15,7 +15,7 @@ import { LinkDialog, type LinkDialogResult } from "@/components/LinkDialog";
 import { Toolbar } from "@/components/Toolbar";
 import { PdfInsertChoiceDialog, type PdfInsertMode } from "@/components/PdfInsertChoiceDialog";
 import { PdfViewerModal } from "@/components/PdfViewerModal";
-import { TableEdgeControls } from "@/components/TableEdgeControls";
+import { TableCellContextMenu } from "@/components/TableCellContextMenu";
 import { FileLinkSuggestionPopover } from "@/components/editor/FileLinkSuggestionPopover";
 import { DetailsPanel } from "@/components/editor/DetailsPanel";
 import { SelectionContextMenu, type SelectionContextMenuState } from "@/components/editor/SelectionContextMenu";
@@ -53,6 +53,7 @@ import { normalizeEscapedCheckboxes } from "@/lib/editor/markdownNormalize";
 import { looksLikeMarkdown, pasteMarkdown } from "@/lib/editor/pasteMarkdown";
 import { normalizePastedSlice } from "@/lib/editor/pasteNormalize";
 import { getEditorMarkdown, getSelectionMarkdown } from "@/lib/editor/markdownStorage";
+import { toggleListForSelectedLines } from "@/lib/editor/listSelection";
 import { serializeGuarded } from "@/lib/editor/serializationGuard";
 import {
   copySelectionAsMarkdown,
@@ -126,6 +127,8 @@ type EditorProps = {
   onDocumentLockToggle: () => void;
   /** Called when this editor becomes the active split pane. */
   onEditorFocus?: () => void;
+  /** Split panes suppress the details sidebar and its controls. */
+  splitViewActive?: boolean;
   /** Suppresses the local toolbar when a shared toolbar is rendered elsewhere. */
   hideToolbar?: boolean;
   /** Where the toolbar renders instead of inside the editor (the document
@@ -135,6 +138,7 @@ type EditorProps = {
 
 export type EditorHandle = {
   printDocument: () => void;
+  focusAtStart: () => void;
   getMarkdown: () => string;
   getSelectionText: () => string;
   /**
@@ -152,6 +156,7 @@ type LinkDialogState = {
   href: string;
   selectedText: string;
   isLinkActive: boolean;
+  kind: "link" | "block";
 };
 
 type PdfPreviewState = {
@@ -231,6 +236,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     documentLocked,
     onDocumentLockToggle,
     onEditorFocus,
+    splitViewActive = false,
     hideToolbar = false,
     toolbarContainer = null
   },
@@ -269,6 +275,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     handleDetailsPanelResizeKeyDown
   } = useDetailsPanelWidth();
   const [linkDialog, setLinkDialog] = useState<LinkDialogState | null>(null);
+  const blockSelectionRef = useRef<{ from: number; to: number } | null>(null);
   const [pdfPreview, setPdfPreview] = useState<PdfPreviewState | null>(null);
   const [pendingMediaInsert, setPendingMediaInsert] = useState<PendingMediaInsert | null>(null);
   // Node types the serializer replaced with a placeholder in the last
@@ -460,8 +467,17 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     setLinkDialog({
       href: (currentEditor.getAttributes("link").href as string | undefined) ?? "",
       selectedText: currentEditor.state.doc.textBetween(from, to, " "),
-      isLinkActive: currentEditor.isActive("link")
+      isLinkActive: currentEditor.isActive("link"),
+      kind: "link"
     });
+  };
+
+  const handleBlockRequest = () => {
+    const currentEditor = editorRef.current;
+    if (!currentEditor) return;
+    const { from, to } = currentEditor.state.selection;
+    setLinkDialog({ href: "", selectedText: "", isLinkActive: false, kind: "block" });
+    blockSelectionRef.current = { from, to };
   };
 
   const handleLinkSubmit = ({ href, text }: LinkDialogResult) => {
@@ -469,6 +485,16 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     setLinkDialog(null);
 
     if (!currentEditor) {
+      return;
+    }
+
+    if (linkDialog?.kind === "block") {
+      const range = blockSelectionRef.current ?? currentEditor.state.selection;
+      blockSelectionRef.current = null;
+      currentEditor.chain().focus().insertContentAt(range, {
+        type: "transclusion",
+        attrs: { href }
+      }).run();
       return;
     }
 
@@ -910,6 +936,12 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     ref,
     () => ({
       printDocument,
+      focusAtStart: () => {
+        const currentEditor = editorRef.current;
+        if (!currentEditor || currentEditor.isDestroyed) return;
+        currentEditor.commands.setTextSelection(1);
+        currentEditor.commands.focus("start");
+      },
       getMarkdown,
       getSelectionText,
       getSelectionRange,
@@ -1245,10 +1277,10 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
             handleLinkRequest();
             break;
           case "bulletList":
-            chain()?.toggleBulletList().run();
+            if (!toggleListForSelectedLines(editor, "bulletList")) chain()?.toggleBulletList().run();
             break;
           case "orderedList":
-            chain()?.toggleOrderedList().run();
+            if (!toggleListForSelectedLines(editor, "orderedList")) chain()?.toggleOrderedList().run();
             break;
           case "checkbox":
             chain()?.toggleTaskList().run();
@@ -1383,6 +1415,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     <Toolbar
       editor={editor}
       onLinkRequest={handleLinkRequest}
+      onBlockRequest={handleBlockRequest}
       onImageInsertRequest={handleImageInsertRequest}
       onPrintRequest={printDocument}
       onDeleteRequest={onDeleteRequest}
@@ -1392,6 +1425,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       onZenModeRequest={onZenModeRequest}
       documentLocked={documentLocked}
       onDocumentLockToggle={onDocumentLockToggle}
+      detailsPanelDisabled={splitViewActive}
     />
   );
 
@@ -1510,9 +1544,9 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
                 }}
               />
             </ScrollArea>
-            <TableEdgeControls editor={editor} disabled={documentLocked} />
+            <TableCellContextMenu editor={editor} disabled={documentLocked} />
 
-            {detailsSheetOpen && layout !== "desktop" ? (
+            {detailsSheetOpen && layout !== "desktop" && !splitViewActive ? (
               <MobileSheet
                 side={layout === "phone" ? "full" : "right"}
                 backdrop={layout === "phone"}
@@ -1539,7 +1573,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
               </MobileSheet>
             ) : null}
 
-            {detailsPanelVisible && layout === "desktop" ? (
+            {detailsPanelVisible && layout === "desktop" && !splitViewActive ? (
               <>
                 <div
                   className={cn(

@@ -730,7 +730,8 @@
     "canvasLabel": "Interactive vault graph",
     "openNote": "Open note {{name}}",
     "openTag": "Open tag {{name}}",
-    "openFolder": "Open folder {{name}}"
+    "openFolder": "Open folder {{name}}",
+    "createNoteInFolder": "New document in folder"
   },
   "fileTree": {
     "treeLabel": "File tree",
@@ -822,6 +823,8 @@
     "codeBlockTitle": "Code block (Ctrl+K)",
     "insertLink": "Insert link",
     "insertLinkTitle": "Insert link (Ctrl+L)",
+    "insertBlock": "Insert linked block",
+    "insertHorizontalRule": "Insert divider",
     "detailsPanel": "Details",
     "detailsPanelTitle": "Show or hide the details panel (Ctrl+Shift+D)",
     "headingMenu": "Heading",
@@ -942,6 +945,10 @@
     "addRowBefore": "Insert row above",
     "addRowAfter": "Insert row below",
     "deleteRow": "Delete row",
+    "moveRowUp": "Move row up",
+    "moveRowDown": "Move row down",
+    "moveColumnLeft": "Move column left",
+    "moveColumnRight": "Move column right",
     "deleteTable": "Delete table"
   },
   "imageView": {
@@ -978,6 +985,8 @@
   },
   "editor": {
     "unserializableContent": "Saving is paused: the editor cannot write this note as Markdown ({{nodes}}). Undo the last change so nothing is lost, and please report this.",
+    "transclusionLoading": "Loading embedded note…",
+    "transclusionMissing": "This embedded block was deleted. Insert its content into this note.",
     "imageRequiresFile": "Images and PDFs can only be inserted while editing a file inside an open folder.",
     "imageInsertFailed": "Could not insert image \"{{fileName}}\": {{error}}",
     "pdfInsertFailed": "Could not insert PDF \"{{fileName}}\" as images: {{error}}",

@@ -1,5 +1,6 @@
 import {
   Bold,
+  Blocks,
   Check,
   ChevronDown,
   Code,
@@ -22,6 +23,7 @@ import {
   Info,
   Italic,
   Link2,
+  Minus,
   Lock,
   LockOpen,
   List,
@@ -68,11 +70,13 @@ import { ZoomControl } from "@/components/ZoomControl";
 import { CALLOUT_VARIANTS, type CalloutVariant } from "@/lib/editor/extensions/callout";
 import { isHighlighterModeActive } from "@/lib/editor/extensions/highlight";
 import { isInTableCell } from "@/lib/editor/extensions/table";
+import { toggleListForSelectedLines } from "@/lib/editor/listSelection";
 import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
 
 type ToolbarProps = {
   editor: Editor;
   onLinkRequest: () => void;
+  onBlockRequest: () => void;
   onImageInsertRequest: () => void;
   onPrintRequest: () => void;
   onDeleteRequest: () => void;
@@ -83,6 +87,7 @@ type ToolbarProps = {
   onZenModeRequest: () => void;
   documentLocked: boolean;
   onDocumentLockToggle: () => void;
+  detailsPanelDisabled?: boolean;
 };
 
 type ToggleButtonProps = {
@@ -370,6 +375,7 @@ function CalloutMenu({ editor }: { editor: Editor }) {
 export function Toolbar({
   editor,
   onLinkRequest,
+  onBlockRequest,
   onImageInsertRequest,
   onPrintRequest,
   onDeleteRequest,
@@ -378,7 +384,8 @@ export function Toolbar({
   onSearchRequest,
   onZenModeRequest,
   documentLocked,
-  onDocumentLockToggle
+  onDocumentLockToggle,
+  detailsPanelDisabled = false
 }: ToolbarProps) {
   const { t } = useTranslation();
   const [, forceRerender] = useState(0);
@@ -580,7 +587,9 @@ export function Toolbar({
           title={t("toolbar.bulletListTitle")}
           disabled={inTableCell}
           onClick={() => {
-            editor.chain().focus().toggleBulletList().run();
+            if (!toggleListForSelectedLines(editor, "bulletList")) {
+              editor.chain().focus().toggleBulletList().run();
+            }
           }}
         >
           <List />
@@ -591,7 +600,9 @@ export function Toolbar({
           title={t("toolbar.orderedListTitle")}
           disabled={inTableCell}
           onClick={() => {
-            editor.chain().focus().toggleOrderedList().run();
+            if (!toggleListForSelectedLines(editor, "orderedList")) {
+              editor.chain().focus().toggleOrderedList().run();
+            }
           }}
         >
           <ListOrdered />
@@ -653,6 +664,29 @@ export function Toolbar({
         >
           <Link2 />
         </ToggleButton>
+        <Button
+          type="button"
+          size="icon-sm"
+          variant="outline"
+          aria-label={t("toolbar.insertBlock", { defaultValue: "Insert linked block" })}
+          title={t("toolbar.insertBlock", { defaultValue: "Insert linked block" })}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={onBlockRequest}
+        >
+          <Blocks />
+        </Button>
+        <Button
+          type="button"
+          size="icon-sm"
+          variant="outline"
+          aria-label={t("toolbar.insertHorizontalRule", { defaultValue: "Insert divider" })}
+          title={t("toolbar.insertHorizontalRule", { defaultValue: "Insert divider" })}
+          disabled={inTableCell}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => editor.chain().focus().setHorizontalRule().run()}
+        >
+          <Minus />
+        </Button>
       </div>
 
       <div className="editor-toolbar__separator" aria-hidden="true" />
@@ -696,7 +730,7 @@ export function Toolbar({
         >
           <Search />
         </Button>
-        <DetailsPanelToggle />
+        {detailsPanelDisabled ? null : <DetailsPanelToggle />}
         <DocumentWidthToggle />
         <ZoomControl />
         <Button

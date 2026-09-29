@@ -980,6 +980,7 @@ export function DocumentPanel({
                     deleteEnabled={capabilities.delete}
                     documentLocked={documentLocked}
                     onDocumentLockToggle={toggleDocumentLocked}
+                    splitViewActive={hasSplitContent}
                     onEditorFocus={() => {
                       setActiveEditorPane("primary");
                       if (selectedFilePath) {
@@ -1115,6 +1116,7 @@ export function DocumentPanel({
                                 !secondaryDocumentLocked
                               )
                             }
+                            splitViewActive={hasSplitContent}
                             onEditorFocus={() => {
                               setActiveEditorPane("secondary");
                               onActivateTab(secondaryFilePath);

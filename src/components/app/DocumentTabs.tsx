@@ -1,5 +1,6 @@
 import { FileText, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useState } from "react";
 
 import { getFileLinkLabel } from "@/lib/editor/fileLinks";
 import { cn } from "@/lib/utils";
@@ -31,6 +32,8 @@ export function DocumentTabs({
 }: DocumentTabsProps) {
   const { t } = useTranslation();
   const dirtySet = new Set(dirtyFilePaths);
+  const [dropTarget, setDropTarget] = useState<{ path: string; position: "before" | "after" } | null>(null);
+  const [draggingPath, setDraggingPath] = useState<string | null>(null);
 
   if (filePaths.length === 0) {
     return null;
@@ -48,19 +51,25 @@ export function DocumentTabs({
           <div
             key={filePath}
             className={cn("document-tab", active && "document-tab--active")}
+            data-drop-position={dropTarget?.path === filePath ? dropTarget.position : undefined}
+            data-dragging={draggingPath === filePath || undefined}
             role="presentation"
             draggable
             onDragStart={(event) => {
               event.dataTransfer.effectAllowed = "copyMove";
               event.dataTransfer.setData(TAB_DRAG_MIME, filePath);
               event.dataTransfer.setData("text/plain", filePath);
+              setDraggingPath(filePath);
             }}
+            onDragEnd={() => { setDraggingPath(null); setDropTarget(null); }}
             onDragOver={(event) => {
               if (!Array.from(event.dataTransfer.types).includes(TAB_DRAG_MIME)) return;
 
               event.preventDefault();
               event.stopPropagation();
               event.dataTransfer.dropEffect = "move";
+              const rect = event.currentTarget.getBoundingClientRect();
+              setDropTarget({ path: filePath, position: event.clientX < rect.left + rect.width / 2 ? "before" : "after" });
             }}
             onDrop={(event) => {
               const draggedFilePath = event.dataTransfer.getData(TAB_DRAG_MIME);
@@ -69,9 +78,15 @@ export function DocumentTabs({
               event.preventDefault();
               event.stopPropagation();
               const rect = event.currentTarget.getBoundingClientRect();
-              const position =
-                event.clientX < rect.left + rect.width / 2 ? "before" : "after";
+              const position = dropTarget?.path === filePath
+                ? dropTarget.position
+                : event.clientX < rect.left + rect.width / 2 ? "before" : "after";
               onReorder(draggedFilePath, filePath, position);
+              setDraggingPath(null);
+              setDropTarget(null);
+            }}
+            onDragLeave={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDropTarget(null);
             }}
           >
             <button

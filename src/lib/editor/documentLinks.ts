@@ -1,4 +1,4 @@
-import { isFileLinkHref, resolveFileLinkTarget } from "./fileLinks";
+import { buildFileLinkHref, isFileLinkHref, resolveFileLinkTarget } from "./fileLinks";
 
 /**
  * Reading links back out of Markdown — what the links/backlinks panel is built
@@ -36,6 +36,69 @@ export function extractMarkdownLinkHrefs(markdown: string): string[] {
   }
 
   return hrefs;
+}
+
+/** Update Markdown links when their target (or the source document) moves. */
+export function rewriteMovedMarkdownLinks(
+  markdown: string,
+  oldSourcePath: string,
+  newSourcePath: string,
+  oldVaultFilePaths: string[],
+  moved: { sourcePath: string; targetPath: string }
+): string {
+  const pattern = /(!?)\[(?:\\.|[^\[\]\\])*\]\(\s*(<[^>\n]*>|(?:\\.|[^()\s])*)/g;
+  const replacements: Array<{ start: number; end: number; value: string }> = [];
+  const normalizedRoot = moved.sourcePath.replace(/\\/g, "/").replace(/\/$/, "").toLocaleLowerCase();
+  const mapMovedPath = (path: string) => {
+    const normalizedPath = path.replace(/\\/g, "/");
+    const lower = normalizedPath.toLocaleLowerCase();
+    if (lower !== normalizedRoot && !lower.startsWith(`${normalizedRoot}/`)) return null;
+    const suffix = normalizedPath.slice(moved.sourcePath.replace(/\\/g, "/").replace(/\/$/, "").length);
+    return `${moved.targetPath.replace(/\\/g, "/").replace(/\/$/, "")}${suffix}`;
+  };
+
+  for (const match of markdown.matchAll(pattern)) {
+    const [whole, imageMarker, rawDestination] = match;
+    const matchIndex = match.index;
+    if (imageMarker === "!" || !rawDestination || matchIndex === undefined) continue;
+    const href = unescapeDestination(rawDestination);
+    if (!isFileLinkHref(href)) continue;
+    const targetPath = resolveFileLinkTarget(href, oldSourcePath, oldVaultFilePaths);
+    if (!targetPath) continue;
+    const movedTarget = mapMovedPath(targetPath);
+    const movedSource = mapMovedPath(oldSourcePath) ?? newSourcePath;
+    if (!movedTarget && movedSource === oldSourcePath) continue;
+    const suffix = href.match(/[?#].*$/)?.[0] ?? "";
+    const replacement = `${buildFileLinkHref(movedSource, movedTarget ?? targetPath)}${suffix}`;
+    const destinationStart = matchIndex + whole.indexOf(rawDestination);
+    replacements.push({ start: destinationStart, end: destinationStart + rawDestination.length, value: replacement });
+  }
+
+  const embeds = /!\[\[([^\]]+)\]\]/g;
+  for (const match of markdown.matchAll(embeds)) {
+    const rawDestination = match[1];
+    const matchIndex = match.index;
+    if (!rawDestination || matchIndex === undefined) continue;
+    const targetPath = resolveFileLinkTarget(rawDestination, oldSourcePath, oldVaultFilePaths);
+    if (!targetPath) continue;
+    const movedTarget = mapMovedPath(targetPath);
+    const movedSource = mapMovedPath(oldSourcePath) ?? newSourcePath;
+    if (!movedTarget && movedSource === oldSourcePath) continue;
+    const suffix = rawDestination.match(/[?#].*$/)?.[0] ?? "";
+    const replacement = `${buildFileLinkHref(movedSource, movedTarget ?? targetPath)}${suffix}`;
+    const destinationStart = matchIndex + match[0].indexOf(rawDestination);
+    replacements.push({ start: destinationStart, end: destinationStart + rawDestination.length, value: replacement });
+  }
+
+  if (!replacements.length) return markdown;
+  replacements.sort((left, right) => left.start - right.start);
+  let output = "";
+  let cursor = 0;
+  for (const replacement of replacements) {
+    output += markdown.slice(cursor, replacement.start) + replacement.value;
+    cursor = replacement.end;
+  }
+  return output + markdown.slice(cursor);
 }
 
 export type OutgoingFileLink = {

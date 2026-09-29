@@ -263,10 +263,9 @@ function App() {
       return;
     }
 
-    setOpenTabs((tabs) => [
-      selectedFilePath,
-      ...tabs.filter((path) => path !== selectedFilePath)
-    ]);
+    setOpenTabs((tabs) =>
+      tabs.includes(selectedFilePath) ? tabs : [...tabs, selectedFilePath]
+    );
   }, [selectedFilePath, folderPath, taskSettings.folder, journalSettings]);
 
   useEffect(() => {
@@ -324,6 +323,13 @@ function App() {
   const { isZenMode, enterZenMode, exitZenMode, toggleZenMode } = useZenMode({
     canEnter: () => selectedFilePath !== null
   });
+
+  // Split view has no room for a details pane. Close it as soon as a second
+  // document (or PDF companion) is shown and keep it closed while split.
+  const setDetailsPanelVisible = useEditorSettingsStore((state) => state.setDetailsPanelVisible);
+  useEffect(() => {
+    if (secondaryFilePath) setDetailsPanelVisible(false);
+  }, [secondaryFilePath, setDetailsPanelVisible]);
 
   useWebviewZoom();
   useAutoSave({ isAiActionPending: false, isSelectedFileStaged: false, isSelectedFileMissing });
@@ -589,10 +595,7 @@ function App() {
   };
 
   const activateDocumentTab = (filePath: string) => {
-    setOpenTabs((tabs) => [
-      filePath,
-      ...tabs.filter((path) => path !== filePath)
-    ]);
+    setOpenTabs((tabs) => tabs.includes(filePath) ? tabs : [...tabs, filePath]);
   };
 
   const selectFilePathSafely = async (filePath: string) => {
@@ -1189,7 +1192,10 @@ function App() {
       setSettingsInitialTab("shortcuts");
       setIsSettingsOpen(true);
     },
-    toggleZenMode,
+    toggleZenMode: () => {
+      if (!isZenMode) editorHandleRef.current?.focusAtStart();
+      toggleZenMode();
+    },
     navigateBack: () => navigateHistory(backStepIndex),
     navigateForward: () => navigateHistory(forwardStepIndex),
     closeWorkingSetEntry: workingSetActions.closeSelectedEntry,
@@ -1435,6 +1441,19 @@ function App() {
               onOpenFolder={(relativePath) => {
                 void openCollectionSafely({ kind: "folder", relativePath });
               }}
+              onCreateFileInFolder={(relativePath) => {
+                if (!folderPath) return;
+                void (async () => {
+                  const targetDirectory = relativePath
+                    ? await join(folderPath, ...relativePath.split("/").filter(Boolean))
+                    : folderPath;
+                  const createdPath = await createNewFile(targetDirectory);
+                  if (createdPath) {
+                    const basename = createdPath.replace(/\\/g, "/").split("/").pop()?.replace(/\.md$/i, "") ?? "";
+                    startTitleRename(basename, createdPath);
+                  }
+                })();
+              }}
               onOpenTag={(tag, matchingFilePaths) => {
                 void openCollectionSafely({ kind: "tag", tag, filePaths: matchingFilePaths });
               }}
@@ -1563,7 +1582,10 @@ function App() {
                 window.setTimeout(() => setSidebarFocusRequestId((id) => id + 1), 0);
               }}
               onRequestFileOpen={(targetFilePath) => void selectFilePathSafely(targetFilePath)}
-              onZenModeRequest={enterZenMode}
+              onZenModeRequest={() => {
+                editorHandleRef.current?.focusAtStart();
+                enterZenMode();
+              }}
               documentLocked={documentLocked}
               onDocumentLockToggle={() => {
                 if (selectedFilePath) {

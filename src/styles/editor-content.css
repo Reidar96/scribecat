@@ -640,6 +640,56 @@
    the viewport so it can sit exactly on a collapsed table border even when
    the table itself scrolls horizontally. The full table menu remains the
    keyboard/touch fallback. */
+.table-cell-menu {
+  position: fixed;
+  z-index: 1400;
+  display: grid;
+  gap: 0.15rem;
+  min-width: 13rem;
+  padding: 0.4rem;
+  border: 1px solid rgba(var(--border-rgb), 0.85);
+  border-radius: 0.7rem;
+  background: rgb(var(--surface-raised-rgb));
+  color: rgba(var(--text-rgb), 0.96);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22);
+}
+
+.table-cell-menu button {
+  border: 0;
+  border-radius: 0.42rem;
+  padding: 0.48rem 0.65rem;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.table-cell-menu button:hover:not(:disabled),
+.table-cell-menu button:focus-visible { background: rgba(var(--selection-rgb), 0.18); }
+.table-cell-menu button:disabled { opacity: 0.4; cursor: default; }
+.table-cell-menu button.table-cell-menu__danger { color: #c43b3b; }
+.table-cell-menu [role="separator"] { height: 1px; margin: 0.2rem 0; background: rgba(var(--border-rgb), 0.75); }
+
+.markdown-transclusion {
+  margin: 1rem 0;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(var(--border-rgb), 0.9);
+  border-left: 3px solid rgba(var(--accent-rgb), 0.8);
+  border-radius: 0.65rem;
+  background: rgba(var(--surface-rgb), 0.45);
+}
+
+.markdown-transclusion__content {
+  margin: 0;
+  overflow: auto;
+  color: inherit;
+  font: inherit;
+  white-space: pre-wrap;
+}
+
+.markdown-transclusion__missing { margin: 0; color: var(--color-danger, #b53636); }
+.markdown-transclusion__loading { margin: 0; opacity: 0.65; }
+
 .table-edge-add {
   position: fixed;
   z-index: 120;

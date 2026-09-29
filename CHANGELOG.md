@@ -1,8 +1,18 @@
+## [0.28.0] - 2026-09-29
+
+- Keep tab order stable when switching notes; show an animated drop marker while reordering tabs.
+- Add graph folder context actions to create a note in that folder and focus its title field.
+- Keep multiple blank paragraphs across save and reopen, and convert selected hard-break lines into separate list items.
+- Close and disable the details panel while split view is active; place the caret at the start of the note when entering Zen mode.
+- Add horizontal rules and linked Markdown transclusion blocks with live source previews and missing-source notices.
+- Update relative document links and transclusion paths when notes or folders move.
+- Add context menus for table row and column insertion, deletion, and movement; remove the floating table edge controls.
+- Keep existing backlinks available in the details panel.
+
 ## [0.27.6] - 2026-09-28
 
 - Save macOS server access tokens in an app-private file with current-user-only permissions to avoid login-keychain password prompts. Existing server connections need one sign-in after updating; the password is exchanged for a token and is not stored. Windows and Linux continue using their OS credential stores.
 - Add breathing room above the sidebar folder/server selector and pin the selector and version label to the bottom of the sidebar.
-
 
 ## [0.27.5] - 2026-09-28
 
