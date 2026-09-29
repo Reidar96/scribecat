@@ -1,3 +1,9 @@
+## [0.28.1] - 2026-09-29
+
+- Edit linked Markdown blocks in place with the same visual rendering for lists, tables, images and PDFs as the document editor. Sync changes to the source note, show a quiet path label, and soften the block outline.
+- Open table cell actions from a touch long press on mobile without selecting the cell text.
+- Keep the other split pane and the original document in place when a tab or note is dropped onto a pane.
+
 ## [0.28.0] - 2026-09-29
 
 - Keep tab order stable when switching notes; show an animated drop marker while reordering tabs.

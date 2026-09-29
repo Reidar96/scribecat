@@ -505,20 +505,16 @@ export function DocumentPanel({
       return;
     }
 
+    // Keep the pane that does not receive the drop anchored to its document.
+    // A document already visible in the other pane has no replacement to make.
+    if (filePath === selectedFilePath || filePath === secondaryFilePath) return;
+
     if (side === secondarySide) {
-      if (filePath === selectedFilePath) {
-        setSecondarySide(side === "left" ? "right" : "left");
-        return;
-      }
-      if (filePath !== secondaryFilePath) {
-        onOpenSecondary(filePath);
-      }
+      onOpenSecondary(filePath);
       return;
     }
 
-    if (filePath !== selectedFilePath) {
-      onSelectTab(filePath);
-    }
+    onSelectTab(filePath);
   };
 
   const handleSplitResizeStart = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -891,27 +887,15 @@ export function DocumentPanel({
                 }}
                 onDropCapture={(event) => {
                   if (layout !== "desktop" || !splitDropPreview) return;
-                  const side = splitDropPreview;
+                  const rect = event.currentTarget.getBoundingClientRect();
+                  const side = event.clientX < rect.left + rect.width / 2 ? "left" : "right";
                   const filePath = splitDropFilePath(event.dataTransfer);
                   setSplitDropPreview(null);
                   if (!filePath) return;
 
                   event.preventDefault();
                   event.stopPropagation();
-                  setSplitPickerOpen(false);
-
-                  if (filePath === selectedFilePath) {
-                    if (hasSplitContent) {
-                      setSecondarySide(side === "left" ? "right" : "left");
-                    }
-                    return;
-                  }
-
-                  setAttachedPdf(null);
-                  setSecondarySide(side);
-                  if (filePath !== secondaryFilePath) {
-                    onOpenSecondary(filePath);
-                  }
+                  replaceSplitSide(side, filePath);
                 }}
               >
                 <div

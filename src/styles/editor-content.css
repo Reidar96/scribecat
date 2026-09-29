@@ -671,24 +671,37 @@
 .table-cell-menu [role="separator"] { height: 1px; margin: 0.2rem 0; background: rgba(var(--border-rgb), 0.75); }
 
 .markdown-transclusion {
-  margin: 1rem 0;
-  padding: 0.85rem 1rem;
-  border: 1px solid rgba(var(--border-rgb), 0.9);
-  border-left: 3px solid rgba(var(--accent-rgb), 0.8);
-  border-radius: 0.65rem;
-  background: rgba(var(--surface-rgb), 0.45);
+  margin: 0.65rem 0;
+  padding: 0.35rem 0.7rem 0.2rem;
+  border: 1px solid rgba(var(--border-rgb), 0.45);
+  border-left: 2px solid rgba(var(--border-rgb), 0.8);
+  border-radius: 0.35rem;
+  background: rgba(var(--surface-rgb), 0.2);
 }
 
-.markdown-transclusion__content {
-  margin: 0;
-  overflow: auto;
-  color: inherit;
-  font: inherit;
-  white-space: pre-wrap;
+.markdown-transclusion:focus-within {
+  border-left-color: rgba(var(--accent-rgb), 0.6);
 }
 
+.markdown-transclusion__editor > .tiptap { min-height: 1.5em; outline: none; }
+.markdown-transclusion__editor > .tiptap > :first-child { margin-top: 0; }
+.markdown-transclusion__editor > .tiptap > :last-child { margin-bottom: 0; }
+.markdown-transclusion__path {
+  display: block;
+  margin-top: 0.2rem;
+  color: rgba(var(--text-rgb), 0.48);
+  font-size: 0.72em;
+  text-align: right;
+  overflow-wrap: anywhere;
+  user-select: none;
+}
 .markdown-transclusion__missing { margin: 0; color: var(--color-danger, #b53636); }
 .markdown-transclusion__loading { margin: 0; opacity: 0.65; }
+
+@media (pointer: coarse) {
+  .editor-view__surface td,
+  .editor-view__surface th { -webkit-touch-callout: none; }
+}
 
 .table-edge-add {
   position: fixed;

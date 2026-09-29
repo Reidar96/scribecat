@@ -1,18 +1,80 @@
 import { Node, mergeAttributes } from "@tiptap/core";
-import { ReactNodeViewRenderer, NodeViewWrapper, type NodeViewProps } from "@tiptap/react";
-import { useContext, useEffect, useMemo, useState } from "react";
+import { EditorContent, ReactNodeViewRenderer, NodeViewWrapper, useEditor, type NodeViewProps } from "@tiptap/react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import type MarkdownIt from "markdown-it";
 
 import { EditorFileContext } from "@/lib/editorFileContext";
+import { splitFrontmatter, replaceBody } from "@/lib/documentFrontmatter";
 import { resolveFileLinkTarget } from "@/lib/editor/fileLinks";
-import { readMarkdownFile } from "@/lib/fileSystem";
+import { buildEditorExtensions } from "@/lib/editor/extensions";
+import { serializeGuarded } from "@/lib/editor/serializationGuard";
 import { useAppStore } from "@/store/useAppStore";
+import { TableCellContextMenu } from "@/components/TableCellContextMenu";
 
 type MarkdownSerializerState = { write: (value: string) => void; closeBlock: (node: ProseMirrorNode) => void };
 
-function TransclusionView({ node }: NodeViewProps) {
+// Break circular embeds before they can mount editors indefinitely.
+const EmbeddedPathContext = createContext<readonly string[]>([]);
+
+function EmbeddedContent({ targetPath, content, editable }: { targetPath: string; content: string; editable: boolean }) {
+  const parentContext = useContext(EditorFileContext);
+  const ancestors = useContext(EmbeddedPathContext);
+  const lastLocalBody = useRef<string | null>(null);
+  const saveTimer = useRef<number | null>(null);
+  const body = splitFrontmatter(content).body;
+  const nestedEditor = useEditor({
+    extensions: buildEditorExtensions(),
+    content: body,
+    editable,
+    onUpdate: ({ editor, transaction }) => {
+      if (!transaction.docChanged) return;
+      const result = serializeGuarded(editor, body);
+      if (result.lost.length) return;
+      const state = useAppStore.getState();
+      const current = state.fileDocuments[targetPath]?.content;
+      if (current === undefined) return;
+      const nextContent = replaceBody(current, result.markdown);
+      if (nextContent === current) return;
+      lastLocalBody.current = result.markdown;
+      state.updateFileContent(targetPath, nextContent);
+      if (saveTimer.current !== null) window.clearTimeout(saveTimer.current);
+      saveTimer.current = window.setTimeout(() => {
+        saveTimer.current = null;
+        void useAppStore.getState().saveFilePath(targetPath, { trigger: "auto" });
+      }, 900);
+    }
+  }, [targetPath]);
+
+  useEffect(() => {
+    if (!nestedEditor || nestedEditor.isDestroyed || body === lastLocalBody.current) return;
+    nestedEditor.commands.setContent(body, { emitUpdate: false });
+  }, [body, nestedEditor]);
+
+  useEffect(() => {
+    nestedEditor?.setEditable(editable);
+  }, [editable, nestedEditor]);
+
+  useEffect(() => () => {
+    if (saveTimer.current !== null) {
+      window.clearTimeout(saveTimer.current);
+      void useAppStore.getState().saveFilePath(targetPath, { trigger: "auto" });
+    }
+  }, [targetPath]);
+
+  if (!nestedEditor) return null;
+  return (
+    <EmbeddedPathContext.Provider value={[...ancestors, targetPath]}>
+      <EditorFileContext.Provider value={{ ...parentContext, filePath: targetPath }}>
+        <EditorContent editor={nestedEditor} className="markdown-transclusion__editor" />
+        <TableCellContextMenu editor={nestedEditor} disabled={!editable} />
+      </EditorFileContext.Provider>
+    </EmbeddedPathContext.Provider>
+  );
+}
+
+function TransclusionView({ node, editor }: NodeViewProps) {
   const { t } = useTranslation();
   const { filePath } = useContext(EditorFileContext);
   const href = String(node.attrs.href ?? "");
@@ -22,32 +84,38 @@ function TransclusionView({ node }: NodeViewProps) {
     [filePath, filePaths, href]
   );
   const openContent = useAppStore((state) => targetPath ? state.fileDocuments[targetPath]?.content : undefined);
-  const [diskContent, setDiskContent] = useState<string | null>(null);
+  const loadFileDocument = useAppStore((state) => state.loadFileDocument);
+  const ancestors = useContext(EmbeddedPathContext);
+  const [loadFailed, setLoadFailed] = useState(false);
 
   useEffect(() => {
     let active = true;
-    if (!targetPath || openContent !== undefined) {
-      setDiskContent(null);
-      return () => { active = false; };
+    setLoadFailed(false);
+    if (targetPath && openContent === undefined) {
+      void loadFileDocument(targetPath).then((loaded) => {
+        if (active) setLoadFailed(!loaded);
+      }).catch(() => {
+        if (active) setLoadFailed(true);
+      });
     }
-    void readMarkdownFile(targetPath).then((content) => {
-      if (active) setDiskContent(content);
-    }).catch(() => {
-      if (active) setDiskContent(null);
-    });
     return () => { active = false; };
-  }, [openContent, targetPath]);
+  }, [loadFileDocument, openContent === undefined, targetPath]);
 
-  const content = openContent ?? diskContent;
+  const cycle = Boolean(targetPath && (targetPath === filePath || ancestors.includes(targetPath)));
   return (
     <NodeViewWrapper as="section" className="markdown-transclusion" contentEditable={false}>
-      {targetPath ? content === null ? (
+      {targetPath && !cycle && openContent !== undefined ? (
+        <EmbeddedContent key={targetPath} targetPath={targetPath} content={openContent} editable={editor.isEditable} />
+      ) : targetPath && !cycle && !loadFailed ? (
         <p className="markdown-transclusion__loading">{t("editor.transclusionLoading")}</p>
-      ) : (
-        <pre className="markdown-transclusion__content">{content}</pre>
+      ) : cycle ? (
+        <p className="markdown-transclusion__missing">{t("editor.transclusionCycle")}</p>
       ) : (
         <p className="markdown-transclusion__missing">{t("editor.transclusionMissing")}</p>
       )}
+      {targetPath && !cycle && openContent !== undefined ? (
+        <span className="markdown-transclusion__path" title={targetPath}>{href}</span>
+      ) : null}
     </NodeViewWrapper>
   );
 }
@@ -82,7 +150,14 @@ export const Transclusion = Node.create({
   },
   parseHTML() { return [{ tag: "div[data-transclusion]" }]; },
   renderHTML({ HTMLAttributes }) { return ["div", mergeAttributes(HTMLAttributes, { class: "markdown-transclusion" })]; },
-  addNodeView() { return ReactNodeViewRenderer(TransclusionView); },
+  addNodeView() {
+    return ReactNodeViewRenderer(TransclusionView, {
+      // The embedded document has its own ProseMirror view. Its selection,
+      // paste and drag events belong to that view, never the host note.
+      stopEvent: ({ event }) =>
+        event.target instanceof Element && Boolean(event.target.closest(".markdown-transclusion__editor"))
+    });
+  },
   addStorage() {
     return { markdown: {
       serialize(state: MarkdownSerializerState, node: ProseMirrorNode) {
