@@ -61,13 +61,46 @@ export function TableCellContextMenu({ editor, disabled = false }: Props) {
   const menuRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const root = editor.view.dom;
+    let longPress: number | null = null;
+    let touchStart: { x: number; y: number; cell: HTMLTableCellElement } | null = null;
+    const cancelLongPress = () => {
+      if (longPress !== null) window.clearTimeout(longPress);
+      longPress = null;
+      touchStart = null;
+    };
+    const showMenu = (cell: HTMLTableCellElement, x: number, y: number) => {
+      setMenu({
+        x: Math.max(8, Math.min(x, window.innerWidth - 220)),
+        y: Math.max(8, Math.min(y, window.innerHeight - 360)),
+        cell
+      });
+    };
     const onContextMenu = (event: MouseEvent) => {
       if (disabled || !(event.target instanceof Element)) return;
       const cell = event.target.closest("td, th");
       if (!(cell instanceof HTMLTableCellElement) || !root.contains(cell)) return;
       event.preventDefault();
       event.stopPropagation();
-      setMenu({ x: Math.min(event.clientX, window.innerWidth - 220), y: Math.min(event.clientY, window.innerHeight - 360), cell });
+      cancelLongPress();
+      window.getSelection()?.removeAllRanges();
+      showMenu(cell, event.clientX, event.clientY);
+    };
+    const onPointerDown = (event: PointerEvent) => {
+      if (disabled || event.pointerType !== "touch" || !(event.target instanceof Element)) return;
+      const cell = event.target.closest("td, th");
+      if (!(cell instanceof HTMLTableCellElement) || !root.contains(cell)) return;
+      cancelLongPress();
+      touchStart = { x: event.clientX, y: event.clientY, cell };
+      longPress = window.setTimeout(() => {
+        longPress = null;
+        if (!touchStart) return;
+        window.getSelection()?.removeAllRanges();
+        showMenu(touchStart.cell, touchStart.x, touchStart.y);
+        touchStart = null;
+      }, 550);
+    };
+    const onPointerMove = (event: PointerEvent) => {
+      if (touchStart && Math.hypot(event.clientX - touchStart.x, event.clientY - touchStart.y) > 10) cancelLongPress();
     };
     const closeOutside = (event: PointerEvent) => {
       if (event.target instanceof Node && menuRef.current?.contains(event.target)) return;
@@ -77,9 +110,22 @@ export function TableCellContextMenu({ editor, disabled = false }: Props) {
       if (event.key === "Escape") setMenu(null);
     };
     root.addEventListener("contextmenu", onContextMenu);
+    root.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", cancelLongPress);
+    window.addEventListener("pointercancel", cancelLongPress);
     window.addEventListener("pointerdown", closeOutside);
     window.addEventListener("keydown", closeOnEscape);
-    return () => { root.removeEventListener("contextmenu", onContextMenu); window.removeEventListener("pointerdown", closeOutside); window.removeEventListener("keydown", closeOnEscape); };
+    return () => {
+      cancelLongPress();
+      root.removeEventListener("contextmenu", onContextMenu);
+      root.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", cancelLongPress);
+      window.removeEventListener("pointercancel", cancelLongPress);
+      window.removeEventListener("pointerdown", closeOutside);
+      window.removeEventListener("keydown", closeOnEscape);
+    };
   }, [disabled, editor]);
   if (!menu) return null;
   const info = tableInfo(editor, menu.cell);

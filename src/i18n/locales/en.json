@@ -987,6 +987,7 @@
     "unserializableContent": "Saving is paused: the editor cannot write this note as Markdown ({{nodes}}). Undo the last change so nothing is lost, and please report this.",
     "transclusionLoading": "Loading embedded note…",
     "transclusionMissing": "This embedded block was deleted. Insert its content into this note.",
+    "transclusionCycle": "This note links back to itself through embedded blocks.",
     "imageRequiresFile": "Images and PDFs can only be inserted while editing a file inside an open folder.",
     "imageInsertFailed": "Could not insert image \"{{fileName}}\": {{error}}",
     "pdfInsertFailed": "Could not insert PDF \"{{fileName}}\" as images: {{error}}",
