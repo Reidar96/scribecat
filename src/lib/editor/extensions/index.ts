@@ -18,6 +18,9 @@ import { BulletList, OrderedList } from "./lists";
 import { HardBreak, Table, TableCell, TableHeader, TableRow } from "./table";
 import { TaskItem, TaskList, TaskListMarkdown } from "./taskList";
 import { Underline } from "./underline";
+import { PreserveBlankLines } from "./preserveBlankLines";
+import { Paragraph } from "./paragraph";
+import { Transclusion } from "./transclusion";
 
 // Everything that defines the document model itself, in the order TipTap loads them.
 function buildContentExtensions(): Extensions {
@@ -25,7 +28,9 @@ function buildContentExtensions(): Extensions {
     // The lists, the hard break and the table are the local variants: they
     // refuse block content in table cells and serialize a cell without ever
     // falling back to tiptap-markdown's "[table]" placeholder (table.ts).
-    StarterKit.configure({ codeBlock: false, bulletList: false, orderedList: false, hardBreak: false }),
+    StarterKit.configure({ codeBlock: false, bulletList: false, orderedList: false, hardBreak: false, paragraph: false }),
+    Paragraph,
+    Transclusion,
     CodeBlock,
     BulletList,
     OrderedList,
@@ -35,6 +40,7 @@ function buildContentExtensions(): Extensions {
     TaskItem.configure({ nested: true }),
     TaskListMarkdown,
     Underline,
+    PreserveBlankLines,
     Highlight,
     Table.configure({ resizable: true }),
     TableRow,

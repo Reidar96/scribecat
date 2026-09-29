@@ -501,12 +501,41 @@ p.detail-panel__version {
 }
 
 .document-tab {
+  position: relative;
+  transition: transform 150ms ease, opacity 150ms ease;
   display: inline-flex;
   align-items: center;
   flex: 0 0 auto;
   max-width: 15rem;
   border-radius: 0.5rem;
   color: rgba(var(--text-rgb), 0.66);
+}
+
+.document-tab[data-dragging="true"] {
+  opacity: 0.55;
+  transform: scale(0.98);
+}
+
+.document-tab[data-drop-position="before"]::before,
+.document-tab[data-drop-position="after"]::after {
+  position: absolute;
+  z-index: 2;
+  top: 4px;
+  bottom: 4px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--color-primary, #4f8cff);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary, #4f8cff) 18%, transparent);
+  content: "";
+  animation: document-tab-drop-in 120ms ease-out;
+}
+
+.document-tab[data-drop-position="before"]::before { left: -2px; }
+.document-tab[data-drop-position="after"]::after { right: -2px; }
+
+@keyframes document-tab-drop-in {
+  from { opacity: 0; transform: scaleY(0.45); }
+  to { opacity: 1; transform: scaleY(1); }
 }
 
 .document-tab--active {

@@ -79,6 +79,28 @@ function bulletList(...items: string[]): JSONContent {
 }
 
 describe("table markdown serializer", () => {
+  it("round-trips linked Markdown blocks as boxed transclusions", () => {
+    const source = "before\n\n![[folder/note.md]]\n\nafter";
+    const parsed = parse(source);
+    expect(parsed.doc.content?.map((node) => node.type)).toEqual([
+      "paragraph", "transclusion", "paragraph"
+    ]);
+    expect(serialize(source)).toBe(source);
+  });
+
+  it("preserves multiple blank lines between paragraphs", () => {
+    const source = "first\n\n\n\nsecond";
+    const parsed = parse(source);
+    expect(parsed.doc.content?.map((node) => node.type)).toEqual([
+      "paragraph", "paragraph", "paragraph", "paragraph"
+    ]);
+    const saved = serialize(source);
+    expect(saved.match(/\u200b/g)).toHaveLength(2);
+    expect(parse(saved).doc.content?.map((node) => node.type)).toEqual([
+      "paragraph", "paragraph", "paragraph", "paragraph"
+    ]);
+  });
+
   it("round-trips a plain table unchanged", () => {
     const source = "| A | B |\n| --- | --- |\n| 1 | 2 |\n";
 

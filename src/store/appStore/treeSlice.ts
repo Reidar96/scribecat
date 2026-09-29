@@ -15,6 +15,7 @@ import {
   writeMarkdownFile
 } from "@/lib/fileSystem";
 import { isDescendantRelativePath } from "@/lib/fileTree";
+import { rewriteMovedMarkdownLinks } from "@/lib/editor/documentLinks";
 import { renameDocumentLockPath } from "@/lib/documentLocks";
 import { setVaultIcon } from "@/lib/vaultIcons";
 import { writeDocumentLocks, writeManualOrder, writeSortMode, type SortMode } from "@/lib/vaultMeta";
@@ -301,6 +302,43 @@ export const createTreeSlice: AppSlice<TreeSlice> = (set, get) => ({
               }
             })
         );
+
+        // Links are stored relative to the source note. Rewrite every incoming
+        // reference to a moved note, and rebase outgoing links in notes that
+        // moved with their folder, so both kinds keep resolving after a move.
+        const movedLinks = await Promise.all(filePaths.map(async (oldSourcePath) => {
+          const newSourcePath = await remapPathUnderRenamedFolder(oldSourcePath, sourcePath, newPath);
+          const originalDocument = fileDocuments[oldSourcePath];
+          const existingNext = nextDocuments[newSourcePath];
+          const originalBase = originalDocument?.baseContent ?? preMoveContentByPath.get(oldSourcePath) ?? await readMarkdownFile(oldSourcePath).catch(() => "");
+          const originalCurrent = originalDocument?.content ?? originalBase;
+          const baseInput = existingNext?.baseContent ?? originalBase;
+          const currentInput = existingNext?.content ?? originalCurrent;
+          const moved = { sourcePath, targetPath: newPath };
+          const correctedBase = rewriteMovedMarkdownLinks(baseInput, oldSourcePath, newSourcePath, filePaths, moved);
+          const correctedCurrent = rewriteMovedMarkdownLinks(currentInput, oldSourcePath, newSourcePath, filePaths, moved);
+          return { oldSourcePath, newSourcePath, originalBase, correctedBase, correctedCurrent, originalDocument, existingNext };
+        }));
+
+        await Promise.all(movedLinks.map(async ({ newSourcePath, originalBase, correctedBase, correctedCurrent, originalDocument, existingNext }) => {
+          if (correctedBase === (existingNext?.baseContent ?? originalBase) && correctedCurrent === (existingNext?.content ?? originalDocument?.content ?? originalBase)) return;
+          const nextDocument = existingNext ?? originalDocument;
+          if (nextDocument) {
+            nextDocuments[newSourcePath] = {
+              ...nextDocument,
+              baseContent: correctedBase,
+              content: correctedCurrent,
+              baseMtimeMs: correctedBase === originalBase ? nextDocument.baseMtimeMs : undefined
+            };
+            if (correctedCurrent !== correctedBase) scheduleDraft(folderPath, newSourcePath, correctedCurrent, nextDocuments[newSourcePath].baseMtimeMs ?? null);
+          }
+          if (correctedBase !== originalBase) {
+            await writeMarkdownFile(newSourcePath, correctedBase)
+              .then(() => snapshotFileVersion(folderPath, newSourcePath, correctedBase))
+              .catch(() => undefined);
+          }
+        }));
+        nextDocuments = { ...nextDocuments };
 
         nextSelectedFilePath = state.selectedFilePath
           ? await remapPathUnderRenamedFolder(state.selectedFilePath, sourcePath, newPath)

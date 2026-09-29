@@ -18,6 +18,7 @@ type GraphCanvasProps = {
   edges: VaultGraphEdge[];
   activeFilePath: string | null;
   onActivateNode: (node: VaultGraphNode) => void;
+  onCreateFileInFolder?: (node: VaultGraphNode, x: number, y: number) => void;
 };
 
 type Point = { x: number; y: number; vx: number; vy: number };
@@ -143,7 +144,8 @@ export function GraphCanvas({
   nodes,
   edges,
   activeFilePath,
-  onActivateNode
+  onActivateNode,
+  onCreateFileInFolder
 }: GraphCanvasProps) {
   const { t } = useTranslation();
   const hostRef = useRef<HTMLDivElement>(null);
@@ -686,6 +688,12 @@ export function GraphCanvas({
                     setHoveredId((current) => (current === node.id ? null : current))
                   }
                   onPointerDown={(event) => onNodePointerDown(event, node)}
+                  onContextMenu={(event) => {
+                    if (node.kind !== "folder" || !onCreateFileInFolder) return;
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onCreateFileInFolder(node, event.clientX, event.clientY);
+                  }}
                   onPointerMove={onNodePointerMove}
                   onPointerUp={(event) => onNodePointerUp(event, node)}
                   onPointerCancel={onNodePointerCancel}

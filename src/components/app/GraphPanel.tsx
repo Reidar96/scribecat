@@ -30,6 +30,7 @@ type GraphPanelProps = {
   onClose: () => void;
   onOpenFile: (filePath: string) => void;
   onOpenFolder: (relativePath: string) => void;
+  onCreateFileInFolder: (relativePath: string) => void;
   onOpenTag: (tag: string, filePaths: string[]) => void;
 };
 
@@ -52,6 +53,7 @@ export function GraphPanel({
   onClose,
   onOpenFile,
   onOpenFolder,
+  onCreateFileInFolder,
   onOpenTag
 }: GraphPanelProps) {
   const { t } = useTranslation();
@@ -62,6 +64,7 @@ export function GraphPanel({
   const [markdownByPath, setMarkdownByPath] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [refreshId, setRefreshId] = useState(0);
+  const [folderMenu, setFolderMenu] = useState<{ relativePath: string; x: number; y: number } | null>(null);
 
   const graphFilePaths = useMemo(
     () =>
@@ -291,12 +294,42 @@ export function GraphPanel({
               <p>{t("graph.allHidden")}</p>
             </div>
           ) : (
-            <GraphCanvas
+            <>
+              <GraphCanvas
               nodes={visibleGraph.nodes}
               edges={visibleGraph.edges}
               activeFilePath={selectedFilePath}
-              onActivateNode={activateNode}
-            />
+                onActivateNode={activateNode}
+                onCreateFileInFolder={(node, x, y) => {
+                  if (node.kind === "folder") {
+                    setFolderMenu({ relativePath: node.relativePath ?? "", x, y });
+                  }
+                }}
+              />
+              {folderMenu ? (
+                <div
+                  className="graph-view__context-menu"
+                  role="menu"
+                  style={{ left: folderMenu.x, top: folderMenu.y }}
+                  onPointerDown={(event) => event.stopPropagation()}
+                >
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      const path = folderMenu.relativePath;
+                      setFolderMenu(null);
+                      onCreateFileInFolder(path);
+                    }}
+                  >
+                    {t("graph.createNoteInFolder", { defaultValue: "New document in folder" })}
+                  </button>
+                  <button type="button" aria-label={t("common.close")} onClick={() => setFolderMenu(null)}>
+                    {t("common.cancel")}
+                  </button>
+                </div>
+              ) : null}
+            </>
           )}
         </div>
       </div>

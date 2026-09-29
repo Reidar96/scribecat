@@ -576,7 +576,8 @@
     "canvasLabel": "Interaktiv graf over mappen",
     "openNote": "Åpne notatet {{name}}",
     "openTag": "Åpne taggen {{name}}",
-    "openFolder": "Åpne mappen {{name}}"
+    "openFolder": "Åpne mappen {{name}}",
+    "createNoteInFolder": "Nytt dokument i mappen"
   },
   "fileTree": {
     "treeLabel": "Filtre",
@@ -660,6 +661,8 @@
     "codeBlockTitle": "Kodeblokk (Ctrl+K)",
     "insertLink": "Sett inn lenke",
     "insertLinkTitle": "Sett inn lenke (Ctrl+L)",
+    "insertBlock": "Sett inn byggeblokk",
+    "insertHorizontalRule": "Sett inn skillelinje",
     "detailsPanel": "Detaljer",
     "detailsPanelTitle": "Vis eller skjul detaljpanelet (Ctrl+Shift+D)",
     "headingMenu": "Overskrift",
@@ -769,6 +772,10 @@
     "addRowBefore": "Sett inn rad over",
     "addRowAfter": "Sett inn rad under",
     "deleteRow": "Slett rad",
+    "moveRowUp": "Flytt rad opp",
+    "moveRowDown": "Flytt rad ned",
+    "moveColumnLeft": "Flytt kolonne til venstre",
+    "moveColumnRight": "Flytt kolonne til høyre",
     "deleteTable": "Slett tabell"
   },
   "imageView": {
@@ -792,6 +799,8 @@
   },
   "editor": {
     "unserializableContent": "Lagring er satt på pause: redigereren kan ikke skrive dette notatet som Markdown ({{nodes}}). Angre siste endring for å unngå datatap, og rapporter gjerne feilen.",
+    "transclusionLoading": "Laster innebygd notat …",
+    "transclusionMissing": "Denne byggeblokken er slettet. Sett inn innholdet i dette notatet.",
     "imageRequiresFile": "Bilder og PDF-er kan bare settes inn når du redigerer en fil i en åpen mappe.",
     "imageInsertFailed": "Kunne ikke sette inn bildet «{{fileName}}»: {{error}}",
     "pdfInsertFailed": "Kunne ikke sette inn PDF-en «{{fileName}}» som bilder: {{error}}",
