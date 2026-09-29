@@ -636,51 +636,29 @@
 }
 
 
-/* Hover affordance for inserting table structure. The button is portalled to
-   the viewport so it can sit exactly on a collapsed table border even when
-   the table itself scrolls horizontally. The full table menu remains the
-   keyboard/touch fallback. */
-.table-cell-menu {
-  position: fixed;
+/* Table actions use the same measured context menu and phone sheet as files. */
+.file-tree-context-menu.table-cell-menu {
   z-index: 1400;
   display: grid;
   gap: 0.15rem;
   min-width: 13rem;
-  padding: 0.4rem;
-  border: 1px solid rgba(var(--border-rgb), 0.85);
-  border-radius: 0.7rem;
-  background: rgb(var(--surface-raised-rgb));
-  color: rgba(var(--text-rgb), 0.96);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22);
 }
 
-.table-cell-menu button {
-  border: 0;
-  border-radius: 0.42rem;
-  padding: 0.48rem 0.65rem;
-  background: transparent;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.table-cell-menu button:hover:not(:disabled),
-.table-cell-menu button:focus-visible { background: rgba(var(--selection-rgb), 0.18); }
-.table-cell-menu button:disabled { opacity: 0.4; cursor: default; }
-.table-cell-menu button.table-cell-menu__danger { color: #c43b3b; }
 .table-cell-menu [role="separator"] { height: 1px; margin: 0.2rem 0; background: rgba(var(--border-rgb), 0.75); }
 
 .markdown-transclusion {
-  margin: 0.65rem 0;
-  padding: 0.35rem 0.7rem 0.2rem;
-  border: 1px solid rgba(var(--border-rgb), 0.45);
-  border-left: 2px solid rgba(var(--border-rgb), 0.8);
-  border-radius: 0.35rem;
-  background: rgba(var(--surface-rgb), 0.2);
+  margin: 0.85rem 0;
+  padding: 0.55rem 0.8rem 0.35rem;
+  border: 1px solid rgba(var(--border-rgb), 0.95);
+  border-radius: 0.55rem;
+  background: rgba(var(--overlay-rgb), 0.055);
 }
 
+.dark .markdown-transclusion { background: rgba(0, 0, 0, 0.2); }
+.dark .editor-view__surface--paper .markdown-transclusion { background: rgba(15, 23, 42, 0.055); }
+
 .markdown-transclusion:focus-within {
-  border-left-color: rgba(var(--accent-rgb), 0.6);
+  border-color: rgba(var(--accent-rgb), 0.55);
 }
 
 .markdown-transclusion__editor > .tiptap { min-height: 1.5em; outline: none; }

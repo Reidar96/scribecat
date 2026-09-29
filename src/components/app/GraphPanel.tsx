@@ -9,6 +9,7 @@ import {
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
+import { ContextMenuSurface } from "@/components/fileTree/ContextMenuSurface";
 import { GraphCanvas } from "@/components/graph/GraphCanvas";
 import { buildVaultGraph, type GraphNodeKind, type VaultGraphNode } from "@/lib/graphIndex";
 import { getRelativeDisplayPath, readMarkdownFile } from "@/lib/fileSystem";
@@ -307,15 +308,11 @@ export function GraphPanel({
                 }}
               />
               {folderMenu ? (
-                <div
-                  className="graph-view__context-menu"
-                  role="menu"
-                  style={{ left: folderMenu.x, top: folderMenu.y }}
-                  onPointerDown={(event) => event.stopPropagation()}
-                >
+                <ContextMenuSurface x={folderMenu.x} y={folderMenu.y} title={t("graph.openFolder", { name: folderMenu.relativePath })}>
                   <button
                     type="button"
                     role="menuitem"
+                    className="file-tree-context-menu__item"
                     onClick={() => {
                       const path = folderMenu.relativePath;
                       setFolderMenu(null);
@@ -324,10 +321,10 @@ export function GraphPanel({
                   >
                     {t("graph.createNoteInFolder", { defaultValue: "New document in folder" })}
                   </button>
-                  <button type="button" aria-label={t("common.close")} onClick={() => setFolderMenu(null)}>
+                  <button type="button" role="menuitem" className="file-tree-context-menu__item" aria-label={t("common.close")} onClick={() => setFolderMenu(null)}>
                     {t("common.cancel")}
                   </button>
-                </div>
+                </ContextMenuSurface>
               ) : null}
             </>
           )}

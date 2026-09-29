@@ -19,6 +19,7 @@ afterEach(async () => {
   editor = null;
   host = null;
   vi.useRealTimers();
+  vi.unstubAllGlobals();
 });
 
 function touch(type: string, x: number, y: number): Event {
@@ -34,6 +35,11 @@ function touch(type: string, x: number, y: number): Event {
 describe("table cell touch menu", () => {
   it("opens on a stationary long press and cancels when the user scrolls", async () => {
     vi.useFakeTimers();
+    vi.stubGlobal("matchMedia", (query: string) => ({
+      matches: query.includes("640"),
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined
+    }));
     editor = new Editor({ extensions: buildPreviewExtensions(), content: "| First | Second |\n| --- | --- |\n| A | B |" });
     host = document.createElement("div");
     host.append(editor.view.dom);
@@ -56,5 +62,7 @@ describe("table cell touch menu", () => {
       vi.advanceTimersByTime(600);
     });
     expect(document.querySelector(".table-cell-menu[role='menu']")).not.toBeNull();
+    expect(document.querySelector(".table-cell-menu.file-tree-context-menu--sheet")).not.toBeNull();
+    expect(document.querySelector(".file-tree-context-menu__backdrop")).not.toBeNull();
   });
 });

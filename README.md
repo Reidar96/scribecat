@@ -8,15 +8,11 @@
 
 Write beautifully, connect your ideas, and turn plans into progress — in a visual Markdown workspace you can run on your own computer or server.
 
-**Open source · Ordinary Markdown files · Windows & Linux · Self-hosted web app**
+**Open source · Ordinary Markdown files · macOS, Windows & Linux · Self-hosted web app**
 
 [**Download ScribeCat**](https://github.com/Reidar96/scribecat/releases/latest) · [**Self-host with Docker**](server/README.md) · [Explore the features](docs/features.md) · [What's new](CHANGELOG.md)
 
 </div>
-
-![Illustrated ScribeCat writing workspace with folders, a formatted note and document details](docs/images/writing.svg)
-
-*Interface illustration with fictional example content, not a captured application screenshot. The illustrations below explain existing workflows; exact layout varies by device and settings.*
 
 ## Make room for your next idea
 
@@ -28,26 +24,22 @@ Underneath it all, your work remains ordinary files in ordinary folders. Use ano
 
 | What you want to do | How ScribeCat helps |
 | --- | --- |
-| **Write without friction** | Visual Markdown editing with tables, images, callouts, code blocks and checklists. Switch to Zen mode when you want room to focus. |
-| **Keep projects within reach** | Organize folders, add portable tags, search across your vault and keep active notes in your working set. |
-| **Read while you write** | View PDFs inside notes, zoom in on a page, or browse a centered multi-page overview with two or three columns. |
-| **Remember your days** | Open a date in the calendar, write a journal entry and add a photo gallery. Entries remain Markdown files. |
-| **Move plans forward** | Manage tasks with categories, deadlines, priorities, tags and subtasks — stored as Markdown checkboxes. |
-| **See the connections** | Explore a graph built from note links, tags and folders. Follow a connection straight back to the relevant note. |
-| **Return with confidence** | Auto-save, draft recovery and save-time conflict checks help protect your work. Enable version history to compare and restore earlier versions. |
+| **Write without friction** | Visual Markdown editing with headings, lists, tables, images, PDFs, callouts, code, links, dividers and checklists. Use Zen mode or split view when you need focus or two notes at once. |
+| **Connect and reuse** | Link notes, see backlinks in document details, and embed an editable note as a linked block that stays in sync with its source. Relative links and block paths follow files when you move them. |
+| **Keep projects within reach** | Organize folders, add portable tags, search and replace across your vault, arrange tabs and keep active notes in your working set. The graph shows notes, tags and folders. |
+| **Read while you write** | View PDFs inside notes, zoom in on a page, or browse a centered multi-page overview. Keep images and attachments beside their notes. |
+| **Remember your days** | Open a date in the calendar, write a journal entry and add a photo gallery. Entries remain Markdown files; the overview caches entries and first images. |
+| **Move plans forward** | Manage Markdown tasks with categories, subcategories, deadlines, priorities, tags, notes and subtasks. Reorder sections on desktop and touch devices. |
+| **Return with confidence** | Auto-save, persistent drafts, a recoverable trash and optional version history protect your work. Offline desktop and server-vault caches keep documents available; changed copies can be compared on reconnect. |
 | **Share finished work** | Export to PDF, DOCX or HTML, print a document, or download Markdown and folder archives. |
 
 ## From reference material to finished writing
 
-![Illustrated PDF overview showing six reference pages in a centered three-column grid](docs/images/pdf-overview.svg)
-
-*Illustrated PDF workflow with sample pages.* Keep reference material in your writing environment, switch between a single page and an overview, and use fullscreen when you need more room.
+Keep reference material in your writing environment, switch between a single page and an overview, and use fullscreen when you need more room.
 
 ## Your tasks and ideas belong together
 
-![Illustration of Markdown tasks and a graph connecting project notes, folders and tags](docs/images/tasks-and-graph.svg)
-
-*Illustrated task and graph workflows with fictional content.* Turn a project into manageable steps, then use links and tags to keep the surrounding research connected.
+Turn a project into manageable steps, then use links, backlinks and tags to keep the surrounding research connected. Right-click a folder in the graph to create a document there.
 
 ## Choose where your workspace lives
 
@@ -57,6 +49,7 @@ Download the latest release, open a folder and start writing. The desktop app wo
 
 | Platform | Available downloads |
 | --- | --- |
+| macOS | Separate Apple Silicon (ARM) and Intel DMG downloads |
 | Windows | Installer (`.exe`), MSI and portable ZIP |
 | Linux | AppImage, Debian package and RPM |
 
@@ -75,7 +68,7 @@ cp .env.example .env
 docker compose up -d
 ```
 
-Follow the [server setup guide](server/docs/getting-started.md) for hostname, certificate and first-sign-in instructions. Docker releases use explicit version tags, such as `ghcr.io/reidar96/scribecat-server:0.26.0`; there is no moving `latest` tag.
+Follow the [server setup guide](server/docs/getting-started.md) for hostname, certificate and first-sign-in instructions. Docker releases use explicit version tags, such as `ghcr.io/reidar96/scribecat-server:0.28.2`; there is no moving `latest` tag.
 
 **Desktop and web share the same core workspace.** The web edition uses your server's storage; local offline dictation is a desktop feature. Phone and tablet access is through the responsive web app, not a separate native mobile release.
 
