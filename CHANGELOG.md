@@ -1,4 +1,3 @@
-
 ## [0.28.0] - 2026-09-29
 
 - Keep tab order stable when switching notes; show an animated drop marker while reordering tabs.
