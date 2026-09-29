@@ -1,3 +1,10 @@
+## [0.28.2] - 2026-09-29
+
+- Give linked blocks a visible border and slightly darker background to distinguish them from the surrounding note.
+- Show table-cell actions in the same bottom-sheet menu as other context actions on phones.
+- Keep desktop context menus within the viewport and let long menus scroll; use the shared menu for table and graph folder actions.
+- Refresh the GitHub overview and feature guide with current features and macOS downloads, and remove obsolete interface images.
+
 ## [0.28.1] - 2026-09-29
 
 - Edit linked Markdown blocks in place with the same visual rendering for lists, tables, images and PDFs as the document editor. Sync changes to the source note, show a quiet path label, and soften the block outline.

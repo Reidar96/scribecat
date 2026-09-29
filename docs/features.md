@@ -20,9 +20,11 @@ The editor supports:
 - Inline code
 - Code blocks
 - Links
+- Linked blocks that embed another Markdown note and can be edited in place
 - Images
 - Callouts
 - Tables
+- Horizontal rules / dividers
 - Undo and redo
 - Paste-as-Markdown
 - Search and replace
@@ -33,7 +35,15 @@ The editor supports:
 - Optional automatic heading numbering
 - Live document outline in the Details panel
 
-Tables can be edited visually, including adding and removing rows and columns.
+Tables can be edited visually. Right-click a cell, or long-press it on a phone, to insert, remove or move rows and columns. The menu stays within the screen and scrolls when necessary. Multiple selected lines can be turned into bullet or numbered lists, and blank lines remain after saving and reopening.
+
+### Tabs, split view and linked notes
+
+- Open several documents as tabs; switching tabs keeps their order intact. Drag a tab to reorder it with a visible drop marker.
+- Drag a tab or note into either split pane. Replacing one pane leaves the other document in place. The Details panel closes while split view is active.
+- Follow normal Markdown links between notes and see incoming links (backlinks) in the Details panel.
+- Insert an editable linked block with `![[relative/path.md]]`. It displays the source note visually, including tables, images and PDFs. Edits in the block update the source note; a border and a small path label identify it.
+- When a note or folder moves within ScribeCat, relative note links and linked-block paths update. A removed block source displays a missing-content notice.
 
 ### Plain files and portable storage
 
@@ -41,7 +51,7 @@ ScribeCat deliberately avoids a proprietary note database.
 
 - Notes are ordinary Markdown files
 - Folders are ordinary filesystem folders
-- Markdown links remain normal relative links
+- Ordinary note links remain normal relative Markdown links; linked blocks use the `![[path.md]]` notation
 - Images are stored in note-local `_attachments/` folders
 - Tags are stored in YAML frontmatter
 - Diary entries use ordinary Markdown files
@@ -82,9 +92,11 @@ File and folder features include:
 - Move
 - Duplicate
 - Delete from context menus and selection actions
+- Restore or permanently remove deleted items from the vault trash, or empty the trash
 - Multi-select for moving or deleting several items
 - Manual, name and modified-date sorting
 - Drag-and-drop organization
+- Drag tabs into split view and rearrange them with a visible drop marker
 - Collapse all open folders
 - Folder notes
 - Custom emoji icons for files and folders
@@ -93,6 +105,7 @@ File and folder features include:
 - Download Markdown
 - Download folder archives as ZIP
 - Recent folders
+- Local/server workspace selector on desktop, with controls to close a local folder or remove a server connection
 - A persistent “In progress” / working-set list for notes you want to keep at hand
 
 ### Portable tags
@@ -135,11 +148,12 @@ You can:
 - Fit the graph to the window
 - Focus a node and its direct connections
 - Open notes, tags and folders directly from the graph
+- Right-click a folder node to create a document inside it and begin renaming it
 - Toggle notes, tags and folders independently
 - Refresh the graph
 - Work with an organic bubble-style layout that separates unrelated groups
 
-There is no graph database and no proprietary link syntax.
+There is no graph database. Ordinary note links use relative Markdown paths; linked blocks use the documented `![[path.md]]` notation.
 
 ### Diary / Calendar
 
@@ -161,6 +175,7 @@ Features include:
 - Configurable date/file structure
 - Option to hide the diary storage folder from the normal file and tag views
 - Right-click deletion of diary entries from overview/search results
+- A cached overview of entries and first images to speed up large journals
 
 The diary note field is always editable and grows automatically with the amount of text.
 
@@ -224,6 +239,8 @@ Tasks support:
 - Tag filtering
 - Category rename
 - Category deletion with ScribeCat's normal confirmation dialog
+- Markdown subcategory headings, with rename, delete and drag-to-reorder actions
+- Touch reorder mode for category order and long-press actions on mobile
 - Drag-and-drop movement between categories
 - Priority-first sorting for open tasks, followed by deadline
 
@@ -283,6 +300,8 @@ ScribeCat also includes:
 
 - Draft recovery / hot exit
 - Unsaved edits surviving restarts
+- Persistent offline access to cached documents and folders in the desktop app; remote vault entries and first journal images are cached in IndexedDB
+- Offline drafts and a reconnection conflict dialog that compares the local and server versions before choosing one
 - Per-vault working-set restoration
 - Save-time conflict detection
 - Protection against silently overwriting externally modified files
@@ -356,6 +375,7 @@ Touch-focused features include:
 - Phone-specific diary navigation
 - Swipe navigation between diary images
 - Touch-friendly multi-select
+- Long-press table-cell actions in a bottom sheet with scrollable options
 - Image picker support
 - Mobile Start shortcuts for Calendar, Graph and Tasks
 - Calendar, Graph and Tasks shortcuts inside the mobile sidebar
@@ -420,7 +440,7 @@ Server setup and connected-server management live under **Settings → Server**.
 
 Account controls live under **Settings → Account**, including password management, signed-in devices and sign out.
 
-Use the supported [Docker Compose setup](../server/README.md) and follow the [getting-started guide](../server/docs/getting-started.md) for HTTPS and first sign-in. Releases use explicit tags such as `ghcr.io/reidar96/scribecat-server:0.26.0`; there is no moving `latest` tag.
+Use the supported [Docker Compose setup](../server/README.md) and follow the [getting-started guide](../server/docs/getting-started.md) for HTTPS and first sign-in. Releases use explicit tags such as `ghcr.io/reidar96/scribecat-server:0.28.2`; there is no moving `latest` tag.
 
 ### Languages
 

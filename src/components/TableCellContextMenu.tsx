@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { useEffect, useState } from "react";
 import type { Editor } from "@tiptap/react";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { useTranslation } from "react-i18next";
+import { ContextMenuSurface } from "@/components/fileTree/ContextMenuSurface";
 
 type MenuState = { x: number; y: number; cell: HTMLTableCellElement };
 type Props = { editor: Editor; disabled?: boolean };
@@ -58,7 +58,6 @@ function moveColumn(editor: Editor, cell: HTMLTableCellElement, direction: -1 | 
 export function TableCellContextMenu({ editor, disabled = false }: Props) {
   const { t } = useTranslation();
   const [menu, setMenu] = useState<MenuState | null>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const root = editor.view.dom;
     let longPress: number | null = null;
@@ -70,8 +69,8 @@ export function TableCellContextMenu({ editor, disabled = false }: Props) {
     };
     const showMenu = (cell: HTMLTableCellElement, x: number, y: number) => {
       setMenu({
-        x: Math.max(8, Math.min(x, window.innerWidth - 220)),
-        y: Math.max(8, Math.min(y, window.innerHeight - 360)),
+        x,
+        y,
         cell
       });
     };
@@ -103,7 +102,7 @@ export function TableCellContextMenu({ editor, disabled = false }: Props) {
       if (touchStart && Math.hypot(event.clientX - touchStart.x, event.clientY - touchStart.y) > 10) cancelLongPress();
     };
     const closeOutside = (event: PointerEvent) => {
-      if (event.target instanceof Node && menuRef.current?.contains(event.target)) return;
+      if (event.target instanceof Element && event.target.closest(".table-cell-menu")) return;
       setMenu(null);
     };
     const closeOnEscape = (event: KeyboardEvent) => {
@@ -133,9 +132,9 @@ export function TableCellContextMenu({ editor, disabled = false }: Props) {
   const header = menu.cell.tagName === "TH";
   const run = (action: () => void) => { action(); setMenu(null); };
   const item = (label: string, action: () => void, danger = false, unavailable = false) => (
-    <button type="button" role="menuitem" disabled={unavailable} className={danger ? "table-cell-menu__danger" : undefined} onPointerDown={(event) => event.preventDefault()} onClick={() => run(action)}>{label}</button>
+    <button type="button" role="menuitem" disabled={unavailable} className={`file-tree-context-menu__item${danger ? " file-tree-context-menu__item--danger" : ""}`} onPointerDown={(event) => event.preventDefault()} onClick={() => run(action)}>{label}</button>
   );
-  return createPortal(<div ref={menuRef} className="table-cell-menu" role="menu" aria-label={t("tableMenu.options")} style={{ left: menu.x, top: menu.y }} onPointerDown={(event) => event.stopPropagation()}>
+  return <ContextMenuSurface x={menu.x} y={menu.y} title={t("tableMenu.options")} className="table-cell-menu">
     {item(t("tableMenu.addRowBefore"), () => { if (selectCell(editor, menu.cell)) editor.chain().focus().addRowBefore().run(); }, false, header)}
     {item(t("tableMenu.addRowAfter"), () => { if (selectCell(editor, menu.cell)) editor.chain().focus().addRowAfter().run(); }, false, header)}
     {item(t("tableMenu.addColumnBefore"), () => { if (selectCell(editor, menu.cell)) editor.chain().focus().addColumnBefore().run(); })}
@@ -148,5 +147,5 @@ export function TableCellContextMenu({ editor, disabled = false }: Props) {
     <div role="separator" />
     {item(t("tableMenu.deleteRow"), () => { if (selectCell(editor, menu.cell)) editor.chain().focus().deleteRow().run(); }, true, header || info.node.childCount <= 2)}
     {item(t("tableMenu.deleteColumn"), () => { if (selectCell(editor, menu.cell)) editor.chain().focus().deleteColumn().run(); }, true)}
-  </div>, document.body);
+  </ContextMenuSurface>;
 }

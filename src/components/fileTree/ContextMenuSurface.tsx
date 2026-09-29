@@ -8,6 +8,7 @@ const VIEWPORT_MARGIN_PX = 8;
 type ContextMenuSurfaceProps = {
   x: number;
   y: number;
+  className?: string;
   /** Shown as the heading of the phone sheet, where the row is covered. */
   title?: string;
   onClick?: MouseEventHandler<HTMLDivElement>;
@@ -28,7 +29,7 @@ type ContextMenuSurfaceProps = {
  * position on a 360 px wide screen, and a sheet is what a touch user expects
  * to come up under a "â€¦" button.
  */
-export function ContextMenuSurface({ x, y, title, onClick, onMouseDown, children }: ContextMenuSurfaceProps) {
+export function ContextMenuSurface({ x, y, className, title, onClick, onMouseDown, children }: ContextMenuSurfaceProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ top: y, left: x });
   const isSheet = useLayoutMode() === "phone";
@@ -39,11 +40,20 @@ export function ContextMenuSurface({ x, y, title, onClick, onMouseDown, children
       return;
     }
 
-    const rect = node.getBoundingClientRect();
-    setPosition({
-      left: Math.max(VIEWPORT_MARGIN_PX, Math.min(x, window.innerWidth - rect.width - VIEWPORT_MARGIN_PX)),
-      top: Math.max(VIEWPORT_MARGIN_PX, Math.min(y, window.innerHeight - rect.height - VIEWPORT_MARGIN_PX))
-    });
+    const reposition = () => {
+      const rect = node.getBoundingClientRect();
+      const left = Math.max(VIEWPORT_MARGIN_PX, Math.min(x, window.innerWidth - rect.width - VIEWPORT_MARGIN_PX));
+      const top = Math.max(VIEWPORT_MARGIN_PX, Math.min(y, window.innerHeight - rect.height - VIEWPORT_MARGIN_PX));
+      setPosition((previous) => previous.left === left && previous.top === top ? previous : { left, top });
+    };
+    reposition();
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(reposition);
+    observer?.observe(node);
+    window.addEventListener("resize", reposition);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("resize", reposition);
+    };
   }, [x, y, isSheet]);
 
   return createPortal(
@@ -53,7 +63,7 @@ export function ContextMenuSurface({ x, y, title, onClick, onMouseDown, children
       {isSheet ? <div className="file-tree-context-menu__backdrop" aria-hidden="true" /> : null}
       <div
         ref={menuRef}
-        className={isSheet ? "file-tree-context-menu file-tree-context-menu--sheet" : "file-tree-context-menu"}
+        className={["file-tree-context-menu", isSheet && "file-tree-context-menu--sheet", className].filter(Boolean).join(" ")}
         role="menu"
         aria-label={title}
         style={isSheet ? undefined : { top: position.top, left: position.left }}

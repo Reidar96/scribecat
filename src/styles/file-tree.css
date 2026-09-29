@@ -232,6 +232,10 @@
   position: fixed;
   z-index: 60;
   min-width: 10rem;
+  max-width: calc(100vw - 1rem);
+  max-height: calc(100dvh - 1rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   border: 1px solid rgba(var(--overlay-rgb),0.1);
   border-radius: 0.75rem;
   background: rgba(var(--surface-rgb),0.98);
