@@ -83,6 +83,7 @@ type ToolbarProps = {
   deleteEnabled: boolean;
   /** "Download as Markdown"; null where the note is on this machine anyway. */
   onDownloadMarkdownRequest: (() => void) | null;
+  onExportRequest?: (mode: "standard" | "manuscript") => void;
   onSearchRequest: () => void;
   onZenModeRequest: () => void;
   documentLocked: boolean;
@@ -161,11 +162,13 @@ function DocumentWidthToggle() {
 function EditorOptionsMenu({
   onPrintRequest,
   onDownloadMarkdownRequest,
+  onExportRequest,
   onDeleteRequest,
   deleteEnabled
 }: {
   onPrintRequest: () => void;
   onDownloadMarkdownRequest: (() => void) | null;
+  onExportRequest?: (mode: "standard" | "manuscript") => void;
   onDeleteRequest: () => void;
   deleteEnabled: boolean;
 }) {
@@ -213,6 +216,14 @@ function EditorOptionsMenu({
                 {t("toolbar.downloadMarkdown")}
               </MenuItem>
             ) : null}
+            {onExportRequest ? <>
+              <MenuItem onClick={() => onExportRequest("standard")}>
+                <FileDown className="size-4" />{t("fileTree.export")}
+              </MenuItem>
+              <MenuItem onClick={() => onExportRequest("manuscript")}>
+                <FileDown className="size-4" />{t("fileTree.exportManuscript")}
+              </MenuItem>
+            </> : null}
             <div className="editor-toolbar__menu-separator" role="separator" />
             <MenuItem disabled={!deleteEnabled} onClick={onDeleteRequest}>
               <Trash2 className="size-4" />
@@ -381,6 +392,7 @@ export function Toolbar({
   onDeleteRequest,
   deleteEnabled,
   onDownloadMarkdownRequest,
+  onExportRequest,
   onSearchRequest,
   onZenModeRequest,
   documentLocked,
@@ -764,6 +776,7 @@ export function Toolbar({
         <EditorOptionsMenu
           onPrintRequest={onPrintRequest}
           onDownloadMarkdownRequest={onDownloadMarkdownRequest}
+          onExportRequest={onExportRequest}
           onDeleteRequest={onDeleteRequest}
           deleteEnabled={deleteEnabled}
         />

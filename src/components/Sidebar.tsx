@@ -218,6 +218,17 @@ export function Sidebar({
   const { t } = useTranslation();
   const appVersion = useAppVersion();
   const [selectionMode, setSelectionMode] = useState(false);
+  useEffect(() => {
+    if (!selectionMode) return;
+    const dismissOnBackground = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (target.closest(".file-tree__row, .sidebar-panel__selection-actions, .sidebar-panel__actions, [data-slot='menu-popup'], .file-tree-context-menu")) return;
+      setSelectionMode(false);
+    };
+    window.addEventListener("pointerdown", dismissOnBackground);
+    return () => window.removeEventListener("pointerdown", dismissOnBackground);
+  }, [selectionMode]);
   const [trashOpen, setTrashOpen] = useState(false);
   const [recentFolderList, setRecentFolderList] = useState(recentFolderPaths);
   const [closingVaultPath, setClosingVaultPath] = useState<string | null>(null);

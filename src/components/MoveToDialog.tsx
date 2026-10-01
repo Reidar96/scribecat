@@ -202,12 +202,12 @@ export function MoveToDialog({
                   role="option"
                   aria-selected={isSelected}
                   aria-expanded={expandable ? expanded.has(target.relativePath) : undefined}
-                  disabled={target.disabled}
+                  aria-disabled={target.disabled}
                   className={cn("move-dialog__item", isSelected && "move-dialog__item--selected")}
                   style={{ paddingLeft: `${0.6 + depth * 1.1}rem` }}
                   title={target.relativePath || t("moveDialog.root")}
                   onClick={() => {
-                    setSelected(target.relativePath);
+                    if (!target.disabled) setSelected(target.relativePath);
                     if (expandable && target.relativePath) {
                       setExpanded((current) => {
                         const next = new Set(current);

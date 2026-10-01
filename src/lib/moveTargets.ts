@@ -70,8 +70,8 @@ export function listMoveTargets(
     .map((source) => source.relativePath);
 
   const disabledFor = (target: string) =>
-    // Moving within the same parent is a reorder, which is what the drag
-    // handle is for; here it would only look like nothing happened.
+    // Disable the current parent as a destination; the picker must still let
+    // this row expand so that its child folders can be selected.
     (sourceParents.size === 1 && sourceParents.has(target)) ||
     sourceFolders.some((folder) => isSameOrInside(target, folder));
 

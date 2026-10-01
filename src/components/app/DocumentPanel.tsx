@@ -46,7 +46,7 @@ import {
   getFileLinkLabel,
   FILE_LINK_DRAG_MIME
 } from "@/lib/editor/fileLinks";
-import { getVaultCapabilities, vaultCapabilityHint } from "@/platform";
+import { getVaultCapabilities, platform, vaultCapabilityHint } from "@/platform";
 import { isJournalRelativePath } from "@/lib/journal";
 import { isTasksContainerRelativePath } from "@/lib/tasks";
 import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
@@ -127,6 +127,7 @@ type DocumentPanelProps = {
   onOpenSidebar: () => void;
   /** Deletes the note currently open in the editor after confirmation. */
   onDeleteRequest: () => void;
+  onExportFileRequest: (filePath: string, mode: "standard" | "manuscript") => void;
   /** Deletes any visible split document after confirmation. */
   onDeleteFileRequest: (filePath: string) => void;
   /** Phone and tablet: the status pill doubles as the save button. */
@@ -242,6 +243,7 @@ export function DocumentPanel({
   onVersionRestoreRequest,
   onOpenSidebar,
   onDeleteRequest,
+  onExportFileRequest,
   onDeleteFileRequest,
   onSaveRequest
 }: DocumentPanelProps) {
@@ -825,6 +827,7 @@ export function DocumentPanel({
                   versioningEnabled={versioningEnabled}
                   onZenModeRequest={onZenModeRequest}
                   onDeleteRequest={onDeleteRequest}
+                  onExportRequest={selectedFilePath && (platform.features.exportFiles || platform.features.downloads) ? (mode) => onExportFileRequest(selectedFilePath, mode) : undefined}
                   deleteEnabled={capabilities.delete}
                   documentLocked={documentLocked}
                   onDocumentLockToggle={toggleDocumentLocked}
@@ -961,6 +964,7 @@ export function DocumentPanel({
                     pdfSplitRestoreRequest={pdfSplitRestoreRequest}
                     onZenModeRequest={onZenModeRequest}
                     onDeleteRequest={onDeleteRequest}
+                    onExportRequest={selectedFilePath && (platform.features.exportFiles || platform.features.downloads) ? (mode) => onExportFileRequest(selectedFilePath, mode) : undefined}
                     deleteEnabled={capabilities.delete}
                     documentLocked={documentLocked}
                     onDocumentLockToggle={toggleDocumentLocked}
@@ -1092,6 +1096,7 @@ export function DocumentPanel({
                             pdfSplitRestoreRequest={pdfSplitRestoreRequest}
                             onZenModeRequest={onZenModeRequest}
                             onDeleteRequest={() => onDeleteFileRequest(secondaryFilePath)}
+                            onExportRequest={platform.features.exportFiles || platform.features.downloads ? (mode) => onExportFileRequest(secondaryFilePath, mode) : undefined}
                             deleteEnabled={capabilities.delete}
                             documentLocked={secondaryDocumentLocked}
                             onDocumentLockToggle={() =>

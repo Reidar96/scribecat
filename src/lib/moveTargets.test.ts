@@ -31,6 +31,17 @@ describe("listMoveTargets", () => {
     expect(targets.find((target) => target.relativePath === "")?.disabled).toBe(false);
   });
 
+  it("allows moving a document into a child folder under its current parent", () => {
+    const targets = listMoveTargets(
+      ["Projects/Roadmap.md", "Projects/Archive/Old.md"],
+      [],
+      [{ kind: "file", relativePath: "Projects/Roadmap.md" }]
+    );
+
+    expect(targets.find((target) => target.relativePath === "Projects")?.disabled).toBe(true);
+    expect(targets.find((target) => target.relativePath === "Projects/Archive")?.disabled).toBe(false);
+  });
+
   it("disables a folder itself and everything inside it when that folder moves", () => {
     const targets = listMoveTargets(FILES, [], [{ kind: "folder", relativePath: "Projects" }]);
 

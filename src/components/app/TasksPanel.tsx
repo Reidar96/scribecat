@@ -128,6 +128,27 @@ function taskItemKey(task: Pick<TaskItem, "filePath" | "lineIndex">): string {
   return `${task.filePath}:${task.lineIndex}`;
 }
 
+function scrollToNewTask(input: HTMLInputElement): void {
+  const container = input.closest<HTMLElement>(".tasks-main");
+  if (!container) return;
+  const start = container.scrollTop;
+  const desired = start + input.getBoundingClientRect().top - container.getBoundingClientRect().top - container.clientHeight / 3;
+  const end = Math.max(0, Math.min(desired, container.scrollHeight - container.clientHeight));
+  if (!window.requestAnimationFrame || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+    container.scrollTop = end;
+    return;
+  }
+  const started = performance.now();
+  const frame = (time: number) => {
+    if (!input.isConnected) return;
+    const progress = Math.min(1, (time - started) / 250);
+    const eased = 1 - (1 - progress) ** 3;
+    container.scrollTop = start + (end - start) * eased;
+    if (progress < 1) window.requestAnimationFrame(frame);
+  };
+  window.requestAnimationFrame(frame);
+}
+
 function compareRootTasks(
   left: TaskItem,
   right: TaskItem,
@@ -297,7 +318,8 @@ function TaskRow({
 
   useEffect(() => {
     if (!autoFocusText || !textInputRef.current) return;
-    textInputRef.current.focus();
+    scrollToNewTask(textInputRef.current);
+    textInputRef.current.focus({ preventScroll: true });
     textInputRef.current.select();
     onAutoFocusHandled?.();
   }, [autoFocusText, onAutoFocusHandled]);
@@ -1031,26 +1053,31 @@ export function TasksPanel({
     return ok;
   };
 
-  const addTask = async () => {
+  const addTask = async (sectionTarget?: { category: string; section: string }) => {
     if (saving) return;
+    // A drag ended outside the list may miss the handle's dragend event.
+    // Its stale drop state must not dim newly created rows.
+    setDraggedRootKey(null);
 
     let category = UNCATEGORIZED_TASK_CATEGORY;
     let deadline: string | null = null;
     let tags: string[] = [];
 
-    if (selectedView.startsWith(CATEGORY_PREFIX)) {
+    if (sectionTarget) {
+      category = sectionTarget.category;
+    } else if (selectedView.startsWith(CATEGORY_PREFIX)) {
       category = sanitizeTaskCategory(
         selectedView.slice(CATEGORY_PREFIX.length)
       );
     } else if (selectedView.startsWith(SECTION_PREFIX)) {
       category = (JSON.parse(selectedView.slice(SECTION_PREFIX.length)) as [string, string])[0];
-    } else if (selectedView === TODAY_TASKS || selectedView === WEEK_TASKS) {
+    } else if (!sectionTarget && (selectedView === TODAY_TASKS || selectedView === WEEK_TASKS)) {
       deadline = todayKey;
-    } else if (selectedView === MONTH_TASKS) {
+    } else if (!sectionTarget && selectedView === MONTH_TASKS) {
       deadline = todayKey;
-    } else if (selectedView === NEXT_MONTH_TASKS) {
+    } else if (!sectionTarget && selectedView === NEXT_MONTH_TASKS) {
       deadline = dateKey(nextMonthDate);
-    } else if (selectedView.startsWith(TAG_PREFIX)) {
+    } else if (!sectionTarget && selectedView.startsWith(TAG_PREFIX)) {
       tags = [selectedView.slice(TAG_PREFIX.length)];
     }
 
@@ -1066,13 +1093,15 @@ export function TasksPanel({
     let markdown = existing
       ? prependTaskToMarkdown(existing, task)
       : createTaskDocument(category, task);
-    if (selectedView.startsWith(SECTION_PREFIX) && existing) {
-      const section = JSON.parse(selectedView.slice(SECTION_PREFIX.length))[1] as string;
+    const section = sectionTarget?.section ?? (selectedView.startsWith(SECTION_PREFIX)
+      ? (JSON.parse(selectedView.slice(SECTION_PREFIX.length)) as [string, string])[1]
+      : null);
+    if (section && existing) {
       const insertedTask = parseTaskMarkdown(markdown).find((candidate) => candidate.parentLineIndex === null);
       if (insertedTask) markdown = moveTaskToSection(markdown, insertedTask.lineIndex, section);
     }
     const inserted = parseTaskMarkdown(markdown).find(
-      (candidate) => candidate.parentLineIndex === null
+      (candidate) => candidate.parentLineIndex === null && candidate.modifiedAt === task.modifiedAt
     );
     const filePath = await resolveFilePath(category);
 
@@ -2127,6 +2156,7 @@ export function TasksPanel({
                     {nameError && sectionDraft?.original === section ? <small role="alert">{nameError}</small> : null}
                     {sectionDraft?.original !== section ? <Menu><MenuTrigger render={<Button type="button" size="icon-xs" variant="ghost" draggable={false} aria-label={t("tasks.sectionMoreActions")} title={t("tasks.sectionMoreActions")} onPointerDown={(event) => event.stopPropagation()}><Ellipsis /></Button>} />
                       <MenuPortal><MenuPositioner align="end"><MenuPopup finalFocus={false}>
+                        <MenuItem onClick={() => void addTask({ category, section })}><Plus className="size-4" aria-hidden="true" />{t("tasks.newTask")}</MenuItem>
                         <MenuItem onClick={() => beginSectionName(section)}><Pencil className="size-4" aria-hidden="true" />{t("tasks.renameCategoryAction")}</MenuItem>
                         <MenuItem className="tasks-category-actions__danger" onClick={() => void deleteSection(category, section)}><Trash2 className="size-4" aria-hidden="true" />{t("tasks.deleteSection")}</MenuItem>
                       </MenuPopup></MenuPositioner></MenuPortal></Menu> : null}</div>;
@@ -2392,6 +2422,14 @@ export function TasksPanel({
 
       {sectionContextMenu ? (
         <ContextMenuSurface x={sectionContextMenu.x} y={sectionContextMenu.y} title={sectionContextMenu.section} onClick={(event) => event.stopPropagation()}>
+          <button type="button" role="menuitem" className="file-tree-context-menu__item" onClick={() => {
+            const { category, section } = sectionContextMenu;
+            setSectionContextMenu(null);
+            void addTask({ category, section });
+          }}>
+            <Plus aria-hidden="true" />
+            {t("tasks.newTask")}
+          </button>
           <button type="button" role="menuitem" className="file-tree-context-menu__item" onClick={() => {
             const { section } = sectionContextMenu;
             setSectionContextMenu(null);

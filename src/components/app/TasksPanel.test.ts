@@ -21,7 +21,7 @@ import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
 import { DEFAULT_TASK_SETTINGS } from "@/lib/tasks";
 let host: HTMLDivElement;
 let root: Root;
-const persist = vi.fn(async () => true);
+const persist = vi.fn(async (_filePath: string, _markdown: string) => true);
 const category = (name: string) => [...host.querySelectorAll<HTMLButtonElement>(".tasks-category--managed")].find((button) => button.firstElementChild?.textContent === name)!;
 async function click(element: HTMLElement) { await act(async () => element.click()); }
 async function type(input: HTMLInputElement, value: string) {
@@ -96,4 +96,15 @@ it("renames a section in its heading using the section menu", async () => {
   expect(document.activeElement).toBe(input);
   await type(input, "Renamed"); await key(input, "Enter");
   expect(persist).toHaveBeenLastCalledWith("/vault/Gjøremål/Alpha.md", expect.stringContaining("## Renamed\n- [ ] Task"));
+});
+
+it("adds a task directly under a section and focuses the new row", async () => {
+  await click(category("Alpha"));
+  await click(host.querySelector<HTMLButtonElement>('[aria-label="tasks.sectionMoreActions"]')!);
+  const add = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find((item) => item.textContent === "tasks.newTask")!;
+  await click(add);
+  const markdown = persist.mock.lastCall?.[1] as string;
+  expect(markdown).toMatch(/## Existing[\s\S]*- \[ \] tasks.newTask/);
+  expect(host.querySelectorAll<HTMLInputElement>(".tasks-item__text")).toHaveLength(2);
+  expect((document.activeElement as HTMLInputElement)?.value).toBe("tasks.newTask");
 });

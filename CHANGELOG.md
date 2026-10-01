@@ -1,3 +1,13 @@
+## [0.28.3] - 2026-10-01
+
+- Let the editor use straight or Norwegian angle quotation marks, selected in application settings.
+- Expand the current folder in Move to so documents can be moved into its subfolders.
+- Keep task creation from becoming dimmed after a stale drag, add tasks directly from subcategory menus, and scroll to the new task over 250 ms.
+- Delete all selected table rows or columns and use plural labels when several are selected.
+- Dismiss file selection mode on background clicks while keeping selection actions available.
+- Keep a folder visible as empty when its last document is deleted.
+- Offer both standard and manuscript document exports from the editor menus.
+
 ## [0.28.2] - 2026-09-29
 
 - Give linked blocks a visible border and slightly darker background to distinguish them from the surrounding note.

@@ -1,14 +1,16 @@
 import { useEffect, useState } from "react";
 import type { Editor } from "@tiptap/react";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
+import { CellSelection, selectedRect } from "@tiptap/pm/tables";
 import { useTranslation } from "react-i18next";
 import { ContextMenuSurface } from "@/components/fileTree/ContextMenuSurface";
 
 type MenuState = { x: number; y: number; cell: HTMLTableCellElement };
 type Props = { editor: Editor; disabled?: boolean };
 
-function selectCell(editor: Editor, cell: HTMLTableCellElement): boolean {
+function selectCell(editor: Editor, cell: HTMLTableCellElement, preserveMultiple = false): boolean {
   try {
+    if (preserveMultiple && editor.state.selection instanceof CellSelection && cell.classList.contains("selectedCell")) return true;
     const pos = editor.view.posAtDOM(cell, 0);
     return editor.commands.setTextSelection(Math.min(editor.state.doc.content.size, Math.max(1, pos + 1)));
   } catch { return false; }
@@ -130,6 +132,11 @@ export function TableCellContextMenu({ editor, disabled = false }: Props) {
   const info = tableInfo(editor, menu.cell);
   if (!info) return null;
   const header = menu.cell.tagName === "TH";
+  const multiple = editor.state.selection instanceof CellSelection && menu.cell.classList.contains("selectedCell")
+    ? selectedRect(editor.state)
+    : null;
+  const rowCount = multiple ? multiple.bottom - multiple.top : 1;
+  const columnCount = multiple ? multiple.right - multiple.left : 1;
   const run = (action: () => void) => { action(); setMenu(null); };
   const item = (label: string, action: () => void, danger = false, unavailable = false) => (
     <button type="button" role="menuitem" disabled={unavailable} className={`file-tree-context-menu__item${danger ? " file-tree-context-menu__item--danger" : ""}`} onPointerDown={(event) => event.preventDefault()} onClick={() => run(action)}>{label}</button>
@@ -145,7 +152,7 @@ export function TableCellContextMenu({ editor, disabled = false }: Props) {
     {item(t("tableMenu.moveColumnLeft", { defaultValue: "Move column left" }), () => moveColumn(editor, menu.cell, -1), false, info.column <= 0)}
     {item(t("tableMenu.moveColumnRight", { defaultValue: "Move column right" }), () => moveColumn(editor, menu.cell, 1), false, info.column >= (menu.cell.parentElement?.children.length ?? 1) - 1)}
     <div role="separator" />
-    {item(t("tableMenu.deleteRow"), () => { if (selectCell(editor, menu.cell)) editor.chain().focus().deleteRow().run(); }, true, header || info.node.childCount <= 2)}
-    {item(t("tableMenu.deleteColumn"), () => { if (selectCell(editor, menu.cell)) editor.chain().focus().deleteColumn().run(); }, true)}
+    {item(t(rowCount > 1 ? "tableMenu.deleteRows" : "tableMenu.deleteRow"), () => { if (selectCell(editor, menu.cell, true)) editor.commands.deleteRow(); }, true, header || (multiple?.top === 0) || info.node.childCount - rowCount < 2)}
+    {item(t(columnCount > 1 ? "tableMenu.deleteColumns" : "tableMenu.deleteColumn"), () => { if (selectCell(editor, menu.cell, true)) editor.commands.deleteColumn(); }, true)}
   </ContextMenuSurface>;
 }

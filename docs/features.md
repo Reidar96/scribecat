@@ -440,7 +440,7 @@ Server setup and connected-server management live under **Settings → Server**.
 
 Account controls live under **Settings → Account**, including password management, signed-in devices and sign out.
 
-Use the supported [Docker Compose setup](../server/README.md) and follow the [getting-started guide](../server/docs/getting-started.md) for HTTPS and first sign-in. Releases use explicit tags such as `ghcr.io/reidar96/scribecat-server:0.28.2`; there is no moving `latest` tag.
+Use the supported [Docker Compose setup](../server/README.md) and follow the [getting-started guide](../server/docs/getting-started.md) for HTTPS and first sign-in. Releases use explicit tags such as `ghcr.io/reidar96/scribecat-server:0.28.3`; there is no moving `latest` tag.
 
 ### Languages
 

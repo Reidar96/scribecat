@@ -142,6 +142,8 @@ export function SettingsDialog({
   const setAutoSaveEnabled = useEditorSettingsStore((state) => state.setAutoSaveEnabled);
   const pasteMarkdown = useEditorSettingsStore((state) => state.pasteMarkdown);
   const setPasteMarkdown = useEditorSettingsStore((state) => state.setPasteMarkdown);
+  const quotationMarks = useEditorSettingsStore((state) => state.quotationMarks);
+  const setQuotationMarks = useEditorSettingsStore((state) => state.setQuotationMarks);
   const restoreWorkingSet = useEditorSettingsStore((state) => state.restoreWorkingSet);
   const setRestoreWorkingSet = useEditorSettingsStore((state) => state.setRestoreWorkingSet);
   const autoAdmitWorkingSet = useEditorSettingsStore((state) => state.autoAdmitWorkingSet);
@@ -282,6 +284,13 @@ export function SettingsDialog({
                         checked={pasteMarkdown}
                         onChange={(event) => setPasteMarkdown(event.target.checked)}
                       />
+                    </SettingRow>
+
+                    <SettingRow label={t("settingsDialog.quotationMarks")} hint={t("settingsDialog.quotationMarksShort")}>
+                      <select value={quotationMarks} onChange={(event) => setQuotationMarks(event.target.value === "angle" ? "angle" : "straight")}>
+                        <option value="straight">{t("settingsDialog.quotationMarksStraight")}</option>
+                        <option value="angle">{t("settingsDialog.quotationMarksAngle")}</option>
+                      </select>
                     </SettingRow>
 
                     {platform.features.updater && isWindowsPlatform() ? (

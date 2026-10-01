@@ -1041,11 +1041,10 @@ export const createFileSlice: AppSlice<FileSlice> = (set, get) => ({
           void writeDocumentLocks(folderPath, nextDocumentLocks).catch(() => undefined);
         }
 
-        // Deleting a folder's note clears the folder's text, it does not
-        // delete the folder — but the note may have been the only file that
-        // put the folder in the tree, so the folder is kept as an empty one.
+        // Removing a folder's last document must not make the folder vanish
+        // from the tree. The filesystem still contains the folder, so keep an
+        // explicit empty-folder entry until the next scan discovers it again.
         const isFolderNowEmpty =
-          isFolderNotePath(filePath) &&
           parentRelativePath !== "" &&
           !nextFilePaths.some((path) => isPathInsideFolder(path, parentDirectory)) &&
           !nextEmptyFolderPaths.some(

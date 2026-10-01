@@ -771,8 +771,8 @@
   background: rgba(var(--selection-rgb), 0.2);
 }
 
-.move-dialog__item:disabled {
-  cursor: default;
+.move-dialog__item[aria-disabled="true"] {
+  cursor: pointer;
   opacity: 0.4;
   background: transparent;
 }
