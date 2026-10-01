@@ -1,3 +1,8 @@
+## [1.0.1] - 2026-10-01
+
+- Give document text more side margin beside the split view controls.
+- Show each split view plus button only while hovering its edge control, without covering text elsewhere.
+
 ## [1.0.0] - 2026-10-01
 
 - Make the current folder look expandable in Move to, while keeping its child destinations selectable.
