@@ -112,7 +112,7 @@ function textStyleName(run: Extract<InlineRun, { kind: "text" }>): string | null
     run.code ? "c" : ""
   ].join("");
 
-  return parts ? `T_${parts}` : null;
+  return parts || run.color ? `T_${parts}${run.color ? `_color${run.color.slice(1)}` : ""}` : null;
 }
 
 // Every used flag combination becomes one automatic text style.
@@ -159,13 +159,14 @@ function collectTextStyles(blocks: ExportBlock[]): string[] {
 }
 
 function textStyleXml(name: string): string {
-  const flags = name.slice(2);
+  const [flags, color] = name.slice(2).split("_color");
   const properties = [
     flags.includes("b") ? 'fo:font-weight="bold"' : "",
     flags.includes("i") ? 'fo:font-style="italic"' : "",
     flags.includes("u") ? 'style:text-underline-style="solid" style:text-underline-width="auto"' : "",
     flags.includes("s") ? 'style:text-line-through-style="solid"' : "",
     flags.includes("h") ? 'fo:background-color="#fde68a"' : "",
+    color ? `fo:color="#${color}"` : "",
     flags.includes("c")
       ? 'style:font-name="Courier New" fo:background-color="#f4f4f4"'
       : ""

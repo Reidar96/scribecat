@@ -1034,16 +1034,7 @@ function App() {
     const targetDirectory = await resolveCollectionTargetDirectory();
     if (!targetDirectory) return false;
 
-    const newFolderPath = await createNewFolder(targetDirectory);
-    if (!newFolderPath) return false;
-
-    const renamed = await renameFolderPath(newFolderPath, name);
-    if (!renamed) {
-      await deleteFolderPath(newFolderPath);
-      return false;
-    }
-
-    return true;
+    return Boolean(await createNewFolder(targetDirectory, null, name));
   };
 
   const requestImportFiles = async () => {

@@ -90,6 +90,9 @@ function renderRuns(runs: InlineRun[], imageHrefs: Map<string, string>): string 
     if (run.strike) {
       text = `<s>${text}</s>`;
     }
+    if (run.color) {
+      text = `<span style="color: ${run.color}">${text}</span>`;
+    }
     if (run.link) {
       text = `<a href="${escapeXml(run.link)}">${text}</a>`;
     }

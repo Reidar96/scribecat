@@ -884,7 +884,7 @@ export function DocumentPanel({
                   if (layout !== "desktop") return;
                   const rect = event.currentTarget.getBoundingClientRect();
                   const edgeWidth = event.currentTarget.querySelector(".split-workspace__edge-zone")
-                    ?.getBoundingClientRect().width ?? 40;
+                    ?.getBoundingClientRect().width ?? 32;
                   const side = event.clientX <= rect.left + edgeWidth
                     ? "left"
                     : event.clientX >= rect.right - edgeWidth

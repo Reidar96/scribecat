@@ -119,7 +119,7 @@ function runsToPdfText(runs: InlineRun[], images: ExportImageMap): Content[] {
       decoration: run.underline ? "underline" : run.strike ? "lineThrough" : undefined,
       background: run.highlight ? HIGHLIGHT_FILL_COLOR : run.code ? CODE_FILL_COLOR : undefined,
       link: run.link ?? undefined,
-      color: run.link ? "#0969da" : undefined
+      color: run.color ?? (run.link ? "#0969da" : undefined)
     };
     const bodyFont = run.code ? "Courier" : undefined;
 

@@ -37,6 +37,7 @@ vi.mock("@/lib/fileSystem", async (importOriginal) => ({
   writeMarkdownFile: vi.fn(async () => undefined),
   renameMarkdownFile: vi.fn(async () => undefined),
   renameMarkdownFolder: vi.fn(async () => undefined),
+  createMarkdownFolderAtPath: vi.fn(async () => undefined),
   markdownFolderExists: vi.fn(async () => false)
 }));
 
@@ -51,7 +52,7 @@ vi.mock("@/lib/noteTrash", async (importOriginal) => ({
   trashNote: vi.fn(async () => undefined)
 }));
 
-const { getRelativeImageMarkdownPath, writeMarkdownFile, renameMarkdownFile } = await import("@/lib/fileSystem");
+const { getRelativeImageMarkdownPath, writeMarkdownFile, renameMarkdownFile, createMarkdownFolderAtPath } = await import("@/lib/fileSystem");
 const { useAppStore } = await import("@/store/useAppStore");
 
 const VAULT = "/vault";
@@ -59,6 +60,21 @@ const NOTE = "/vault/note.md";
 const MOVED_NOTE = "/vault/sub/note.md";
 const MARKDOWN = "# Title\n\n![eye](images/image-3.png)\n";
 const REWRITTEN = "# Title\n\n![eye](../images/image-3.png)\n";
+
+it("creates a named folder in the collection in one operation and keeps it visible", async () => {
+  useAppStore.setState({
+    folderPath: VAULT,
+    filePaths: [],
+    emptyFolderPaths: [],
+    manualOrder: {},
+    fileError: null
+  });
+
+  expect(await useAppStore.getState().createNewFolder(VAULT, null, "Plans")).toBe("/vault/Plans");
+  expect(createMarkdownFolderAtPath).toHaveBeenCalledWith("/vault/Plans");
+  expect(useAppStore.getState().emptyFolderPaths).toContain("/vault/Plans");
+  expect(useAppStore.getState().manualOrder[""]).toContain("Plans");
+});
 
 it("keeps a folder visible when its last document is deleted", async () => {
   useAppStore.setState({

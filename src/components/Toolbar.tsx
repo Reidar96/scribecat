@@ -32,6 +32,7 @@ import {
   Minimize2,
   Maximize2,
   OctagonAlert,
+  Palette,
   PanelRight,
   Pilcrow,
   Redo2,
@@ -69,6 +70,7 @@ import { TableMenu } from "@/components/TableMenu";
 import { ZoomControl } from "@/components/ZoomControl";
 import { CALLOUT_VARIANTS, type CalloutVariant } from "@/lib/editor/extensions/callout";
 import { isHighlighterModeActive } from "@/lib/editor/extensions/highlight";
+import { FONT_COLORS } from "@/lib/editor/extensions/fontColor";
 import { isInTableCell } from "@/lib/editor/extensions/table";
 import { toggleListForSelectedLines } from "@/lib/editor/listSelection";
 import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
@@ -383,6 +385,41 @@ function CalloutMenu({ editor }: { editor: Editor }) {
   );
 }
 
+function FontColorMenu({ editor }: { editor: Editor }) {
+  const { t } = useTranslation();
+  const activeColor = editor.getAttributes("fontColor").color as string | undefined;
+
+  return (
+    <Menu>
+      <MenuTrigger
+        render={<Button type="button" size="icon-sm" variant="outline"
+          aria-label={t("toolbar.fontColor")} title={t("toolbar.fontColor")}
+          data-active={activeColor ? "true" : undefined}
+          onMouseDown={(event) => event.preventDefault()} />}
+      >
+        <Palette />
+      </MenuTrigger>
+      <MenuPortal>
+        <MenuPositioner align="start">
+          <MenuPopup aria-label={t("toolbar.fontColor")}>
+            {FONT_COLORS.map(({ name, value }) => (
+              <MenuItem key={name} onClick={() => editor.chain().focus().setFontColor(value).run()}>
+                <span className="editor-toolbar__color-swatch" style={{ backgroundColor: value }} aria-hidden="true" />
+                {t(`toolbar.fontColorNames.${name}`)}
+                {activeColor === value ? <Check className="ml-auto size-4" /> : null}
+              </MenuItem>
+            ))}
+            <div className="editor-toolbar__menu-separator" role="separator" />
+            <MenuItem onClick={() => editor.chain().focus().unsetFontColor().run()}>
+              <X className="size-4" />{t("toolbar.fontColorReset")}
+            </MenuItem>
+          </MenuPopup>
+        </MenuPositioner>
+      </MenuPortal>
+    </Menu>
+  );
+}
+
 export function Toolbar({
   editor,
   onLinkRequest,
@@ -537,6 +574,7 @@ export function Toolbar({
         >
           <Underline />
         </ToggleButton>
+        <FontColorMenu editor={editor} />
         <ToggleButton
           pressed={highlighterMode || editor.isActive("highlight")}
           label={t("toolbar.highlight")}

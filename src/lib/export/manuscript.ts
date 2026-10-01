@@ -133,7 +133,8 @@ function textRun(text: string, bold = false, italic = false): InlineRun {
     highlight: false,
     strike: false,
     code: false,
-    link: null
+    link: null,
+    color: null
   };
 }
 

@@ -13,6 +13,7 @@ import { VoiceInsertWidget } from "@/lib/voiceInsertWidget";
 import { Callout } from "./callout";
 import { CodeBlock } from "./codeBlock";
 import { Highlight } from "./highlight";
+import { FontColor } from "./fontColor";
 import { EditorImage } from "./image";
 import { BulletList, OrderedList } from "./lists";
 import { HardBreak, Table, TableCell, TableHeader, TableRow } from "./table";
@@ -42,6 +43,7 @@ function buildContentExtensions(): Extensions {
     Underline,
     PreserveBlankLines,
     Highlight,
+    FontColor,
     Table.configure({ resizable: true }),
     TableRow,
     TableHeader,

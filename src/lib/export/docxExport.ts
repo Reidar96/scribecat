@@ -105,7 +105,8 @@ function runsToDocxChildren(
       strike: run.strike,
       font: run.code ? MONO_FONT : undefined,
       shading: run.code ? { type: ShadingType.CLEAR, fill: CODE_FILL } : undefined,
-      style: run.link ? "Hyperlink" : undefined
+      style: run.link ? "Hyperlink" : undefined,
+      color: run.color?.slice(1)
     });
 
     if (run.link) {

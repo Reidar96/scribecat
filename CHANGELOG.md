@@ -1,3 +1,10 @@
+## [1.0.3] - 2026-10-01
+
+- Narrow the split view plus controls and add a subtle accent line along the document edge.
+- Add an Overdue filter to tasks.
+- Create named folders directly from File Viewer so Enter and the confirmation button leave the folder visible.
+- Color selected text with ten palette colors, match pasted Word colors to the nearest palette color, and preserve color in saved notes and exports.
+
 ## [1.0.2] - 2026-10-01
 
 - Dismiss the split document picker when clicking anywhere outside it.

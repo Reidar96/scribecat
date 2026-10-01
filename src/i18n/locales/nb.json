@@ -532,6 +532,7 @@
     "delete": "Slett gjøremål",
     "uncategorized": "Uten kategori",
     "today": "I dag",
+    "overdue": "Forfalt",
     "week": "Denne uken",
     "month": "Denne måneden",
     "nextMonth": "Neste måned",
@@ -638,6 +639,12 @@
     "strikethroughTitle": "Gjennomstreking (Ctrl+D)",
     "underline": "Understreking",
     "underlineTitle": "Understreking (Ctrl+U)",
+    "fontColor": "Tekstfarge",
+    "fontColorReset": "Vanlig tekstfarge",
+    "fontColorNames": {
+      "red": "Rød", "orange": "Oransje", "yellow": "Gul", "green": "Grønn", "teal": "Turkis",
+      "blue": "Blå", "indigo": "Indigo", "purple": "Lilla", "pink": "Rosa", "gray": "Grå"
+    },
     "highlight": "Utheving",
     "highlightTitle": "Utheving (Ctrl+Shift+H)",
     "highlightModeTitle": "Markør er på: marker tekst for å utheve den (Esc eller klikk igjen for å stoppe)",

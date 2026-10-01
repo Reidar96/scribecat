@@ -114,6 +114,9 @@ function renderRuns(runs: InlineRun[], images: ExportImageMap): string {
     if (run.strike) {
       text = `<s>${text}</s>`;
     }
+    if (run.color) {
+      text = `<span style="color: ${run.color}">${text}</span>`;
+    }
     if (run.link) {
       text = `<a href="${escapeHtml(run.link)}">${text}</a>`;
     }
