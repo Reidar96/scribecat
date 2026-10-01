@@ -791,12 +791,14 @@ p.detail-panel__version {
   top: 0;
   bottom: 0;
   width: 1px;
-  background: rgba(var(--accent-rgb), 0.18);
+  background: rgba(var(--accent-rgb), 0.35);
+  opacity: 0;
+  transition: opacity 120ms ease;
 }
 
 .split-workspace__edge-zone--left::before { left: 0; }
 .split-workspace__edge-zone--right::before { right: 0; }
-.split-workspace__edge-zone--visible::before { background: rgba(var(--accent-rgb), 0.35); }
+.split-workspace__edge-zone--visible::before { opacity: 1; }
 
 /* Leave a gutter for the split controls without covering the editor's text. */
 @media (min-width: 921px) {

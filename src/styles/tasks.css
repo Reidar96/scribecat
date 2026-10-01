@@ -604,6 +604,33 @@
   font-size: var(--font-ui-xs);
 }
 
+.tasks-item__deadline-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  height: 1rem;
+  flex: none;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.tasks-item__deadline-clear:hover,
+.tasks-item__deadline-clear:focus-visible {
+  background: rgba(var(--accent-rgb), 0.12);
+  opacity: 1;
+}
+
+.tasks-item__deadline-clear svg {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
 .tasks-item__deadline[data-empty="true"] input {
   width: 5.4rem;
   color: transparent;
