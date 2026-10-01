@@ -1,3 +1,8 @@
+## [1.0.2] - 2026-10-01
+
+- Dismiss the split document picker when clicking anywhere outside it.
+- Reveal the split plus button when the pointer is anywhere along its side gutter, without blocking clicks in the editor.
+
 ## [1.0.1] - 2026-10-01
 
 - Give document text more side margin beside the split view controls.

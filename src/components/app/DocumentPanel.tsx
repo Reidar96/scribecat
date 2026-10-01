@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState, type RefObject } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -260,6 +260,8 @@ export function DocumentPanel({
   const [splitPickerOpen, setSplitPickerOpen] = useState(false);
   const [splitPickerSide, setSplitPickerSide] = useState<"left" | "right">("right");
   const [splitPickerQuery, setSplitPickerQuery] = useState("");
+  const [hoveredSplitEdge, setHoveredSplitEdge] = useState<"left" | "right" | null>(null);
+  const splitPickerRef = useRef<HTMLDivElement>(null);
   const [splitDropPreview, setSplitDropPreview] = useState<"left" | "right" | null>(null);
   const [attachedPdf, setAttachedPdf] = useState<
     (PdfPreviewRequest & { ownerFilePath: string; pageNumber: number }) | null
@@ -298,6 +300,21 @@ export function DocumentPanel({
       setAttachedPdf(null);
     }
   }, [attachedPdf, openTabs]);
+
+  useEffect(() => {
+    if (!splitPickerOpen) return;
+
+    const dismissOnOutsideClick = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node) || splitPickerRef.current?.contains(target)) return;
+      // The edge button has its own toggle handler; let it close the picker.
+      if (target instanceof Element && target.closest(".split-workspace__edge-add")) return;
+      setSplitPickerOpen(false);
+    };
+
+    document.addEventListener("pointerdown", dismissOnOutsideClick);
+    return () => document.removeEventListener("pointerdown", dismissOnOutsideClick);
+  }, [splitPickerOpen]);
 
   // A PDF companion is rendered only while its owning Markdown tab is
   // the active (primary) document. If that tab is merely kept open in the
@@ -863,6 +880,19 @@ export function DocumentPanel({
                   "split-workspace",
                   hasSplitContent && "split-workspace--active"
                 )}
+                onMouseMove={(event) => {
+                  if (layout !== "desktop") return;
+                  const rect = event.currentTarget.getBoundingClientRect();
+                  const edgeWidth = event.currentTarget.querySelector(".split-workspace__edge-zone")
+                    ?.getBoundingClientRect().width ?? 40;
+                  const side = event.clientX <= rect.left + edgeWidth
+                    ? "left"
+                    : event.clientX >= rect.right - edgeWidth
+                      ? "right"
+                      : null;
+                  setHoveredSplitEdge(side);
+                }}
+                onMouseLeave={() => setHoveredSplitEdge(null)}
                 style={
                   hasSplitContent
                     ? ({ "--split-left": `${splitRatio}%` } as React.CSSProperties)
@@ -1126,7 +1156,8 @@ export function DocumentPanel({
                         key={side}
                         className={cn(
                           "split-workspace__edge-zone",
-                          `split-workspace__edge-zone--${side}`
+                          `split-workspace__edge-zone--${side}`,
+                          hoveredSplitEdge === side && "split-workspace__edge-zone--visible"
                         )}
                       >
                         <button
@@ -1152,6 +1183,7 @@ export function DocumentPanel({
 
                     {splitPickerOpen ? (
                       <div
+                        ref={splitPickerRef}
                         className={cn(
                           "split-picker",
                           `split-picker--${splitPickerSide}`
