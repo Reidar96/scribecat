@@ -7,6 +7,15 @@ import { parseMarkdownToBlocks } from "./markdownModel";
 // ("++u++", "==mark=="); the export parser has to read the same ones, or a
 // highlighted phrase exports as literal equals signs.
 describe("parseMarkdownToBlocks inline marks", () => {
+  it("keeps colored text in the export model and HTML", () => {
+    const blocks = parseMarkdownToBlocks('A <span style="color: #326eb1">blue</span> word.');
+    const [block] = blocks;
+    if (block.kind !== "paragraph") throw new Error("expected paragraph");
+    expect(block.runs.find((run) => run.kind === "text" && run.text === "blue"))
+      .toMatchObject({ color: "#326eb1" });
+    expect(renderHtmlBody(blocks, new Map())).toContain('<span style="color: #326eb1">blue</span>');
+  });
+
   it("reads ==text== as a highlight run", () => {
     const [block] = parseMarkdownToBlocks("Ein ==wichtiger== Satz.");
 

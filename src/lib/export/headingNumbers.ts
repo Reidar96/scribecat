@@ -65,7 +65,8 @@ function numberRun(number: string): InlineRun {
     highlight: false,
     strike: false,
     code: false,
-    link: null
+    link: null,
+    color: null
   };
 }
 

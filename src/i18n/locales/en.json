@@ -686,6 +686,7 @@
     "delete": "Delete task",
     "uncategorized": "Uncategorized",
     "today": "Today",
+    "overdue": "Overdue",
     "week": "This week",
     "month": "This month",
     "nextMonth": "Next month",
@@ -800,6 +801,12 @@
     "strikethroughTitle": "Strikethrough (Ctrl+D)",
     "underline": "Underline",
     "underlineTitle": "Underline (Ctrl+U)",
+    "fontColor": "Text color",
+    "fontColorReset": "Default text color",
+    "fontColorNames": {
+      "red": "Red", "orange": "Orange", "yellow": "Yellow", "green": "Green", "teal": "Teal",
+      "blue": "Blue", "indigo": "Indigo", "purple": "Purple", "pink": "Pink", "gray": "Gray"
+    },
     "highlight": "Highlight",
     "highlightTitle": "Highlight (Ctrl+Shift+H)",
     "highlightModeTitle": "Highlighter on: select text to highlight it (Esc or click again to stop)",

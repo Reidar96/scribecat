@@ -78,7 +78,7 @@ export type FolderSlice = {
   refreshFolderFiles: () => Promise<boolean>;
   /** Reload only the cross-device document lock sidecar. */
   refreshDocumentLocks: () => Promise<void>;
-  createNewFolder: (targetDirectory?: string, insertAfterBasename?: string | null) => Promise<string | null>;
+  createNewFolder: (targetDirectory?: string, insertAfterBasename?: string | null, name?: string) => Promise<string | null>;
   /** Creates a folder at exactly this path (see createFileAtPath for the why). */
   createFolderAtPath: (folderPath: string) => Promise<boolean>;
   renameFolderPath: (folderPath: string, newBaseName: string) => Promise<boolean>;

@@ -100,6 +100,7 @@ type TasksPanelProps = {
 };
 
 const ALL_TASKS = "__all__";
+const OVERDUE_TASKS = "__overdue__";
 const TODAY_TASKS = "__today__";
 const WEEK_TASKS = "__week__";
 const MONTH_TASKS = "__month__";
@@ -838,6 +839,9 @@ export function TasksPanel({
         return rootTasks.filter((task) => task.category === category && task.section === section);
       } catch { return rootTasks; }
     }
+    if (selectedView === OVERDUE_TASKS) {
+      return rootTasks.filter((task) => task.deadline !== null && task.deadline < todayKey);
+    }
     if (selectedView === TODAY_TASKS) {
       return rootTasks.filter((task) => task.deadline === todayKey);
     }
@@ -902,6 +906,7 @@ export function TasksPanel({
     [filteredRootTasks]
   );
   const timeBasedView =
+    selectedView === OVERDUE_TASKS ||
     selectedView === TODAY_TASKS ||
     selectedView === WEEK_TASKS ||
     selectedView === MONTH_TASKS ||
@@ -987,6 +992,7 @@ export function TasksPanel({
     );
   }, [childrenByParent, i18n.language, i18n.resolvedLanguage, rootTasks]);
 
+  const overdueCount = activeRootTasks.filter((task) => task.deadline !== null && task.deadline < todayKey).length;
   const todayCount = activeRootTasks.filter((task) => task.deadline === todayKey).length;
   const weekCount = activeRootTasks.filter(
     (task) =>
@@ -1055,6 +1061,8 @@ export function TasksPanel({
 
   const addTask = async (sectionTarget?: { category: string; section: string }) => {
     if (saving) return;
+    // A new task cannot be overdue; show the all-tasks list so its input stays visible.
+    if (selectedView === OVERDUE_TASKS && !sectionTarget) setSelectedView(ALL_TASKS);
     // A drag ended outside the list may miss the handle's dragend event.
     // Its stale drop state must not dim newly created rows.
     setDraggedRootKey(null);
@@ -1725,6 +1733,7 @@ export function TasksPanel({
       try { return (JSON.parse(selectedView.slice(SECTION_PREFIX.length)) as [string, string])[1]; }
       catch { return t("tasks.all"); }
     }
+    if (selectedView === OVERDUE_TASKS) return t("tasks.overdue");
     if (selectedView === TODAY_TASKS) return t("tasks.today");
     if (selectedView === WEEK_TASKS) return t("tasks.week");
     if (selectedView === MONTH_TASKS) return t("tasks.month");
@@ -1831,6 +1840,7 @@ export function TasksPanel({
             </button>
 
             {[
+              [OVERDUE_TASKS, t("tasks.overdue"), overdueCount],
               [TODAY_TASKS, t("tasks.today"), todayCount],
               [WEEK_TASKS, t("tasks.week"), weekCount],
               [MONTH_TASKS, t("tasks.month"), monthCount],

@@ -263,21 +263,34 @@ export const createFolderSlice: AppSlice<FolderSlice> = (set, get) => ({
       return false;
     }
   },
-  createNewFolder: async (targetDirectory?: string, insertAfterBasename?: string | null) => {
-    const { folderPath, filePaths, emptyFolderPaths } = get();
+  createNewFolder: async (targetDirectory?: string, insertAfterBasename?: string | null, name?: string) => {
+    const { folderPath } = get();
 
     if (!folderPath) {
+      return null;
+    }
+
+    const trimmedName = name?.trim();
+    if (name !== undefined && (!trimmedName || INVALID_FILE_NAME_CHARS.test(trimmedName))) {
+      set({ fileError: i18n.t("store.invalidFileName") });
       return null;
     }
 
     try {
       const resolvedTargetDirectory = targetDirectory ?? folderPath;
 
-      const newFolderPath = await createUniqueMarkdownFolder(
-        resolvedTargetDirectory,
-        i18n.t("store.newFolderBaseName")
-      );
+      const newFolderPath = trimmedName
+        ? await join(resolvedTargetDirectory, trimmedName)
+        : await createUniqueMarkdownFolder(resolvedTargetDirectory, i18n.t("store.newFolderBaseName"));
+      if (trimmedName) {
+        if (await markdownFolderExists(newFolderPath)) {
+          set({ fileError: i18n.t("store.folderAlreadyExists") });
+          return null;
+        }
+        await createMarkdownFolderAtPath(newFolderPath);
+      }
 
+      const { filePaths, emptyFolderPaths } = get();
       const parentRelativePath = getRelativeDisplayPath(folderPath, resolvedTargetDirectory);
       const currentManualOrder = get().manualOrder;
       const seededManualOrder = ensureManualOrderEntry(

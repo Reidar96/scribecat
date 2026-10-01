@@ -781,9 +781,22 @@ p.detail-panel__version {
   top: 0;
   bottom: 0;
   z-index: 8;
-  width: 2.5rem;
+  width: 2rem;
   pointer-events: none;
 }
+
+.split-workspace__edge-zone::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(var(--accent-rgb), 0.18);
+}
+
+.split-workspace__edge-zone--left::before { left: 0; }
+.split-workspace__edge-zone--right::before { right: 0; }
+.split-workspace__edge-zone--visible::before { background: rgba(var(--accent-rgb), 0.35); }
 
 /* Leave a gutter for the split controls without covering the editor's text. */
 @media (min-width: 921px) {
@@ -806,7 +819,7 @@ p.detail-panel__version {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
+  width: 1.7rem;
   height: 3.4rem;
   transform: translateY(-50%);
   border: 1px solid rgba(var(--accent-rgb), 0.35);
@@ -819,13 +832,13 @@ p.detail-panel__version {
 }
 
 .split-workspace__edge-add--left {
-  left: 0.25rem;
+  left: 0.15rem;
   transform: translateY(-50%) translateX(-55%);
   border-radius: 0 0.65rem 0.65rem 0;
 }
 
 .split-workspace__edge-add--right {
-  right: 0.25rem;
+  right: 0.15rem;
   transform: translateY(-50%) translateX(55%);
   border-radius: 0.65rem 0 0 0.65rem;
 }

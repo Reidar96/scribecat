@@ -4,6 +4,7 @@ import insPlugin from "markdown-it-ins";
 import markPlugin from "markdown-it-mark";
 
 import { calloutMarkdownItPlugin } from "@/lib/editor/extensions/callout";
+import { fontColorMarkdownItPlugin } from "@/lib/editor/extensions/fontColor";
 import { splitFrontmatter } from "@/lib/documentFrontmatter";
 import { tableLineBreakMarkdownItPlugin } from "@/lib/editor/extensions/table";
 
@@ -19,6 +20,7 @@ export type InlineStyle = {
   strike: boolean;
   code: boolean;
   link: string | null;
+  color: string | null;
 };
 
 export type InlineRun =
@@ -63,6 +65,7 @@ export function createExportMarkdownIt(): MarkdownIt {
   const markdownIt = new MarkdownIt({ html: false, linkify: false, breaks: false });
   markdownIt.use(insPlugin);
   markdownIt.use(markPlugin);
+  markdownIt.use(fontColorMarkdownItPlugin);
   // Strips the `[!VARIANT]` admonition marker so callouts export as clean
   // blockquotes instead of showing the raw marker text.
   markdownIt.use(calloutMarkdownItPlugin);
@@ -83,7 +86,7 @@ export function normalizeTaskListMarkdown(markdown: string): string {
 const TASK_PREFIX_PATTERN = /^\[( |x|X)\]\s+/;
 
 function emptyStyle(): InlineStyle {
-  return { bold: false, italic: false, underline: false, highlight: false, strike: false, code: false, link: null };
+  return { bold: false, italic: false, underline: false, highlight: false, strike: false, code: false, link: null, color: null };
 }
 
 function parseInlineTokens(tokens: Token[]): InlineRun[] {
@@ -126,12 +129,16 @@ function parseInlineTokens(tokens: Token[]): InlineRun[] {
       case "link_open":
         styleStack.push({ ...currentStyle(), link: token.attrGet("href") ?? null });
         break;
+      case "font_color_open":
+        styleStack.push({ ...currentStyle(), color: token.attrGet("color") });
+        break;
       case "strong_close":
       case "em_close":
       case "s_close":
       case "ins_close":
       case "mark_close":
       case "link_close":
+      case "font_color_close":
         if (styleStack.length > 1) {
           styleStack.pop();
         }
