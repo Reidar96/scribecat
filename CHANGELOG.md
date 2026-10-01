@@ -1,3 +1,11 @@
+## [1.0.0] - 2026-10-01
+
+- Make the current folder look expandable in Move to, while keeping its child destinations selectable.
+- Delete selected table rows or columns with Backspace or Delete when entire rows or columns are selected.
+- Insert pasted and dropped images directly into notes; offer PDF page images or an embedded viewer for dropped PDFs.
+- Keep the PDF import choice above the sidebar and offer Delete from the inline PDF viewer's right-click or long-press menu.
+- Let clicks beside the left edge of the editor reach the text unless the split view plus button itself is clicked.
+
 ## [0.28.3] - 2026-10-01
 
 - Let the editor use straight or Norwegian angle quotation marks, selected in application settings.

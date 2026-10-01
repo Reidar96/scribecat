@@ -1007,7 +1007,7 @@
     "aiTipGeneric": "Tip: Check the AI settings and try again.",
     "aiThinking": "Thinking …",
     "aiGenerating": "AI is writing …",
-    "dropDocumentHint": "PDFs can be inserted as page images. Drop other documents on the file list to import them as notes.",
+    "dropDocumentHint": "Images and PDFs can be inserted here. Drop other documents on the file list to import them as notes.",
     "stagedPreviewCreate": "This note will be created.",
     "stagedPreviewEdit": "Proposed changes: {{count}}",
     "stagedPreviewDelete": "This note is to be deleted.",

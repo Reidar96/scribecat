@@ -7,6 +7,7 @@ import { getVaultCapabilities, platform, vaultCapabilityHint } from "@/platform"
 import type { PickedImageFile } from "@/platform/types";
 import { EditorContent, type Editor as TipTapEditor, useEditor } from "@tiptap/react";
 import { NodeSelection } from "@tiptap/pm/state";
+import { CellSelection, selectedRect } from "@tiptap/pm/tables";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
@@ -65,6 +66,7 @@ import {
   ABSOLUTE_URL_PATTERN,
   getLastOpenedFolderPath,
   getRelativeImageMarkdownPath,
+  guessImageMimeType,
   saveImageToFolder
 } from "@/lib/fileSystem";
 import { dirname, join } from "@/platform/paths";
@@ -84,6 +86,24 @@ import { useShortcutsStore } from "@/store/useShortcutsStore";
 // What the editor embeds as an image — the toolbar's file filter and the drop
 // handler share this list, so both accept exactly the same files.
 const EDITOR_MEDIA_EXTENSIONS = ["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "pdf"];
+const EDITOR_MEDIA_PATTERN = /\.(png|jpe?g|gif|webp|svg|bmp|pdf)$/i;
+
+function supportedMediaFiles(files: File[]): File[] {
+  return files.filter((file) =>
+    file.type.startsWith("image/") || file.type === "application/pdf" || EDITOR_MEDIA_PATTERN.test(file.name)
+  );
+}
+
+async function mediaPayloadsFromFiles(files: File[]): Promise<MediaPayload[]> {
+  return Promise.all(files.map(async (file, index) => {
+    const extension = file.type.split("/")[1]?.replace("jpeg", "jpg") || "png";
+    return {
+      fileName: file.name && EDITOR_MEDIA_PATTERN.test(file.name) ? file.name : `clipboard-${index + 1}.${extension}`,
+      mimeType: file.type || (file.name.toLowerCase().endsWith(".pdf") ? "application/pdf" : guessImageMimeType(file.name)),
+      data: new Uint8Array(await file.arrayBuffer())
+    };
+  }));
+}
 
 // Marks the surface as a light page inside the dark UI; tokens.css and the
 // dark variant in App.css key off this exact name.
@@ -1045,7 +1065,16 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 
         if (event.dataTransfer?.files.length) {
           event.preventDefault();
-          setFeedback({ kind: "error", message: t("editor.dropDocumentHint") });
+          const files = Array.from(event.dataTransfer.files);
+          const supported = supportedMediaFiles(files);
+          if (!supported.length) {
+            setFeedback({ kind: "error", message: t("editor.dropDocumentHint") });
+          } else {
+            const coordinates = view.posAtCoords({ left: event.clientX, top: event.clientY });
+            void mediaPayloadsFromFiles(supported)
+              .then((payloads) => insertMediaPayloads(payloads, coordinates?.pos ?? view.state.selection.from))
+              .catch((error) => setFeedback({ kind: "error", message: extractErrorMessage(error, t) }));
+          }
           return true;
         }
 
@@ -1053,9 +1082,21 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       },
       transformPasted: (slice) => normalizePastedSlice(slice),
       handlePaste: (view, event) => {
-        if (Array.from(event.clipboardData?.items ?? []).some((item) => item.kind === "file")) {
+        const clipboardFiles = Array.from(event.clipboardData?.items ?? [])
+          .filter((item) => item.kind === "file")
+          .map((item) => item.getAsFile())
+          .filter((file): file is File => file !== null);
+        if (clipboardFiles.length) {
           event.preventDefault();
-          setFeedback({ kind: "error", message: t("editorContextMenu.pasteFailed") });
+          const supported = supportedMediaFiles(clipboardFiles);
+          if (!supported.length) {
+            setFeedback({ kind: "error", message: t("editor.dropDocumentHint") });
+          } else {
+            const insertPos = view.state.selection.from;
+            void mediaPayloadsFromFiles(supported)
+              .then((payloads) => insertMediaPayloads(payloads, insertPos))
+              .catch((error) => setFeedback({ kind: "error", message: extractErrorMessage(error, t) }));
+          }
           return true;
         }
 
@@ -1128,6 +1169,23 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         }
       },
       handleKeyDown: (view, event) => {
+        if ((event.key === "Backspace" || event.key === "Delete") &&
+            !event.altKey && !event.ctrlKey && !event.metaKey &&
+            view.state.selection instanceof CellSelection && !documentLockedRef.current) {
+          const rect = selectedRect(view.state);
+          const wholeRows = rect.left === 0 && rect.right === rect.map.width && rect.bottom - rect.top > 1;
+          const wholeColumns = rect.top === 0 && rect.bottom === rect.map.height && rect.right - rect.left > 1;
+          if (wholeRows && rect.top > 0) {
+            event.preventDefault();
+            editorRef.current?.commands.deleteRow();
+            return true;
+          }
+          if (wholeColumns) {
+            event.preventDefault();
+            editorRef.current?.commands.deleteColumn();
+            return true;
+          }
+        }
         // While the "[[" picker is open it owns the arrow keys, Enter, Tab and
         // Escape — nothing of that may reach the document.
         if (handleSuggestionKeyDown(event)) {
