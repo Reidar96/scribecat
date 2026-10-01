@@ -777,6 +777,12 @@
   background: transparent;
 }
 
+/* A current parent cannot be chosen, but is still a working disclosure row. */
+.move-dialog__item--expandable[aria-disabled="true"] {
+  opacity: 1;
+  cursor: pointer;
+}
+
 .move-dialog__item-name {
   overflow: hidden;
   white-space: nowrap;

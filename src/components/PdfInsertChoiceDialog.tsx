@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
@@ -40,7 +41,7 @@ export function PdfInsertChoiceDialog({
     return null;
   }
 
-  return (
+  return createPortal(
     <div className="unsaved-dialog" role="presentation" onClick={onCancel}>
       <div
         className="unsaved-dialog__panel"
@@ -73,6 +74,7 @@ export function PdfInsertChoiceDialog({
           </Button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

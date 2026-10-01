@@ -25,6 +25,7 @@ async function click(selector: string) {
 
 beforeEach(async () => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  vi.stubGlobal("matchMedia", () => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
   vi.stubGlobal("ResizeObserver", class {
     target?: Element;
     observe(target: Element) { this.target = target; observed.add(target); }
@@ -48,6 +49,19 @@ afterEach(async () => {
 });
 
 describe("PDF view transitions", () => {
+  it("offers deletion from the PDF page context menu", async () => {
+    const onDelete = vi.fn();
+    await act(async () => root.render(createElement(PdfViewerSurface, {
+      absolutePath: "sample.pdf", label: "Sample", mode: "inline", onDelete
+    })));
+    const stage = document.querySelector(".pdf-preview__stage")!;
+    await act(async () => stage.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 25, clientY: 30 })));
+    const deleteButton = [...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')]
+      .find((button) => button.textContent?.includes("common.delete"));
+    expect(deleteButton).toBeTruthy();
+    await act(async () => deleteButton!.click());
+    expect(onDelete).toHaveBeenCalledOnce();
+  });
   it.each(["close split", "restore while split stays open"])("keeps an explicit overview height after %s", async (transition) => {
     const styles = document.createElement("style");
     styles.textContent = viewerStyles;

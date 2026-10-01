@@ -279,8 +279,7 @@ export function ImageView({ node, editor, getPos, updateAttributes, selected }: 
       }}
       onContextMenu={(event: React.MouseEvent<HTMLElement>) => {
         if (isPdf) {
-          // Keep native text-selection/copy behaviour inside the PDF and stop
-          // the editor's own context menu from replacing it.
+          // The PDF viewer owns its own download/delete menu.
           event.stopPropagation();
           return;
         }
@@ -296,6 +295,7 @@ export function ImageView({ node, editor, getPos, updateAttributes, selected }: 
             absolutePath={documentAbsolutePath}
             label={pdfLabel}
             mode="inline"
+            onDelete={editor.isEditable ? deleteMedia : undefined}
             restoreMinimizedRequestId={
               pdfSplitRestoreRequest?.absolutePath === documentAbsolutePath
                 ? pdfSplitRestoreRequest.requestId

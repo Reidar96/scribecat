@@ -782,6 +782,7 @@ p.detail-panel__version {
   bottom: 0;
   z-index: 8;
   width: 1.35rem;
+  pointer-events: none;
 }
 
 .split-workspace__edge-zone--left {
@@ -822,18 +823,18 @@ p.detail-panel__version {
   border-radius: 0.65rem 0 0 0.65rem;
 }
 
-.split-workspace__edge-zone:hover .split-workspace__edge-add,
+.split-workspace:hover .split-workspace__edge-add,
 .split-workspace__edge-add:focus-visible {
   opacity: 1;
   pointer-events: auto;
 }
 
-.split-workspace__edge-zone:hover .split-workspace__edge-add--left,
+.split-workspace:hover .split-workspace__edge-add--left,
 .split-workspace__edge-add--left:focus-visible {
   transform: translateY(-50%) translateX(0);
 }
 
-.split-workspace__edge-zone:hover .split-workspace__edge-add--right,
+.split-workspace:hover .split-workspace__edge-add--right,
 .split-workspace__edge-add--right:focus-visible {
   transform: translateY(-50%) translateX(0);
 }

@@ -68,7 +68,7 @@ cp .env.example .env
 docker compose up -d
 ```
 
-Follow the [server setup guide](server/docs/getting-started.md) for hostname, certificate and first-sign-in instructions. Docker releases use explicit version tags, such as `ghcr.io/reidar96/scribecat-server:0.28.3`; there is no moving `latest` tag.
+Follow the [server setup guide](server/docs/getting-started.md) for hostname, certificate and first-sign-in instructions. Docker releases use explicit version tags, such as `ghcr.io/reidar96/scribecat-server:1.0.0`; there is no moving `latest` tag.
 
 **Desktop and web share the same core workspace.** The web edition uses your server's storage; local offline dictation is a desktop feature. Phone and tablet access is through the responsive web app, not a separate native mobile release.
 

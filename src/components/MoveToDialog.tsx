@@ -203,7 +203,7 @@ export function MoveToDialog({
                   aria-selected={isSelected}
                   aria-expanded={expandable ? expanded.has(target.relativePath) : undefined}
                   aria-disabled={target.disabled}
-                  className={cn("move-dialog__item", isSelected && "move-dialog__item--selected")}
+                  className={cn("move-dialog__item", isSelected && "move-dialog__item--selected", expandable && "move-dialog__item--expandable")}
                   style={{ paddingLeft: `${0.6 + depth * 1.1}rem` }}
                   title={target.relativePath || t("moveDialog.root")}
                   onClick={() => {

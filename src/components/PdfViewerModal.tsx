@@ -15,12 +15,14 @@ import {
   Square,
   Grid2X2
 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { readFile } from "@/platform/vaultFs";
 import { platform } from "@/platform";
 import { copyText } from "@/lib/clipboard";
 import { ContextMenuSurface } from "@/components/fileTree/ContextMenuSurface";
 import { useContextMenuState } from "@/components/fileTree/useContextMenuState";
+import { useLongPressContextMenu } from "@/hooks/useLongPressContextMenu";
 
 type PdfTextItemLike = {
   str?: string;
@@ -82,6 +84,7 @@ export type PdfPreviewRequest = {
 type PdfViewerSurfaceProps = PdfPreviewRequest & {
   onClose?: () => void;
   onOpenInSplit?: (pageNumber: number) => void;
+  onDelete?: () => void;
   onPageChange?: (pageNumber: number) => void;
   initialPageNumber?: number;
   mode?: "modal" | "split" | "inline";
@@ -146,6 +149,7 @@ export function PdfViewerSurface({
   label,
   onClose,
   onOpenInSplit,
+  onDelete,
   onPageChange,
   initialPageNumber = 1,
   mode = "modal",
@@ -153,6 +157,10 @@ export function PdfViewerSurface({
 }: PdfViewerSurfaceProps) {
   const { t } = useTranslation();
   const rootRef = useRef<HTMLDivElement>(null);
+  const { getLongPressProps } = useLongPressContextMenu<null>((_, x, y) => {
+    if (onDelete) setDocumentMenu({ x, y });
+  });
+  const longPressProps = getLongPressProps(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const pageRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -1229,10 +1237,15 @@ export function PdfViewerSurface({
       className={`pdf-preview pdf-preview--${mode}${pageView === "grid" ? " pdf-preview--grid" : ""}${fallbackFullscreen ? " pdf-preview--fallback-fullscreen" : ""}${isMinimized ? " pdf-preview--minimized" : ""}`}
       tabIndex={0}
       onKeyDown={handleViewerKeyDown}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
-      onPointerCancel={handlePointerCancel}
+      onPointerDown={(event) => {
+        handlePointerDown(event);
+        if (onDelete && (event.target as Element).closest(".pdf-preview__stage")) longPressProps.onPointerDown(event);
+      }}
+      onPointerMove={(event) => { handlePointerMove(event); longPressProps.onPointerMove(event); }}
+      onPointerUp={(event) => { handlePointerUp(event); longPressProps.onPointerUp(event); }}
+      onPointerCancel={(event) => { handlePointerCancel(event); longPressProps.onPointerCancel(event); }}
+      onClickCapture={longPressProps.onClickCapture}
+      onContextMenuCapture={longPressProps.onContextMenuCapture}
       onMouseDown={(event) => event.stopPropagation()}
       onClick={(event) => event.stopPropagation()}
       onContextMenu={(event) => {
@@ -1546,6 +1559,12 @@ export function PdfViewerSurface({
             <Download aria-hidden="true" />
             <span>{t("pdfViewer.download")}</span>
           </button>
+          {onDelete ? (
+            <button type="button" role="menuitem" className="file-tree-context-menu__item file-tree-context-menu__item--danger" onClick={() => { setDocumentMenu(null); onDelete(); }}>
+              <Trash2 aria-hidden="true" />
+              <span>{t("common.delete")}</span>
+            </button>
+          ) : null}
           {downloadError ? (
             <div className="file-tree-context-menu__error" role="alert">
               {t("pdfViewer.downloadFailed")}

@@ -815,7 +815,7 @@
     "imageDialogFilter": "Bilder og PDF",
     "linkRequiresFile": "Filer kan bare lenkes når du redigerer en fil i en åpen mappe.",
     "linkTargetMissing": "Den lenkede filen «{{href}}» ble ikke funnet.",
-    "dropDocumentHint": "PDF-er kan settes inn som sidebilder. Slipp andre dokumenter på fillisten for å importere dem som notater."
+    "dropDocumentHint": "Bilder og PDF-er kan settes inn her. Slipp andre dokumenter på fillisten for å importere dem som notater."
   },
   "editorContextMenu": {
     "copyFormatted": "Kopier tekst med formatering",
