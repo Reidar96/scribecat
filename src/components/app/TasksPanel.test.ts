@@ -108,3 +108,16 @@ it("adds a task directly under a section and focuses the new row", async () => {
   expect(host.querySelectorAll<HTMLInputElement>(".tasks-item__text")).toHaveLength(2);
   expect((document.activeElement as HTMLInputElement)?.value).toBe("tasks.newTask");
 });
+
+it("removes an existing task date with the clear-date action", async () => {
+  const dateInput = host.querySelector<HTMLInputElement>(".tasks-item__deadline input[type=date]")!;
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(dateInput, "2026-10-15");
+    dateInput.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  const clearDate = host.querySelector<HTMLButtonElement>('[aria-label="tasks.clearDeadline"]');
+  expect(clearDate).not.toBeNull();
+  await click(clearDate!);
+  expect(persist.mock.lastCall?.[1]).not.toContain("📅");
+  expect(host.querySelector('[aria-label="tasks.clearDeadline"]')).toBeNull();
+});

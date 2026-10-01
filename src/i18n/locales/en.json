@@ -673,6 +673,7 @@
     "dragCategory": "Drag to change order",
     "categoryOptional": "Category (optional)",
     "deadline": "Deadline",
+    "clearDeadline": "Clear date",
     "noDate": "No date",
     "add": "Add",
     "count": "{{count}} tasks",

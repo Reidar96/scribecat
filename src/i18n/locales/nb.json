@@ -519,6 +519,7 @@
     "dragCategory": "Dra for å endre rekkefølge",
     "categoryOptional": "Kategori (valgfritt)",
     "deadline": "Deadline",
+    "clearDeadline": "Fjern dato",
     "noDate": "Ingen dato",
     "add": "Legg til",
     "count": "{{count}} gjøremål",

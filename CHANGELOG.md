@@ -1,3 +1,8 @@
+## [1.0.4] - 2026-10-01
+
+- Show the split view accent line only while hovering over the document edge.
+- Add a clear-date action to remove a task deadline.
+
 ## [1.0.3] - 2026-10-01
 
 - Narrow the split view plus controls and add a subtle accent line along the document edge.

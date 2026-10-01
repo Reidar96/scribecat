@@ -544,7 +544,7 @@ function TaskRow({
               </MenuPopup></MenuPositioner></MenuPortal>
             </Menu>
 
-            <label
+            <div
               className="tasks-item__deadline"
               data-empty={task.deadline ? "false" : "true"}
               data-placeholder={t("tasks.noDate")}
@@ -556,7 +556,18 @@ function TaskRow({
                 onChange={(event) => onDeadlineChange(event.target.value || null)}
                 aria-label={task.deadline ? t("tasks.deadline") : t("tasks.noDate")}
               />
-            </label>
+              {task.deadline ? (
+                <button
+                  type="button"
+                  className="tasks-item__deadline-clear"
+                  onClick={() => onDeadlineChange(null)}
+                  aria-label={t("tasks.clearDeadline")}
+                  title={t("tasks.clearDeadline")}
+                >
+                  <X aria-hidden="true" />
+                </button>
+              ) : null}
+            </div>
 
             <label className="tasks-item__tags">
               <Tag aria-hidden="true" />
