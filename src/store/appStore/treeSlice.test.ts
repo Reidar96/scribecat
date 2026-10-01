@@ -46,6 +46,11 @@ vi.mock("@/lib/vaultMeta", async (importOriginal) => ({
   writeSortMode: vi.fn(async () => undefined)
 }));
 
+vi.mock("@/lib/noteTrash", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/noteTrash")>()),
+  trashNote: vi.fn(async () => undefined)
+}));
+
 const { getRelativeImageMarkdownPath, writeMarkdownFile, renameMarkdownFile } = await import("@/lib/fileSystem");
 const { useAppStore } = await import("@/store/useAppStore");
 
@@ -54,6 +59,23 @@ const NOTE = "/vault/note.md";
 const MOVED_NOTE = "/vault/sub/note.md";
 const MARKDOWN = "# Title\n\n![eye](images/image-3.png)\n";
 const REWRITTEN = "# Title\n\n![eye](../images/image-3.png)\n";
+
+it("keeps a folder visible when its last document is deleted", async () => {
+  useAppStore.setState({
+    folderPath: VAULT,
+    filePaths: ["/vault/Projects/only.md"],
+    emptyFolderPaths: [],
+    fileDocuments: {},
+    selectedFilePath: null,
+    manualOrder: {},
+    vaultIcons: {},
+    documentLocks: {},
+    workingSet: []
+  });
+  expect(await useAppStore.getState().deleteFilePath("/vault/Projects/only.md")).toBe(true);
+  expect(useAppStore.getState().filePaths).toEqual([]);
+  expect(useAppStore.getState().emptyFolderPaths).toContain("/vault/Projects");
+});
 
 function primeStore(
   document: { content: string; baseContent: string } | null,

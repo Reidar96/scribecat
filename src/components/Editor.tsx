@@ -70,6 +70,7 @@ import {
 import { dirname, join } from "@/platform/paths";
 import { updateSearchHighlight } from "@/lib/searchHighlight";
 import { canDownloadMarkdown, downloadNoteAsMarkdown } from "@/lib/export/markdownDownload";
+import { angleQuoteFor } from "@/lib/editor/quotationMarks";
 import { printMarkdown } from "@/lib/print";
 import { replaceBody } from "@/lib/documentFrontmatter";
 import { couldBeShortcut } from "@/lib/shortcuts/binding";
@@ -122,6 +123,7 @@ type EditorProps = {
   pdfSplitRestoreRequest?: InlinePdfSplitRestoreRequest | null;
   onZenModeRequest: () => void;
   onDeleteRequest: () => void;
+  onExportRequest?: (mode: "standard" | "manuscript") => void;
   deleteEnabled: boolean;
   documentLocked: boolean;
   onDocumentLockToggle: () => void;
@@ -232,6 +234,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     pdfSplitRestoreRequest = null,
     onZenModeRequest,
     onDeleteRequest,
+    onExportRequest,
     deleteEnabled,
     documentLocked,
     onDocumentLockToggle,
@@ -1013,6 +1016,19 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       updateOutlineHighlight(currentEditor, null);
     },
     editorProps: {
+      handleTextInput: (view, from, to, text) => {
+        if (text !== '"' || useEditorSettingsStore.getState().quotationMarks !== "angle") return false;
+        const { selection } = view.state;
+        if (selection.$from.parent.type.spec.code || selection.$from.marks().some((mark) => mark.type.name === "code")) return false;
+        if (from !== to) {
+          const selected = view.state.doc.textBetween(from, to, "\n");
+          view.dispatch(view.state.tr.insertText(`«${selected}»`, from, to));
+          return true;
+        }
+        const preceding = view.state.doc.textBetween(Math.max(0, from - 1), from, " ");
+        view.dispatch(view.state.tr.insertText(angleQuoteFor(preceding), from, to));
+        return true;
+      },
       handleDrop: (view, event, _slice, moved) => {
         if (moved) {
           return false;
@@ -1421,6 +1437,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       onDeleteRequest={onDeleteRequest}
       deleteEnabled={deleteEnabled}
       onDownloadMarkdownRequest={downloadDocument}
+      onExportRequest={onExportRequest}
       onSearchRequest={openFindPanel}
       onZenModeRequest={onZenModeRequest}
       documentLocked={documentLocked}

@@ -309,6 +309,20 @@ export function CollectionPanel({
   } | null>(null);
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(() => new Set());
   const [selectionMode, setSelectionMode] = useState(false);
+  useEffect(() => {
+    if (!selectionMode) return;
+    const dismissOnBackground = (event: globalThis.PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (target.closest(".collection-card, .collection-panel__selection-bar, [data-slot='menu-popup'], .file-tree-context-menu")) return;
+      // The selection toggle handles its own state on click.
+      if (target.closest("[data-collection-selection-toggle]")) return;
+      setSelectionMode(false);
+      setSelectedKeys(new Set());
+    };
+    window.addEventListener("pointerdown", dismissOnBackground);
+    return () => window.removeEventListener("pointerdown", dismissOnBackground);
+  }, [selectionMode]);
   const { contextMenu, setContextMenu } = useContextMenuState<{
     cards: CollectionCard[];
     x: number;
@@ -1015,6 +1029,7 @@ export function CollectionPanel({
               aria-label={t("collection.selectionMode")}
               title={t("collection.selectionMode")}
               aria-pressed={selectionMode}
+              data-collection-selection-toggle
               onClick={() => {
                 if (selectionMode) {
                   setSelectionMode(false);

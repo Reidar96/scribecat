@@ -3,6 +3,7 @@ import {
   ArrowLeft,
   ArrowRight,
   EllipsisVertical,
+  Download,
   FileCode,
   Focus,
   History,
@@ -44,6 +45,7 @@ type DocumentMenuProps = {
   versioningEnabled: boolean;
   onZenModeRequest: () => void;
   onDeleteRequest: () => void;
+  onExportRequest?: (mode: "standard" | "manuscript") => void;
   deleteEnabled: boolean;
   documentLocked: boolean;
   onDocumentLockToggle: () => void;
@@ -70,6 +72,7 @@ export function DocumentMenu({
   versioningEnabled,
   onZenModeRequest,
   onDeleteRequest,
+  onExportRequest,
   deleteEnabled,
   documentLocked,
   onDocumentLockToggle
@@ -218,6 +221,10 @@ export function DocumentMenu({
               <Printer className="size-4" />
               {t("toolbar.printButton")}
             </MenuItem>
+            {onExportRequest ? <>
+              <MenuItem onClick={() => onExportRequest("standard")}><Download className="size-4" />{t("fileTree.export")}</MenuItem>
+              <MenuItem onClick={() => onExportRequest("manuscript")}><Download className="size-4" />{t("fileTree.exportManuscript")}</MenuItem>
+            </> : null}
             <div className="editor-toolbar__menu-separator" role="separator" />
             <MenuItem disabled={!deleteEnabled} onClick={onDeleteRequest}>
               <Trash2 className="size-4" />

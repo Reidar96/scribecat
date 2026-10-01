@@ -56,9 +56,19 @@ export const AUTO_SAVE_STORAGE_KEY = "scribecat-auto-save-enabled";
 export const RESTORE_WORKING_SET_STORAGE_KEY = "scribecat-restore-working-set";
 export const AUTO_ADMIT_WORKING_SET_STORAGE_KEY = "scribecat-auto-admit-working-set";
 export const PASTE_MARKDOWN_STORAGE_KEY = "scribecat-paste-markdown";
+export const QUOTATION_MARKS_STORAGE_KEY = "scribecat-quotation-marks";
 export const DOCUMENT_WIDTH_STORAGE_KEY = "scribecat-document-width";
 
 export type DocumentWidthMode = "compact" | "full";
+export type QuotationMarksMode = "straight" | "angle";
+
+function getStoredQuotationMarks(): QuotationMarksMode {
+  try {
+    return window.localStorage.getItem(QUOTATION_MARKS_STORAGE_KEY) === "angle" ? "angle" : "straight";
+  } catch {
+    return "straight";
+  }
+}
 
 // Zoom level is an offset in percent relative to normal size (0 = 100%).
 export const ZOOM_MIN = -30;
@@ -381,6 +391,8 @@ type EditorSettingsState = {
    */
   pasteMarkdown: boolean;
   setPasteMarkdown: (enabled: boolean) => void;
+  quotationMarks: QuotationMarksMode;
+  setQuotationMarks: (mode: QuotationMarksMode) => void;
   /** Open the note that was open in the vault last time when it is opened again. */
   reopenLastNote: boolean;
   setReopenLastNote: (enabled: boolean) => void;
@@ -518,6 +530,11 @@ export const useEditorSettingsStore = create<EditorSettingsState>((set, get) => 
   setPasteMarkdown: (enabled: boolean) => {
     persistPasteMarkdown(enabled);
     set({ pasteMarkdown: enabled });
+  },
+  quotationMarks: getStoredQuotationMarks(),
+  setQuotationMarks: (mode: QuotationMarksMode) => {
+    try { window.localStorage.setItem(QUOTATION_MARKS_STORAGE_KEY, mode); } catch { /* optional storage */ }
+    set({ quotationMarks: mode });
   },
   reopenLastNote: getStoredReopenLastNote(),
   setReopenLastNote: (enabled: boolean) => {

@@ -12,6 +12,7 @@ import {
 import { useTranslation } from "react-i18next";
 
 import type { Editor } from "@tiptap/react";
+import { CellSelection, selectedRect } from "@tiptap/pm/tables";
 
 import { Button } from "@/components/ui/button";
 import { useLayoutMode } from "@/hooks/useLayoutMode";
@@ -76,6 +77,9 @@ export function TableMenu({ editor }: TableMenuProps) {
   usePopoverOverflowAlign(anchor, popoverRef, setAlign, setValign);
 
   const isInHeaderRow = editor.isActive("tableHeader");
+  const selectionRect = editor.state.selection instanceof CellSelection ? selectedRect(editor.state) : null;
+  const rowCount = selectionRect ? selectionRect.bottom - selectionRect.top : 1;
+  const columnCount = selectionRect ? selectionRect.right - selectionRect.left : 1;
 
   const run = (command: () => void) => {
     command();
@@ -135,7 +139,7 @@ export function TableMenu({ editor }: TableMenuProps) {
               />
               <MenuItem
                 icon={<Trash2 aria-hidden="true" />}
-                label={t("tableMenu.deleteColumn")}
+                label={t(columnCount > 1 ? "tableMenu.deleteColumns" : "tableMenu.deleteColumn")}
                 danger
                 disabled={!editor.can().deleteColumn()}
                 onSelect={() => run(() => editor.chain().focus().deleteColumn().run())}
@@ -157,9 +161,9 @@ export function TableMenu({ editor }: TableMenuProps) {
               />
               <MenuItem
                 icon={<Rows3 aria-hidden="true" />}
-                label={t("tableMenu.deleteRow")}
+                label={t(rowCount > 1 ? "tableMenu.deleteRows" : "tableMenu.deleteRow")}
                 danger
-                disabled={isInHeaderRow || !editor.can().deleteRow()}
+                disabled={isInHeaderRow || selectionRect?.top === 0 || !editor.can().deleteRow()}
                 onSelect={() => run(() => editor.chain().focus().deleteRow().run())}
               />
 

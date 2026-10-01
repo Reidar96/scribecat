@@ -1605,6 +1605,7 @@ function App() {
                 }
               }}
               onDeleteFileRequest={requestDeleteFile}
+              onExportFileRequest={requestExportFile}
               onSaveRequest={() => void saveSelectedFile()}
             />
           )}
