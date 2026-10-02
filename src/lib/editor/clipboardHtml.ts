@@ -1,23 +1,36 @@
-/**
- * navigator.clipboard.read() can return HTML where the whole fragment has
- * been entity-escaped (for example &lt;p&gt;text&lt;/p&gt;). Passing that
- * directly to TipTap inserts the markup itself as visible text. Decode that
- * wrapper once so the editor can parse the original rich fragment.
- */
-function containsTagMarkup(value: string): boolean {
-  const start = value.indexOf("<");
-  if (start < 0) return false;
-  const nameStart = value[start + 1] === "/" ? start + 2 : start + 1;
-  return /[a-z]/i.test(value[nameStart] ?? "");
+function startsWithTagMarkup(value: string): boolean {
+  const candidate = value.trimStart();
+  if (candidate[0] !== "<") return false;
+  const nameStart = candidate[1] === "/" ? 2 : 1;
+  return /[a-z]/i.test(candidate[nameStart] ?? "");
 }
 
+/**
+ * Some clipboard providers encode a rich HTML fragment a second time. Parse
+ * text nodes that contain a whole escaped fragment back into elements before
+ * handing the result to ProseMirror's normal clipboard parser.
+ */
 export function normalizeClipboardHtml(html: string): string {
-  if (!html.includes("&lt;") || containsTagMarkup(html)) {
-    return html;
+  const template = document.createElement("template");
+  template.innerHTML = html;
+
+  const walker = document.createTreeWalker(template.content, NodeFilter.SHOW_TEXT);
+  const textNodes: Text[] = [];
+  while (walker.nextNode()) textNodes.push(walker.currentNode as Text);
+
+  let changed = false;
+  for (const textNode of textNodes) {
+    const parent = textNode.parentElement;
+    const value = textNode.nodeValue ?? "";
+    if (parent?.closest("pre, code") || !startsWithTagMarkup(value)) continue;
+
+    const fragment = document.createElement("template");
+    fragment.innerHTML = value;
+    if (!Array.from(fragment.content.childNodes).some((node) => node.nodeType === Node.ELEMENT_NODE)) continue;
+
+    textNode.replaceWith(fragment.content);
+    changed = true;
   }
 
-  const decoder = document.createElement("textarea");
-  decoder.innerHTML = html;
-  const decoded = decoder.value;
-  return containsTagMarkup(decoded) ? decoded : html;
+  return changed ? template.innerHTML : html;
 }

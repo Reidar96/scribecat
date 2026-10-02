@@ -1,3 +1,7 @@
+## [1.0.8] - 2026-10-02
+
+- Fix right-click paste so escaped HTML fragments are restored and parsed using the same editor clipboard pipeline as Ctrl+V.
+
 ## [1.0.7] - 2026-10-02
 
 - Fix right-click paste when the clipboard returns a fully HTML-escaped rich-text fragment, so markup is parsed as content instead of inserted visibly.
