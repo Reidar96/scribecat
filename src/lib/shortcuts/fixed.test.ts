@@ -34,6 +34,7 @@ describe("matchFixedEditorShortcut", () => {
 
   it("ignores everything else", () => {
     expect(matchFixedEditorShortcut(keydown({ ctrlKey: true, code: "KeyV", key: "v" }))).toBeNull();
+    expect(matchFixedEditorShortcut(keydown({ ctrlKey: true, shiftKey: true, code: "KeyV", key: "V" }))).toBeNull();
     expect(matchFixedEditorShortcut(keydown({ altKey: true, code: "KeyC", key: "c" }))).toBeNull();
     expect(matchFixedEditorShortcut(keydown({ ctrlKey: true, altKey: true, shiftKey: true, code: "KeyC" }))).toBeNull();
   });
