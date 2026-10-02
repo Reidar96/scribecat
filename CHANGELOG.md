@@ -1,3 +1,7 @@
+## [1.0.7] - 2026-10-02
+
+- Fix right-click paste when the clipboard returns a fully HTML-escaped rich-text fragment, so markup is parsed as content instead of inserted visibly.
+
 ## [1.0.6] - 2026-10-02
 
 - Add editor context-menu actions to paste normally or as plain text and to insert media, tables, links, blockquotes, linked blocks, code blocks and dividers.

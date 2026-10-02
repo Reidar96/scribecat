@@ -53,6 +53,7 @@ import { moveLine, moveListItem, toggleTaskItemChecked } from "@/lib/editor/list
 import { normalizeEscapedCheckboxes } from "@/lib/editor/markdownNormalize";
 import { looksLikeMarkdown, pasteMarkdown } from "@/lib/editor/pasteMarkdown";
 import { pastePlainText } from "@/lib/editor/plainTextPaste";
+import { normalizeClipboardHtml } from "@/lib/editor/clipboardHtml";
 import { normalizePastedSlice } from "@/lib/editor/pasteNormalize";
 import { getEditorMarkdown, getSelectionMarkdown } from "@/lib/editor/markdownStorage";
 import { toggleListForSelectedLines } from "@/lib/editor/listSelection";
@@ -858,7 +859,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         }
 
         if (html) {
-          currentEditor.chain().focus().insertContentAt(range, html).run();
+          currentEditor.chain().focus().insertContentAt(range, normalizeClipboardHtml(html)).run();
           return;
         }
 
