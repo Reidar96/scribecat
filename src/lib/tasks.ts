@@ -9,6 +9,7 @@ export type TaskSettings = {
   folder: string;
   uncategorizedFileName: string;
   categoryOrder: string[];
+  collapsedSections: string[];
   hideFromSidebar: boolean;
   sortMode: TaskSortMode;
 };
@@ -17,6 +18,7 @@ export const DEFAULT_TASK_SETTINGS: TaskSettings = {
   folder: TASKS_FOLDER_NAME,
   uncategorizedFileName: UNCATEGORIZED_TASK_CATEGORY,
   categoryOrder: [],
+  collapsedSections: [],
   hideFromSidebar: true,
   sortMode: "manual"
 };
@@ -46,6 +48,9 @@ export function normalizeTaskSettings(value: unknown): TaskSettings {
         : UNCATEGORIZED_TASK_CATEGORY,
     categoryOrder: Array.isArray(record.categoryOrder)
       ? [...new Set(record.categoryOrder.filter((name): name is string => typeof name === "string").map(sanitizeTaskCategory))]
+      : [],
+    collapsedSections: Array.isArray(record.collapsedSections)
+      ? [...new Set(record.collapsedSections.filter((key): key is string => typeof key === "string"))]
       : [],
     hideFromSidebar: record.hideFromSidebar !== false,
     sortMode:

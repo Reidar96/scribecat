@@ -953,6 +953,15 @@ export function TasksPanel({
     () => orderTaskGroups(visibleCompletedRoots, childrenByParent, compareVisibleRoots),
     [childrenByParent, compareVisibleRoots, visibleCompletedRoots]
   );
+  const toggleSectionCollapsed = (category: string, section: string) => {
+    const key = JSON.stringify([category, section]);
+    const collapsed = taskSettings.collapsedSections.includes(key);
+    setTaskSettings({
+      collapsedSections: collapsed
+        ? taskSettings.collapsedSections.filter((item) => item !== key)
+        : [...taskSettings.collapsedSections, key]
+    });
+  };
   const draggedRootTask = useMemo(
     () =>
       draggedRootKey
@@ -2143,7 +2152,9 @@ export function TasksPanel({
               {(selectedCategory
                 ? [null, ...(sectionsByCategory[selectedCategory] ?? []), ...(sectionDraft?.original === null ? [undefined] : [])].flatMap((section) => [
                     { kind: "heading" as const, section },
-                    ...visibleActiveTasks.filter((task) => (task.section ?? null) === section).map((task) => ({ kind: "task" as const, task }))
+                    ...(section !== undefined && section !== null && taskSettings.collapsedSections.includes(JSON.stringify([selectedCategory, section]))
+                      ? []
+                      : visibleActiveTasks.filter((task) => (task.section ?? null) === section).map((task) => ({ kind: "task" as const, task })))
                   ])
                 : visibleActiveTasks.map((task) => ({ kind: "task" as const, task }))).map((entry) => {
                 if (entry.kind === "heading") {
@@ -2173,7 +2184,15 @@ export function TasksPanel({
                   >{sectionDraft?.original === section ? <input autoFocus value={sectionDraft.value} aria-label={t("tasks.renameSection")}
                     onChange={(event) => { setSectionDraft({ ...sectionDraft, value: event.target.value }); setNameError(null); }}
                     onBlur={() => void commitSectionName()}
-                    onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); void commitSectionName(); } else if (event.key === "Escape") { event.preventDefault(); skipNameBlurRef.current = true; setSectionDraft(null); setNameError(null); } }} /> : <h4>{section}</h4>}
+                    onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); void commitSectionName(); } else if (event.key === "Escape") { event.preventDefault(); skipNameBlurRef.current = true; setSectionDraft(null); setNameError(null); } }} /> : <>
+                      <Button type="button" size="icon-xs" variant="ghost" className="tasks-section-heading__toggle" draggable={false}
+                        aria-expanded={!taskSettings.collapsedSections.includes(JSON.stringify([category, section]))}
+                        aria-label={t(taskSettings.collapsedSections.includes(JSON.stringify([category, section])) ? "tasks.expandSection" : "tasks.collapseSection", { section })}
+                        title={t(taskSettings.collapsedSections.includes(JSON.stringify([category, section])) ? "tasks.expandSection" : "tasks.collapseSection", { section })}
+                        onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); toggleSectionCollapsed(category, section); }}>
+                        {taskSettings.collapsedSections.includes(JSON.stringify([category, section])) ? <ChevronRight aria-hidden="true" /> : <ChevronDown aria-hidden="true" />}
+                      </Button><h4>{section}</h4>
+                    </>}
                     {nameError && sectionDraft?.original === section ? <small role="alert">{nameError}</small> : null}
                     {sectionDraft?.original !== section ? <Menu><MenuTrigger render={<Button type="button" size="icon-xs" variant="ghost" draggable={false} aria-label={t("tasks.sectionMoreActions")} title={t("tasks.sectionMoreActions")} onPointerDown={(event) => event.stopPropagation()}><Ellipsis /></Button>} />
                       <MenuPortal><MenuPositioner align="end"><MenuPopup finalFocus={false}>

@@ -1,3 +1,7 @@
+## [1.0.5] - 2026-10-02
+
+- Collapse or expand tasks in a subcategory and sync the collapsed state with vault task settings across devices.
+
 ## [1.0.4] - 2026-10-01
 
 - Show the split view accent line only while hovering over the document edge.

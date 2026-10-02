@@ -114,6 +114,7 @@
 .tasks-section-heading h4 { margin: 0; font-size: var(--font-ui-md); font-weight: 650; }
 .tasks-section-heading h4, .tasks-section-heading input { flex: 1; }
 .tasks-section-heading > button { margin-left: auto; }
+.tasks-section-heading > button.tasks-section-heading__toggle { margin-left: 0; flex: none; }
 .tasks-section-heading--editing { cursor: text; flex-wrap: wrap; }
 .tasks-section-heading--editing input { flex-basis: 100%; }
 .tasks-category-picker__section { padding-left: 1.4rem; }

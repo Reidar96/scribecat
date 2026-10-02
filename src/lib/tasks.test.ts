@@ -372,6 +372,7 @@ describe("tasks markdown", () => {
       folder: "Gjøremål",
       uncategorizedFileName: "Uten kategori",
       categoryOrder: [],
+      collapsedSections: [],
       hideFromSidebar: true,
       sortMode: "manual"
     });
@@ -385,6 +386,7 @@ describe("tasks markdown", () => {
       folder: "Oppgaver / Privat",
       uncategorizedFileName: "Uten kategori",
       categoryOrder: [],
+      collapsedSections: [],
       hideFromSidebar: false,
       sortMode: "date"
     });
@@ -399,9 +401,13 @@ describe("tasks markdown", () => {
       folder: "Oppgaver / Privat",
       uncategorizedFileName: "Uten kategori",
       categoryOrder: [],
+      collapsedSections: [],
       hideFromSidebar: false,
       sortMode: "date"
     });
+
+    expect(normalizeTaskSettings({ collapsedSections: ['["Alpha","Planlegging"]', 4] }).collapsedSections)
+      .toEqual(['["Alpha","Planlegging"]']);
   });
 
   it("renames the category heading without changing the task body", () => {
