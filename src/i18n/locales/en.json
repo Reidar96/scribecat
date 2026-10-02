@@ -663,6 +663,8 @@
     "renameSection": "Rename subcategory",
     "deleteSection": "Delete subcategory",
     "sectionMoreActions": "More subcategory actions",
+    "collapseSection": "Collapse {{section}} tasks",
+    "expandSection": "Expand {{section}} tasks",
     "sectionExists": "The subcategory “{{section}}” already exists.",
     "moveUp": "Move up",
     "moveDown": "Move down",

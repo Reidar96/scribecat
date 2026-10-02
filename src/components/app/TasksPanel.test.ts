@@ -98,6 +98,17 @@ it("renames a section in its heading using the section menu", async () => {
   expect(persist).toHaveBeenLastCalledWith("/vault/Gjøremål/Alpha.md", expect.stringContaining("## Renamed\n- [ ] Task"));
 });
 
+it("collapses subcategory tasks and stores the setting for vault sync", async () => {
+  await click(category("Alpha"));
+  expect(host.querySelectorAll(".tasks-item__text")).toHaveLength(1);
+  await click(host.querySelector<HTMLButtonElement>('[aria-label="tasks.collapseSection"]')!);
+  expect(host.querySelectorAll(".tasks-item__text")).toHaveLength(0);
+  expect(useEditorSettingsStore.getState().taskSettings.collapsedSections)
+    .toContain(JSON.stringify(["Alpha", "Existing"]));
+  await click(host.querySelector<HTMLButtonElement>('[aria-label="tasks.expandSection"]')!);
+  expect(host.querySelectorAll(".tasks-item__text")).toHaveLength(1);
+});
+
 it("adds a task directly under a section and focuses the new row", async () => {
   await click(category("Alpha"));
   await click(host.querySelector<HTMLButtonElement>('[aria-label="tasks.sectionMoreActions"]')!);

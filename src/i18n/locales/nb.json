@@ -509,6 +509,8 @@
     "renameSection": "Gi underkategori nytt navn",
     "deleteSection": "Slett underkategori",
     "sectionMoreActions": "Flere valg for underkategori",
+    "collapseSection": "Skjul gjøremål i {{section}}",
+    "expandSection": "Vis gjøremål i {{section}}",
     "sectionExists": "Underkategorien «{{section}}» finnes allerede.",
     "moveUp": "Flytt opp",
     "moveDown": "Flytt ned",
