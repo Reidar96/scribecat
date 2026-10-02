@@ -859,7 +859,8 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         }
 
         if (html) {
-          currentEditor.chain().focus().insertContentAt(range, normalizeClipboardHtml(html)).run();
+          currentEditor.commands.setTextSelection(range);
+          currentEditor.view.pasteHTML(normalizeClipboardHtml(html));
           return;
         }
 
