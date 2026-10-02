@@ -52,6 +52,7 @@ import { renderPdfToPageImages } from "@/lib/editor/pdfToImages";
 import { moveLine, moveListItem, toggleTaskItemChecked } from "@/lib/editor/listCommands";
 import { normalizeEscapedCheckboxes } from "@/lib/editor/markdownNormalize";
 import { looksLikeMarkdown, pasteMarkdown } from "@/lib/editor/pasteMarkdown";
+import { pastePlainText } from "@/lib/editor/plainTextPaste";
 import { normalizePastedSlice } from "@/lib/editor/pasteNormalize";
 import { getEditorMarkdown, getSelectionMarkdown } from "@/lib/editor/markdownStorage";
 import { toggleListForSelectedLines } from "@/lib/editor/listSelection";
@@ -77,7 +78,7 @@ import { printMarkdown } from "@/lib/print";
 import { replaceBody } from "@/lib/documentFrontmatter";
 import { couldBeShortcut } from "@/lib/shortcuts/binding";
 import { matchFixedEditorShortcut } from "@/lib/shortcuts/fixed";
-import { isRetiredDefault, matchShortcut } from "@/lib/shortcuts/resolve";
+import { isCustomBinding, isRetiredDefault, matchShortcut } from "@/lib/shortcuts/resolve";
 import { useAppStore } from "@/store/useAppStore";
 import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
 import { useSearchStore } from "@/store/useSearchStore";
@@ -813,6 +814,91 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 
   };
 
+  const pasteFromClipboard = async (plainTextOnly: boolean) => {
+    const currentEditor = editorRef.current;
+    if (!currentEditor || currentEditor.isDestroyed || !currentEditor.isEditable) return;
+
+    const range = { from: currentEditor.state.selection.from, to: currentEditor.state.selection.to };
+    const clipboard = navigator.clipboard;
+    if (!clipboard) {
+      setFeedback({ kind: "error", message: t("editorContextMenu.pasteFailed") });
+      return;
+    }
+
+    try {
+      if (plainTextOnly) {
+        const text = await clipboard.readText();
+        pastePlainText(currentEditor, text, range);
+        return;
+      }
+
+      if (typeof clipboard.read === "function") {
+        const items = await clipboard.read();
+        const files: File[] = [];
+        let html = "";
+        let plain = "";
+
+        for (const item of items) {
+          for (const type of item.types) {
+            if (type === "text/html") html ||= await (await item.getType(type)).text();
+            else if (type === "text/plain") plain ||= await (await item.getType(type)).text();
+            else if (type.startsWith("image/") || type === "application/pdf") {
+              const blob = await item.getType(type);
+              const extension = type === "application/pdf" ? "pdf" : type.split("/")[1]?.replace("jpeg", "jpg") || "png";
+              files.push(new File([blob], `clipboard-${files.length + 1}.${extension}`, { type }));
+            }
+          }
+        }
+
+        if (files.length) {
+          const supported = supportedMediaFiles(files);
+          const payloads = await mediaPayloadsFromFiles(supported);
+          await insertMediaPayloads(payloads, range.from);
+          return;
+        }
+
+        if (html) {
+          currentEditor.chain().focus().insertContentAt(range, html).run();
+          return;
+        }
+
+        if (!plain) plain = await clipboard.readText();
+        if (useEditorSettingsStore.getState().pasteMarkdown && looksLikeMarkdown(plain)) {
+          currentEditor.commands.setTextSelection(range);
+          if (pasteMarkdown(currentEditor, plain)) return;
+        }
+        pastePlainText(currentEditor, plain, range);
+        return;
+      }
+
+      const text = await clipboard.readText();
+      if (useEditorSettingsStore.getState().pasteMarkdown && looksLikeMarkdown(text)) {
+        currentEditor.commands.setTextSelection(range);
+        if (pasteMarkdown(currentEditor, text)) return;
+      }
+      pastePlainText(currentEditor, text, range);
+    } catch {
+      // Some browsers expose readText but deny the richer read() API. Give a
+      // text-only paste a second chance before showing a clipboard error.
+      if (!plainTextOnly && typeof clipboard.readText === "function") {
+        try {
+          const text = await clipboard.readText();
+          if (text) {
+            if (useEditorSettingsStore.getState().pasteMarkdown && looksLikeMarkdown(text)) {
+              currentEditor.commands.setTextSelection(range);
+              if (pasteMarkdown(currentEditor, text)) return;
+            }
+            pastePlainText(currentEditor, text, range);
+            return;
+          }
+        } catch {
+          // Fall through to the shared clipboard error feedback.
+        }
+      }
+      setFeedback({ kind: "error", message: t("editorContextMenu.pasteFailed") });
+    }
+  };
+
   // Toolbar media button: images insert directly. PDFs pause at the same
   // two-choice dialog used by paste/drop so the user decides between rendered
   // page images and the existing 0.24.3 PDF reader/split-view flow.
@@ -1242,19 +1328,6 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         // with the browser, which keeps Ctrl+C native in every other focus.
         const fixedShortcut = matchFixedEditorShortcut(event);
 
-        if (fixedShortcut === "pastePlainText") {
-          // The keystroke stays with the browser, which pastes the plain
-          // text; the flag only tells handlePaste to skip the Markdown
-          // conversion. Cleared shortly after in case no paste follows
-          // (empty clipboard, permission refused).
-          plainPasteRequestedRef.current = true;
-          window.setTimeout(() => {
-            plainPasteRequestedRef.current = false;
-          }, 500);
-
-          return false;
-        }
-
         if (fixedShortcut) {
           if (view.state.selection.empty || fixedShortcut === "copyFormatted") {
             return false;
@@ -1291,6 +1364,18 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
           return false;
         }
 
+        // Keep the platform's native clipboard route for the default paste
+        // bindings. A user-assigned shortcut instead reads the clipboard
+        // directly so the new binding works independently of OS key chords.
+        if (action === "paste" && !isCustomBinding(overrides, action)) {
+          return false;
+        }
+        if (action === "pastePlainText" && !isCustomBinding(overrides, action)) {
+          plainPasteRequestedRef.current = true;
+          window.setTimeout(() => { plainPasteRequestedRef.current = false; }, 500);
+          return false;
+        }
+
         const chain = () => editorRef.current?.chain().focus();
 
         switch (action) {
@@ -1316,6 +1401,12 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         event.preventDefault();
 
         switch (action) {
+          case "paste":
+            void pasteFromClipboard(false);
+            break;
+          case "pastePlainText":
+            void pasteFromClipboard(true);
+            break;
           case "bold":
             chain()?.toggleBold().run();
             break;
@@ -1714,9 +1805,15 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
           x={selectionMenu.x}
           y={selectionMenu.y}
           hasSelection={selectionMenu.hasSelection}
+          editor={editor}
+          canEdit={!documentLocked}
           onCopyFormatted={() => copySelection("formatted")}
           onCopyMarkdown={() => copySelection("markdown")}
           onCopyPlainText={() => copySelection("plainText")}
+          onPaste={(plainText) => void pasteFromClipboard(plainText)}
+          onInsertImage={() => void handleImageInsertRequest()}
+          onInsertLink={handleLinkRequest}
+          onInsertBlock={handleBlockRequest}
           onClose={() => setSelectionMenu(null)}
         />
       ) : null}

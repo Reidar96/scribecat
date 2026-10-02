@@ -1,3 +1,8 @@
+## [1.0.6] - 2026-10-02
+
+- Add editor context-menu actions to paste normally or as plain text and to insert media, tables, links, blockquotes, linked blocks, code blocks and dividers.
+- Make the normal and plain-text paste shortcuts configurable in Settings; preserve native paste handling for their default shortcuts.
+
 ## [1.0.5] - 2026-10-02
 
 - Collapse or expand tasks in a subcategory and sync the collapsed state with vault task settings across devices.

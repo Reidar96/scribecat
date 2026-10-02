@@ -828,10 +828,19 @@
     "dropDocumentHint": "Bilder og PDF-er kan settes inn her. Slipp andre dokumenter på fillisten for å importere dem som notater."
   },
   "editorContextMenu": {
+    "title": "Redigeringsvalg",
+    "insertActions": "Sett inn innhold",
+    "insertImage": "Sett inn bilde eller PDF",
+    "insertTable": "Sett inn tabell",
+    "insertLink": "Sett inn lenke",
+    "blockquote": "Blokksitat",
+    "insertBlock": "Sett inn byggeblokk",
+    "codeBlock": "Kodeblokk",
+    "insertDivider": "Skillelinje",
     "copyFormatted": "Kopier tekst med formatering",
     "copyMarkdown": "Kopier tekst som Markdown",
     "copyPlainText": "Kopier bare tekst",
-    "pastePlainText": "Lim inn bare tekst",
+    "pastePlainText": "Lim inn ren tekst",
     "paste": "Lim inn",
     "copyFailed": "Kunne ikke kopiere til utklippstavlen.",
     "pasteFailed": "Kunne ikke lese fra utklippstavlen."

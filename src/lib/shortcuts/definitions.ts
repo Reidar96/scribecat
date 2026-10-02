@@ -31,6 +31,8 @@ export type ShortcutActionId =
   | "highlight"
   | "strikethrough"
   | "insertLink"
+  | "paste"
+  | "pastePlainText"
   | "bulletList"
   | "orderedList"
   | "checkbox"
@@ -230,6 +232,20 @@ export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
     category: "format",
     descriptionKey: "shortcutsDialog.items.insertLink",
     defaultBinding: letter(CTRL, "L")
+  },
+  {
+    id: "paste",
+    scope: "editor",
+    category: "format",
+    descriptionKey: "shortcutsDialog.items.paste",
+    defaultBinding: letter(CTRL, "V")
+  },
+  {
+    id: "pastePlainText",
+    scope: "editor",
+    category: "format",
+    descriptionKey: "editorContextMenu.pastePlainText",
+    defaultBinding: letter(CTRL_SHIFT, "V")
   },
   {
     id: "bulletList",

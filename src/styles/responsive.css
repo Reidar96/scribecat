@@ -319,6 +319,8 @@
   padding: 0.6rem 0.75rem max(0.6rem, env(safe-area-inset-bottom));
 }
 
+.editor-context-menu--sheet { min-width: 0; }
+
 .file-tree-context-menu__backdrop {
   position: fixed;
   inset: 0;
