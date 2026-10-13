@@ -25,6 +25,8 @@ env:
 
 jobs:
   build:
+    # v1.0.9 is packaged locally; do not spend Actions minutes on its tag.
+    if: github.ref != 'refs/tags/v1.0.9'
     strategy:
       fail-fast: false
       matrix:
