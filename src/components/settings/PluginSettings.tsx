@@ -26,22 +26,25 @@ export function PluginSettings() {
     </div>
     <h3>{plugin.name}</h3>
     {error ? <p role="alert">{error}</p> : null}
-    <div className="ai-dialog__grid">
+    <div className="plugin-settings__groups">
+      <section><h4>App</h4>
       {checkbox("Aktivert", preference.enabled, (enabled) => update(selected, { enabled }))}
-      {checkbox("Fest som app", isPinned, (value) => pin(selected, value))}
-      {plugin.defaultFolder && selected !== "journal" && selected !== "tasks" ?
+      {checkbox("Fest i sidemenyen", isPinned, (value) => pin(selected, value))}</section>
+      {plugin.defaultFolder && selected !== "journal" && selected !== "tasks" ? <section><h4>Innhold</h4>
         <SettingRow label="Mappe" hint="Relativ sti i den åpne mappen.">
           <input type="text" disabled={!ready} value={folderDraft} onChange={(event) => setFolderDraft(event.target.value)}
             onBlur={() => { const folder = validPluginFolder(folderDraft); if (folder) update(selected, { folder }); else setFolderDraft(preference.folder ?? ""); }} />
-        </SettingRow> : null}
-      {plugin.defaultFolder && selected !== "journal" && selected !== "tasks" ?
-        checkbox("Vis i filoversikten", preference.showInFiles, (showInFiles) => update(selected, { showInFiles })) : null}
+        </SettingRow>
+        {checkbox("Vis i filoversikten", preference.showInFiles, (showInFiles) => update(selected, { showInFiles }))}</section> : null}
+      {plugin.defaultFolder ? <section><h4>Synlighet</h4>
       {plugin.defaultFolder ? checkbox("Ta med i søk", preference.includeInSearch, (includeInSearch) => update(selected, { includeInSearch })) : null}
       {plugin.defaultFolder ? checkbox("Ta med i graf", preference.includeInGraph, (includeInGraph) => update(selected, { includeInGraph })) : null}
-      {plugin.defaultFolder ? checkbox("Vis i flytt-dialogen", preference.includeInMove, (includeInMove) => update(selected, { includeInMove })) : null}
-      {selected === "recipes" ? checkbox("Offentlig visning", preference.publicView, (publicView) => update(selected, { publicView })) : null}
+      {plugin.defaultFolder ? checkbox("Vis i flytt-dialogen", preference.includeInMove, (includeInMove) => update(selected, { includeInMove })) : null}</section> : null}
+      {plugin.capabilities.includes("publicView") ? <section><h4>Deling</h4>
+        {checkbox("Offentlig visning", preference.publicView, (publicView) => update(selected, { publicView }))}
+        <p>{selected === "recipes" ? "Kun oppskrifter merket som publisert vises på /oppskrifter." : "En offentlig handleliste kan endres av alle som kjenner adressen. Del bare når det er ønskelig."}</p>
+      </section> : null}
     </div>
     {selected === "journal" || selected === "tasks" ? <VaultSettings pluginId={selected} /> : null}
-    {selected === "recipes" && preference.publicView ? <p>Kun oppskrifter med <code>published: true</code> kan vises offentlig. Kontroller alltid innholdet før publisering.</p> : null}
   </div>;
 }

@@ -106,6 +106,7 @@ function App() {
     null
   );
   const [editorFocusRequestId, setEditorFocusRequestId] = useState(0);
+  const [headingJump, setHeadingJump] = useState<{ filePath: string; anchor: string; id: number } | null>(null);
   const [sidebarFocusRequestId, setSidebarFocusRequestId] = useState(0);
   const [fileTreeSelection, setFileTreeSelection] = useState<BatchEntry[]>([]);
   const [entryClipboard, setEntryClipboard] = useState<BatchEntry[]>([]);
@@ -1599,7 +1600,14 @@ function App() {
                 }
                 window.setTimeout(() => setSidebarFocusRequestId((id) => id + 1), 0);
               }}
-              onRequestFileOpen={(targetFilePath) => void selectFilePathSafely(targetFilePath)}
+              onRequestFileOpen={(targetFilePath, anchor) => {
+                void selectFilePathSafely(targetFilePath).then(() => {
+                  if (anchor && useAppStore.getState().selectedFilePath === targetFilePath) {
+                    setHeadingJump({ filePath: targetFilePath, anchor, id: Date.now() });
+                  }
+                });
+              }}
+              headingJump={headingJump}
               onZenModeRequest={() => {
                 editorHandleRef.current?.focusAtStart();
                 enterZenMode();

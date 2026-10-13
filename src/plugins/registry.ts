@@ -23,7 +23,7 @@ export const BUILTIN_PLUGINS: readonly PluginManifest[] = [
   { id: "graph", name: "Graf", nameEn: "Graph", version: "1.0.0", icon: "network", kind: "view", capabilities: ["navigation", "settings", "vaultRead"], defaultEnabled: true },
   { id: "quick-notes", name: "Quick Notes", nameEn: "Quick Notes", version: "1.0.0", icon: "sticky-note", kind: "content", defaultFolder: "Quick Notes", capabilities: ["navigation", "settings", "folderPolicy", "vaultRead", "markdownWrite", "search"], defaultEnabled: true },
   { id: "books", name: "Bøker", nameEn: "Books", version: "1.0.0", icon: "book-open", kind: "content", defaultFolder: "Bøker", capabilities: ["navigation", "settings", "folderPolicy", "vaultRead", "markdownWrite", "attachments", "search"], defaultEnabled: true },
-  { id: "shopping", name: "Handleliste", nameEn: "Shopping", version: "1.0.0", icon: "shopping-basket", kind: "content", defaultFolder: "Handlelister", capabilities: ["navigation", "settings", "folderPolicy", "vaultRead", "markdownWrite", "search"], defaultEnabled: true },
+  { id: "shopping", name: "Handleliste", nameEn: "Shopping", version: "1.0.0", icon: "shopping-basket", kind: "content", defaultFolder: "Handlelister", capabilities: ["navigation", "settings", "folderPolicy", "vaultRead", "markdownWrite", "search", "publicView"], defaultEnabled: true },
   { id: "recipes", name: "Oppskrifter", nameEn: "Recipes", version: "1.0.0", icon: "chef-hat", kind: "content", defaultFolder: "Oppskrifter", capabilities: ["navigation", "settings", "folderPolicy", "vaultRead", "markdownWrite", "attachments", "search", "publicView"], defaultEnabled: true },
   { id: "inventory", name: "Inventar", nameEn: "Inventory", version: "1.0.0", icon: "boxes", kind: "content", defaultFolder: "Inventar", capabilities: ["navigation", "settings", "folderPolicy", "vaultRead", "markdownWrite", "attachments", "search"], defaultEnabled: true }
 ] as const;
@@ -44,6 +44,7 @@ export type PluginConfiguration = {
   version: 1;
   plugins: Partial<Record<PluginId, PluginPreferences>>;
   pinned: PluginId[];
+  order: PluginId[];
 };
 
 export function defaultPluginPreferences(plugin: PluginManifest): PluginPreferences {
@@ -83,7 +84,9 @@ export function normalizePluginConfiguration(raw: unknown): PluginConfiguration 
     };
   }
   const pinned = Array.isArray(input.pinned) ? input.pinned.filter((id): id is PluginId => typeof id === "string" && !!pluginById(id)) : ["journal", "graph", "tasks"] as PluginId[];
-  return { version: 1, plugins, pinned: [...new Set(pinned)].filter((id) => plugins[id]?.enabled).slice(0, 3) };
+  const requestedOrder = Array.isArray(input.order) ? input.order.filter((id): id is PluginId => typeof id === "string" && !!pluginById(id)) : [];
+  const order = [...new Set([...requestedOrder, ...BUILTIN_PLUGINS.map((item) => item.id)])];
+  return { version: 1, plugins, pinned: [...new Set(pinned)].filter((id) => plugins[id]?.enabled).slice(0, 3), order };
 }
 
 /** Central policy lookup. An owning folder never disappears from the vault itself. */

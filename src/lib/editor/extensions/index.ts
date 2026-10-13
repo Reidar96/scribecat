@@ -52,6 +52,7 @@ function buildContentExtensions(): Extensions {
       autolink: false,
       linkOnPaste: false,
       openOnClick: false,
+      protocols: ["scribecat"],
       HTMLAttributes: {
         target: null,
         rel: "noopener noreferrer"

@@ -17,6 +17,7 @@ type PluginState = {
   load: (vaultPath: string | null) => Promise<void>;
   update: (id: PluginId, patch: Partial<PluginPreferences>) => void;
   pin: (id: PluginId, pinned: boolean) => void;
+  reorder: (from: PluginId, to: PluginId) => void;
 };
 
 let generation = 0;
@@ -57,6 +58,17 @@ export const usePluginStore = create<PluginState>((set, get) => ({
     const config = normalizePluginConfiguration({ ...current, pinned: pinned
       ? [...current.pinned.filter((item) => item !== id), id].slice(-3)
       : current.pinned.filter((item) => item !== id) });
+    set({ config, error: null });
+    persist(get, set, config);
+  },
+  reorder: (from, to) => {
+    if (!get().ready || from === to) return;
+    const order = [...get().config.order];
+    const fromIndex = order.indexOf(from), toIndex = order.indexOf(to);
+    if (fromIndex < 0 || toIndex < 0) return;
+    order.splice(fromIndex, 1);
+    order.splice(toIndex, 0, from);
+    const config = normalizePluginConfiguration({ ...get().config, order });
     set({ config, error: null });
     persist(get, set, config);
   }

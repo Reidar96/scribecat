@@ -37,6 +37,7 @@ import {
 import { buildEditorExtensions } from "@/lib/editor/extensions";
 import { collectHeadings, hasHeading, type OutlineHeading } from "@/lib/editor/documentOutline";
 import { headingAnchor, headingMatchesAnchor } from "@/lib/editor/headingAnchors";
+import { headingLinkHref, parseHeadingLink, pastedHeadingHref } from "@/lib/editor/headingLinks";
 import { readClipboardText, writeHeadingLink } from "@/platform/clipboardText";
 import { updateOutlineHighlight } from "@/lib/editor/outlineHighlight";
 import {
@@ -69,6 +70,7 @@ import {
 import {
   ABSOLUTE_URL_PATTERN,
   getLastOpenedFolderPath,
+  getRelativeDisplayPath,
   getRelativeImageMarkdownPath,
   guessImageMimeType,
   saveImageToFolder
@@ -143,7 +145,8 @@ type EditorProps = {
   filePath: string | null;
   editorFocusRequestId?: number;
   onRequestSidebarFocus?: () => void;
-  onRequestFileOpen?: (filePath: string) => void;
+  onRequestFileOpen?: (filePath: string, anchor?: string) => void;
+  headingJump?: { filePath: string; anchor: string; id: number } | null;
   /** Opens a local PDF linked from this note beside the owning Markdown document. */
   onOpenPdfInSplit?: (request: PdfPreviewState & { ownerFilePath: string }) => void;
   pdfSplitRestoreRequest?: InlinePdfSplitRestoreRequest | null;
@@ -257,6 +260,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     editorFocusRequestId,
     onRequestSidebarFocus,
     onRequestFileOpen,
+    headingJump,
     onOpenPdfInSplit,
     pdfSplitRestoreRequest = null,
     onZenModeRequest,
@@ -642,7 +646,16 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 
   const activateAnchor = (anchor: HTMLAnchorElement) => {
     const rawHref = anchor.getAttribute("href") ?? "";
-    if (isFileLinkHref(rawHref)) {
+    const headingLink = parseHeadingLink(rawHref);
+    if (headingLink) {
+      const target = vaultFilePathsRef.current.find((path) => folderPath &&
+        getRelativeDisplayPath(folderPath, path).replace(/\\/g, "/").toLowerCase() === headingLink.relativePath.toLowerCase());
+      if (target && target === filePath) {
+        headingMatchesAnchor(Array.from(editorRef.current?.view.dom.querySelectorAll("h1, h2, h3, h4, h5, h6") ?? []), headingLink.anchor)
+          ?.scrollIntoView({ behavior: "smooth", block: "start" });
+      } else if (target) onRequestFileOpen?.(target, headingLink.anchor);
+      else setFeedback({ kind: "error", message: t("editor.linkTargetMissing", { href: headingLink.relativePath }) });
+    } else if (isFileLinkHref(rawHref)) {
       openFileLink(rawHref);
     } else if (rawHref.startsWith("#")) {
       const heading = headingMatchesAnchor(
@@ -1259,8 +1272,16 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         plainPasteRequestedRef.current = false;
         const text = event.clipboardData?.getData("text/plain") ?? "";
         const currentEditor = editorRef.current;
-        const hasHtml = Boolean(event.clipboardData?.getData("text/html"));
+        const html = event.clipboardData?.getData("text/html") ?? "";
+        const hasHtml = Boolean(html);
         const inCode = view.state.selection.$from.parent.type.spec.code === true;
+
+        const headingHref = !view.state.selection.empty && !plainPasteRequested && !inCode ? pastedHeadingHref(text, html) : null;
+        if (headingHref && currentEditor) {
+          event.preventDefault();
+          currentEditor.chain().focus().setLink({ href: headingHref }).run();
+          return true;
+        }
 
         // The browser's trusted paste event already carries the clipboard's
         // plain text. Use it directly for Ctrl/Cmd+Shift+V instead of asking
@@ -1583,6 +1604,15 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   if (editor) {
     editorRef.current = editor;
   }
+
+  useEffect(() => {
+    if (!editor || !headingJump || headingJump.filePath !== filePath) return;
+    const frame = window.requestAnimationFrame(() => {
+      headingMatchesAnchor(Array.from(editor.view.dom.querySelectorAll("h1, h2, h3, h4, h5, h6")), headingJump.anchor)
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [editor, filePath, headingJump]);
 
   useEffect(() => {
     editor?.view.dom.setAttribute("spellcheck", "false");
@@ -1921,7 +1951,9 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
           onCopyHeadingLink={() => {
             if (!selectionMenu.headingLink) return;
             const title = editor.state.selection.$from.parent.textContent;
-            void writeHeadingLink(title, selectionMenu.headingLink).then(() => {
+            void writeHeadingLink(title, folderPath && filePath
+              ? headingLinkHref(folderPath, filePath, selectionMenu.headingLink)
+              : selectionMenu.headingLink).then(() => {
               setFeedback({ kind: "success", message: t("editorContextMenu.headingLinkCopied") });
             }).catch(() => setFeedback({ kind: "error", message: t("editorContextMenu.copyFailed") }));
           }}

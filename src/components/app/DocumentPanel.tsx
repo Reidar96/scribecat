@@ -114,7 +114,8 @@ type DocumentPanelProps = {
   onMarkdownChange: (markdown: string) => void;
   onCanonicalMarkdown: (filePath: string, markdown: string) => void;
   onRequestSidebarFocus: () => void;
-  onRequestFileOpen: (targetFilePath: string) => void;
+  onRequestFileOpen: (targetFilePath: string, anchor?: string) => void;
+  headingJump?: { filePath: string; anchor: string; id: number } | null;
   onZenModeRequest: () => void;
   documentLocked: boolean;
   onDocumentLockToggle: () => void;
@@ -235,6 +236,7 @@ export function DocumentPanel({
   onCanonicalMarkdown,
   onRequestSidebarFocus,
   onRequestFileOpen,
+  headingJump,
   onZenModeRequest,
   documentLocked,
   onDocumentLockToggle,
@@ -997,6 +999,7 @@ export function DocumentPanel({
                     editorFocusRequestId={editorFocusRequestId}
                     onRequestSidebarFocus={onRequestSidebarFocus}
                     onRequestFileOpen={onRequestFileOpen}
+                    headingJump={headingJump}
                     onOpenPdfInSplit={openPdfInSplit}
                     pdfSplitRestoreRequest={pdfSplitRestoreRequest}
                     onZenModeRequest={onZenModeRequest}
@@ -1133,6 +1136,7 @@ export function DocumentPanel({
                             filePath={secondaryFilePath}
                             onRequestSidebarFocus={onRequestSidebarFocus}
                             onRequestFileOpen={onRequestFileOpen}
+                            headingJump={headingJump}
                             onOpenPdfInSplit={openPdfInSplit}
                             pdfSplitRestoreRequest={pdfSplitRestoreRequest}
                             onZenModeRequest={onZenModeRequest}
