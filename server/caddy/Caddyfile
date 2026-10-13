@@ -1,12 +1,12 @@
-# Caddy in front of ScribeDog Server: TLS termination only, nothing else.
+# Caddy in front of ScribeCat Server: TLS termination only, nothing else.
 #
-# The whole request path is passed through unchanged. ScribeDog knows its own
-# SCRIBEDOG_BASE_PATH and answers under it (and 404s everywhere else), so the
+# The whole request path is passed through unchanged. ScribeCat knows its own
+# SCRIBECAT_BASE_PATH and answers under it (and 404s everywhere else), so the
 # proxy never has to strip or rewrite a prefix. If you route several instances
 # behind one host, use `handle` (keeps the path), never `handle_path` (strips it):
 #
-#   handle /anna* { reverse_proxy scribedog-anna:3000 }
-#   handle /bob*  { reverse_proxy scribedog-bob:3000 }
+#   handle /anna* { reverse_proxy scribecat-anna:3000 }
+#   handle /bob*  { reverse_proxy scribecat-bob:3000 }
 
 {
 	# A browser that opens the site by IP address sends no server name, and
@@ -14,27 +14,27 @@
 	# stack's mock model) Caddy then has nothing to pick a certificate by and
 	# drops the handshake. This names the site whose certificate answers such
 	# a client; docker-compose.yml defaults it to the site address.
-	default_sni {$SCRIBEDOG_DEFAULT_SNI:localhost}
+	default_sni {$SCRIBECAT_DEFAULT_SNI:localhost}
 }
 
-{$SCRIBEDOG_SITE_ADDRESS:localhost} {
+{$SCRIBECAT_SITE_ADDRESS:localhost} {
 	# "internal": Caddy's own local CA, works for localhost, LAN names and
-	# plain IPs. For a public domain set SCRIBEDOG_TLS to your e-mail address
+	# plain IPs. For a public domain set SCRIBECAT_TLS to your e-mail address
 	# and Caddy obtains a Let's Encrypt certificate instead.
-	tls {$SCRIBEDOG_TLS:internal}
+	tls {$SCRIBECAT_TLS:internal}
 
 	encode zstd gzip
 
 	# Lets a browser fetch the local CA's certificate directly, so trusting it
 	# (see docs/getting-started.md, "The certificate warning") is opening this
 	# URL on the device rather than moving a file there some other way.
-	handle /scribedog-ca.crt {
+	handle /scribecat-ca.crt {
 		root * /data/caddy/pki/authorities/local
 		rewrite * /root.crt
 		file_server
 	}
 
 	handle {
-		reverse_proxy scribedog:3000
+		reverse_proxy scribecat:3000
 	}
 }
