@@ -1,0 +1,21 @@
+.content-plugin-panel { min-width: 0; min-height: 0; display: flex; flex-direction: column; flex: 1; background: var(--surface); }
+.content-plugin-panel__header { min-height: 3.5rem; display: flex; align-items: center; gap: 0.5rem; padding: 0.55rem 1rem; border-bottom: 1px solid rgba(var(--overlay-rgb), 0.1); }
+.content-plugin-panel__header h2 { margin: 0; font-size: 1.15rem; flex: 1; min-width: 0; }
+.content-plugin-panel__body { flex: 1; min-height: 0; overflow: auto; padding: 1rem; }
+.content-plugin-panel__search { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; border: 1px solid var(--border); border-radius: 0.5rem; max-width: 28rem; }
+.content-plugin-panel__search input { width: 100%; min-width: 0; background: transparent; outline: none; }
+.content-plugin-panel__filters, .plugin-settings__list { display: flex; gap: 0.4rem; flex-wrap: wrap; margin: 0.8rem 0; }
+.content-plugin-panel__filters button, .plugin-settings__list button { padding: 0.35rem 0.7rem; border: 1px solid var(--border); border-radius: 0.5rem; }
+.content-plugin-panel__filters button.active, .plugin-settings__list button.active { background: rgba(var(--overlay-rgb), 0.1); border-color: var(--primary); }
+.content-plugin-panel__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: 0.8rem; margin-top: 1rem; }
+.content-plugin-panel__card { display: flex; flex-direction: column; gap: 0.4rem; min-width: 0; padding: 1rem; border: 1px solid var(--border); border-radius: 0.75rem; background: var(--card); }
+.content-plugin-panel__card p { margin: 0; overflow-wrap: anywhere; white-space: pre-line; color: var(--muted-foreground); }
+.content-plugin-panel__cover { width: 100%; max-height: 12rem; object-fit: cover; border-radius: 0.4rem; }
+.content-plugin-panel__title { text-align: left; font-weight: 700; font-size: 1rem; overflow-wrap: anywhere; }
+.content-plugin-panel__card textarea { min-height: 6rem; width: 100%; resize: vertical; background: transparent; border: 1px solid var(--border); border-radius: 0.4rem; padding: 0.4rem; }
+.content-plugin-panel__items { display: flex; flex-direction: column; gap: 0.3rem; }
+.content-plugin-panel__category { display: flex; align-items: center; gap: 0.5rem; border-top: 1px solid var(--border); padding-top: 0.4rem; }
+.content-plugin-panel__category strong { flex: 1; }
+.content-plugin-panel__open { text-align: left; margin-top: auto; padding-top: 0.5rem; text-decoration: underline; }
+.plugin-settings { min-width: 0; }
+.plugin-settings h3 { margin: 1rem 0 0.5rem; }

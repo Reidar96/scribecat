@@ -462,7 +462,7 @@
 @media (min-width: 721px) and (max-width: 920px) {
   .collection-home-actions {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: 1fr;
     gap: 0.45rem;
     margin-bottom: 0.8rem;
   }
@@ -503,7 +503,7 @@
 
   .collection-home-actions {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: 1fr;
     gap: 0.45rem;
     margin-bottom: 0.8rem;
   }

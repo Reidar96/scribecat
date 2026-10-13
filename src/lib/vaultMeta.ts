@@ -20,6 +20,7 @@ import {
   type TaskSettings
 } from "@/lib/tasks";
 import { normalizeStoredWorkingSet, type StoredWorkingSet } from "@/store/appStore/workingSet";
+import { normalizePluginConfiguration, type PluginConfiguration } from "@/plugins/registry";
 
 export type SortMode = "name" | "modified" | "manual";
 
@@ -36,7 +37,23 @@ const TASKS_FILE_NAME = "tasks.json";
 const ICONS_FILE_NAME = "icons.json";
 const WORKING_SET_FILE_NAME = "open-files.json";
 const DOCUMENT_LOCKS_FILE_NAME = "document-locks.json";
+const PLUGINS_FILE_NAME = "plugins.json";
 const SORT_MODES: SortMode[] = ["name", "modified", "manual"];
+
+export async function readPluginConfiguration(folderPath: string): Promise<PluginConfiguration> {
+  try {
+    const filePath = await join(await vaultMetaDirPath(folderPath), PLUGINS_FILE_NAME);
+    return normalizePluginConfiguration(JSON.parse(await readTextFile(filePath)));
+  } catch {
+    return normalizePluginConfiguration(null);
+  }
+}
+
+export async function writePluginConfiguration(folderPath: string, config: PluginConfiguration): Promise<void> {
+  const dirPath = await vaultMetaDirPath(folderPath);
+  await mkdir(dirPath, { recursive: true });
+  await writeTextFile(await join(dirPath, PLUGINS_FILE_NAME), JSON.stringify(normalizePluginConfiguration(config), null, 2));
+}
 
 /**
  * What a vault without a sort-mode sidecar gets: Manual, so drag & drop works

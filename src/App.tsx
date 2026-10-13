@@ -13,6 +13,10 @@ import { CollectionPanel } from "@/components/app/CollectionPanel";
 import { GraphPanel } from "@/components/app/GraphPanel";
 import { JournalPanel } from "@/components/app/JournalPanel";
 import { TasksPanel } from "@/components/app/TasksPanel";
+import { ContentPluginPanel } from "@/components/plugins/ContentPluginPanel";
+import { AppsOverview } from "@/components/plugins/PluginNavigation";
+import type { PluginId } from "@/plugins/registry";
+import { usePluginStore } from "@/store/usePluginStore";
 import type { CollectionViewRequest } from "@/components/app/collectionTypes";
 import { MobileSheet } from "@/components/app/MobileSheet";
 import { ZenMode } from "@/components/app/ZenMode";
@@ -112,6 +116,9 @@ function App() {
   const [graphViewOpen, setGraphViewOpen] = useState(false);
   const [journalViewOpen, setJournalViewOpen] = useState(false);
   const [tasksViewOpen, setTasksViewOpen] = useState(false);
+  const [activeContentPlugin, setActiveContentPlugin] = useState<PluginId | null>(null);
+  const [appsOpen, setAppsOpen] = useState(false);
+  const pluginConfig = usePluginStore((state) => state.config);
   const [openTabs, setOpenTabs] = useState<string[]>([]);
   const [secondaryFilePath, setSecondaryFilePath] = useState<string | null>(null);
   const appVersion = useAppVersion();
@@ -130,6 +137,7 @@ function App() {
   const folderPath = useAppStore((state) => state.folderPath);
   const taskSettings = useEditorSettingsStore((state) => state.taskSettings);
   const journalSettings = useEditorSettingsStore((state) => state.journalSettings);
+  const legacyVaultSettingsReady = useEditorSettingsStore((state) => state.vaultSettingsReady && state.headingNumberingVaultPath === folderPath);
   const isLoading = useAppStore((state) => state.isLoading);
   const isFileLoading = useAppStore((state) => state.isFileLoading);
   const isSaving = useAppStore((state) => state.isSaving);
@@ -240,6 +248,8 @@ function App() {
     setGraphViewOpen(false);
     setJournalViewOpen(false);
     setTasksViewOpen(false);
+    setActiveContentPlugin(null);
+    setAppsOpen(false);
     setOpenTabs([]);
     setSecondaryFilePath(null);
     setEntryClipboard([]);
@@ -250,8 +260,8 @@ function App() {
 
     const relativePath = getRelativeDisplayPath(folderPath, filePath);
     return (
-      isTasksContainerRelativePath(relativePath, taskSettings.folder) ||
-      isJournalRelativePath(relativePath, journalSettings)
+      (pluginConfig.plugins.tasks?.enabled === true && isTasksContainerRelativePath(relativePath, taskSettings.folder)) ||
+      (pluginConfig.plugins.journal?.enabled === true && isJournalRelativePath(relativePath, journalSettings))
     );
   };
 
@@ -591,6 +601,8 @@ function App() {
     setGraphViewOpen(false);
     setJournalViewOpen(false);
     setTasksViewOpen(false);
+    setActiveContentPlugin(null);
+    setAppsOpen(false);
     return true;
   };
 
@@ -611,6 +623,8 @@ function App() {
       setGraphViewOpen(false);
       setJournalViewOpen(false);
       setTasksViewOpen(false);
+      setActiveContentPlugin(null);
+      setAppsOpen(false);
       return;
     }
 
@@ -625,6 +639,8 @@ function App() {
     setGraphViewOpen(false);
     setJournalViewOpen(false);
     setTasksViewOpen(false);
+    setActiveContentPlugin(null);
+    setAppsOpen(false);
     await selectFilePath(filePath);
   };
 
@@ -696,6 +712,8 @@ function App() {
     setGraphViewOpen(false);
     setJournalViewOpen(false);
     setTasksViewOpen(false);
+    setActiveContentPlugin(null);
+    setAppsOpen(false);
   };
 
   const closePrimarySplitPane = async () => {
@@ -752,6 +770,8 @@ function App() {
     setGraphViewOpen(false);
     setJournalViewOpen(false);
     setTasksViewOpen(false);
+    setActiveContentPlugin(null);
+    setAppsOpen(false);
     setIsSidebarSheetOpen(false);
   };
 
@@ -771,6 +791,8 @@ function App() {
     setGraphViewOpen(false);
     setJournalViewOpen(false);
     setTasksViewOpen(false);
+    setActiveContentPlugin(null);
+    setAppsOpen(false);
   };
 
   const openCollectionSafely = async (request: CollectionViewRequest) => {
@@ -792,6 +814,8 @@ function App() {
     setGraphViewOpen(false);
     setJournalViewOpen(false);
     setTasksViewOpen(false);
+    setActiveContentPlugin(null);
+    setAppsOpen(false);
     setIsSidebarSheetOpen(false);
   };
 
@@ -835,6 +859,8 @@ function App() {
     setGraphViewOpen(false);
     setJournalViewOpen(true);
     setTasksViewOpen(false);
+    setActiveContentPlugin(null);
+    setAppsOpen(false);
     setIsSidebarSheetOpen(false);
     return resolvedPath;
   };
@@ -887,6 +913,48 @@ function App() {
   useEffect(() => {
     void useEditorSettingsStore.getState().loadHeadingNumbering(folderPath);
   }, [folderPath]);
+
+  useEffect(() => { void usePluginStore.getState().load(folderPath); }, [folderPath]);
+
+  useEffect(() => {
+    const state = usePluginStore.getState();
+    if (!state.ready || state.vaultPath !== folderPath || !folderPath || !legacyVaultSettingsReady) return;
+    for (const [id, settings] of [["journal", journalSettings], ["tasks", taskSettings]] as const) {
+      const current = state.config.plugins[id];
+      if (current?.folder !== settings.folder || current.showInFiles === settings.hideFromSidebar) {
+        state.update(id, { folder: settings.folder, showInFiles: !settings.hideFromSidebar });
+      }
+    }
+  }, [folderPath, journalSettings, taskSettings, pluginConfig, legacyVaultSettingsReady]);
+
+  useEffect(() => {
+    if (activeContentPlugin && !pluginConfig.plugins[activeContentPlugin]?.enabled) setActiveContentPlugin(null);
+    if (appsOpen && !Object.values(pluginConfig.plugins).some((value) => value?.enabled)) setAppsOpen(false);
+    if (journalViewOpen && !pluginConfig.plugins.journal?.enabled) setJournalViewOpen(false);
+    if (tasksViewOpen && !pluginConfig.plugins.tasks?.enabled) setTasksViewOpen(false);
+    if (graphViewOpen && !pluginConfig.plugins.graph?.enabled) setGraphViewOpen(false);
+  }, [activeContentPlugin, appsOpen, journalViewOpen, tasksViewOpen, graphViewOpen, pluginConfig]);
+
+  const openPlugin = (id: PluginId) => {
+    if (!pluginConfig.plugins[id]?.enabled) return;
+    setGraphViewOpen(id === "graph");
+    setJournalViewOpen(id === "journal");
+    setTasksViewOpen(id === "tasks");
+    setActiveContentPlugin(id === "journal" || id === "tasks" || id === "graph" ? null : id);
+    setAppsOpen(false);
+    setCollectionView(null);
+    setIsSidebarSheetOpen(false);
+  };
+
+  const openApps = () => {
+    setGraphViewOpen(false);
+    setJournalViewOpen(false);
+    setTasksViewOpen(false);
+    setActiveContentPlugin(null);
+    setAppsOpen(true);
+    setCollectionView(null);
+    setIsSidebarSheetOpen(false);
+  };
 
   // The single writer of the navigation history: whichever way a note ends up
   // open — sidebar, a link in the text, the backlinks panel, a search hit, a
@@ -1252,45 +1320,10 @@ function App() {
         void openCollectionSafely({ kind: "tag", tag, filePaths: matchingFilePaths });
       }}
       onCloseCollection={() => setCollectionView(null)}
-      graphViewOpen={graphViewOpen}
-      onGraphViewToggle={() => {
-        if (graphViewOpen) {
-          void openCollectionSafely({ kind: "folder", relativePath: "" });
-          return;
-        }
-
-        setGraphViewOpen(true);
-        setJournalViewOpen(false);
-        setTasksViewOpen(false);
-        setCollectionView(null);
-        setIsSidebarSheetOpen(false);
-      }}
-      journalViewOpen={journalViewOpen}
-      onJournalViewToggle={() => {
-        if (journalViewOpen) {
-          void openCollectionSafely({ kind: "folder", relativePath: "" });
-          return;
-        }
-
-        setJournalViewOpen(true);
-        setGraphViewOpen(false);
-        setTasksViewOpen(false);
-        setCollectionView(null);
-        setIsSidebarSheetOpen(false);
-      }}
-      tasksViewOpen={tasksViewOpen}
-      onTasksViewToggle={() => {
-        if (tasksViewOpen) {
-          void openCollectionSafely({ kind: "folder", relativePath: "" });
-          return;
-        }
-
-        setTasksViewOpen(true);
-        setGraphViewOpen(false);
-        setJournalViewOpen(false);
-        setCollectionView(null);
-        setIsSidebarSheetOpen(false);
-      }}
+      activePlugin={activeContentPlugin ?? (journalViewOpen ? "journal" : tasksViewOpen ? "tasks" : graphViewOpen ? "graph" : null)}
+      onOpenPlugin={openPlugin}
+      appsOpen={appsOpen}
+      onOpenApps={openApps}
       onDeleteFileRequest={requestDeleteFile}
       onDuplicateFileRequest={(filePath) => void duplicateFile(filePath)}
       onDuplicateFolderRequest={(targetFolderPath) => void duplicateFolder(targetFolderPath)}
@@ -1380,6 +1413,14 @@ function App() {
 
           {!startupFolderResolved && folderPath === null ? (
             <div className="workspace-startup-placeholder" aria-busy="true" />
+          ) : appsOpen && folderPath ? (
+            <AppsOverview onOpen={openPlugin} onOpenSidebar={() => setIsSidebarSheetOpen(true)} onClose={() => void openCollectionSafely({ kind: "folder", relativePath: "" })} />
+          ) : activeContentPlugin && folderPath ? (
+            <ContentPluginPanel id={activeContentPlugin} folderPath={folderPath} filePaths={filePaths}
+              sidebarVisible={sidebarVisible} onSidebarVisibilityToggle={toggleSidebarVisible}
+              onOpenSidebar={() => setIsSidebarSheetOpen(true)}
+              onOpenFile={(path) => void selectFilePathSafely(path)}
+              onClose={() => void openCollectionSafely({ kind: "folder", relativePath: "" })} />
           ) : tasksViewOpen && folderPath ? (
             <TasksPanel
               folderPath={folderPath}
@@ -1471,24 +1512,10 @@ function App() {
               onOpenFolder={(relativePath) => {
                 void openCollectionSafely({ kind: "folder", relativePath });
               }}
-              onOpenJournal={() => {
-                setJournalViewOpen(true);
-                setGraphViewOpen(false);
-                setTasksViewOpen(false);
-                setCollectionView(null);
-              }}
-              onOpenGraph={() => {
-                setGraphViewOpen(true);
-                setJournalViewOpen(false);
-                setTasksViewOpen(false);
-                setCollectionView(null);
-              }}
-              onOpenTasks={() => {
-                setTasksViewOpen(true);
-                setJournalViewOpen(false);
-                setGraphViewOpen(false);
-                setCollectionView(null);
-              }}
+              activePlugin={activeContentPlugin ?? (journalViewOpen ? "journal" : tasksViewOpen ? "tasks" : graphViewOpen ? "graph" : null)}
+              onOpenPlugin={openPlugin}
+              appsOpen={appsOpen}
+              onOpenApps={openApps}
               onCreateFolder={createCollectionFolder}
               onCreateNote={createCollectionNote}
               onSetSortMode={(mode) => void setSortMode(mode)}

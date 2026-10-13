@@ -16,7 +16,7 @@ import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
  * Settings that belong to the open folder. The page is grouped by what they
  * affect so diary/storage controls do not sit mixed in with document layout.
  */
-export function VaultSettings() {
+export function VaultSettings({ pluginId }: { pluginId?: "journal" | "tasks" | "graph" | "core" }) {
   const { t } = useTranslation();
   const headingNumbering = useEditorSettingsStore((state) => state.headingNumbering);
   const setHeadingNumbering = useEditorSettingsStore((state) => state.setHeadingNumbering);
@@ -81,9 +81,10 @@ export function VaultSettings() {
 
   return (
     <>
-      <VaultScopeHeader variant="intro" />
+      {(!pluginId || pluginId === "core") ? <VaultScopeHeader variant="intro" /> : null}
 
       <div className="settings-vault-sections">
+        {(!pluginId || pluginId === "core") && (
         <section className="settings-vault-section">
           <h5 className="settings-section__title">{t("settingsDialog.vaultSectionDocument")}</h5>
           <p className="settings-vault-section__hint">
@@ -208,8 +209,9 @@ export function VaultSettings() {
               </>
             ) : null}
           </div>
-        </section>
+        </section>)}
 
+        {pluginId === "journal" && (
         <section className="settings-vault-section">
           <h5 className="settings-section__title">{t("settingsDialog.vaultSectionJournal")}</h5>
           <p className="settings-vault-section__hint">
@@ -269,8 +271,9 @@ export function VaultSettings() {
               </select>
             </SettingRow>
           </div>
-        </section>
+        </section>)}
 
+        {pluginId === "tasks" && (
         <section className="settings-vault-section">
           <h5 className="settings-section__title">{t("settingsDialog.vaultSectionTasks")}</h5>
           <p className="settings-vault-section__hint">
@@ -332,8 +335,9 @@ export function VaultSettings() {
               />
             </SettingRow>
           </div>
-        </section>
+        </section>)}
 
+        {(pluginId === "journal" || pluginId === "tasks") && (
         <section className="settings-vault-section">
           <h5 className="settings-section__title">{t("settingsDialog.vaultSectionFileList")}</h5>
           <p className="settings-vault-section__hint">
@@ -341,7 +345,7 @@ export function VaultSettings() {
           </p>
 
           <div className="ai-dialog__grid">
-            <SettingRow
+            {pluginId === "journal" ? <SettingRow
               layout="switch"
               label={t("settingsDialog.journalHide")}
               hint={t("settingsDialog.journalHideShort")}
@@ -355,9 +359,9 @@ export function VaultSettings() {
                   setJournalSettings({ hideFromSidebar: event.target.checked })
                 }
               />
-            </SettingRow>
+            </SettingRow> : null}
 
-            <SettingRow
+            {pluginId === "tasks" ? <SettingRow
               layout="switch"
               label={t("settingsDialog.tasksHide")}
               hint={t("settingsDialog.tasksHideShort")}
@@ -371,10 +375,11 @@ export function VaultSettings() {
                   setTaskSettings({ hideFromSidebar: event.target.checked })
                 }
               />
-            </SettingRow>
+            </SettingRow> : null}
           </div>
-        </section>
+        </section>)}
 
+        {(!pluginId || pluginId === "core") && (
         <section className="settings-vault-section">
           <h5 className="settings-section__title">{t("settingsDialog.vaultSectionFolders")}</h5>
           <p className="settings-vault-section__hint">
@@ -422,7 +427,7 @@ export function VaultSettings() {
               </div>
             ) : null}
           </div>
-        </section>
+        </section>)}
       </div>
     </>
   );

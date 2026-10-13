@@ -49,6 +49,7 @@ import {
 import { getVaultCapabilities, platform, vaultCapabilityHint } from "@/platform";
 import { isJournalRelativePath } from "@/lib/journal";
 import { isTasksContainerRelativePath } from "@/lib/tasks";
+import { usePluginStore } from "@/store/usePluginStore";
 import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
 import { useSearchStore } from "@/store/useSearchStore";
 import { useVersioningSettingsStore } from "@/store/useVersioningSettingsStore";
@@ -334,6 +335,7 @@ export function DocumentPanel({
   const autoSaveEnabled = useEditorSettingsStore((state) => state.autoSaveEnabled);
   const taskSettings = useEditorSettingsStore((state) => state.taskSettings);
   const journalSettings = useEditorSettingsStore((state) => state.journalSettings);
+  const pluginConfig = usePluginStore((state) => state.config);
   // Folder crumbs always navigate to the corresponding collection grid.
   // A folder note's final crumb is also a folder, so it links back to that
   // folder collection rather than behaving like an ordinary note leaf.
@@ -415,11 +417,11 @@ export function DocumentPanel({
           // Task and journal documents are dedicated app surfaces, not
           // secondary editors. Keep them out of the split picker even when
           // their folders are otherwise visible in the vault.
-          if (isTasksContainerRelativePath(option.relativePath, taskSettings.folder)) {
+          if (pluginConfig.plugins.tasks?.enabled && isTasksContainerRelativePath(option.relativePath, taskSettings.folder)) {
             return false;
           }
 
-          if (isJournalRelativePath(option.relativePath, journalSettings)) {
+          if (pluginConfig.plugins.journal?.enabled && isJournalRelativePath(option.relativePath, journalSettings)) {
             return false;
           }
 
@@ -435,7 +437,8 @@ export function DocumentPanel({
       selectedFilePath,
       splitPickerQuery,
       taskSettings.folder,
-      journalSettings
+      journalSettings,
+      pluginConfig
     ]
   );
 

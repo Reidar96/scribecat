@@ -13,12 +13,11 @@ import { ContextMenuSurface } from "@/components/fileTree/ContextMenuSurface";
 import { GraphCanvas } from "@/components/graph/GraphCanvas";
 import { buildVaultGraph, type GraphNodeKind, type VaultGraphNode } from "@/lib/graphIndex";
 import { getRelativeDisplayPath, readMarkdownFile } from "@/lib/fileSystem";
-import { isJournalRelativePath } from "@/lib/journal";
-import { isTasksContainerRelativePath } from "@/lib/tasks";
 import { useLayoutMode } from "@/hooks/useLayoutMode";
 import { useAppStore } from "@/store/useAppStore";
-import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
 import { cn } from "@/lib/utils";
+import { pluginPolicyForPath } from "@/plugins/registry";
+import { usePluginStore } from "@/store/usePluginStore";
 
 type GraphPanelProps = {
   folderPath: string;
@@ -59,8 +58,7 @@ export function GraphPanel({
 }: GraphPanelProps) {
   const { t } = useTranslation();
   const layout = useLayoutMode();
-  const journalSettings = useEditorSettingsStore((state) => state.journalSettings);
-  const taskSettings = useEditorSettingsStore((state) => state.taskSettings);
+  const pluginConfig = usePluginStore((state) => state.config);
   const [visibility, setVisibility] = useState<Visibility>(INITIAL_VISIBILITY);
   const [markdownByPath, setMarkdownByPath] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(true);
@@ -71,12 +69,9 @@ export function GraphPanel({
     () =>
       filePaths.filter((filePath) => {
         const relativePath = getRelativeDisplayPath(folderPath, filePath);
-        return (
-          !isJournalRelativePath(relativePath, journalSettings) &&
-          !isTasksContainerRelativePath(relativePath, taskSettings.folder)
-        );
+        return pluginPolicyForPath(pluginConfig, relativePath)?.includeInGraph !== false;
       }),
-    [filePaths, folderPath, journalSettings, taskSettings.folder]
+    [filePaths, folderPath, pluginConfig]
   );
   const graphFilePathSet = useMemo(() => new Set(graphFilePaths), [graphFilePaths]);
 

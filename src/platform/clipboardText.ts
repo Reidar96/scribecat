@@ -1,4 +1,5 @@
 import { isTauri } from "@tauri-apps/api/core";
+import { copyText } from "@/lib/clipboard";
 
 export async function readClipboardText(): Promise<string> {
   if (isTauri()) {
@@ -21,18 +22,34 @@ export async function writeClipboardText(text: string): Promise<void> {
 
 export async function writeHeadingLink(title: string, href: string): Promise<void> {
   const escapedTitle = title.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const escapedHref = href.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const markdown = `[${title.replace(/\\/g, "\\\\").replace(/\]/g, "\\]")}](${href})`;
   if (isTauri()) {
-    const clipboard = await import("@tauri-apps/plugin-clipboard-manager");
-    await clipboard.writeHtml(`<a href="${href}">${escapedTitle}</a>`, markdown);
-    return;
+    try {
+      const clipboard = await import("@tauri-apps/plugin-clipboard-manager");
+      await clipboard.writeHtml(`<a href="${escapedHref}">${escapedTitle}</a>`, markdown);
+      return;
+    } catch {
+      // Some desktop clipboard backends reject HTML even when text is allowed.
+      try {
+        await writeClipboardText(markdown);
+        return;
+      } catch {
+        // Fall through to the browser/webview's copy event.
+      }
+    }
   }
   if (navigator.clipboard?.write && typeof ClipboardItem !== "undefined") {
-    await navigator.clipboard.write([new ClipboardItem({
-      "text/html": new Blob([`<a href="${href}">${escapedTitle}</a>`], { type: "text/html" }),
-      "text/plain": new Blob([markdown], { type: "text/plain" })
-    })]);
-    return;
+    try {
+      await navigator.clipboard.write([new ClipboardItem({
+        "text/html": new Blob([`<a href="${escapedHref}">${escapedTitle}</a>`], { type: "text/html" }),
+        "text/plain": new Blob([markdown], { type: "text/plain" })
+      })]);
+      return;
+    } catch {
+      // Permission, focus or unsupported MIME type: plain text is sufficient.
+    }
   }
-  await writeClipboardText(markdown);
+  if (await copyText(markdown)) return;
+  throw new Error("Clipboard write failed.");
 }

@@ -30,6 +30,7 @@ Underneath it all, your work remains ordinary files in ordinary folders. Use ano
 | **Read while you write** | View PDFs inside notes, zoom in on a page, or browse a centered multi-page overview. Keep images and attachments beside their notes. |
 | **Remember your days** | Open a date in the calendar, write a journal entry and add a photo gallery. Entries remain Markdown files; the overview caches entries and first images. |
 | **Move plans forward** | Manage Markdown tasks with categories, subcategories, deadlines, priorities, tags, notes and subtasks. Reorder sections on desktop and touch devices. |
+| **Choose your apps** | Pin three shortcuts and open the Apps overview for Journal, Tasks, Graph, Quick Notes, Books, Shopping, Recipes and Inventory. Each content app writes readable Markdown in its own folder. |
 | **Return with confidence** | Auto-save, persistent drafts, a recoverable trash and optional version history protect your work. Offline desktop and server-vault caches keep documents available; changed copies can be compared on reconnect. |
 | **Share finished work** | Export to PDF, DOCX or HTML, print a document, or download Markdown and folder archives. |
 
@@ -45,7 +46,7 @@ Turn a project into manageable steps, then use links, backlinks and tags to keep
 
 ### On your computer
 
-Download the latest release, open a folder and start writing. The desktop app works with local files and can also connect to a ScribeCat server vault.
+The desktop app works with local files and can also connect to a ScribeCat server vault. The latest desktop installers are in the [1.0.9 release](https://github.com/Reidar96/scribecat/releases/tag/v1.0.9); the 1.1.0 release currently provides the server image and source code. Desktop packages require native builds and signing before distribution.
 
 | Platform | Available downloads |
 | --- | --- |
@@ -53,7 +54,7 @@ Download the latest release, open a folder and start writing. The desktop app wo
 | Windows | Installer (`.exe`), MSI and portable ZIP |
 | Linux | AppImage, Debian package and RPM |
 
-[**Get the latest desktop release →**](https://github.com/Reidar96/scribecat/releases/latest)
+[**Get the desktop release →**](https://github.com/Reidar96/scribecat/releases/tag/v1.0.9)
 
 ### On your own server
 
@@ -68,7 +69,7 @@ cp .env.example .env
 docker compose up -d
 ```
 
-Follow the [server setup guide](server/docs/getting-started.md) for hostname, certificate and first-sign-in instructions. Docker releases use explicit version tags, such as `ghcr.io/reidar96/scribecat-server:1.0.9`; there is no moving `latest` tag.
+Follow the [server setup guide](server/docs/getting-started.md) for hostname, certificate and first-sign-in instructions. Docker releases use explicit version tags, such as `ghcr.io/reidar96/scribecat-server:1.1.0`; there is no moving `latest` tag.
 
 **Desktop and web share the same core workspace.** The web edition uses your server's storage; local offline dictation is a desktop feature. Phone and tablet access is through the responsive web app, not a separate native mobile release.
 
@@ -82,9 +83,12 @@ Follow the [server setup guide](server/docs/getting-started.md) for hostname, ce
 
 ScribeCat is actively developed. See the [changelog](CHANGELOG.md) for release details and [report a bug](https://github.com/Reidar96/scribecat/issues) if something gets in your way.
 
+The bundled apps can be enabled or disabled per vault in Settings → Plugins. Recipes can be shared through an explicit read-only public view on the server when both the plugin and each recipe are published. See the [plugin architecture and API v1](docs/plugin-api.md) for the file format, permissions and current limits of third-party plugins.
+
 ## Explore further
 
 - [Complete feature guide](docs/features.md)
+- [Plugin architecture and API](docs/plugin-api.md)
 - [Self-hosting and server documentation](server/docs/README.md)
 - [Security policy](SECURITY.md)
 - [Releases and downloads](https://github.com/Reidar96/scribecat/releases)

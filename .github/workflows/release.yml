@@ -1,16 +1,13 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - 'v*'
   workflow_dispatch:
     inputs:
       version:
         description: 'Version to publish, e.g. 0.22.14'
         required: true
 
-# A tag pushed twice (or re-pushed) would otherwise start a second run that
+# A manually requested tag pushed twice would otherwise start a second run that
 # writes into the very same GitHub release as the first one, from four jobs at
 # once. Not cancel-in-progress: the release is published before the portable
 # zip is uploaded, so an abort mid-run can leave a live release with an
@@ -25,8 +22,7 @@ env:
 
 jobs:
   build:
-    # v1.0.9 is packaged locally; do not spend Actions minutes on its tag.
-    if: github.ref != 'refs/tags/v1.0.9'
+    # Manual fallback only. Normal releases are packaged outside Actions.
     strategy:
       fail-fast: false
       matrix:

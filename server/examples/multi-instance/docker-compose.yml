@@ -23,7 +23,7 @@ x-scribecat: &scribecat
   build:
     context: ../../..
     dockerfile: server/Dockerfile
-  image: ${SCRIBECAT_IMAGE:-ghcr.io/reidar96/scribecat-server:1.0.9}
+  image: ${SCRIBECAT_IMAGE:-ghcr.io/reidar96/scribecat-server:1.1.0}
   restart: unless-stopped
   expose:
     - "3000"

@@ -12,7 +12,6 @@ import {
   ArrowDownAZ,
   ArrowUpDown,
   BookOpen,
-  CalendarDays,
   Columns2,
   Check,
   ClipboardPaste,
@@ -31,8 +30,6 @@ import {
   GripVertical,
   Home,
   ListChecks,
-  SquareCheck,
-  Network,
   PanelLeft,
   PanelLeftOpen,
   Printer,
@@ -80,8 +77,6 @@ import {
   getNoteDisplayName,
   isFolderNotePath
 } from "@/lib/folderNotes";
-import { isJournalRelativePath } from "@/lib/journal";
-import { isTasksContainerRelativePath } from "@/lib/tasks";
 import {
   canDownloadFolderArchive,
   canDownloadMarkdown
@@ -92,6 +87,9 @@ import { getVaultCapabilities, platform, vaultCapabilityHint } from "@/platform"
 import { join } from "@/platform/paths";
 import { formatModifiedLabel } from "@/components/fileTree/treeNavigation";
 import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
+import { PluginNavigation } from "@/components/plugins/PluginNavigation";
+import { pluginPolicyForPath, type PluginId } from "@/plugins/registry";
+import { usePluginStore } from "@/store/usePluginStore";
 
 type CollectionPanelProps = {
   request: CollectionViewRequest;
@@ -110,9 +108,10 @@ type CollectionPanelProps = {
   onClose: () => void;
   onOpenFile: (filePath: string) => void;
   onOpenFolder: (relativePath: string) => void;
-  onOpenJournal?: () => void;
-  onOpenGraph?: () => void;
-  onOpenTasks?: () => void;
+  activePlugin: PluginId | null;
+  appsOpen: boolean;
+  onOpenPlugin: (id: PluginId) => void;
+  onOpenApps: () => void;
   onCreateFolder?: (name: string) => Promise<boolean>;
   onCreateNote?: (name: string) => Promise<boolean>;
   onSetSortMode: (mode: SortMode) => void;
@@ -249,9 +248,10 @@ export function CollectionPanel({
   onClose,
   onOpenFile,
   onOpenFolder,
-  onOpenJournal,
-  onOpenGraph,
-  onOpenTasks,
+  activePlugin,
+  appsOpen,
+  onOpenPlugin,
+  onOpenApps,
   onCreateFolder,
   onCreateNote,
   onSetSortMode,
@@ -285,8 +285,7 @@ export function CollectionPanel({
   const offersFolderArchive = canDownloadFolderArchive(folderPath);
   const offersRevealInFileManager = platform.shell.openFolderInFileManager !== null;
   const folderNotesEnabled = useEditorSettingsStore((state) => state.folderNotesEnabled);
-  const journalSettings = useEditorSettingsStore((state) => state.journalSettings);
-  const taskSettings = useEditorSettingsStore((state) => state.taskSettings);
+  const pluginConfig = usePluginStore((state) => state.config);
   const vaultSettingsLoadedPath = useEditorSettingsStore(
     (state) => state.headingNumberingVaultPath
   );
@@ -337,13 +336,9 @@ export function CollectionPanel({
     () =>
       filePaths.filter((filePath) => {
         const relativePath = getRelativeDisplayPath(folderPath, filePath);
-        return (
-          !(journalSettings.hideFromSidebar && isJournalRelativePath(relativePath, journalSettings)) &&
-          !(taskSettings.hideFromSidebar &&
-            isTasksContainerRelativePath(relativePath, taskSettings.folder))
-        );
+        return pluginPolicyForPath(pluginConfig, relativePath)?.showInFiles !== false;
       }),
-    [filePaths, folderPath, journalSettings, taskSettings]
+    [filePaths, folderPath, pluginConfig]
   );
 
   const visibleCollectionFilePathSet = useMemo(
@@ -355,13 +350,9 @@ export function CollectionPanel({
     () =>
       emptyFolderPaths.filter((entryPath) => {
         const relativePath = getRelativeDisplayPath(folderPath, entryPath);
-        return (
-          !(journalSettings.hideFromSidebar && isJournalRelativePath(relativePath, journalSettings)) &&
-          !(taskSettings.hideFromSidebar &&
-            isTasksContainerRelativePath(relativePath, taskSettings.folder))
-        );
+        return pluginPolicyForPath(pluginConfig, relativePath)?.showInFiles !== false;
       }),
-    [emptyFolderPaths, folderPath, journalSettings, taskSettings]
+    [emptyFolderPaths, folderPath, pluginConfig]
   );
 
   const treeNodes = useMemo(() => {
@@ -1237,36 +1228,7 @@ export function CollectionPanel({
         >
           {isRootCollection ? (
             <div className="collection-home-actions">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onOpenJournal}
-                disabled={!onOpenJournal}
-                aria-label={t("sidebar.calendar")}
-                title={t("sidebar.calendar")}
-              >
-                <CalendarDays />
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onOpenGraph}
-                disabled={!onOpenGraph}
-                aria-label={t("sidebar.graph")}
-                title={t("sidebar.graph")}
-              >
-                <Network />
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onOpenTasks}
-                disabled={!onOpenTasks}
-                aria-label={t("sidebar.tasks")}
-                title={t("sidebar.tasks")}
-              >
-                <SquareCheck />
-              </Button>
+              <PluginNavigation active={activePlugin} appsOpen={appsOpen} onOpen={onOpenPlugin} onOpenApps={onOpenApps} />
             </div>
           ) : null}
 

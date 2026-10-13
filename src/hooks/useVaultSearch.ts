@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 import { extractTags, splitFrontmatter } from "@/lib/documentFrontmatter";
 import { getRelativeDisplayPath, readMarkdownFile } from "@/lib/fileSystem";
 import { getNoteDisplayName } from "@/lib/folderNotes";
+import { pluginPolicyForPath } from "@/plugins/registry";
+import { usePluginStore } from "@/store/usePluginStore";
 
 export type VaultSearchResult = {
   filePath: string;
@@ -56,6 +58,10 @@ export function useVaultSearch(
   const active = query.trim().length > 0;
   const [records, setRecords] = useState<IndexedRecord[]>([]);
   const [loading, setLoading] = useState(false);
+  const pluginConfig = usePluginStore((state) => state.config);
+  const searchablePaths = useMemo(() => folderPath
+    ? filePaths.filter((filePath) => pluginPolicyForPath(pluginConfig, getRelativeDisplayPath(folderPath, filePath))?.includeInSearch !== false)
+    : filePaths, [filePaths, folderPath, pluginConfig]);
 
   useEffect(() => {
     if (!active || !folderPath) {
@@ -67,7 +73,7 @@ export function useVaultSearch(
     setLoading(true);
 
     void Promise.all(
-      filePaths.map(async (filePath) => {
+      searchablePaths.map(async (filePath) => {
         const markdown =
           filePath === selectedFilePath && selectedFileContent !== null
             ? selectedFileContent
@@ -85,7 +91,7 @@ export function useVaultSearch(
     };
     // selected content is patched by the smaller effect below; do not rebuild
     // the whole vault for every keystroke in the open note.
-  }, [active, filePaths, folderPath, selectedFilePath]);
+  }, [active, searchablePaths, folderPath, selectedFilePath]);
 
   useEffect(() => {
     if (!active || !folderPath || !selectedFilePath || selectedFileContent === null) {

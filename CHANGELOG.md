@@ -1,3 +1,12 @@
+## [1.1.0] - 2026-10-13
+
+- Fix copying Markdown heading links when the rich clipboard API is unavailable.
+- Introduce per-vault bundled plugin manifests, capability checks, enable/disable controls, folder policies, three configurable shortcuts and an Apps overview in the sidebar and file viewer.
+- Move Journal and Tasks options into plugin settings while retaining existing Markdown and vault settings files.
+- Add Markdown-backed Quick Notes, Books, Shopping, Recipes and Inventory views with card search, editing and plugin-specific controls.
+- Add an opt-in, read-only public Recipes view. Only explicitly published recipes with unique slugs and their referenced images are available without a session; private vault APIs remain authenticated.
+- Document the bundled Plugin API v1 and the future requirements for external plugins. Disable automatic GitHub Actions builds on source pushes and release tags.
+
 ## [1.0.9] - 2026-10-13
 
 - Allow task headings and document breadcrumbs to wrap or shrink on narrow screens.

@@ -19,11 +19,32 @@ function copyViaCommand(text: string): boolean {
   document.addEventListener("copy", handleCopy, { capture: true, once: true });
 
   try {
+    if (document.execCommand("copy")) return true;
+  } catch {
+    // Try a selected textarea below when a browser needs a concrete selection.
+  } finally {
+    document.removeEventListener("copy", handleCopy, { capture: true });
+  }
+
+  const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  const selection = window.getSelection();
+  const ranges = selection ? Array.from({ length: selection.rangeCount }, (_, i) => selection.getRangeAt(i).cloneRange()) : [];
+  const field = document.createElement("textarea");
+  field.value = text;
+  field.readOnly = true;
+  field.style.position = "fixed";
+  field.style.opacity = "0";
+  document.body.appendChild(field);
+  field.select();
+  try {
     return document.execCommand("copy");
   } catch {
     return false;
   } finally {
-    document.removeEventListener("copy", handleCopy, { capture: true });
+    field.remove();
+    selection?.removeAllRanges();
+    ranges.forEach((range) => selection?.addRange(range));
+    previousFocus?.focus({ preventScroll: true });
   }
 }
 

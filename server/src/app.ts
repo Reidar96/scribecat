@@ -16,6 +16,7 @@ import type { Vault } from "./vault/files.js";
 import { fileRoutes } from "./vault/routes.js";
 import type { VaultWatcher } from "./vault/watcher.js";
 import { staticSite } from "./web/staticSite.js";
+import { publicRecipeRoutes } from "./public/recipes.js";
 
 export type AppDependencies = {
   config: ServerConfig;
@@ -88,6 +89,7 @@ export async function buildApp(deps: AppDependencies): Promise<FastifyInstance> 
       await scoped.register(authRoutes, { authStore, session, throttle, tokens, requireSession, prefix: "/api/auth" });
       await scoped.register(fileRoutes, { vault, requireSession, prefix: "/api" });
       await scoped.register(exportRoutes, { vault, requireSession, prefix: "/api" });
+      await scoped.register(publicRecipeRoutes, { vault, prefix: "/public" });
       if (deps.watcher) {
         await scoped.register(eventRoutes, { watcher: deps.watcher, tokens, requireSession, prefix: "/api" });
       }

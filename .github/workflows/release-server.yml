@@ -9,9 +9,6 @@ name: Release server image
 # compose file, which is also what makes the data-version downgrade check in
 # the server meaningful.
 on:
-  push:
-    tags:
-      - 'v*'
   workflow_dispatch:
     inputs:
       version:
@@ -21,7 +18,7 @@ on:
         description: 'Optional source ref for a packaging-only rebuild of the current version'
         required: false
 
-# A tag pushed twice starts a second build of the very same image tag, and the
+# Repeating a manual build starts a second build of the very same image tag, and the
 # two then race on the ghcr push — which is how the v0.14.1 run sat there for
 # 99 minutes before it was cancelled. Cancelling is safe here (unlike in
 # release.yml): the push is atomic over the digest, so an aborted run leaves
@@ -32,8 +29,7 @@ concurrency:
 
 jobs:
   image:
-    # v1.0.9 is packaged locally and attached to the GitHub Release.
-    if: github.ref != 'refs/tags/v1.0.9'
+    # Manual fallback only. Normal releases are packaged outside Actions.
     runs-on: ubuntu-latest
     env:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}

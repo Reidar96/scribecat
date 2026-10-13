@@ -8,6 +8,7 @@ export type SettingsTab =
   | "shortcuts"
   | "versioning"
   | "vault"
+  | "plugins"
   | "account"
   | "server";
 
@@ -15,7 +16,7 @@ export type SettingsGroup = "application" | "folder";
 
 export const SETTINGS_NAV: { group: SettingsGroup; tabs: SettingsTab[] }[] = [
   { group: "application", tabs: ["application", "appearance", "fonts", "shortcuts", "account", "server"] },
-  { group: "folder", tabs: ["versioning", "vault"] }
+  { group: "folder", tabs: ["versioning", "vault", "plugins"] }
 ];
 
 const SETTINGS_TAB_FEATURE: Partial<Record<SettingsTab, keyof PlatformFeatures>> = {
@@ -39,6 +40,7 @@ export const SELF_SAVING_TABS: SettingsTab[] = [
   "shortcuts",
   "versioning",
   "vault",
+  "plugins",
   "account",
   "server"
 ];
@@ -50,6 +52,7 @@ export const SETTINGS_TAB_LABEL_KEY: Record<SettingsTab, string> = {
   shortcuts: "settingsDialog.tabShortcuts",
   versioning: "settingsDialog.tabVersioning",
   vault: "settingsDialog.tabVault",
+  plugins: "settingsDialog.tabPlugins",
   account: "settingsDialog.tabAccount",
   server: "settingsDialog.tabServer"
 };

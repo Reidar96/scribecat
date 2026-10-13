@@ -4,7 +4,6 @@ import {
   ArrowDownAZ,
   ArrowUpDown,
   BookOpen,
-  CalendarDays,
   Check,
   ChevronDown,
   ChevronRight,
@@ -18,9 +17,7 @@ import {
   GripVertical,
   Import,
   ListChecks,
-  SquareCheck,
   Move,
-  Network,
   PanelLeftClose,
   Plus,
   Search,
@@ -56,8 +53,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useStoredCollapsed, useWorkingSetHeight } from "@/hooks/useWorkingSetHeight";
 import { canDownloadFolderArchive } from "@/lib/export/markdownDownload";
 import { formatFolderLabel, getFolderBasename, getRecentFolderPaths, getRelativeDisplayPath, removeRecentFolderPath } from "@/lib/fileSystem";
-import { isJournalRelativePath } from "@/lib/journal";
-import { isTasksContainerRelativePath } from "@/lib/tasks";
 import { isRemoteVaultPath, remoteVaultFor, removeRemoteVault } from "@/lib/remoteVaults";
 import { getVaultCapabilities, platform, vaultCapabilityHint } from "@/platform";
 import type { ManualOrderMap, SortMode } from "@/lib/vaultMeta";
@@ -65,6 +60,9 @@ import { cn } from "@/lib/utils";
 import type { MoveTreeEntryInput, WorkingSetEntry } from "@/store/useAppStore";
 import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
 import { useAppVersion } from "@/hooks/useAppVersion";
+import { PluginNavigation } from "@/components/plugins/PluginNavigation";
+import { pluginPolicyForPath, type PluginId } from "@/plugins/registry";
+import { usePluginStore } from "@/store/usePluginStore";
 
 /** What the "In progress" section needs from the app (see WorkingSetPanel). */
 export type WorkingSetHandlers = {
@@ -113,12 +111,10 @@ type SidebarProps = {
   activeCollectionTag: string | null;
   onOpenTagCollection: (tag: string, filePaths: string[]) => void;
   onCloseCollection: () => void;
-  graphViewOpen: boolean;
-  onGraphViewToggle: () => void;
-  journalViewOpen: boolean;
-  onJournalViewToggle: () => void;
-  tasksViewOpen: boolean;
-  onTasksViewToggle: () => void;
+  activePlugin: PluginId | null;
+  appsOpen: boolean;
+  onOpenPlugin: (id: PluginId) => void;
+  onOpenApps: () => void;
   onDeleteFileRequest: (filePath: string) => void;
   onDuplicateFileRequest: (filePath: string) => void;
   onDuplicateFolderRequest: (folderPath: string) => void;
@@ -182,12 +178,10 @@ export function Sidebar({
   activeCollectionTag,
   onOpenTagCollection,
   onCloseCollection,
-  graphViewOpen,
-  onGraphViewToggle,
-  journalViewOpen,
-  onJournalViewToggle,
-  tasksViewOpen,
-  onTasksViewToggle,
+  activePlugin,
+  appsOpen,
+  onOpenPlugin,
+  onOpenApps,
   onDeleteFileRequest,
   onDuplicateFileRequest,
   onDuplicateFolderRequest,
@@ -235,9 +229,7 @@ export function Sidebar({
   const [vaultActionError, setVaultActionError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [collapseFoldersRequestId, setCollapseFoldersRequestId] = useState(0);
-  const journalSettings = useEditorSettingsStore((state) => state.journalSettings);
-  const taskSettings = useEditorSettingsStore((state) => state.taskSettings);
-  const hideTasksFromSidebar = taskSettings.hideFromSidebar;
+  const pluginConfig = usePluginStore((state) => state.config);
   const vaultSettingsLoadedPath = useEditorSettingsStore(
     (state) => state.headingNumberingVaultPath
   );
@@ -251,20 +243,11 @@ export function Sidebar({
         ? vaultSettingsReady
           ? filePaths.filter((filePath) => {
             const relativePath = getRelativeDisplayPath(folderPath, filePath);
-            return (
-              !(
-                journalSettings.hideFromSidebar &&
-                isJournalRelativePath(relativePath, journalSettings)
-              ) &&
-              !(
-                hideTasksFromSidebar &&
-                isTasksContainerRelativePath(relativePath, taskSettings.folder)
-              )
-            );
+            return pluginPolicyForPath(pluginConfig, relativePath)?.showInFiles !== false;
           })
           : []
         : filePaths,
-    [filePaths, folderPath, hideTasksFromSidebar, journalSettings, taskSettings.folder, vaultSettingsReady]
+    [filePaths, folderPath, pluginConfig, vaultSettingsReady]
   );
   const visibleSidebarEmptyFolderPaths = useMemo(
     () =>
@@ -272,20 +255,11 @@ export function Sidebar({
         ? vaultSettingsReady
           ? emptyFolderPaths.filter((entryPath) => {
             const relativePath = getRelativeDisplayPath(folderPath, entryPath);
-            return (
-              !(
-                journalSettings.hideFromSidebar &&
-                isJournalRelativePath(relativePath, journalSettings)
-              ) &&
-              !(
-                hideTasksFromSidebar &&
-                isTasksContainerRelativePath(relativePath, taskSettings.folder)
-              )
-            );
+            return pluginPolicyForPath(pluginConfig, relativePath)?.showInFiles !== false;
           })
           : []
         : emptyFolderPaths,
-    [emptyFolderPaths, folderPath, hideTasksFromSidebar, journalSettings, taskSettings.folder, vaultSettingsReady]
+    [emptyFolderPaths, folderPath, pluginConfig, vaultSettingsReady]
   );
   // Hidden diary/task storage is also excluded from the ordinary tag overview.
   // The underlying Markdown remains searchable and portable.
@@ -297,7 +271,7 @@ export function Sidebar({
   const vaultSearch = useVaultSearch(
     searchQuery,
     folderPath,
-    visibleSidebarFilePaths,
+    filePaths,
     selectedFilePath,
     selectedFileContent
   );
@@ -428,41 +402,7 @@ export function Sidebar({
 
       <div className="sidebar-panel__header">
         <div className="sidebar-panel__primary-actions">
-            <Button
-              type="button"
-              variant={journalViewOpen ? "default" : "outline"}
-              onClick={onJournalViewToggle}
-              disabled={isLoading || folderPath === null}
-              aria-pressed={journalViewOpen}
-              aria-label={t("sidebar.calendar")}
-              title={t("sidebar.calendar")}
-            >
-              <CalendarDays />
-            </Button>
-
-            <Button
-              type="button"
-              variant={graphViewOpen ? "default" : "outline"}
-              onClick={onGraphViewToggle}
-              disabled={isLoading || folderPath === null}
-              aria-pressed={graphViewOpen}
-              aria-label={t("sidebar.graph")}
-              title={t("sidebar.graph")}
-            >
-              <Network />
-            </Button>
-
-            <Button
-              type="button"
-              variant={tasksViewOpen ? "default" : "outline"}
-              onClick={onTasksViewToggle}
-              disabled={isLoading || folderPath === null}
-              aria-pressed={tasksViewOpen}
-              aria-label={t("sidebar.tasks")}
-              title={t("sidebar.tasks")}
-            >
-              <SquareCheck />
-            </Button>
+          <PluginNavigation active={activePlugin} appsOpen={appsOpen} onOpen={onOpenPlugin} onOpenApps={onOpenApps} disabled={isLoading || folderPath === null} />
         </div>
 
         <div className="sidebar-panel__actions">

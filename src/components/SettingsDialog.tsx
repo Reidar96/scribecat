@@ -13,6 +13,7 @@ import { SettingsNav } from "@/components/settings/SettingsNav";
 import { SettingsPage } from "@/components/settings/SettingsPage";
 import type { SettingsTab } from "@/components/settings/settingsTabs";
 import { VaultSettings } from "@/components/settings/VaultSettings";
+import { PluginSettings } from "@/components/settings/PluginSettings";
 import { ShortcutsSettings } from "@/components/ShortcutsSettings";
 import { VersioningSettings } from "@/components/VersioningSettings";
 import { getPortableStatus, type PortableMode } from "@/lib/portable";
@@ -349,6 +350,8 @@ export function SettingsDialog({
                 <SettingsPage tab="versioning"><VersioningSettings /></SettingsPage>
               ) : activeTab === "vault" ? (
                 <SettingsPage tab="vault"><VaultSettings /></SettingsPage>
+              ) : activeTab === "plugins" ? (
+                <SettingsPage tab="plugins"><PluginSettings /></SettingsPage>
               ) : activeTab === "account" ? (
                 <SettingsPage tab="account"><AccountSettings onLogoutRequest={onLogoutRequest} /></SettingsPage>
               ) : (

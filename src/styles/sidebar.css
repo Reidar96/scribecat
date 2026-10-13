@@ -56,32 +56,25 @@
 
 .sidebar-panel__primary-actions {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 0.45rem;
   flex: 1 1 100%;
 }
 
-.sidebar-panel__primary-actions > button {
+.plugin-navigation {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.45rem;
+  width: 100%;
+}
+
+.plugin-navigation > button {
   min-width: 0;
+  width: 100%;
   min-height: 2.6rem;
-  justify-content: center;
-  gap: 0.4rem;
-  padding-inline: 0.55rem;
+  padding-inline: 0.4rem;
 }
-
-.sidebar-panel__primary-actions > button span {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: var(--font-ui-xs);
-}
-
-.sidebar-panel__primary-actions > button svg {
-  flex: none;
-  width: 0.95rem;
-  height: 0.95rem;
-}
+.plugin-navigation > button svg { width: 1rem; height: 1rem; }
 
 .sidebar-panel__actions {
   display: flex;
