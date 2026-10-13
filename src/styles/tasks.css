@@ -526,6 +526,10 @@
 }
 
 .tasks-item__text {
+  display: block;
+  min-height: 1.35em;
+  overflow: hidden;
+  resize: none;
   font-size: var(--font-ui-md);
   line-height: 1.35;
 }

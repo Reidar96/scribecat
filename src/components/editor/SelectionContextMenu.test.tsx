@@ -21,7 +21,7 @@ beforeEach(() => {
   host = document.createElement("div"); document.body.append(host); root = createRoot(host);
   act(() => root.render(createElement(SelectionContextMenu, {
     x: 20, y: 20, hasSelection: false, canEdit: true, editor: fakeEditor as never,
-    onCopyFormatted: vi.fn(), onCopyMarkdown: vi.fn(), onCopyPlainText: vi.fn(), onPaste,
+    onCopyFormatted: vi.fn(), onCopyMarkdown: vi.fn(), onCopyPlainText: vi.fn(), onCopyHeadingLink: vi.fn(), onPaste,
     onInsertImage, onInsertLink: vi.fn(), onInsertBlock: vi.fn(), onClose: vi.fn()
   })));
 });

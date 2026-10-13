@@ -29,10 +29,8 @@ export function FileLinkSuggestionPopover({
 }: FileLinkSuggestionPopoverProps) {
   const { t } = useTranslation();
   const { coords } = suggestion;
-  const left = Math.max(
-    VIEWPORT_MARGIN_PX,
-    Math.min(coords.left, window.innerWidth - POPOVER_WIDTH_PX - VIEWPORT_MARGIN_PX)
-  );
+  const width = Math.max(0, Math.min(POPOVER_WIDTH_PX, window.innerWidth - VIEWPORT_MARGIN_PX * 2));
+  const left = Math.max(VIEWPORT_MARGIN_PX, Math.min(coords.left, window.innerWidth - width - VIEWPORT_MARGIN_PX));
   // Opens below the caret and flips above it when the line sits too low.
   const opensUpwards = coords.bottom + POPOVER_MAX_HEIGHT_PX + VIEWPORT_MARGIN_PX > window.innerHeight;
 
@@ -41,7 +39,8 @@ export function FileLinkSuggestionPopover({
       className="file-link-suggest"
       style={{
         left,
-        width: POPOVER_WIDTH_PX,
+        width,
+        maxHeight: Math.max(0, window.innerHeight - VIEWPORT_MARGIN_PX * 2),
         ...(opensUpwards
           ? { bottom: window.innerHeight - coords.top + CARET_GAP_PX }
           : { top: coords.bottom + CARET_GAP_PX })

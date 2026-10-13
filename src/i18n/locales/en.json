@@ -1042,6 +1042,8 @@
     "copyFormatted": "Copy text with formatting",
     "copyMarkdown": "Copy text as Markdown",
     "copyPlainText": "Copy text only",
+    "copyHeadingLink": "Copy link to heading",
+    "headingLinkCopied": "Heading link copied.",
     "pastePlainText": "Paste as plain text",
     "paste": "Paste",
     "copyFailed": "Could not copy to the clipboard.",

@@ -840,6 +840,8 @@
     "copyFormatted": "Kopier tekst med formatering",
     "copyMarkdown": "Kopier tekst som Markdown",
     "copyPlainText": "Kopier bare tekst",
+    "copyHeadingLink": "Kopier lenke til overskrift",
+    "headingLinkCopied": "Lenke til overskriften er kopiert.",
     "pastePlainText": "Lim inn ren tekst",
     "paste": "Lim inn",
     "copyFailed": "Kunne ikke kopiere til utklippstavlen.",

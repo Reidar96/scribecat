@@ -35,7 +35,9 @@ import {
   type InlinePdfSplitRestoreRequest
 } from "@/lib/editorFileContext";
 import { buildEditorExtensions } from "@/lib/editor/extensions";
-import { hasHeading, type OutlineHeading } from "@/lib/editor/documentOutline";
+import { collectHeadings, hasHeading, type OutlineHeading } from "@/lib/editor/documentOutline";
+import { headingAnchor, headingMatchesAnchor } from "@/lib/editor/headingAnchors";
+import { readClipboardText, writeHeadingLink } from "@/platform/clipboardText";
 import { updateOutlineHighlight } from "@/lib/editor/outlineHighlight";
 import {
   buildFileLinkHref,
@@ -133,6 +135,8 @@ type EditorProps = {
   /** Full note including YAML frontmatter; the editor itself only sees markdown body. */
   documentMarkdown: string;
   onMarkdownChange: (markdown: string) => void;
+  /** Persist by the editor's own path so a debounced write cannot land in a newly selected note. */
+  onPersistMarkdown?: (filePath: string, markdown: string) => void;
   onDocumentMarkdownChange: (markdown: string) => void;
   onCanonicalMarkdown?: (filePath: string, markdown: string) => void;
   folderPath: string | null;
@@ -245,6 +249,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     markdown,
     documentMarkdown,
     onMarkdownChange,
+    onPersistMarkdown,
     onDocumentMarkdownChange,
     onCanonicalMarkdown,
     folderPath,
@@ -274,10 +279,22 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   // The pointer type of the last press inside the editor, for the context
   // menu guard below: the event itself does not always say where it came from.
   const lastPointerTypeRef = useRef<string | null>(null);
+  const touchLinkPressRef = useRef<{ href: string; startedAt: number } | null>(null);
+  const lastTouchLinkActivationRef = useRef<{ href: string; at: number } | null>(null);
   // Set by Ctrl+Shift+V and consumed by the paste event it triggers: the
   // clipboard event itself carries no modifier state.
   const plainPasteRequestedRef = useRef(false);
   const lastSyncedMarkdownRef = useRef(markdown);
+  const markdownPropRef = useRef(markdown);
+  markdownPropRef.current = markdown;
+  const filePathRef = useRef(filePath);
+  filePathRef.current = filePath;
+  const persistMarkdownRef = useRef(onPersistMarkdown);
+  persistMarkdownRef.current = onPersistMarkdown;
+  const markdownChangeRef = useRef(onMarkdownChange);
+  markdownChangeRef.current = onMarkdownChange;
+  const pendingSerializationRef = useRef<number | null>(null);
+  const pendingEditRef = useRef(false);
   // Kept in a ref so the sync effect below doesn't re-run for a new callback
   // identity: it may only react to actual content changes. Declared up here
   // because the editor's onUpdate reaches for it too.
@@ -409,7 +426,11 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         return;
       }
 
-      setSelectionMenu({ x, y, hasSelection });
+      const $from = currentEditor.state.selection.$from;
+      const headingLink = $from.parent.type.name === "heading"
+        ? headingAnchor(collectHeadings(currentEditor.state.doc), $from.before())
+        : null;
+      setSelectionMenu({ x, y, hasSelection, headingLink });
     };
 
     if (fromTouch) {
@@ -603,6 +624,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   // App so the unsaved-changes dialog guards the switch, exactly like clicking
   // the file in the sidebar.
   const openFileLink = (href: string) => {
+    flushPendingSerialization();
     const targetFilePath = filePath
       ? resolveFileLinkTarget(href, filePath, vaultFilePathsRef.current)
       : null;
@@ -616,6 +638,23 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     }
 
     onRequestFileOpen?.(targetFilePath);
+  };
+
+  const activateAnchor = (anchor: HTMLAnchorElement) => {
+    const rawHref = anchor.getAttribute("href") ?? "";
+    if (isFileLinkHref(rawHref)) {
+      openFileLink(rawHref);
+    } else if (rawHref.startsWith("#")) {
+      const heading = headingMatchesAnchor(
+        Array.from(editorRef.current?.view.dom.querySelectorAll("h1, h2, h3, h4, h5, h6") ?? []),
+        rawHref
+      );
+      heading?.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else if (isLocalDocumentPreviewHref(rawHref)) {
+      void openLocalDocument(rawHref);
+    } else {
+      void platform.shell.openUrl(anchor.href);
+    }
   };
 
   const openLocalDocument = async (href: string) => {
@@ -821,14 +860,14 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 
     const range = { from: currentEditor.state.selection.from, to: currentEditor.state.selection.to };
     const clipboard = navigator.clipboard;
-    if (!clipboard) {
+    if (!clipboard && !plainTextOnly) {
       setFeedback({ kind: "error", message: t("editorContextMenu.pasteFailed") });
       return;
     }
 
     try {
       if (plainTextOnly) {
-        const text = await clipboard.readText();
+        const text = await readClipboardText();
         pastePlainText(currentEditor, text, range);
         return;
       }
@@ -873,7 +912,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         return;
       }
 
-      const text = await clipboard.readText();
+      const text = await readClipboardText();
       if (useEditorSettingsStore.getState().pasteMarkdown && looksLikeMarkdown(text)) {
         currentEditor.commands.setTextSelection(range);
         if (pasteMarkdown(currentEditor, text)) return;
@@ -882,9 +921,9 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     } catch {
       // Some browsers expose readText but deny the richer read() API. Give a
       // text-only paste a second chance before showing a clipboard error.
-      if (!plainTextOnly && typeof clipboard.readText === "function") {
+      if (!plainTextOnly) {
         try {
-          const text = await clipboard.readText();
+          const text = await readClipboardText();
           if (text) {
             if (useEditorSettingsStore.getState().pasteMarkdown && looksLikeMarkdown(text)) {
               currentEditor.commands.setTextSelection(range);
@@ -1011,9 +1050,28 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     return serialized;
   };
 
+  const flushPendingSerialization = () => {
+    if (pendingSerializationRef.current !== null) {
+      window.clearTimeout(pendingSerializationRef.current);
+      pendingSerializationRef.current = null;
+    }
+    if (!pendingEditRef.current) return;
+    pendingEditRef.current = false;
+    const currentEditor = editorRef.current;
+    if (!currentEditor || currentEditor.isDestroyed) return;
+    const serialized = guardSerialization(currentEditor, markdownPropRef.current);
+    if (serialized === null) return;
+    lastSyncedMarkdownRef.current = serialized;
+    const path = filePathRef.current;
+    if (path && persistMarkdownRef.current) persistMarkdownRef.current(path, serialized);
+    else markdownChangeRef.current(serialized);
+  };
+
   const getMarkdown = () => {
     const currentEditor = editorRef.current;
-    return currentEditor ? getEditorMarkdown(currentEditor, markdown) : "";
+    if (!currentEditor) return "";
+    flushPendingSerialization();
+    return getEditorMarkdown(currentEditor, markdownPropRef.current);
   };
 
   const getSelectionText = () => {
@@ -1077,6 +1135,13 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       lastSyncedMarkdownRef.current = markdown;
     },
     onUpdate: ({ editor, transaction }) => {
+      if (transaction.docChanged) {
+        pendingEditRef.current = true;
+        if (pendingSerializationRef.current !== null) window.clearTimeout(pendingSerializationRef.current);
+        pendingSerializationRef.current = window.setTimeout(flushPendingSerialization, 300);
+        refreshSuggestion();
+        return;
+      }
       const nextMarkdown = guardSerialization(editor, markdown);
 
       if (nextMarkdown === null) {
@@ -1102,7 +1167,8 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         onCanonicalMarkdownRef.current?.(filePath, nextMarkdown);
       }
 
-      onMarkdownChange(nextMarkdown);
+      // Non-document transactions are canonicalization only; real edits are
+      // serialized and persisted in one batch after the user pauses typing.
 
       // An edit can change what the selection covers without the selection
       // itself moving, so the mirror is refreshed from here too.
@@ -1112,6 +1178,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       refreshSuggestion();
     },
     onBlur: ({ editor: currentEditor }) => {
+      flushPendingSerialization();
       closeSuggestion();
       // A selected image stays selected when the editor loses focus, so a click
       // outside would leave it highlighted with its resize handles.
@@ -1195,8 +1262,17 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         const hasHtml = Boolean(event.clipboardData?.getData("text/html"));
         const inCode = view.state.selection.$from.parent.type.spec.code === true;
 
+        // The browser's trusted paste event already carries the clipboard's
+        // plain text. Use it directly for Ctrl/Cmd+Shift+V instead of asking
+        // the Clipboard API for permission (which often fails in WebViews,
+        // mobile Safari, and when the toolbar has taken focus).
+        if (plainPasteRequested && currentEditor && text) {
+          event.preventDefault();
+          pastePlainText(currentEditor, text, view.state.selection);
+          return true;
+        }
+
         if (
-          plainPasteRequested ||
           hasHtml ||
           inCode ||
           !currentEditor ||
@@ -1214,6 +1290,33 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         return true;
       },
       handleDOMEvents: {
+        pointerdown: (_view, event) => {
+          const pointer = event as PointerEvent;
+          if (pointer.pointerType === "touch" || pointer.pointerType === "pen") {
+            const target = pointer.target as HTMLElement | null;
+            const anchor = target?.closest("a[href]") as HTMLAnchorElement | null;
+            touchLinkPressRef.current = anchor
+              ? { href: anchor.getAttribute("href") ?? "", startedAt: Date.now() }
+              : null;
+          }
+          return false;
+        },
+        pointerup: (_view, event) => {
+          const pointer = event as PointerEvent;
+          const press = touchLinkPressRef.current;
+          touchLinkPressRef.current = null;
+          if (!press || (pointer.pointerType !== "touch" && pointer.pointerType !== "pen")) return false;
+          if (Date.now() - press.startedAt > 500) return false;
+          const target = pointer.target as HTMLElement | null;
+          const anchor = target?.closest("a[href]") as HTMLAnchorElement | null;
+          if (!anchor || (anchor.getAttribute("href") ?? "") !== press.href) return false;
+          event.preventDefault();
+          event.stopPropagation();
+          event.stopImmediatePropagation();
+          lastTouchLinkActivationRef.current = { href: press.href, at: Date.now() };
+          activateAnchor(anchor);
+          return true;
+        },
         click: (_view, event) => {
           const target = event.target as HTMLElement | null;
           const anchor = target?.closest("a[href]") as HTMLAnchorElement | null;
@@ -1244,14 +1347,12 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
           // note link has to be resolved from: the DOM property would resolve
           // the relative path against the app's own base URL.
           const rawHref = anchor.getAttribute("href") ?? "";
-
-          if (isFileLinkHref(rawHref)) {
-            openFileLink(rawHref);
-          } else if (isLocalDocumentPreviewHref(rawHref)) {
-            void openLocalDocument(rawHref);
-          } else {
-            void platform.shell.openUrl(anchor.href);
+          const touchActivation = lastTouchLinkActivationRef.current;
+          if (touchActivation?.href === rawHref && Date.now() - touchActivation.at < 800) {
+            lastTouchLinkActivationRef.current = null;
+            return true;
           }
+          activateAnchor(anchor);
 
           return true;
         }
@@ -1574,6 +1675,10 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     }
   }, [markdown, editor, filePath]);
 
+  useEffect(() => () => {
+    flushPendingSerialization();
+  }, []);
+
   if (!editor) {
     return null;
   }
@@ -1807,11 +1912,19 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
           x={selectionMenu.x}
           y={selectionMenu.y}
           hasSelection={selectionMenu.hasSelection}
+          headingLink={selectionMenu.headingLink}
           editor={editor}
           canEdit={!documentLocked}
           onCopyFormatted={() => copySelection("formatted")}
           onCopyMarkdown={() => copySelection("markdown")}
           onCopyPlainText={() => copySelection("plainText")}
+          onCopyHeadingLink={() => {
+            if (!selectionMenu.headingLink) return;
+            const title = editor.state.selection.$from.parent.textContent;
+            void writeHeadingLink(title, selectionMenu.headingLink).then(() => {
+              setFeedback({ kind: "success", message: t("editorContextMenu.headingLinkCopied") });
+            }).catch(() => setFeedback({ kind: "error", message: t("editorContextMenu.copyFailed") }));
+          }}
           onPaste={(plainText) => void pasteFromClipboard(plainText)}
           onInsertImage={() => void handleImageInsertRequest()}
           onInsertLink={handleLinkRequest}

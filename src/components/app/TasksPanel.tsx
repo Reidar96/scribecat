@@ -129,7 +129,7 @@ function taskItemKey(task: Pick<TaskItem, "filePath" | "lineIndex">): string {
   return `${task.filePath}:${task.lineIndex}`;
 }
 
-function scrollToNewTask(input: HTMLInputElement): void {
+function scrollToNewTask(input: HTMLElement): void {
   const container = input.closest<HTMLElement>(".tasks-main");
   if (!container) return;
   const start = container.scrollTop;
@@ -285,7 +285,7 @@ function TaskRow({
   const [dropPosition, setDropPosition] = useState<"before" | "after" | null>(
     null
   );
-  const textInputRef = useRef<HTMLInputElement>(null);
+  const textInputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     setTextDraft(task.text);
@@ -294,6 +294,24 @@ function TaskRow({
   useEffect(() => {
     setNoteDraft(task.note);
   }, [task.note]);
+
+  useLayoutEffect(() => {
+    const input = textInputRef.current;
+    if (!input) return;
+    let previousWidth = -1;
+    const resizeToContent = () => {
+      const width = input.clientWidth;
+      if (width === previousWidth) return;
+      previousWidth = width;
+      input.style.height = "auto";
+      input.style.height = `${input.scrollHeight}px`;
+    };
+    resizeToContent();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(resizeToContent);
+    observer.observe(input.parentElement ?? input);
+    return () => observer.disconnect();
+  }, [textDraft]);
 
   useLayoutEffect(() => {
     const input = noteInputRef.current;
@@ -502,9 +520,10 @@ function TaskRow({
       </label>
 
       <div className="tasks-item__content">
-        <input
+        <textarea
           ref={textInputRef}
           className="tasks-item__text"
+          rows={1}
           value={textDraft}
           onChange={(event) => setTextDraft(event.target.value)}
           onBlur={commitText}

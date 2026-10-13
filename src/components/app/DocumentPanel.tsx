@@ -983,6 +983,10 @@ export function DocumentPanel({
                     markdown={editorMarkdown ?? ""}
                     documentMarkdown={selectedFileContent}
                     onMarkdownChange={handleEditorMarkdownChange}
+                    onPersistMarkdown={(path, body) => {
+                      const document = fileDocuments[path];
+                      if (document) onSecondaryMarkdownChange(path, replaceBody(document.content, body));
+                    }}
                     onDocumentMarkdownChange={onMarkdownChange}
                     onCanonicalMarkdown={handleCanonicalMarkdown}
                     folderPath={folderPath}
@@ -1109,6 +1113,10 @@ export function DocumentPanel({
                                 replaceBody(secondaryDocument.content, body)
                               )
                             }
+                            onPersistMarkdown={(path, body) => {
+                              const document = fileDocuments[path];
+                              if (document) onSecondaryMarkdownChange(path, replaceBody(document.content, body));
+                            }}
                             onDocumentMarkdownChange={(markdown) =>
                               onSecondaryMarkdownChange(secondaryFilePath, markdown)
                             }

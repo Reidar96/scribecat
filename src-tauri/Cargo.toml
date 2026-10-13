@@ -1,6 +1,6 @@
 [package]
 name = "scribecat"
-version = "1.0.8"
+version = "1.0.9"
 description = "A local Markdown editor"
 authors = ["snooky234"]
 license = "MIT"
@@ -27,6 +27,7 @@ tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
 tauri-plugin-window-state = "2"
 tauri-plugin-opener = "2"
+tauri-plugin-clipboard-manager = "2"
 notify = "8"
 keyring = { version = "3", features = ["windows-native", "apple-native", "sync-secret-service"] }
 serde = { version = "1", features = ["derive"] }

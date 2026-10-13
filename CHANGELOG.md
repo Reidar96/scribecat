@@ -1,3 +1,10 @@
+## [1.0.9] - 2026-10-13
+
+- Allow task headings and document breadcrumbs to wrap or shrink on narrow screens.
+- Fix plain-text paste from the keyboard and editor context menu, using the native desktop clipboard in Tauri.
+- Copy links to Markdown headings from the editor context menu and jump to them within the note.
+- Keep the document-link search popup within the mobile viewport.
+
 ## [1.0.8] - 2026-10-02
 
 - Fix right-click paste so escaped HTML fragments are restored and parsed using the same editor clipboard pipeline as Ctrl+V.

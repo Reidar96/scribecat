@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Blocks, Code2, ImagePlus, Link2, Minus, Quote, Table2 } from "lucide-react";
+import { Blocks, Code2, Copy, ImagePlus, Link2, Minus, Quote, Table2 } from "lucide-react";
 import type { Editor } from "@tiptap/react";
 
 import { ContextMenuSurface } from "@/components/fileTree/ContextMenuSurface";
@@ -12,6 +12,7 @@ export type SelectionContextMenuState = {
   x: number;
   y: number;
   hasSelection: boolean;
+  headingLink?: string | null;
 };
 
 type SelectionContextMenuProps = SelectionContextMenuState & {
@@ -20,6 +21,7 @@ type SelectionContextMenuProps = SelectionContextMenuState & {
   onCopyFormatted: () => void;
   onCopyMarkdown: () => void;
   onCopyPlainText: () => void;
+  onCopyHeadingLink: () => void;
   onPaste: (plainText: boolean) => void;
   onInsertImage: () => void;
   onInsertLink: () => void;
@@ -31,11 +33,13 @@ export function SelectionContextMenu({
   x,
   y,
   hasSelection,
+  headingLink,
   editor,
   canEdit,
   onCopyFormatted,
   onCopyMarkdown,
   onCopyPlainText,
+  onCopyHeadingLink,
   onPaste,
   onInsertImage,
   onInsertLink,
@@ -82,6 +86,9 @@ export function SelectionContextMenu({
         </button>
       )) : null}
       {canEdit && hasSelection ? <div className="editor-context-menu__separator" role="separator" /> : null}
+      {headingLink ? <button type="button" role="menuitem" className="file-tree-context-menu__item" onClick={() => { onClose(); onCopyHeadingLink(); }}>
+        <span className="file-tree-context-menu__label">{t("editorContextMenu.copyHeadingLink")}</span><Copy aria-hidden="true" />
+      </button> : null}
       {copyItems.map((item) => (
         <button
           key={item.id}
