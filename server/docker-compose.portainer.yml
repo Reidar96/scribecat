@@ -53,7 +53,7 @@ services:
       # set this to your e-mail address and Caddy fetches a public certificate.
       SCRIBECAT_TLS: ${SCRIBECAT_TLS:-internal}
     volumes:
-      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ${SCRIBECAT_CADDYFILE:-./caddy/Caddyfile}:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
       - caddy-config:/config
 
