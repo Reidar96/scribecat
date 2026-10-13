@@ -32,6 +32,8 @@ concurrency:
 
 jobs:
   image:
+    # v1.0.9 is packaged locally and attached to the GitHub Release.
+    if: github.ref != 'refs/tags/v1.0.9'
     runs-on: ubuntu-latest
     env:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
