@@ -1156,3 +1156,11 @@ Improve voice transcription performance and language handling.
 
 ### Highlights
 - Initial release of ScribeDog
+## [1.1.1] - 2026-10-13
+
+- Keep copied heading links inside ScribeCat: jump within the current note or open the linked note and scroll to the heading. Pasting a copied heading link over selected text turns that text into a link.
+- Give Quick Notes immediate post-it editing and Books, Recipes, Shopping and Inventory dedicated Markdown-backed detail views. Add cover selection, editable sections, category and series fields, and local recipe checklists.
+- Standardize plugin settings and add a reorderable Apps overview with consistent home navigation.
+- Offer opt-in Recipes at `/oppskrifter` with a visual index and temporary ingredient/step checkboxes; keep the existing `/public/recipes` links working.
+- Offer opt-in public Shopping lists at `/handleliste`, scoped to explicitly published lists, with rate-limited add and checkbox actions.
+

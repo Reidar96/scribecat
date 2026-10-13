@@ -28,6 +28,8 @@ describe("public recipes", () => {
     const index = await get(context, "");
     expect(index.statusCode).toBe(200);
     expect(index.body).toContain("Focaccia");
+    expect((await context.app.inject({ method: "GET", url: "/anna/oppskrifter" })).body).toContain("Focaccia");
+    expect((await context.app.inject({ method: "GET", url: "/anna/oppskrifter/focaccia" })).body).toContain('type="checkbox"');
     expect(index.body).not.toContain("Hemmelig");
     expect((await get(context, "/hemmelig")).statusCode).toBe(404);
     const detail = await get(context, "/focaccia");

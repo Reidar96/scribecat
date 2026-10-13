@@ -58,11 +58,13 @@ function referencedImages(markdown: string, documentPath: string): Map<string, s
 function renderBody(recipe: Recipe): string {
   const paragraphs: string[] = [];
   const lines = recipe.body.split(/\r?\n/);
+  let checklist = false;
   for (const line of lines) {
     const heading = /^(#{1,3})\s+(.+)$/.exec(line);
     if (heading) {
       if (heading[1].length === 1 && heading[2].trim() === recipe.title) continue;
       paragraphs.push(`<h${heading[1].length}>${publicText(heading[2])}</h${heading[1].length}>`);
+      checklist = /^Ingredienser$|^Fremgangsmåte$/i.test(heading[2].trim());
       continue;
     }
     const image = /^!\[([^\]]*)\]\(([^\s)]+)\)/.exec(line);
@@ -75,17 +77,17 @@ function renderBody(recipe: Recipe): string {
       continue;
     }
     const item = /^(?:[-*] |\d+\. )(.*)$/.exec(line);
-    if (item) paragraphs.push(`<p class="item">• ${publicText(item[1])}</p>`);
+    if (item) paragraphs.push(checklist ? `<label class="item"><input type="checkbox"> ${publicText(item[1])}</label>` : `<p class="item">• ${publicText(item[1])}</p>`);
     else if (line.trim()) paragraphs.push(`<p>${publicText(line)}</p>`);
   }
   return paragraphs.join("\n");
 }
 
 function page(title: string, body: string, indexHref: string): string {
-  return `<!doctype html><html lang="no"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)} · ScribeCat Recipes</title><style>body{font:1rem/1.65 system-ui,sans-serif;max-width:50rem;margin:auto;padding:2rem 1rem;color:#242424;background:#faf9f6}a{color:#245d42}main{background:white;border:1px solid #e4e2de;border-radius:1rem;padding:clamp(1rem,4vw,3rem)}img{display:block;max-width:100%;height:auto;border-radius:.6rem}h1,h2,h3{line-height:1.25}.item{padding-left:1rem}nav{margin-bottom:1rem}</style></head><body><nav><a href="${indexHref}">ScribeCat Recipes</a></nav><main>${body}</main></body></html>`;
+  return `<!doctype html><html lang="no"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)} · Oppskrifter</title><style>body{font:1rem/1.65 system-ui,sans-serif;max-width:60rem;margin:auto;padding:2rem 1rem;color:#242424;background:#faf9f6}a{color:#245d42;text-decoration:none}main{background:white;border:1px solid #e4e2de;border-radius:1rem;padding:clamp(1rem,4vw,3rem)}img{display:block;max-width:100%;height:auto;border-radius:.6rem}h1,h2,h3{line-height:1.25}.item{display:block;padding:.3rem 0}.item input{accent-color:#245d42}nav{margin-bottom:1rem}.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(12rem,1fr));gap:1rem;list-style:none;padding:0}.cards a{display:block;border:1px solid #e4e2de;border-radius:.7rem;padding:.65rem}.cards img{width:100%;aspect-ratio:4/3;object-fit:cover;margin-bottom:.5rem}</style></head><body><nav><a href="${indexHref}">⌂ Oppskrifter</a></nav><main>${body}</main></body></html>`;
 }
 
-export const publicRecipeRoutes: FastifyPluginAsync<{ vault: Vault }> = async (app, { vault }) => {
+export const publicRecipeRoutes: FastifyPluginAsync<{ vault: Vault; routeBase?: string }> = async (app, { vault, routeBase = "/recipes" }) => {
   async function publishedRecipes(): Promise<Recipe[]> {
     let folder: string | null = null;
     try {
@@ -121,19 +123,19 @@ export const publicRecipeRoutes: FastifyPluginAsync<{ vault: Vault }> = async (a
     reply.header("Content-Security-Policy", "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'");
   });
 
-  app.get("/recipes", async (_request, reply) => {
+  app.get(routeBase, async (_request, reply) => {
     const recipes = await publishedRecipes();
-    const items = recipes.map((recipe) => `<li><a href="recipes/${encodeURIComponent(recipe.slug)}">${escapeHtml(recipe.title)}</a></li>`).join("");
-    return reply.type("text/html; charset=utf-8").send(page("Oppskrifter", `<h1>Oppskrifter</h1><ul>${items}</ul>`, "recipes"));
+    const items = recipes.map((recipe) => `<li><a href="${routeBase.slice(1)}/${encodeURIComponent(recipe.slug)}">${recipe.coverToken ? `<img src="${routeBase.slice(1)}/${encodeURIComponent(recipe.slug)}/media/${recipe.coverToken}" alt="">` : ""}<strong>${escapeHtml(recipe.title)}</strong></a></li>`).join("");
+    return reply.type("text/html; charset=utf-8").send(page("Oppskrifter", `<h1>Oppskrifter</h1><ul class="cards">${items}</ul>`, routeBase.slice(1)));
   });
-  app.get<{ Params: { slug: string } }>("/recipes/:slug", async (request, reply) => {
+  app.get<{ Params: { slug: string } }>(`${routeBase}/:slug`, async (request, reply) => {
     if (!SLUG.test(request.params.slug)) return reply.code(404).send();
     const recipe = (await publishedRecipes()).find((entry) => entry.slug === request.params.slug);
     if (!recipe) return reply.code(404).send();
     return reply.type("text/html; charset=utf-8").send(page(recipe.title,
-      `<h1>${escapeHtml(recipe.title)}</h1>${recipe.coverToken ? `<img src="${encodeURIComponent(recipe.slug)}/media/${recipe.coverToken}" alt="">` : ""}${recipe.servings ? `<p>${escapeHtml(recipe.servings)} porsjoner</p>` : ""}${renderBody(recipe)}`, "../recipes"));
+      `<h1>${escapeHtml(recipe.title)}</h1>${recipe.coverToken ? `<img src="${encodeURIComponent(recipe.slug)}/media/${recipe.coverToken}" alt="">` : ""}${recipe.servings ? `<p>${escapeHtml(recipe.servings)} porsjoner</p>` : ""}${renderBody(recipe)}`, `../${routeBase.slice(1)}`));
   });
-  app.get<{ Params: { slug: string; token: string } }>("/recipes/:slug/media/:token", async (request, reply) => {
+  app.get<{ Params: { slug: string; token: string } }>(`${routeBase}/:slug/media/:token`, async (request, reply) => {
     if (!SLUG.test(request.params.slug) || !/^[a-f0-9]{32}$/.test(request.params.token)) return reply.code(404).send();
     const recipe = (await publishedRecipes()).find((entry) => entry.slug === request.params.slug);
     const imagePath = recipe?.images.get(request.params.token);

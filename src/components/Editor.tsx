@@ -655,6 +655,8 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
           ?.scrollIntoView({ behavior: "smooth", block: "start" });
       } else if (target) onRequestFileOpen?.(target, headingLink.anchor);
       else setFeedback({ kind: "error", message: t("editor.linkTargetMissing", { href: headingLink.relativePath }) });
+    } else if (rawHref.startsWith("scribecat:")) {
+      setFeedback({ kind: "error", message: t("editor.linkTargetMissing", { href: rawHref }) });
     } else if (isFileLinkHref(rawHref)) {
       openFileLink(rawHref);
     } else if (rawHref.startsWith("#")) {
