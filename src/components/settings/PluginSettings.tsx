@@ -42,7 +42,7 @@ export function PluginSettings() {
       {plugin.defaultFolder ? checkbox("Vis i flytt-dialogen", preference.includeInMove, (includeInMove) => update(selected, { includeInMove })) : null}</section> : null}
       {plugin.capabilities.includes("publicView") ? <section><h4>Deling</h4>
         {checkbox("Offentlig visning", preference.publicView, (publicView) => update(selected, { publicView }))}
-        <p>{selected === "recipes" ? "Kun oppskrifter merket som publisert vises på /oppskrifter." : selected === "inventory" ? "Kun inventargjenstander merket som publisert vises på /inventar. Private felt som pris og serienummer vises aldri." : "En offentlig handleliste kan endres av alle som kjenner adressen. Del bare når det er ønskelig."}</p>
+        <p>{selected === "recipes" ? "Kun oppskrifter merket som publisert vises på /oppskrifter." : selected === "books" ? "Kun bøker merket som publisert vises på /boker. Private notater vises ikke." : selected === "inventory" ? "Kun inventargjenstander merket som publisert vises på /inventar. Private felt som pris og serienummer vises aldri." : "En offentlig handleliste kan endres av alle som kjenner adressen. Del bare når det er ønskelig."}</p>
       </section> : null}
     </div>
     {selected === "journal" || selected === "tasks" ? <VaultSettings pluginId={selected} /> : null}

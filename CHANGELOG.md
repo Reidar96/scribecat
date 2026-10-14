@@ -1,3 +1,10 @@
+## [1.1.3] - 2026-10-14
+
+- Intercept editor link clicks before the browser's default action, so heading links navigate within ScribeCat without an extra blank tab.
+- Create plugin entries inline in the card view with confirm and cancel controls. Books, Recipes and Inventory now keep each Markdown document and its `_attachments` directory together in a dedicated folder.
+- Add opt-in public Books at `/boker`, showing only explicitly published books and public summary fields. Add the matching sharing setting and per-book publication checkbox.
+- Show scaled recipe quantities directly in editable ingredient rows, support custom units, and reveal ingredient and step entry fields with a plus action. Allow editing existing Shopping items, book highlights and Inventory maintenance rows in their dedicated views.
+
 ## [1.1.2] - 2026-10-14
 
 - Keep copied heading links inside ScribeCat and scroll to the target instead of opening an empty browser tab.

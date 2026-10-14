@@ -7,6 +7,7 @@ describe("structured recipe Markdown", () => {
       { amount: "500", unit: "g", name: "Potet" }, { amount: "", unit: "", name: "Salt etter smak" }
     ]);
     expect(ingredientMarkdown(parseIngredients("- 500 g Potet\n- Salt etter smak"))).toBe("- 500 g Potet\n- Salt etter smak");
+    expect(parseIngredients("- 2 klyper salt")).toEqual([{ amount: "2", unit: "klyper", name: "salt" }]);
     expect(stepsMarkdown(parseSteps("1. Kok opp\n2. Stek gyllen"))).toBe("1. Kok opp\n2. Stek gyllen");
   });
   it("scales decimal and fractional quantities", () => {

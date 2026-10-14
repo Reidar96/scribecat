@@ -38,7 +38,10 @@ function ShoppingItems({ entry, onChange }: { entry: PluginEntry; onChange: (mar
         <input type="checkbox" checked={line.startsWith("- [x]")} onChange={() => {
           const next = sectionLines.map((item, at) => at === lineIndex ? item.replace(/^(- \[)[ x](\])/, `$1${line.startsWith("- [x]") ? " " : "x"}$2`) : item);
           void onChange(setPluginSection(entry.markdown, category, next.join("\n")));
-        }} /><span>{line.slice(6)}</span>
+      }} /><input aria-label={`Vare ${line.slice(6)}`} key={line} defaultValue={line.slice(6)} onBlur={(event) => {
+        const value = event.currentTarget.value.trim().replace(/[\r\n]/g, " ");
+        if (value && value !== line.slice(6)) void onChange(setPluginSection(entry.markdown, category, sectionLines.map((row, at) => at === lineIndex ? `${line.slice(0, 6)}${value}` : row).join("\n")));
+      }} />
         <button aria-label={`Slett ${line.slice(6)}`} onClick={() => void onChange(setPluginSection(entry.markdown, category, sectionLines.filter((_, at) => at !== lineIndex).join("\n")))}><Trash2 size={15} /></button>
       </label>)}
       <form onSubmit={(event) => {
@@ -64,6 +67,9 @@ function RecipeEditor({ entry, servings, onChange }: { entry: PluginEntry; servi
   const [steps, setSteps] = useState<string[]>(() => parseSteps(pluginSection(entry.markdown, "Fremgangsmåte")));
   const [draft, setDraft] = useState<Ingredient>({ amount: "", unit: "", name: "" });
   const [stepDraft, setStepDraft] = useState("");
+  const [addingIngredient, setAddingIngredient] = useState(false);
+  const [addingStep, setAddingStep] = useState(false);
+  const [amountEdits, setAmountEdits] = useState<Record<number, string>>({});
   useEffect(() => {
     setIngredients(parseIngredients(pluginSection(entry.markdown, "Ingredienser")));
     setSteps(parseSteps(pluginSection(entry.markdown, "Fremgangsmåte")));
@@ -72,24 +78,28 @@ function RecipeEditor({ entry, servings, onChange }: { entry: PluginEntry; servi
   const saveSteps = (next: string[]) => { setSteps(next); void onChange(setPluginSection(entry.markdown, "Fremgangsmåte", stepsMarkdown(next))); };
   const baseServings = Number(entry.metadata.servings) || 4;
   return <div className="plugin-detail__recipe-grid">
-    <section className="plugin-detail__section"><h3>Ingredienser</h3>
+    <section className="plugin-detail__section"><div className="plugin-detail__section-heading"><h3>Ingredienser</h3><button type="button" onClick={() => setAddingIngredient(true)}><Plus size={16} /> Legg til</button></div>
       <ul className="plugin-detail__recipe-list">{ingredients.map((item, index) => <li key={index}><label className="plugin-detail__ingredient"><input type="checkbox" aria-label={`Brukt ${item.name}`} />
-        <input aria-label={`Mengde for ${item.name}`} value={item.amount} onChange={(event) => setIngredients(ingredients.map((row, at) => at === index ? { ...row, amount: event.target.value } : row))} onBlur={() => saveIngredients(ingredients)} />
+        <input aria-label={`Mengde for ${item.name}`} value={amountEdits[index] ?? scaledAmount(item.amount, baseServings, servings)} onChange={(event) => setAmountEdits((edits) => ({ ...edits, [index]: event.target.value }))} onBlur={() => {
+          if (amountEdits[index] === undefined) return;
+          saveIngredients(ingredients.map((row, at) => at === index ? { ...row, amount: scaledAmount(amountEdits[index], servings, baseServings) } : row));
+          setAmountEdits((edits) => { const next = { ...edits }; delete next[index]; return next; });
+        }} />
         <input aria-label={`Enhet for ${item.name}`} value={item.unit} onChange={(event) => setIngredients(ingredients.map((row, at) => at === index ? { ...row, unit: event.target.value } : row))} onBlur={() => saveIngredients(ingredients)} />
         <input aria-label="Ingrediens" value={item.name} onChange={(event) => setIngredients(ingredients.map((row, at) => at === index ? { ...row, name: event.target.value } : row))} onBlur={() => saveIngredients(ingredients)} />
         <button type="button" aria-label={`Slett ${item.name}`} onClick={() => saveIngredients(ingredients.filter((_, at) => at !== index))}><Trash2 size={15} /></button></label>
-        {servings !== baseServings && item.amount && <small>{scaledAmount(item.amount, baseServings, servings)} {item.unit} ved {servings} porsjoner</small>}</li>)}</ul>
-      <form className="plugin-detail__add-row" onSubmit={(event) => { event.preventDefault(); if (!draft.name.trim()) return; saveIngredients([...ingredients, draft]); setDraft({ amount: "", unit: "", name: "" }); }}>
+        </li>)}</ul>
+      {addingIngredient && <form className="plugin-detail__add-row" onSubmit={(event) => { event.preventDefault(); if (!draft.name.trim()) return; saveIngredients([...ingredients, { ...draft, amount: scaledAmount(draft.amount, servings, baseServings) }]); setDraft({ amount: "", unit: "", name: "" }); setAddingIngredient(false); }}>
         <input aria-label="Mengde" placeholder="Mengde" value={draft.amount} onChange={(event) => setDraft({ ...draft, amount: event.target.value })} />
         <input aria-label="Enhet" placeholder="Enhet" value={draft.unit} onChange={(event) => setDraft({ ...draft, unit: event.target.value })} />
         <input aria-label="Ny ingrediens" placeholder="Ingrediens" value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} />
-        <Button type="submit" aria-label="Legg til ingrediens"><Plus size={16} /></Button></form></section>
-    <section className="plugin-detail__section"><h3>Fremgangsmåte</h3><ol className="plugin-detail__recipe-list">{steps.map((step, index) => <li key={index} className="plugin-detail__step"><span>Steg {index + 1}</span><label><input type="checkbox" aria-label={`Fullført steg ${index + 1}`} />
+        <Button type="submit" aria-label="Lagre ingrediens">✓</Button><button type="button" aria-label="Avbryt" onClick={() => setAddingIngredient(false)}>×</button></form>}</section>
+    <section className="plugin-detail__section"><div className="plugin-detail__section-heading"><h3>Fremgangsmåte</h3><button type="button" onClick={() => setAddingStep(true)}><Plus size={16} /> Legg til</button></div><ol className="plugin-detail__recipe-list">{steps.map((step, index) => <li key={index} className="plugin-detail__step"><span>Steg {index + 1}</span><label><input type="checkbox" aria-label={`Fullført steg ${index + 1}`} />
       <textarea aria-label={`Steg ${index + 1}`} value={step} onChange={(event) => setSteps(steps.map((row, at) => at === index ? event.target.value : row))} onBlur={() => saveSteps(steps)} /></label>
       <button type="button" aria-label={`Slett steg ${index + 1}`} onClick={() => saveSteps(steps.filter((_, at) => at !== index))}><Trash2 size={15} /></button></li>)}</ol>
-      <form className="plugin-detail__add-row" onSubmit={(event) => { event.preventDefault(); if (!stepDraft.trim()) return; saveSteps([...steps, stepDraft]); setStepDraft(""); }}>
+      {addingStep && <form className="plugin-detail__add-row" onSubmit={(event) => { event.preventDefault(); if (!stepDraft.trim()) return; saveSteps([...steps, stepDraft]); setStepDraft(""); setAddingStep(false); }}>
         <input aria-label="Nytt steg" placeholder="Beskriv neste steg" value={stepDraft} onChange={(event) => setStepDraft(event.target.value)} />
-        <Button type="submit" aria-label="Legg til steg"><Plus size={16} /></Button></form></section>
+        <Button type="submit" aria-label="Lagre steg">✓</Button><button type="button" aria-label="Avbryt" onClick={() => setAddingStep(false)}>×</button></form>}</section>
   </div>;
 }
 
@@ -99,7 +109,10 @@ function LineItemsEditor({ entry, heading, placeholder, onChange }: { entry: Plu
   const save = (next: string[]) => void onChange(setPluginSection(entry.markdown, heading,
     next.filter((line) => line.trim()).map((line) => `- ${line.trim().replace(/[\r\n]/g, " ")}`).join("\n")));
   return <section className="plugin-detail__section"><h3>{heading}</h3><ul className="plugin-detail__recipe-list">{lines.map((line, index) =>
-    <li key={`${index}-${line}`} className="plugin-detail__simple-row"><span>{line}</span><button type="button" aria-label={`Slett ${line}`} onClick={() => save(lines.filter((_, at) => at !== index))}><Trash2 size={15} /></button></li>)}</ul>
+    <li key={`${index}-${line}`} className="plugin-detail__simple-row"><input aria-label={`${heading} ${index + 1}`} defaultValue={line} onBlur={(event) => {
+      const value = event.currentTarget.value.trim();
+      if (value && value !== line) save(lines.map((row, at) => at === index ? value : row));
+    }} /><button type="button" aria-label={`Slett ${line}`} onClick={() => save(lines.filter((_, at) => at !== index))}><Trash2 size={15} /></button></li>)}</ul>
     <form className="plugin-detail__add-row plugin-detail__add-row--simple" onSubmit={(event) => { event.preventDefault(); if (draft.trim()) { save([...lines, draft]); setDraft(""); } }}>
       <input aria-label={`Legg til i ${heading}`} placeholder={placeholder} value={draft} onChange={(event) => setDraft(event.target.value)} /><Button type="submit" aria-label={`Legg til i ${heading}`}><Plus size={16} /></Button></form></section>;
 }
@@ -133,7 +146,8 @@ export function ContentPluginDetail({ id, entry, vaultPath, publicView, onBack, 
           onSave={(value) => void onChange(setPluginTitle(entry.markdown, id === "inventory" ? "name" : "title", value))} />
           {id === "books" && <>{metadataField("Forfatter", "author")}
             <label className="plugin-detail__field"><span>Lesestatus</span><select value={entry.metadata.status || "want-to-read"} onChange={(event) => field("status", event.target.value)}><option value="want-to-read">Vil lese</option><option value="reading">Leser</option><option value="finished">Lest</option></select></label>
-            {metadataField("Kategori", "category")}{metadataField("Serie", "series")}{metadataField("Samling", "collection")}{metadataField("Startet", "started", "date")}{metadataField("Fullført", "finished", "date")}{metadataField("Vurdering (1–5)", "rating", "number")}</>}
+            {metadataField("Kategori", "category")}{metadataField("Serie", "series")}{metadataField("Samling", "collection")}{metadataField("Startet", "started", "date")}{metadataField("Fullført", "finished", "date")}{metadataField("Vurdering (1–5)", "rating", "number")}
+            <label className="plugin-detail__field"><span>Offentlig</span><input type="checkbox" checked={published} disabled={!publicView && !published} onChange={() => field("published", String(!published))} /></label></>}
           {id === "recipes" && <>{metadataField("Kategori", "category")}{metadataField("Standardporsjoner", "servings", "number")}
             <button onClick={() => void onChange(setPluginField(entry.markdown, "favorite", entry.metadata.favorite !== "true"))}>{entry.metadata.favorite === "true" ? "★ Favoritt" : "☆ Favoritt"}</button>
             <label className="plugin-detail__field"><span>Offentlig</span><input type="checkbox" checked={published} disabled={!publicView && !published} onChange={() => {

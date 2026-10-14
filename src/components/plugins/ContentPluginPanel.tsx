@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Home, PanelLeft, Plus, Search } from "lucide-react";
+import { Check, FileText, Home, PanelLeft, Plus, Search, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { splitFrontmatter } from "@/lib/documentFrontmatter";
 import { createPluginApi } from "@/plugins/api";
 import { newPluginDocument, pluginMetadata, safeDocumentName, setPluginField } from "@/plugins/markdown";
 import { pluginById, type PluginId } from "@/plugins/registry";
-import { join } from "@/platform/paths";
-import { exists } from "@/platform/vaultFs";
+import { dirname, join } from "@/platform/paths";
+import { exists, mkdir } from "@/platform/vaultFs";
 import { usePluginStore } from "@/store/usePluginStore";
 import { useLayoutMode } from "@/hooks/useLayoutMode";
 import { PluginCover } from "@/components/plugins/PluginCover";
@@ -32,14 +32,19 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
   const folder = usePluginStore((state) => state.config.plugins[id]?.folder ?? manifest.defaultFolder ?? "");
   const publicView = usePluginStore((state) => state.config.plugins[id]?.publicView ?? false);
   const deleteFile = useAppStore((state) => state.deleteFilePath);
+  const deleteFolder = useAppStore((state) => state.deleteFolderPath);
   const api = createPluginApi(id, folderPath, onOpenFile);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("");
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [newNotePath, setNewNotePath] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [nameDraft, setNameDraft] = useState("");
+  const [savingNew, setSavingNew] = useState(false);
+  const nameInput = useRef<HTMLInputElement>(null);
   const [error, setError] = useState("");
-  const [dialog, setDialog] = useState<{ kind: "new" | "delete" | "category"; path?: string; label?: string } | null>(null);
+  const [dialog, setDialog] = useState<{ kind: "delete" | "category"; path?: string; label?: string } | null>(null);
   const pendingWrites = useRef(new Map<string, Promise<void>>());
   const paths = useMemo(() => filePaths.filter((path) => {
     const relative = path.replace(/\\/g, "/");
@@ -65,6 +70,7 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
   useEffect(() => {
     if (newNotePath) document.querySelector<HTMLTextAreaElement>(`[data-note-path="${CSS.escape(newNotePath)}"]`)?.focus();
   }, [newNotePath, entries]);
+  useEffect(() => { if (creating) nameInput.current?.focus(); }, [creating]);
 
   const visible = entries.filter((entry) => {
     if (id === "quick-notes" && filter !== "arkiv" && entry.metadata.archived === "true") return false;
@@ -85,25 +91,31 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
   const add = async (title: string) => {
     if (!title?.trim()) return;
     const name = safeDocumentName(title);
-    const base = await join(folderPath, ...folder.split("/"), `${name}.md`);
-    let path = base;
+    const root = await join(folderPath, ...folder.split("/"));
+    let entryFolder = await join(root, name);
     let number = 2;
-    while (filePaths.some((existing) => existing.toLocaleLowerCase() === path.toLocaleLowerCase()) || await exists(path).catch(() => false)) {
-      path = await join(folderPath, ...folder.split("/"), `${name} ${number++}.md`);
+    while (await exists(entryFolder).catch(() => false) || filePaths.some((existing) => existing.toLocaleLowerCase().startsWith(`${entryFolder.toLocaleLowerCase()}/`))) {
+      entryFolder = await join(root, `${name} ${number++}`);
     }
+    const path = await join(entryFolder, `${entryFolder.split(/[\\/]/).pop()}.md`);
     try {
+      setSavingNew(true);
       if (await api.saveMarkdown(path, newPluginDocument(id, title))) {
+        if (manifest.capabilities.includes("attachments")) await mkdir(await join(entryFolder, "_attachments"), { recursive: true });
         if (id === "quick-notes") setNewNotePath(path);
         else setSelectedPath(path);
+        setCreating(false);
+        setNameDraft("");
         setError("");
       }
       else setError("Kunne ikke opprette dokumentet.");
     } catch { setError("Kunne ikke opprette dokumentet."); }
+    finally { setSavingNew(false); }
   };
 
   const requestAdd = () => {
     if (id === "quick-notes") void add(`Huskelapp ${new Date().toLocaleString("sv-SE").replace(/[ :]/g, "-")}`);
-    else setDialog({ kind: "new" });
+    else { setSelectedPath(null); setCreating(true); setNameDraft(""); }
   };
 
   const change = async (entry: Entry, markdown: string) => {
@@ -144,7 +156,12 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
           {!(["want-to-read", "reading", "finished", "true", "arkiv", "garanti", "favoritter"].includes(value)) && <button title={`Slett kategorien ${value}`} aria-label={`Slett kategorien ${value}`} onClick={() => setDialog({ kind: "category", label: value })}>×</button>}</span>)}
       </div> : null}
       {error ? <p role="alert">{error}</p> : null}
-      <div className={`content-plugin-panel__grid content-plugin-panel__grid--${id}`}>{visible.map((entry) => {
+      <div className={`content-plugin-panel__grid content-plugin-panel__grid--${id}`}>{creating && <form className="content-plugin-panel__card content-plugin-panel__new-card" onSubmit={(event) => { event.preventDefault(); if (!savingNew) void add(nameDraft); }}>
+        <FileText size={25} aria-hidden="true" />
+        <input ref={nameInput} aria-label="Navn på ny oppføring" placeholder="Navn" value={nameDraft} maxLength={90} onChange={(event) => setNameDraft(event.target.value)} onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); setCreating(false); } }} />
+        <button type="submit" disabled={!nameDraft.trim() || savingNew} aria-label="Fullfør"><Check size={20} /></button>
+        <button type="button" aria-label="Avbryt" onClick={() => setCreating(false)}><X size={20} /></button>
+      </form>}{visible.map((entry) => {
         const body = splitFrontmatter(entry.markdown).body;
         return <article key={entry.path} className="content-plugin-panel__card">
           {id !== "quick-notes" && <button className="content-plugin-panel__tile" onClick={() => setSelectedPath(entry.path)}>
@@ -168,18 +185,21 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
           </> : null}
         </article>;
       })}</div>
-      {visible.length === 0 ? <p>Ingen oppføringer her ennå.</p> : null}
+      {visible.length === 0 && !creating ? <p>Ingen oppføringer her ennå.</p> : null}
       </>}
     </div>
-    {dialog && <PluginDialog key={`${dialog.kind}-${dialog.path ?? dialog.label ?? ""}`} title={dialog.kind === "new" ? `Ny ${manifest.name.toLocaleLowerCase()}` : dialog.kind === "category" ? `Slette kategorien «${dialog.label}»?` : `Flytte «${dialog.label}» til papirkurven?`}
-      label={dialog.kind === "new" ? "Navn" : undefined} confirmLabel={dialog.kind === "new" ? "Opprett" : "Slett"} destructive={dialog.kind !== "new"}
-      onCancel={() => setDialog(null)} onConfirm={(value) => {
+    {dialog && <PluginDialog key={`${dialog.kind}-${dialog.path ?? dialog.label ?? ""}`} title={dialog.kind === "category" ? `Slette kategorien «${dialog.label}»?` : `Flytte «${dialog.label}» til papirkurven?`}
+      confirmLabel="Slett" destructive
+      onCancel={() => setDialog(null)} onConfirm={() => {
         const action = dialog;
         setDialog(null);
-        if (action.kind === "new") { void add(value); return; }
         if (action.kind === "delete" && action.path) {
           if (pendingWrites.current.has(action.path)) { setError("Vent til endringen er lagret før du sletter."); return; }
-          void deleteFile(action.path).then((ok) => { if (ok) { setEntries((items) => items.filter((item) => item.path !== action.path)); setSelectedPath(null); } else setError("Kunne ikke slette oppføringen."); });
+          void (async () => {
+            const entryFolder = await dirname(action.path!);
+            const ownFolder = entryFolder.split(/[\\/]/).pop() === action.path!.split(/[\\/]/).pop()?.replace(/\.md$/i, "");
+            return ownFolder ? deleteFolder(entryFolder) : deleteFile(action.path!);
+          })().then((ok) => { if (ok) { setEntries((items) => items.filter((item) => item.path !== action.path)); setSelectedPath(null); } else setError("Kunne ikke slette oppføringen."); });
         }
         if (action.kind === "category" && action.label) {
           setFilter("");

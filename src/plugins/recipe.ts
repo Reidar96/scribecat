@@ -4,7 +4,7 @@ export type Ingredient = { amount: string; unit: string; name: string };
 export function parseIngredients(section: string): Ingredient[] {
   return section.split(/\r?\n/).filter((line) => /^-\s+\S/.test(line)).map((line) => {
     const text = line.replace(/^-\s+/, "");
-    const match = /^(\d+(?:[.,]\d+)?|\d+\/\d+)\s+(g|kg|mg|ml|l|dl|cl|ts|ss|stk|pk|fedd)\s+(.+)$/i.exec(text);
+    const match = /^(\d+(?:[.,]\d+)?|\d+\/\d+)\s+(\S+)\s+(.+)$/i.exec(text);
     return match ? { amount: match[1], unit: match[2], name: match[3] } : { amount: "", unit: "", name: text };
   });
 }

@@ -84,7 +84,7 @@ function renderBody(recipe: Recipe): string {
     }
     const item = /^(?:[-*] |\d+\. )(.*)$/.exec(line);
     if (item) {
-      const ingredient = /^(\d+(?:[.,]\d+)?|\d+\/\d+)\s+(g|kg|mg|ml|l|dl|cl|ts|ss|stk|pk|fedd)\s+(.+)$/i.exec(item[1]);
+      const ingredient = /^(\d+(?:[.,]\d+)?|\d+\/\d+)\s+(\S+)\s+(.+)$/i.exec(item[1]);
       const value = ingredient ? `<span class="amount" data-base="${escapeHtml(ingredient[1])}">${escapeHtml(ingredient[1])}</span> ${publicText(ingredient[2])} ${publicText(ingredient[3])}` : publicText(item[1]);
       paragraphs.push(checklist ? `<label class="item"><input type="checkbox"> <span>${value}</span></label>` : `<p class="item">• ${value}</p>`);
     }

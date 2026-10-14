@@ -672,6 +672,29 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     }
   };
 
+  // ProseMirror's delegated click handler may run after the browser has
+  // already followed an anchor (notably on macOS WebKit). Intercept in the
+  // capture phase so an internal heading link cannot spawn about:blank.
+  useEffect(() => {
+    const dom = editor?.view.dom;
+    if (!dom) return;
+    const intercept = (event: MouseEvent) => {
+      const anchor = (event.target as Element | null)?.closest?.("a[href]") as HTMLAnchorElement | null;
+      if (!anchor) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      const href = anchor.getAttribute("href") ?? "";
+      const touch = lastTouchLinkActivationRef.current;
+      if (touch?.href === href && Date.now() - touch.at < 800) {
+        lastTouchLinkActivationRef.current = null;
+        return;
+      }
+      activateAnchor(anchor);
+    };
+    dom.addEventListener("click", intercept, true);
+    return () => dom.removeEventListener("click", intercept, true);
+  });
+
   const openLocalDocument = async (href: string) => {
     if (!filePath) return;
 

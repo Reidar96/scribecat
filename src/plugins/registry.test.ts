@@ -31,6 +31,12 @@ describe("plugin storage policies", () => {
     expect(markdown).toContain("## Ingredienser");
   });
 
+  it("keeps book publication opt-in in both settings and Markdown", () => {
+    const config = normalizePluginConfiguration({ plugins: { books: { publicView: true } } });
+    expect(config.plugins.books?.publicView).toBe(true);
+    expect(pluginMetadata(newPluginDocument("books", "En bok"))).toMatchObject({ slug: "en-bok", published: "false" });
+  });
+
   it("reorders shopping categories without separating items or frontmatter", () => {
     const markdown = "---\nscribecat-plugin: shopping\n---\n# Uke\n\n## Kjøl\n\n- [ ] Melk\n\n## Frukt\n\n- [ ] Eple\n";
     const moved = moveMarkdownSection(markdown, "Frukt", -1);

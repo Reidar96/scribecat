@@ -28,7 +28,7 @@ export function newPluginDocument(id: PluginId, title: string): string {
   const common = `scribecat-plugin: ${id}\n`;
   switch (id) {
     case "quick-notes": return `---\n${common}type: quick-note\ncreated: ${date}\npinned: false\n---\n\n`;
-    case "books": return `---\n${common}type: book\ntitle: ${quoted}\nauthor: ""\nstatus: want-to-read\nrating: ""\n---\n\n# ${safeTitle}\n\n## Oppsummering\n\n## Høydepunkter\n\n## Mine tanker\n\n`;
+    case "books": return `---\n${common}type: book\ntitle: ${quoted}\nslug: ${pluginSlug(safeTitle)}\nauthor: ""\nstatus: want-to-read\nrating: ""\npublished: false\n---\n\n# ${safeTitle}\n\n## Oppsummering\n\n## Høydepunkter\n\n## Mine tanker\n\n`;
     case "shopping": return `---\n${common}type: shopping-list\ntitle: ${quoted}\nslug: ${pluginSlug(safeTitle)}\ndate: ${date.slice(0, 10)}\npublished: false\n---\n\n# ${safeTitle}\n\n## Annet\n\n`;
     case "recipes": return `---\n${common}type: recipe\ntitle: ${quoted}\nslug: ${pluginSlug(safeTitle)}\nservings: 4\nfavorite: false\npublished: false\n---\n\n# ${safeTitle}\n\n## Beskrivelse\n\n## Ingredienser\n\n## Fremgangsmåte\n\n## Notater\n\n`;
     case "inventory": return `---\n${common}type: item\nname: ${quoted}\nslug: ${pluginSlug(safeTitle)}\ncategory: ""\nlocation: ""\nquantity: 1\npublished: false\n---\n\n# ${safeTitle}\n\n## Notater\n\n## Vedlikehold\n\n`;
