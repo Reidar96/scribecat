@@ -1,3 +1,11 @@
+## [1.2.0] - 2026-10-14
+
+- Keep heading links inside the editor without a browser `href`; show deleted headings as inactive, navigate across notes only when the target heading exists, and support keyboard activation.
+- Align the Books, Recipes, Inventory and Shopping public pages with a shared ScribeCat navigation rail, violet controls, responsive cards and statistics. Add category creation on public Shopping lists.
+- Give plugin detail editors an explicit Cancel action and a reading view without a private subnavigation panel. Give Quick Notes a Save/Cancel flow with recoverable local drafts and a check against external changes.
+- Scope category, author, series, collection and location filters to their own Markdown fields so removing one value cannot erase another field with the same name.
+- Read plugin collections in bounded batches and scan only their configured folders for public pages. Preserve readable Markdown, attachment folders, existing vault paths and container volumes.
+
 ## [1.1.4] - 2026-10-14
 
 - Handle heading-link clicks before browser navigation, including absolute clipboard fragments, without opening an extra tab.

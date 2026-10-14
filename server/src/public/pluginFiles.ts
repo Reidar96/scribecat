@@ -20,3 +20,16 @@ export async function pluginMarkdownPaths(vault: Vault, folder: string): Promise
   await visit(folder);
   return files;
 }
+
+export async function readPluginMarkdown(vault: Vault, folder: string): Promise<Array<{ relativePath: string; markdown: string }>> {
+  const paths = await pluginMarkdownPaths(vault, folder);
+  const results: Array<{ relativePath: string; markdown: string }> = [];
+  for (let at = 0; at < paths.length; at += 16) {
+    const batch = await Promise.all(paths.slice(at, at + 16).map(async (relativePath) => {
+      try { return { relativePath, markdown: await vault.readText(relativePath) }; }
+      catch { return null; } // A document can disappear during the scan.
+    }));
+    for (const item of batch) if (item) results.push(item);
+  }
+  return results;
+}

@@ -20,14 +20,18 @@ const previewMarkdown = new MarkdownIt({ html: false, linkify: false }).disable(
 type Props = { id: PluginId; entry: PluginEntry; vaultPath: string; publicView: boolean; isNew: boolean; dirty: boolean; saving: boolean; onSave: () => void; onBack: () => void; onCancelEdit: () => void; onChange: (markdown: string) => Promise<void>; onDelete: () => void };
 
 function Field({ label, value, onSave, type = "text", autoFocus = false }: { label: string; value: string; onSave: (value: string) => void; type?: string; autoFocus?: boolean }) {
-  return <label className="plugin-detail__field"><span>{label}</span><input key={`${label}-${value}`} type={type} defaultValue={value} autoFocus={autoFocus}
-    onBlur={(event) => { if (event.target.value !== value) onSave(event.target.value); }}
+  const [draft, setDraft] = useState(value);
+  useEffect(() => { setDraft((current) => current.trim() === value.trim() ? current : value); }, [value]);
+  return <label className="plugin-detail__field"><span>{label}</span><input type={type} value={draft} autoFocus={autoFocus}
+    onChange={(event) => { setDraft(event.target.value); onSave(event.target.value); }}
     onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }} /></label>;
 }
 
 function Section({ title, value, onSave, placeholder }: { title: string; value: string; onSave: (value: string) => void; placeholder?: string }) {
-  return <section className="plugin-detail__section"><h3>{title}</h3><textarea key={`${title}-${value}`} defaultValue={value} placeholder={placeholder}
-    onBlur={(event) => { if (event.target.value.trim() !== value.trim()) onSave(event.target.value); }} /></section>;
+  const [draft, setDraft] = useState(value);
+  useEffect(() => { setDraft((current) => current.trim() === value.trim() ? current : value); }, [value]);
+  return <section className="plugin-detail__section"><h3>{title}</h3><textarea value={draft} placeholder={placeholder}
+    onChange={(event) => { setDraft(event.target.value); onSave(event.target.value); }} /></section>;
 }
 
 function ShoppingItems({ entry, onChange }: { entry: PluginEntry; onChange: (markdown: string) => Promise<void> }) {
@@ -44,7 +48,7 @@ function ShoppingItems({ entry, onChange }: { entry: PluginEntry; onChange: (mar
         <input type="checkbox" checked={line.startsWith("- [x]")} onChange={() => {
           const next = sectionLines.map((item, at) => at === lineIndex ? item.replace(/^(- \[)[ x](\])/, `$1${line.startsWith("- [x]") ? " " : "x"}$2`) : item);
           void onChange(setPluginSection(entry.markdown, category, next.join("\n")));
-      }} /><input aria-label={`Vare ${line.slice(6)}`} key={line} defaultValue={line.slice(6)} onBlur={(event) => {
+      }} /><input aria-label={`Vare ${line.slice(6)}`} defaultValue={line.slice(6)} onBlur={(event) => {
         const value = event.currentTarget.value.trim().replace(/[\r\n]/g, " ");
         if (value && value !== line.slice(6)) void onChange(setPluginSection(entry.markdown, category, sectionLines.map((row, at) => at === lineIndex ? `${line.slice(0, 6)}${value}` : row).join("\n")));
       }} />
@@ -115,7 +119,7 @@ function LineItemsEditor({ entry, heading, placeholder, onChange }: { entry: Plu
   const save = (next: string[]) => void onChange(setPluginSection(entry.markdown, heading,
     next.filter((line) => line.trim()).map((line) => `- ${line.trim().replace(/[\r\n]/g, " ")}`).join("\n")));
   return <section className="plugin-detail__section"><h3>{heading}</h3><ul className="plugin-detail__recipe-list">{lines.map((line, index) =>
-    <li key={`${index}-${line}`} className="plugin-detail__simple-row"><input aria-label={`${heading} ${index + 1}`} defaultValue={line} onBlur={(event) => {
+    <li key={index} className="plugin-detail__simple-row"><input aria-label={`${heading} ${index + 1}`} defaultValue={line} onBlur={(event) => {
       const value = event.currentTarget.value.trim();
       if (value && value !== line) save(lines.map((row, at) => at === index ? value : row));
     }} /><button type="button" aria-label={`Slett ${line}`} onClick={() => save(lines.filter((_, at) => at !== index))}><Trash2 size={15} /></button></li>)}</ul>
@@ -163,7 +167,10 @@ export function ContentPluginDetail({ id, entry, vaultPath, publicView, isNew, d
 
   return <div className="plugin-detail"><div className="plugin-detail__actions"><Button variant="ghost" onClick={onBack}><ArrowLeft size={17} /> Tilbake</Button><div className="plugin-detail__action-group">
     {!isNew && <Button variant="outline" onClick={() => void showVersions()}><History size={16} /> Versjoner</Button>}
-    {editing ? <><Button variant="outline" onClick={() => { onCancelEdit(); if (!dirty && !isNew) setEditing(false); }} disabled={saving}><X size={16} /> Avbryt</Button><Button onClick={onSave} disabled={saving || (!isNew && !dirty)}><Save size={16} /> {saving ? "Lagrer …" : "Lagre"}</Button></>
+    {editing ? <><Button variant="outline" onClick={() => { onCancelEdit(); if (!dirty && !isNew) setEditing(false); }} disabled={saving}><X size={16} /> Avbryt</Button><Button onPointerDown={() => {
+      const active = document.activeElement;
+      if (active instanceof HTMLElement && active.closest(".plugin-detail")) active.blur();
+    }} onClick={onSave} disabled={saving}><Save size={16} /> {saving ? "Lagrer …" : "Lagre"}</Button></>
       : <Button onClick={() => setEditing(true)}><Pencil size={16} /> Rediger</Button>}
     {!isNew && <Button variant="destructive" onClick={onDelete}><Trash2 size={16} /> Slett</Button>}</div></div>
     {dirty && <p className="plugin-detail__unsaved">Endringer som ikke er lagret · Utkastet beholdes lokalt til du lagrer eller forkaster det.</p>}

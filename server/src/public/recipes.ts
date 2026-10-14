@@ -1,4 +1,4 @@
-import { pluginMarkdownPaths } from "./pluginFiles.js";
+import { readPluginMarkdown } from "./pluginFiles.js";
 import { publicCss, publicFrame } from "./theme.js";
 import { createHash } from "node:crypto";
 import path from "node:path";
@@ -111,13 +111,11 @@ export const publicRecipeRoutes: FastifyPluginAsync<{ vault: Vault; routeBase?: 
       folder = safeFolder(preference.folder ?? "Oppskrifter");
     } catch { return []; }
     if (!folder) return [];
-    const records = await pluginMarkdownPaths(vault, folder);
+    const records = await readPluginMarkdown(vault, folder);
     const result: Recipe[] = [];
     const slugCounts = new Map<string, number>();
-    for (const relativePath of records) {
-      const record = { relativePath };
-      let markdown: string;
-      try { markdown = await vault.readText(record.relativePath); } catch { continue; }
+    for (const record of records) {
+      const markdown = record.markdown;
       const { fields, body } = frontmatter(markdown);
       if (fields["scribecat-plugin"] !== "recipes" || fields.type !== "recipe" || fields.published !== "true" || !SLUG.test(fields.slug ?? "")) continue;
       slugCounts.set(fields.slug, (slugCounts.get(fields.slug) ?? 0) + 1);

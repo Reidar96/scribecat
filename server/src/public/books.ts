@@ -1,4 +1,4 @@
-import { pluginMarkdownPaths } from "./pluginFiles.js";
+import { readPluginMarkdown } from "./pluginFiles.js";
 import { publicCss, publicFrame } from "./theme.js";
 import { createHash } from "node:crypto";
 import path from "node:path";
@@ -56,10 +56,9 @@ export const publicBookRoutes: FastifyPluginAsync<{ vault: Vault }> = async (app
     } catch { return []; }
     const result: Book[] = [];
     const counts = new Map<string, number>();
-    for (const relativePath of await pluginMarkdownPaths(vault, folder)) {
-      const record = { relativePath };
+    for (const record of await readPluginMarkdown(vault, folder)) {
       try {
-        const markdown = await vault.readText(record.relativePath);
+        const markdown = record.markdown;
         const fields = metadata(markdown);
         if (fields["scribecat-plugin"] !== "books" || fields.type !== "book" || fields.published !== "true" || !slugPattern.test(fields.slug ?? "")) continue;
         counts.set(fields.slug, (counts.get(fields.slug) ?? 0) + 1);

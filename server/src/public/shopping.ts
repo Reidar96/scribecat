@@ -1,4 +1,4 @@
-import { pluginMarkdownPaths } from "./pluginFiles.js";
+import { readPluginMarkdown } from "./pluginFiles.js";
 import { publicCss, publicFrame } from "./theme.js";
 import type { FastifyPluginAsync } from "fastify";
 import type { Vault } from "../vault/files.js";
@@ -37,10 +37,9 @@ export const publicShoppingRoutes: FastifyPluginAsync<{ vault: Vault }> = async 
     } catch { return []; }
     const lists: List[] = [];
     const slugs = new Map<string, number>();
-    for (const relativePath of await pluginMarkdownPaths(vault, folder)) {
-      const record = { relativePath };
+    for (const record of await readPluginMarkdown(vault, folder)) {
       try {
-        const markdown = await vault.readText(record.relativePath);
+        const markdown = record.markdown;
         const meta = fields(markdown);
         if (meta["scribecat-plugin"] !== "shopping" || meta.type !== "shopping-list" || meta.published !== "true" || !SLUG.test(meta.slug ?? "")) continue;
         lists.push({ path: record.relativePath, slug: meta.slug, title: meta.title || meta.slug, markdown });
@@ -50,7 +49,7 @@ export const publicShoppingRoutes: FastifyPluginAsync<{ vault: Vault }> = async 
     return lists.filter((list) => slugs.get(list.slug) === 1);
   }
 
-  const html = (title: string, body: string) => `<!doctype html><html lang="no"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)} · Handleliste</title><style>${publicCss}</style></head><body>${publicFrame("Handlelister", body, title === "Handlelister" ? "handleliste" : "../handleliste", [])}</body></html>`;
+  const html = (title: string, body: string, links: Array<[string, string]> = []) => `<!doctype html><html lang="no"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)} · Handleliste</title><style>${publicCss}</style></head><body>${publicFrame("Handlelister", body, title === "Handlelister" ? "handleliste" : "../handleliste", links)}</body></html>`;
 
   app.get("/handleliste", async (_request, reply) => {
     const lists = await published();
@@ -64,18 +63,24 @@ export const publicShoppingRoutes: FastifyPluginAsync<{ vault: Vault }> = async 
     if (!list) return reply.code(404).send();
     const lines = list.markdown.replace(/^---\r?\n[\s\S]*?\r?\n---/, "").split(/\r?\n/);
     let itemIndex = 0;
+    let sectionOpen = false;
+    let categoryIndex = 0;
     const content = lines.map((line) => {
       const heading = /^## (.+)$/.exec(line);
-      if (heading) return `<section><h2>${escapeHtml(heading[1])}</h2>`;
+      if (heading) {
+        const close = sectionOpen ? "</section>" : "";
+        sectionOpen = true;
+        return `${close}<section class="public-shopping-category" id="kategori-${categoryIndex++}"><h2>${escapeHtml(heading[1])}</h2>`;
+      }
       const item = /^- \[([ x])\] (.+)$/.exec(line);
       if (!item) return "";
       const index = itemIndex++;
       return `<form class="toggle" method="post" action="${list.slug}/toggle"><input type="hidden" name="index" value="${index}"><label class="${item[1] === "x" ? "done" : ""}"><input type="checkbox" ${item[1] === "x" ? "checked" : ""}>${escapeHtml(item[2])}</label><noscript><button type="submit">Endre</button></noscript></form>`;
-    }).join("");
+    }).join("") + (sectionOpen ? "</section>" : "");
     const categories = [...list.markdown.matchAll(/^##\s+(.+)$/gm)].map((match) => match[1].trim());
     const add = `<form class="add" method="post" action="${list.slug}/items"><input type="text" name="item" maxlength="120" required placeholder="Ny vare"><select name="category">${categories.map((category) => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`).join("")}</select><button type="submit">Legg til</button></form>`;
     const addCategory = `<form class="add" method="post" action="${list.slug}/categories"><input type="text" name="category" maxlength="80" required placeholder="Ny kategori" aria-label="Ny kategori"><button type="submit">+ Kategori</button></form>`;
-    return reply.type("text/html; charset=utf-8").send(html(list.title, `<h1>${escapeHtml(list.title)}</h1>${content}${add}${addCategory}<script defer src="../handleliste/app.js"></script>`));
+    return reply.type("text/html; charset=utf-8").send(html(list.title, `<h1>${escapeHtml(list.title)}</h1><p class="meta">Kryss av underveis, eller legg til det som mangler.</p>${content}${add}${addCategory}<script defer src="../handleliste/app.js"></script>`, categories.map((category, index) => [escapeHtml(category), `#kategori-${index}`])));
   });
 
   async function mutate(slug: string, payload: Record<string, unknown>, mode: "add" | "toggle" | "category"): Promise<boolean> {

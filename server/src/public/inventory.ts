@@ -1,4 +1,4 @@
-import { pluginMarkdownPaths } from "./pluginFiles.js";
+import { readPluginMarkdown } from "./pluginFiles.js";
 import { publicCss, publicFrame } from "./theme.js";
 import { createHash } from "node:crypto";
 import path from "node:path";
@@ -53,10 +53,9 @@ export const publicInventoryRoutes: FastifyPluginAsync<{ vault: Vault }> = async
     } catch { return []; }
     const result: Item[] = [];
     const counts = new Map<string, number>();
-    for (const relativePath of await pluginMarkdownPaths(vault, folder)) {
-      const record = { relativePath };
+    for (const record of await readPluginMarkdown(vault, folder)) {
       try {
-        const markdown = await vault.readText(record.relativePath);
+        const markdown = record.markdown;
         const fields = metadata(markdown);
         if (fields["scribecat-plugin"] !== "inventory" || fields.type !== "item" || fields.published !== "true" || !slugPattern.test(fields.slug ?? "")) continue;
         counts.set(fields.slug, (counts.get(fields.slug) ?? 0) + 1);
