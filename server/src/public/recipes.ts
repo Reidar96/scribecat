@@ -4,7 +4,7 @@ import type { FastifyPluginAsync } from "fastify";
 
 import type { Vault } from "../vault/files.js";
 
-type Recipe = { path: string; slug: string; title: string; servings: string; body: string; images: Map<string, string>; coverToken: string | null };
+type Recipe = { path: string; slug: string; title: string; category: string; description: string; servings: string; body: string; images: Map<string, string>; coverToken: string | null };
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const IMAGE = /\.(?:png|jpe?g|webp|gif)$/i;
 const MIME: Record<string, string> = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".gif": "image/gif" };
@@ -56,17 +56,23 @@ function referencedImages(markdown: string, documentPath: string): Map<string, s
 }
 
 function renderBody(recipe: Recipe): string {
-  const paragraphs: string[] = [];
+  const sections: string[] = [];
+  let paragraphs: string[] = [];
   const lines = recipe.body.split(/\r?\n/);
   let checklist = false;
+  let skipDescription = false;
   for (const line of lines) {
     const heading = /^(#{1,3})\s+(.+)$/.exec(line);
     if (heading) {
       if (heading[1].length === 1 && heading[2].trim() === recipe.title) continue;
-      paragraphs.push(`<h${heading[1].length}>${publicText(heading[2])}</h${heading[1].length}>`);
+      if (heading[2].trim() === "Beskrivelse") { if (paragraphs.length) sections.push(`<section>${paragraphs.join("\n")}</section>`); paragraphs = []; checklist = false; skipDescription = true; continue; }
+      skipDescription = false;
+      if (paragraphs.length) sections.push(`<section>${paragraphs.join("\n")}</section>`);
+      paragraphs = [`<h${heading[1].length}>${publicText(heading[2])}</h${heading[1].length}>`];
       checklist = /^Ingredienser$|^Fremgangsmåte$/i.test(heading[2].trim());
       continue;
     }
+    if (skipDescription) continue;
     const image = /^!\[([^\]]*)\]\(([^\s)]+)\)/.exec(line);
     if (image) {
       let target = "";
@@ -77,14 +83,19 @@ function renderBody(recipe: Recipe): string {
       continue;
     }
     const item = /^(?:[-*] |\d+\. )(.*)$/.exec(line);
-    if (item) paragraphs.push(checklist ? `<label class="item"><input type="checkbox"> ${publicText(item[1])}</label>` : `<p class="item">• ${publicText(item[1])}</p>`);
+    if (item) {
+      const ingredient = /^(\d+(?:[.,]\d+)?|\d+\/\d+)\s+(g|kg|mg|ml|l|dl|cl|ts|ss|stk|pk|fedd)\s+(.+)$/i.exec(item[1]);
+      const value = ingredient ? `<span class="amount" data-base="${escapeHtml(ingredient[1])}">${escapeHtml(ingredient[1])}</span> ${publicText(ingredient[2])} ${publicText(ingredient[3])}` : publicText(item[1]);
+      paragraphs.push(checklist ? `<label class="item"><input type="checkbox"> <span>${value}</span></label>` : `<p class="item">• ${value}</p>`);
+    }
     else if (line.trim()) paragraphs.push(`<p>${publicText(line)}</p>`);
   }
-  return paragraphs.join("\n");
+  if (paragraphs.length) sections.push(`<section>${paragraphs.join("\n")}</section>`);
+  return sections.join("\n");
 }
 
 function page(title: string, body: string, indexHref: string): string {
-  return `<!doctype html><html lang="no"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)} · Oppskrifter</title><style>body{font:1rem/1.65 system-ui,sans-serif;max-width:60rem;margin:auto;padding:2rem 1rem;color:#242424;background:#faf9f6}a{color:#245d42;text-decoration:none}main{background:white;border:1px solid #e4e2de;border-radius:1rem;padding:clamp(1rem,4vw,3rem)}img{display:block;max-width:100%;height:auto;border-radius:.6rem}h1,h2,h3{line-height:1.25}.item{display:block;padding:.3rem 0}.item input{accent-color:#245d42}nav{margin-bottom:1rem}.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(12rem,1fr));gap:1rem;list-style:none;padding:0}.cards a{display:block;border:1px solid #e4e2de;border-radius:.7rem;padding:.65rem}.cards img{width:100%;aspect-ratio:4/3;object-fit:cover;margin-bottom:.5rem}</style></head><body><nav><a href="${indexHref}">⌂ Oppskrifter</a></nav><main>${body}</main></body></html>`;
+  return `<!doctype html><html lang="no"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)} · Oppskrifter</title><style>:root{color-scheme:light dark}*{box-sizing:border-box}body{font:1rem/1.65 system-ui,sans-serif;margin:0;color:#252724;background:#f5f4f1}a{color:inherit;text-decoration:none}nav{max-width:76rem;margin:auto;padding:1.2rem clamp(1rem,4vw,3rem);font-weight:650}main{max-width:76rem;margin:auto;padding:0 clamp(1rem,4vw,3rem) 4rem}h1,h2,h3{line-height:1.2}h1{font-size:clamp(2rem,5vw,3.5rem);margin:.4rem 0}h2{font-size:1.35rem}.intro{color:#626760;max-width:45rem}.filters{display:flex;flex-wrap:wrap;gap:.65rem;margin:1.6rem 0}.filters input,.filters select,.filters button,.servings input{font:inherit;border:1px solid #c9cec7;border-radius:.6rem;padding:.65rem;background:#fff;color:#252724}.filters input{flex:1;min-width:12rem}.filters button{background:#345f49;color:white;cursor:pointer}.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,15rem),1fr));gap:1rem;list-style:none;padding:0}.cards a{display:block;height:100%;overflow:hidden;background:#fff;border:1px solid #e2e5df;border-radius:1rem;box-shadow:0 2px 10px #00000008}.cards img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover}.cards .tile{padding:1rem}.cards strong{display:block;font-size:1.15rem}.muted{color:#687168;font-size:.9rem}.recipe{background:#fff;border:1px solid #e2e5df;border-radius:1.2rem;overflow:hidden}.recipe-hero{display:grid;grid-template-columns:1fr 1fr}.recipe-hero>div{padding:clamp(1.2rem,4vw,3rem);align-self:center}.recipe-hero img{width:100%;height:100%;min-height:18rem;max-height:31rem;object-fit:cover}.recipe-body{display:grid;grid-template-columns:minmax(14rem,1fr) minmax(0,1.6fr);gap:2rem;padding:clamp(1.2rem,4vw,3rem)}.recipe-body h2{border-bottom:1px solid #e2e5df;padding-bottom:.6rem}.item{display:flex;gap:.6rem;padding:.65rem .1rem;border-bottom:1px solid #eeefeb}.item input{width:1.1rem;height:1.1rem;accent-color:#345f49;flex:none;margin-top:.3rem}.item:has(input:checked){opacity:.55;text-decoration:line-through}.recipe-body p{max-width:70ch}.servings input{width:5rem}.recipe-body h3{font-size:1.04rem}.recipe-body ol{padding-left:1.3rem}@media(max-width:44rem){.recipe-hero,.recipe-body{grid-template-columns:1fr}.recipe-hero img{min-height:13rem;max-height:20rem;grid-row:1}.recipe-body{gap:.4rem}}@media(prefers-color-scheme:dark){body{background:#171a18;color:#f3f4f0}.intro,.muted{color:#acb5aa}.recipe,.cards a{background:#252a26;border-color:#414942}.filters input,.filters select,.servings input{background:#252a26;color:#f3f4f0;border-color:#555e57}.item,.recipe-body h2{border-color:#414942}}</style></head><body><nav><a href="${indexHref}">⌂ Oppskrifter</a></nav><main>${body}</main></body></html>`;
 }
 
 export const publicRecipeRoutes: FastifyPluginAsync<{ vault: Vault; routeBase?: string }> = async (app, { vault, routeBase = "/recipes" }) => {
@@ -110,8 +121,9 @@ export const publicRecipeRoutes: FastifyPluginAsync<{ vault: Vault; routeBase?: 
       const images = referencedImages(markdown, record.relativePath);
       const coverPath = fields.cover ? path.posix.normalize(path.posix.join(path.posix.dirname(record.relativePath), fields.cover)) : null;
       const coverToken = [...images].find(([, imagePath]) => imagePath === coverPath)?.[0] ?? null;
+      const description = /^## Beskrivelse\s*\n([\s\S]*?)(?=^## |$(?![\s\S]))/m.exec(body)?.[1].trim() ?? "";
       result.push({ path: record.relativePath, slug: fields.slug, title: fields.title || fields.slug,
-        servings: fields.servings ?? "", body, images, coverToken });
+        category: fields.category ?? "", description, servings: fields.servings ?? "", body, images, coverToken });
     }
     return result.filter((recipe) => slugCounts.get(recipe.slug) === 1);
   }
@@ -120,20 +132,30 @@ export const publicRecipeRoutes: FastifyPluginAsync<{ vault: Vault; routeBase?: 
     reply.header("Cache-Control", "no-store");
     reply.header("X-Content-Type-Options", "nosniff");
     reply.header("Referrer-Policy", "no-referrer");
-    reply.header("Content-Security-Policy", "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'");
+    reply.header("Content-Security-Policy", "default-src 'none'; img-src 'self'; script-src 'self'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'");
   });
 
-  app.get(routeBase, async (_request, reply) => {
+  app.get(`${routeBase}/app.js`, async (_request, reply) => reply.type("application/javascript; charset=utf-8").send(
+    "document.addEventListener('input',event=>{if(event.target.id!=='servings')return;const field=event.target;const base=Number(field.dataset.base),current=Number(field.value);if(!(base>0&&current>0))return;document.querySelectorAll('.amount[data-base]').forEach(node=>{const raw=node.dataset.base;const parts=raw.split('/');const amount=parts.length===2?Number(parts[0])/Number(parts[1]):Number(raw.replace(',','.'));if(Number.isFinite(amount))node.textContent=String(Math.round(amount*current/base*100)/100).replace('.',',')})})"
+  ));
+
+  app.get<{ Querystring: { q?: string; category?: string } }>(routeBase, async (request, reply) => {
     const recipes = await publishedRecipes();
-    const items = recipes.map((recipe) => `<li><a href="${routeBase.slice(1)}/${encodeURIComponent(recipe.slug)}">${recipe.coverToken ? `<img src="${routeBase.slice(1)}/${encodeURIComponent(recipe.slug)}/media/${recipe.coverToken}" alt="">` : ""}<strong>${escapeHtml(recipe.title)}</strong></a></li>`).join("");
-    return reply.type("text/html; charset=utf-8").send(page("Oppskrifter", `<h1>Oppskrifter</h1><ul class="cards">${items}</ul>`, routeBase.slice(1)));
+    const query = typeof request.query.q === "string" ? request.query.q.trim().slice(0, 100).toLocaleLowerCase("no") : "";
+    const category = typeof request.query.category === "string" ? request.query.category.slice(0, 100) : "";
+    const categories = [...new Set(recipes.map((recipe) => recipe.category).filter(Boolean))].sort((a, b) => a.localeCompare(b, "no"));
+    const items = recipes.filter((recipe) => (!category || recipe.category === category) &&
+      (!query || `${recipe.title} ${recipe.category} ${recipe.description}`.toLocaleLowerCase("no").includes(query)))
+      .map((recipe) => `<li><a href="${routeBase.slice(1)}/${encodeURIComponent(recipe.slug)}">${recipe.coverToken ? `<img src="${routeBase.slice(1)}/${encodeURIComponent(recipe.slug)}/media/${recipe.coverToken}" alt="">` : ""}<div class="tile"><strong>${escapeHtml(recipe.title)}</strong><span class="muted">${escapeHtml(recipe.category)}${recipe.servings ? ` · ${escapeHtml(recipe.servings)} porsjoner` : ""}</span><p>${publicText(recipe.description.slice(0, 160))}</p></div></a></li>`).join("");
+    const filters = `<form class="filters" method="get"><input type="search" name="q" value="${escapeHtml(query)}" placeholder="Søk etter oppskrift" aria-label="Søk etter oppskrift"><select name="category" aria-label="Kategori"><option value="">Alle kategorier</option>${categories.map((item) => `<option value="${escapeHtml(item)}" ${item === category ? "selected" : ""}>${escapeHtml(item)}</option>`).join("")}</select><button type="submit">Søk</button></form>`;
+    return reply.type("text/html; charset=utf-8").send(page("Oppskrifter", `<h1>Oppskrifter</h1><p class="intro">Finn noe godt å lage.</p>${filters}<ul class="cards">${items}</ul>`, routeBase.slice(1)));
   });
   app.get<{ Params: { slug: string } }>(`${routeBase}/:slug`, async (request, reply) => {
     if (!SLUG.test(request.params.slug)) return reply.code(404).send();
     const recipe = (await publishedRecipes()).find((entry) => entry.slug === request.params.slug);
     if (!recipe) return reply.code(404).send();
     return reply.type("text/html; charset=utf-8").send(page(recipe.title,
-      `<h1>${escapeHtml(recipe.title)}</h1>${recipe.coverToken ? `<img src="${encodeURIComponent(recipe.slug)}/media/${recipe.coverToken}" alt="">` : ""}${recipe.servings ? `<p>${escapeHtml(recipe.servings)} porsjoner</p>` : ""}${renderBody(recipe)}`, `../${routeBase.slice(1)}`));
+      `<article class="recipe"><header class="recipe-hero"><div><p class="muted">${escapeHtml(recipe.category)}</p><h1>${escapeHtml(recipe.title)}</h1><p class="intro">${publicText(recipe.description)}</p>${Number(recipe.servings) > 0 ? `<label class="servings">Porsjoner <input id="servings" type="number" min="1" max="100" data-base="${escapeHtml(recipe.servings)}" value="${escapeHtml(recipe.servings)}"></label>` : ""}</div>${recipe.coverToken ? `<img src="${encodeURIComponent(recipe.slug)}/media/${recipe.coverToken}" alt="">` : ""}</header><div class="recipe-body">${renderBody(recipe)}</div></article><script defer src="../${routeBase.slice(1)}/app.js"></script>`, `../${routeBase.slice(1)}`));
   });
   app.get<{ Params: { slug: string; token: string } }>(`${routeBase}/:slug/media/:token`, async (request, reply) => {
     if (!SLUG.test(request.params.slug) || !/^[a-f0-9]{32}$/.test(request.params.token)) return reply.code(404).send();

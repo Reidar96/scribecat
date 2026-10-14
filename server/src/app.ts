@@ -18,6 +18,7 @@ import type { VaultWatcher } from "./vault/watcher.js";
 import { staticSite } from "./web/staticSite.js";
 import { publicRecipeRoutes } from "./public/recipes.js";
 import { publicShoppingRoutes } from "./public/shopping.js";
+import { publicInventoryRoutes } from "./public/inventory.js";
 
 export type AppDependencies = {
   config: ServerConfig;
@@ -93,6 +94,7 @@ export async function buildApp(deps: AppDependencies): Promise<FastifyInstance> 
       await scoped.register(publicRecipeRoutes, { vault, prefix: "/public" });
       await scoped.register(publicRecipeRoutes, { vault, routeBase: "/oppskrifter" });
       await scoped.register(publicShoppingRoutes, { vault });
+      await scoped.register(publicInventoryRoutes, { vault });
       if (deps.watcher) {
         await scoped.register(eventRoutes, { watcher: deps.watcher, tokens, requireSession, prefix: "/api" });
       }

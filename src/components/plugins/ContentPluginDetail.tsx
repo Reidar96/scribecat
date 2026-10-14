@@ -1,15 +1,17 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeft, ImagePlus, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PluginCover } from "@/components/plugins/PluginCover";
 import { splitFrontmatter } from "@/lib/documentFrontmatter";
 import { getRelativeImageMarkdownPath, saveImageToFolder } from "@/lib/fileSystem";
-import { moveMarkdownSection, pluginSection, setPluginField, setPluginSection, setPluginTitle } from "@/plugins/markdown";
+import { moveMarkdownSection, pluginSection, removeMarkdownSection, setPluginField, setPluginSection, setPluginTitle } from "@/plugins/markdown";
+import { ingredientMarkdown, parseIngredients, parseSteps, scaledAmount, stepsMarkdown, type Ingredient } from "@/plugins/recipe";
+import { PluginDialog } from "@/components/plugins/PluginDialog";
 import type { PluginId } from "@/plugins/registry";
 import { platform } from "@/platform";
 
 export type PluginEntry = { path: string; markdown: string; metadata: Record<string, string>; title: string };
-type Props = { id: PluginId; entry: PluginEntry; vaultPath: string; publicView: boolean; onBack: () => void; onChange: (markdown: string) => Promise<void>; onOpenMarkdown: () => void };
+type Props = { id: PluginId; entry: PluginEntry; vaultPath: string; publicView: boolean; onBack: () => void; onChange: (markdown: string) => Promise<void>; onDelete: () => void };
 
 function Field({ label, value, onSave, type = "text" }: { label: string; value: string; onSave: (value: string) => void; type?: string }) {
   return <label className="plugin-detail__field"><span>{label}</span><input key={`${label}-${value}`} type={type} defaultValue={value}
@@ -23,13 +25,15 @@ function Section({ title, value, onSave, placeholder }: { title: string; value: 
 }
 
 function ShoppingItems({ entry, onChange }: { entry: PluginEntry; onChange: (markdown: string) => Promise<void> }) {
+  const [dialog, setDialog] = useState<{ kind: "new" | "delete"; category?: string } | null>(null);
   const categories = [...splitFrontmatter(entry.markdown).body.matchAll(/^##\s+(.+)$/gm)].map((match) => match[1].trim());
   return <div className="plugin-detail__shopping">{categories.map((category, categoryIndex) => {
     const sectionLines = pluginSection(entry.markdown, category).split("\n");
     const items = sectionLines.map((line, lineIndex) => ({ line, lineIndex })).filter(({ line }) => /^- \[[ x]\] /.test(line));
     return <section key={category} className="plugin-detail__section"><div className="plugin-detail__section-heading"><h3>{category}</h3>
       <button disabled={categoryIndex === 0} aria-label={`Flytt ${category} opp`} onClick={() => void onChange(moveMarkdownSection(entry.markdown, category, -1))}>↑</button>
-      <button disabled={categoryIndex === categories.length - 1} aria-label={`Flytt ${category} ned`} onClick={() => void onChange(moveMarkdownSection(entry.markdown, category, 1))}>↓</button></div>
+      <button disabled={categoryIndex === categories.length - 1} aria-label={`Flytt ${category} ned`} onClick={() => void onChange(moveMarkdownSection(entry.markdown, category, 1))}>↓</button>
+      <button className="plugin-detail__remove" aria-label={`Slett kategorien ${category}`} onClick={() => setDialog({ kind: "delete", category })}><Trash2 size={15} /></button></div>
       {items.map(({ line, lineIndex }, index) => <label key={`${category}-${index}`} className="plugin-detail__item">
         <input type="checkbox" checked={line.startsWith("- [x]")} onChange={() => {
           const next = sectionLines.map((item, at) => at === lineIndex ? item.replace(/^(- \[)[ x](\])/, `$1${line.startsWith("- [x]") ? " " : "x"}$2`) : item);
@@ -45,14 +49,62 @@ function ShoppingItems({ entry, onChange }: { entry: PluginEntry; onChange: (mar
         input.value = "";
       }}><input name="item" aria-label={`Ny vare i ${category}`} placeholder="Legg til vare" /><button type="submit" aria-label="Legg til"><Plus size={17} /></button></form>
     </section>;
-  })}<Button variant="outline" onClick={() => {
-    const category = window.prompt("Ny kategori");
-    if (!category?.trim() || categories.some((item) => item.toLowerCase() === category.trim().toLowerCase())) return;
-    void onChange(setPluginSection(entry.markdown, category.trim().replace(/[\r\n]/g, " "), ""));
-  }}><Plus size={16} /> Kategori</Button></div>;
+  })}<Button variant="outline" onClick={() => setDialog({ kind: "new" })}><Plus size={16} /> Kategori</Button>
+    {dialog && <PluginDialog title={dialog.kind === "new" ? "Ny kategori" : `Slette kategorien «${dialog.category}» og varene i den?`}
+      label={dialog.kind === "new" ? "Navn" : undefined} confirmLabel={dialog.kind === "new" ? "Opprett" : "Slett"} destructive={dialog.kind === "delete"}
+      onCancel={() => setDialog(null)} onConfirm={(value) => {
+        if (dialog.kind === "new" && !categories.some((item) => item.toLowerCase() === value.toLowerCase())) void onChange(setPluginSection(entry.markdown, value, ""));
+        if (dialog.kind === "delete" && dialog.category) void onChange(removeMarkdownSection(entry.markdown, dialog.category));
+        setDialog(null);
+      }} />}</div>;
 }
 
-export function ContentPluginDetail({ id, entry, vaultPath, publicView, onBack, onChange, onOpenMarkdown }: Props) {
+function RecipeEditor({ entry, servings, onChange }: { entry: PluginEntry; servings: number; onChange: (markdown: string) => Promise<void> }) {
+  const [ingredients, setIngredients] = useState<Ingredient[]>(() => parseIngredients(pluginSection(entry.markdown, "Ingredienser")));
+  const [steps, setSteps] = useState<string[]>(() => parseSteps(pluginSection(entry.markdown, "Fremgangsmåte")));
+  const [draft, setDraft] = useState<Ingredient>({ amount: "", unit: "", name: "" });
+  const [stepDraft, setStepDraft] = useState("");
+  useEffect(() => {
+    setIngredients(parseIngredients(pluginSection(entry.markdown, "Ingredienser")));
+    setSteps(parseSteps(pluginSection(entry.markdown, "Fremgangsmåte")));
+  }, [entry.path]);
+  const saveIngredients = (next: Ingredient[]) => { setIngredients(next); void onChange(setPluginSection(entry.markdown, "Ingredienser", ingredientMarkdown(next))); };
+  const saveSteps = (next: string[]) => { setSteps(next); void onChange(setPluginSection(entry.markdown, "Fremgangsmåte", stepsMarkdown(next))); };
+  const baseServings = Number(entry.metadata.servings) || 4;
+  return <div className="plugin-detail__recipe-grid">
+    <section className="plugin-detail__section"><h3>Ingredienser</h3>
+      <ul className="plugin-detail__recipe-list">{ingredients.map((item, index) => <li key={index}><label className="plugin-detail__ingredient"><input type="checkbox" aria-label={`Brukt ${item.name}`} />
+        <input aria-label={`Mengde for ${item.name}`} value={item.amount} onChange={(event) => setIngredients(ingredients.map((row, at) => at === index ? { ...row, amount: event.target.value } : row))} onBlur={() => saveIngredients(ingredients)} />
+        <input aria-label={`Enhet for ${item.name}`} value={item.unit} onChange={(event) => setIngredients(ingredients.map((row, at) => at === index ? { ...row, unit: event.target.value } : row))} onBlur={() => saveIngredients(ingredients)} />
+        <input aria-label="Ingrediens" value={item.name} onChange={(event) => setIngredients(ingredients.map((row, at) => at === index ? { ...row, name: event.target.value } : row))} onBlur={() => saveIngredients(ingredients)} />
+        <button type="button" aria-label={`Slett ${item.name}`} onClick={() => saveIngredients(ingredients.filter((_, at) => at !== index))}><Trash2 size={15} /></button></label>
+        {servings !== baseServings && item.amount && <small>{scaledAmount(item.amount, baseServings, servings)} {item.unit} ved {servings} porsjoner</small>}</li>)}</ul>
+      <form className="plugin-detail__add-row" onSubmit={(event) => { event.preventDefault(); if (!draft.name.trim()) return; saveIngredients([...ingredients, draft]); setDraft({ amount: "", unit: "", name: "" }); }}>
+        <input aria-label="Mengde" placeholder="Mengde" value={draft.amount} onChange={(event) => setDraft({ ...draft, amount: event.target.value })} />
+        <input aria-label="Enhet" placeholder="Enhet" value={draft.unit} onChange={(event) => setDraft({ ...draft, unit: event.target.value })} />
+        <input aria-label="Ny ingrediens" placeholder="Ingrediens" value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} />
+        <Button type="submit" aria-label="Legg til ingrediens"><Plus size={16} /></Button></form></section>
+    <section className="plugin-detail__section"><h3>Fremgangsmåte</h3><ol className="plugin-detail__recipe-list">{steps.map((step, index) => <li key={index} className="plugin-detail__step"><span>Steg {index + 1}</span><label><input type="checkbox" aria-label={`Fullført steg ${index + 1}`} />
+      <textarea aria-label={`Steg ${index + 1}`} value={step} onChange={(event) => setSteps(steps.map((row, at) => at === index ? event.target.value : row))} onBlur={() => saveSteps(steps)} /></label>
+      <button type="button" aria-label={`Slett steg ${index + 1}`} onClick={() => saveSteps(steps.filter((_, at) => at !== index))}><Trash2 size={15} /></button></li>)}</ol>
+      <form className="plugin-detail__add-row" onSubmit={(event) => { event.preventDefault(); if (!stepDraft.trim()) return; saveSteps([...steps, stepDraft]); setStepDraft(""); }}>
+        <input aria-label="Nytt steg" placeholder="Beskriv neste steg" value={stepDraft} onChange={(event) => setStepDraft(event.target.value)} />
+        <Button type="submit" aria-label="Legg til steg"><Plus size={16} /></Button></form></section>
+  </div>;
+}
+
+function LineItemsEditor({ entry, heading, placeholder, onChange }: { entry: PluginEntry; heading: string; placeholder: string; onChange: (markdown: string) => Promise<void> }) {
+  const lines = pluginSection(entry.markdown, heading).split("\n").filter((line) => /^-\s+\S/.test(line)).map((line) => line.replace(/^-\s+/, ""));
+  const [draft, setDraft] = useState("");
+  const save = (next: string[]) => void onChange(setPluginSection(entry.markdown, heading,
+    next.filter((line) => line.trim()).map((line) => `- ${line.trim().replace(/[\r\n]/g, " ")}`).join("\n")));
+  return <section className="plugin-detail__section"><h3>{heading}</h3><ul className="plugin-detail__recipe-list">{lines.map((line, index) =>
+    <li key={`${index}-${line}`} className="plugin-detail__simple-row"><span>{line}</span><button type="button" aria-label={`Slett ${line}`} onClick={() => save(lines.filter((_, at) => at !== index))}><Trash2 size={15} /></button></li>)}</ul>
+    <form className="plugin-detail__add-row plugin-detail__add-row--simple" onSubmit={(event) => { event.preventDefault(); if (draft.trim()) { save([...lines, draft]); setDraft(""); } }}>
+      <input aria-label={`Legg til i ${heading}`} placeholder={placeholder} value={draft} onChange={(event) => setDraft(event.target.value)} /><Button type="submit" aria-label={`Legg til i ${heading}`}><Plus size={16} /></Button></form></section>;
+}
+
+export function ContentPluginDetail({ id, entry, vaultPath, publicView, onBack, onChange, onDelete }: Props) {
   const [servings, setServings] = useState<number | null>(null);
   const field = (key: string, value: string) => void onChange(setPluginField(entry.markdown, key, value));
   const section = (heading: string, value: string) => void onChange(setPluginSection(entry.markdown, heading, value));
@@ -71,11 +123,10 @@ export function ContentPluginDetail({ id, entry, vaultPath, publicView, onBack, 
   const contentSection = (heading: string, placeholder?: string) => <Section title={heading} value={pluginSection(entry.markdown, heading)} placeholder={placeholder} onSave={(value) => section(heading, value)} />;
   const published = entry.metadata.published === "true";
 
-  return <div className="plugin-detail"><div className="plugin-detail__actions"><Button variant="ghost" onClick={onBack}><ArrowLeft size={17} /> Tilbake</Button><button className="plugin-detail__markdown" onClick={onOpenMarkdown}>Åpne Markdown</button></div>
-    {id === "shopping" ? <><h2>{title}</h2><label className="plugin-detail__field"><span>Offentlig handleliste</span><input type="checkbox" checked={published} disabled={!publicView && !published} onChange={() => {
-      if (!published && !window.confirm("Alle som kjenner adressen kan legge til og krysse av varer. Publisere listen?")) return;
-      void onChange(setPluginField(entry.markdown, "published", !published));
-    }} /></label>{published && publicView && <p>Adresse: /handleliste/{entry.metadata.slug}</p>}<ShoppingItems entry={entry} onChange={onChange} /></> : <>
+  return <div className="plugin-detail"><div className="plugin-detail__actions"><Button variant="ghost" onClick={onBack}><ArrowLeft size={17} /> Tilbake</Button><Button variant="destructive" onClick={onDelete}><Trash2 size={16} /> Slett</Button></div>
+    {id === "shopping" ? <><h2>{title}</h2><Field label="Navn" value={title} onSave={(value) => void onChange(setPluginTitle(entry.markdown, "title", value))} />
+      <label className="plugin-detail__field"><span>Offentlig handleliste</span><input type="checkbox" checked={published} disabled={!publicView && !published} onChange={() => void onChange(setPluginField(entry.markdown, "published", !published))} /></label>
+      {published && publicView && <p>Adresse: /handleliste/{entry.metadata.slug}</p>}<ShoppingItems entry={entry} onChange={onChange} /></> : <>
       <div className="plugin-detail__hero"><div className="plugin-detail__image">{cover ? <PluginCover id={id} vaultPath={vaultPath} documentPath={entry.path} reference={cover} alt={title} /> : <span aria-hidden="true">{id === "books" ? "📖" : id === "recipes" ? "🍽" : "📦"}</span>}
         <button onClick={() => void uploadCover()}><ImagePlus size={16} /> {cover ? "Bytt bilde" : "Legg til bilde"}</button></div>
         <div className="plugin-detail__hero-fields"><h2>{title}</h2><Field label={id === "inventory" ? "Navn" : "Tittel"} value={title}
@@ -83,24 +134,19 @@ export function ContentPluginDetail({ id, entry, vaultPath, publicView, onBack, 
           {id === "books" && <>{metadataField("Forfatter", "author")}
             <label className="plugin-detail__field"><span>Lesestatus</span><select value={entry.metadata.status || "want-to-read"} onChange={(event) => field("status", event.target.value)}><option value="want-to-read">Vil lese</option><option value="reading">Leser</option><option value="finished">Lest</option></select></label>
             {metadataField("Kategori", "category")}{metadataField("Serie", "series")}{metadataField("Samling", "collection")}{metadataField("Startet", "started", "date")}{metadataField("Fullført", "finished", "date")}{metadataField("Vurdering (1–5)", "rating", "number")}</>}
-          {id === "recipes" && <>{metadataField("Kategori", "category")}{metadataField("Porsjoner", "servings", "number")}
+          {id === "recipes" && <>{metadataField("Kategori", "category")}{metadataField("Standardporsjoner", "servings", "number")}
             <button onClick={() => void onChange(setPluginField(entry.markdown, "favorite", entry.metadata.favorite !== "true"))}>{entry.metadata.favorite === "true" ? "★ Favoritt" : "☆ Favoritt"}</button>
             <label className="plugin-detail__field"><span>Offentlig</span><input type="checkbox" checked={published} disabled={!publicView && !published} onChange={() => {
-              if (!published && !window.confirm(`Publisere «${title}» offentlig?`)) return;
               void onChange(setPluginField(entry.markdown, "published", !published));
             }} /></label></>}
-          {id === "inventory" && <>{metadataField("Kategori", "category")}{metadataField("Plassering", "location")}{metadataField("Antall", "quantity", "number")}{metadataField("Kjøpt", "purchased", "date")}{metadataField("Pris", "purchase-price")}{metadataField("Garanti til", "warranty-until", "date")}{metadataField("Serienummer", "serial-number")}</>}
+          {id === "inventory" && <>{metadataField("Kategori", "category")}{metadataField("Plassering", "location")}{metadataField("Antall", "quantity", "number")}{metadataField("Kjøpt", "purchased", "date")}{metadataField("Pris", "purchase-price")}{metadataField("Garanti til", "warranty-until", "date")}{metadataField("Serienummer", "serial-number")}
+            <label className="plugin-detail__field"><span>Offentlig</span><input type="checkbox" checked={published} disabled={!publicView && !published} onChange={() => void onChange(setPluginField(entry.markdown, "published", !published))} /></label></>}
         </div></div>
-      {id === "books" && <>{contentSection("Oppsummering", "Hva handler boken om?")}{contentSection("Høydepunkter", "Sitater og høydepunkter")}{contentSection("Mine tanker")}</>}
-      {id === "recipes" && <><label className="plugin-detail__field"><span>Skaler visning til porsjoner</span><input type="number" min="1" max="100" value={servings ?? Number(entry.metadata.servings || 4)} onChange={(event) => setServings(Number(event.target.value))} /></label>
-        {(["Ingredienser", "Fremgangsmåte"] as const).map((heading) => <section key={heading} className="plugin-detail__section"><h3>{heading}</h3>
-          <textarea key={`${heading}-${entry.markdown}`} defaultValue={pluginSection(entry.markdown, heading)} onBlur={(event) => section(heading, event.target.value)} />
-          {heading === "Ingredienser" ? <ul>{pluginSection(entry.markdown, heading).split("\n").filter((line) => /^- /.test(line)).map((line, index) => {
-            const scale = (servings ?? Number(entry.metadata.servings || 4)) / (Number(entry.metadata.servings) || 4);
-            return <li key={index}><label><input type="checkbox" /> {line.slice(2).replace(/^(\d+(?:[.,]\d+)?)/, (quantity) => String(Math.round(Number(quantity.replace(",", ".")) * scale * 100) / 100))}</label></li>;
-          })}</ul> : <ol>{pluginSection(entry.markdown, heading).split("\n").filter((line) => /^\d+\. /.test(line)).map((line, index) => <li key={index}><label><input type="checkbox" /> {line.replace(/^\d+\. /, "")}</label></li>)}</ol>}
-        </section>)}{contentSection("Notater")}</>}
-      {id === "inventory" && <>{contentSection("Notater")}{contentSection("Vedlikehold", "Dato og hva som ble gjort")}</>}
+      {id === "books" && <>{contentSection("Oppsummering", "Hva handler boken om?")}<LineItemsEditor entry={entry} heading="Høydepunkter" placeholder="Legg til sitat eller høydepunkt" onChange={onChange} />{contentSection("Mine tanker")}</>}
+      {id === "recipes" && <>{contentSection("Beskrivelse", "Beskriv retten …")}
+        <label className="plugin-detail__field plugin-detail__servings"><span>Vis for antall porsjoner</span><input type="number" min="1" max="100" value={servings ?? Number(entry.metadata.servings || 4)} onChange={(event) => setServings(Number(event.target.value))} /></label>
+        <RecipeEditor key={entry.path} entry={entry} servings={servings ?? Number(entry.metadata.servings || 4)} onChange={onChange} />{contentSection("Notater")}</>}
+      {id === "inventory" && <>{contentSection("Beskrivelse", "Kort beskrivelse for den offentlige visningen")}{contentSection("Notater")}<LineItemsEditor entry={entry} heading="Vedlikehold" placeholder="Dato og hva som ble gjort" onChange={onChange} /></>}
     </>}
   </div>;
 }

@@ -64,3 +64,29 @@
 .plugin-detail__shopping { display: grid; gap: .8rem; }
 .plugin-detail__shopping form { display: flex; align-items: center; gap: .4rem; margin-top: .65rem; }
 @media (max-width: 38rem) { .plugin-detail__hero { grid-template-columns: 1fr; } .plugin-detail__image { max-width: 15rem; } .plugin-detail__hero-fields { grid-template-columns: 1fr; } }
+.plugin-dialog { display: grid; gap: 1rem; width: min(92vw, 28rem); }
+.plugin-dialog h2 { margin: 0; font-size: 1.2rem; }
+.plugin-dialog__actions { display: flex; justify-content: flex-end; gap: .55rem; }
+.content-plugin-panel__filter { display: inline-flex; border: 1px solid var(--border); border-radius: .5rem; overflow: hidden; }
+.content-plugin-panel__filter button { border: 0; border-radius: 0; }
+.content-plugin-panel__filter button + button { padding-inline: .35rem; color: var(--muted-foreground); }
+.plugin-detail__recipe-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 1rem; align-items: start; }
+.plugin-detail__recipe-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .55rem; }
+.plugin-detail__recipe-list li { margin: 0; border-bottom: 1px solid var(--border); padding: .45rem 0; }
+.plugin-detail__recipe-list small { color: var(--muted-foreground); margin-left: 2rem; }
+.plugin-detail__ingredient { display: grid; grid-template-columns: 1.4rem 4rem 4rem minmax(0, 1fr) 1.5rem; align-items: center; gap: .35rem; }
+.plugin-detail__ingredient input:not([type=checkbox]), .plugin-detail__add-row input { min-width: 0; width: 100%; padding: .5rem; border: 1px solid var(--border); border-radius: .45rem; background: var(--surface); color: var(--foreground); }
+.plugin-detail__add-row { display: grid; grid-template-columns: 4rem 4rem minmax(0, 1fr) auto; gap: .35rem; margin-top: .75rem; }
+.plugin-detail__step { position: relative; display: grid; gap: .35rem; }
+.plugin-detail__step > span { font-weight: 600; }
+.plugin-detail__step label { display: flex; gap: .5rem; align-items: start; }
+.plugin-detail__step textarea { min-height: 4rem; }
+.plugin-detail__step > button { position: absolute; top: .3rem; right: .1rem; }
+.plugin-detail__step + .plugin-detail__add-row, .plugin-detail__step ~ .plugin-detail__add-row { grid-template-columns: 1fr auto; }
+.plugin-detail__recipe-grid .plugin-detail__section:last-child .plugin-detail__add-row { grid-template-columns: 1fr auto; }
+.plugin-detail__servings { max-width: 12rem; }
+.plugin-detail__remove { color: var(--muted-foreground); }
+.plugin-detail__add-row--simple { grid-template-columns: 1fr auto; }
+.plugin-detail__simple-row { display: flex; justify-content: space-between; gap: .7rem; }
+@media (max-width: 48rem) { .plugin-detail__recipe-grid { grid-template-columns: 1fr; } }
+@media (max-width: 30rem) { .plugin-detail__ingredient { grid-template-columns: 1.4rem 3rem 3rem minmax(0, 1fr) 1.5rem; gap: .2rem; } .plugin-detail__add-row { grid-template-columns: 3rem 3rem minmax(0, 1fr) auto; } }

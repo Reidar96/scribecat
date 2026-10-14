@@ -1,3 +1,20 @@
+## [1.1.2] - 2026-10-14
+
+- Keep copied heading links inside ScribeCat and scroll to the target instead of opening an empty browser tab.
+- Replace native plugin creation prompts with an in-app dialog and add deletion of plugin entries and categories, while leaving Journal, Graph and Tasks unchanged.
+- Edit recipe ingredients and steps one at a time as readable Markdown, with adjustable units and a serving-size preview; add recipe descriptions.
+- Remove the extra publication confirmation and the Markdown-opening control from plugin views; add opt-in public Inventory with a strict public-field allowlist.
+- Improve the public Recipes catalog with search, category filters, covers, descriptions and serving-size controls. Add structured add actions for book highlights and inventory maintenance entries.
+
+
+## [1.1.1] - 2026-10-13
+
+- Keep copied heading links inside ScribeCat: jump within the current note or open the linked note and scroll to the heading. Pasting a copied heading link over selected text turns that text into a link.
+- Give Quick Notes immediate post-it editing and Books, Recipes, Shopping and Inventory dedicated Markdown-backed detail views. Add cover selection, editable sections, category and series fields, and local recipe checklists.
+- Standardize plugin settings and add a reorderable Apps overview with consistent home navigation.
+- Offer opt-in Recipes at `/oppskrifter` with a visual index and temporary ingredient/step checkboxes; keep the existing `/public/recipes` links working.
+- Offer opt-in public Shopping lists at `/handleliste`, scoped to explicitly published lists, with rate-limited add and checkbox actions.
+
 ## [1.1.0] - 2026-10-13
 
 - Fix copying Markdown heading links when the rich clipboard API is unavailable.
@@ -1156,11 +1173,3 @@ Improve voice transcription performance and language handling.
 
 ### Highlights
 - Initial release of ScribeDog
-## [1.1.1] - 2026-10-13
-
-- Keep copied heading links inside ScribeCat: jump within the current note or open the linked note and scroll to the heading. Pasting a copied heading link over selected text turns that text into a link.
-- Give Quick Notes immediate post-it editing and Books, Recipes, Shopping and Inventory dedicated Markdown-backed detail views. Add cover selection, editable sections, category and series fields, and local recipe checklists.
-- Standardize plugin settings and add a reorderable Apps overview with consistent home navigation.
-- Offer opt-in Recipes at `/oppskrifter` with a visual index and temporary ingredient/step checkboxes; keep the existing `/public/recipes` links working.
-- Offer opt-in public Shopping lists at `/handleliste`, scoped to explicitly published lists, with rate-limited add and checkbox actions.
-

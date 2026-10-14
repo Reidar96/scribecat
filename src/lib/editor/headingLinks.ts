@@ -1,6 +1,9 @@
 import { getRelativeDisplayPath } from "@/lib/fileSystem";
 
-const PREFIX = "scribecat://note/";
+// A same-document fragment survives TipTap's URL sanitizer and cannot launch a
+// browser tab. Keep parsing the old scheme for links already stored in notes.
+const PREFIX = "#scribecat-note/";
+const LEGACY_PREFIX = "scribecat://note/";
 
 export function headingLinkHref(vaultPath: string, filePath: string, anchor: string): string {
   const relative = getRelativeDisplayPath(vaultPath, filePath).replace(/\\/g, "/");
@@ -8,8 +11,9 @@ export function headingLinkHref(vaultPath: string, filePath: string, anchor: str
 }
 
 export function parseHeadingLink(href: string): { relativePath: string; anchor: string } | null {
-  if (!href.startsWith(PREFIX)) return null;
-  const [rawPath, rawAnchor] = href.slice(PREFIX.length).split("#");
+  const prefix = href.startsWith(PREFIX) ? PREFIX : href.startsWith(LEGACY_PREFIX) ? LEGACY_PREFIX : null;
+  if (!prefix) return null;
+  const [rawPath, rawAnchor] = href.slice(prefix.length).split("#");
   if (!rawAnchor || !rawPath) return null;
   try {
     const parts = rawPath.split("/").map(decodeURIComponent);
@@ -19,7 +23,7 @@ export function parseHeadingLink(href: string): { relativePath: string; anchor: 
 }
 
 export function pastedHeadingHref(text: string, html: string): string | null {
-  const markdown = /^\[[^\]]+\]\((scribecat:\/\/note\/[^\s)]+)\)$/.exec(text.trim());
+  const markdown = /^\[[^\]]+\]\(((?:scribecat:\/\/note\/|#scribecat-note\/)[^\s)]+)\)$/.exec(text.trim());
   if (markdown && parseHeadingLink(markdown[1])) return markdown[1];
   const element = typeof DOMParser !== "undefined" ? new DOMParser().parseFromString(html, "text/html").body : null;
   const href = element?.querySelector("a[href]")?.getAttribute("href") ?? "";

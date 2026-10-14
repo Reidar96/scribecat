@@ -12,6 +12,7 @@ import { usePluginStore } from "@/store/usePluginStore";
 import { useLayoutMode } from "@/hooks/useLayoutMode";
 import { PluginCover } from "@/components/plugins/PluginCover";
 import { ContentPluginDetail } from "@/components/plugins/ContentPluginDetail";
+import { PluginDialog } from "@/components/plugins/PluginDialog";
 import { useAppStore } from "@/store/useAppStore";
 
 type Entry = { path: string; markdown: string; metadata: Record<string, string>; title: string };
@@ -29,7 +30,7 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
   const manifest = pluginById(id)!;
   const isPhone = useLayoutMode() === "phone";
   const folder = usePluginStore((state) => state.config.plugins[id]?.folder ?? manifest.defaultFolder ?? "");
-  const publicView = usePluginStore((state) => state.config.plugins.recipes?.publicView ?? false);
+  const publicView = usePluginStore((state) => state.config.plugins[id]?.publicView ?? false);
   const deleteFile = useAppStore((state) => state.deleteFilePath);
   const api = createPluginApi(id, folderPath, onOpenFile);
   const [entries, setEntries] = useState<Entry[]>([]);
@@ -38,6 +39,7 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [newNotePath, setNewNotePath] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [dialog, setDialog] = useState<{ kind: "new" | "delete" | "category"; path?: string; label?: string } | null>(null);
   const pendingWrites = useRef(new Map<string, Promise<void>>());
   const paths = useMemo(() => filePaths.filter((path) => {
     const relative = path.replace(/\\/g, "/");
@@ -80,9 +82,7 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
     : id === "recipes" ? ["favoritter", ...new Set(entries.map((entry) => entry.metadata.category).filter(Boolean))]
     : [];
 
-  const add = async () => {
-    const title = id === "quick-notes" ? `Huskelapp ${new Date().toLocaleString("sv-SE").replace(/[ :]/g, "-")}`
-      : window.prompt(`Ny ${manifest.name.toLocaleLowerCase()}: navn`);
+  const add = async (title: string) => {
     if (!title?.trim()) return;
     const name = safeDocumentName(title);
     const base = await join(folderPath, ...folder.split("/"), `${name}.md`);
@@ -99,6 +99,11 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
       }
       else setError("Kunne ikke opprette dokumentet.");
     } catch { setError("Kunne ikke opprette dokumentet."); }
+  };
+
+  const requestAdd = () => {
+    if (id === "quick-notes") void add(`Huskelapp ${new Date().toLocaleString("sv-SE").replace(/[ :]/g, "-")}`);
+    else setDialog({ kind: "new" });
   };
 
   const change = async (entry: Entry, markdown: string) => {
@@ -127,15 +132,16 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
       {isPhone || !sidebarVisible ? <Button variant="outline" aria-label="Åpne sidemeny" onClick={isPhone ? onOpenSidebar : onSidebarVisibilityToggle}><PanelLeft /></Button> : null}
       <h2>{manifest.name}</h2>
       <Button variant="outline" aria-label="Hjem" title="Hjem" onClick={onClose}><Home size={18} /></Button>
-      {!selected && <Button onClick={() => void add()}><Plus size={16} /> Ny</Button>}
+      {!selected && <Button onClick={requestAdd}><Plus size={16} /> Ny</Button>}
     </header>
     <div className="content-plugin-panel__body">
       {selected && id !== "quick-notes" ? <ContentPluginDetail id={id} entry={selected} vaultPath={folderPath} publicView={publicView}
-        onBack={() => setSelectedPath(null)} onChange={(next) => change(selected, next)} onOpenMarkdown={() => api.openMarkdown(selected.path)} /> : <>
+        onBack={() => setSelectedPath(null)} onChange={(next) => change(selected, next)} onDelete={() => setDialog({ kind: "delete", path: selected.path, label: selected.title })} /> : <>
       <label className="content-plugin-panel__search"><Search size={16} /><input type="search" value={query} placeholder={`Søk i ${manifest.name.toLocaleLowerCase()}`} onChange={(event) => setQuery(event.target.value)} /></label>
       {filters.length ? <div className="content-plugin-panel__filters">
         <button className={!filter ? "active" : ""} onClick={() => setFilter("")}>Alle</button>
-        {filters.map((value) => <button key={value} className={filter === value ? "active" : ""} onClick={() => setFilter(value)}>{({ "want-to-read": "Vil lese", reading: "Leser", finished: "Lest", true: "Festet", arkiv: "Arkiv", garanti: "Garanti", favoritter: "Favoritter" } as Record<string, string>)[value] ?? value}</button>)}
+        {filters.map((value) => <span key={value} className="content-plugin-panel__filter"><button className={filter === value ? "active" : ""} onClick={() => setFilter(value)}>{({ "want-to-read": "Vil lese", reading: "Leser", finished: "Lest", true: "Festet", arkiv: "Arkiv", garanti: "Garanti", favoritter: "Favoritter" } as Record<string, string>)[value] ?? value}</button>
+          {!(["want-to-read", "reading", "finished", "true", "arkiv", "garanti", "favoritter"].includes(value)) && <button title={`Slett kategorien ${value}`} aria-label={`Slett kategorien ${value}`} onClick={() => setDialog({ kind: "category", label: value })}>×</button>}</span>)}
       </div> : null}
       {error ? <p role="alert">{error}</p> : null}
       <div className={`content-plugin-panel__grid content-plugin-panel__grid--${id}`}>{visible.map((entry) => {
@@ -158,16 +164,31 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
               }} />
             <div><button onClick={() => void change(entry, setPluginField(entry.markdown, "pinned", entry.metadata.pinned !== "true"))}>{entry.metadata.pinned === "true" ? "Løsne" : "Fest"}</button>
             {" · "}<button onClick={() => void change(entry, setPluginField(entry.markdown, "archived", entry.metadata.archived !== "true"))}>{entry.metadata.archived === "true" ? "Gjenopprett" : "Arkiver"}</button>
-            {" · "}<button onClick={() => {
-              if (pendingWrites.current.has(entry.path)) return;
-              if (!window.confirm(`Slette «${entry.title}» til papirkurven?`)) return;
-              void deleteFile(entry.path).then((ok) => { if (ok) setEntries((items) => items.filter((item) => item.path !== entry.path)); });
-            }}>Slett</button></div>
+            {" · "}<button onClick={() => setDialog({ kind: "delete", path: entry.path, label: "huskelappen" })}>Slett</button></div>
           </> : null}
         </article>;
       })}</div>
       {visible.length === 0 ? <p>Ingen oppføringer her ennå.</p> : null}
       </>}
     </div>
+    {dialog && <PluginDialog key={`${dialog.kind}-${dialog.path ?? dialog.label ?? ""}`} title={dialog.kind === "new" ? `Ny ${manifest.name.toLocaleLowerCase()}` : dialog.kind === "category" ? `Slette kategorien «${dialog.label}»?` : `Flytte «${dialog.label}» til papirkurven?`}
+      label={dialog.kind === "new" ? "Navn" : undefined} confirmLabel={dialog.kind === "new" ? "Opprett" : "Slett"} destructive={dialog.kind !== "new"}
+      onCancel={() => setDialog(null)} onConfirm={(value) => {
+        const action = dialog;
+        setDialog(null);
+        if (action.kind === "new") { void add(value); return; }
+        if (action.kind === "delete" && action.path) {
+          if (pendingWrites.current.has(action.path)) { setError("Vent til endringen er lagret før du sletter."); return; }
+          void deleteFile(action.path).then((ok) => { if (ok) { setEntries((items) => items.filter((item) => item.path !== action.path)); setSelectedPath(null); } else setError("Kunne ikke slette oppføringen."); });
+        }
+        if (action.kind === "category" && action.label) {
+          setFilter("");
+          for (const entry of entries) {
+            const keys = id === "books" ? ["category", "series", "collection"] : id === "inventory" ? ["category", "location"] : ["category"];
+            const matching = keys.filter((key) => entry.metadata[key] === action.label);
+            if (matching.length) void change(entry, matching.reduce((markdown, key) => setPluginField(markdown, key, ""), entry.markdown));
+          }
+        }
+      }} />}
   </main>;
 }

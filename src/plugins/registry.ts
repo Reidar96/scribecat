@@ -25,7 +25,7 @@ export const BUILTIN_PLUGINS: readonly PluginManifest[] = [
   { id: "books", name: "Bøker", nameEn: "Books", version: "1.0.0", icon: "book-open", kind: "content", defaultFolder: "Bøker", capabilities: ["navigation", "settings", "folderPolicy", "vaultRead", "markdownWrite", "attachments", "search"], defaultEnabled: true },
   { id: "shopping", name: "Handleliste", nameEn: "Shopping", version: "1.0.0", icon: "shopping-basket", kind: "content", defaultFolder: "Handlelister", capabilities: ["navigation", "settings", "folderPolicy", "vaultRead", "markdownWrite", "search", "publicView"], defaultEnabled: true },
   { id: "recipes", name: "Oppskrifter", nameEn: "Recipes", version: "1.0.0", icon: "chef-hat", kind: "content", defaultFolder: "Oppskrifter", capabilities: ["navigation", "settings", "folderPolicy", "vaultRead", "markdownWrite", "attachments", "search", "publicView"], defaultEnabled: true },
-  { id: "inventory", name: "Inventar", nameEn: "Inventory", version: "1.0.0", icon: "boxes", kind: "content", defaultFolder: "Inventar", capabilities: ["navigation", "settings", "folderPolicy", "vaultRead", "markdownWrite", "attachments", "search"], defaultEnabled: true }
+  { id: "inventory", name: "Inventar", nameEn: "Inventory", version: "1.0.0", icon: "boxes", kind: "content", defaultFolder: "Inventar", capabilities: ["navigation", "settings", "folderPolicy", "vaultRead", "markdownWrite", "attachments", "search", "publicView"], defaultEnabled: true }
 ] as const;
 
 export const pluginById = (id: string): PluginManifest | undefined => BUILTIN_PLUGINS.find((plugin) => plugin.id === id);
