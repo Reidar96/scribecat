@@ -56,7 +56,7 @@ export const publicShoppingRoutes: FastifyPluginAsync<{ vault: Vault }> = async 
     return reply.type("text/html; charset=utf-8").send(html("Handlelister", `<h1>Handlelister</h1><p class="meta">Delte lister du kan handle sammen med andre.</p><div class="cards">${lists.map((list) => `<a class="card" href="handleliste/${list.slug}"><div><strong>${escapeHtml(list.title)}</strong><p class="meta">Åpne handleliste →</p></div></a>`).join("")}</div>`));
   });
   app.get("/handleliste/app.js", async (_request, reply) => reply.type("application/javascript; charset=utf-8").send(
-    "document.addEventListener('change',event=>{if(event.target.matches('form.toggle input[type=checkbox]'))event.target.form.requestSubmit()})"
+    "document.addEventListener('change',event=>{if(event.target.matches('form.toggle input[type=checkbox]'))event.target.form.requestSubmit()});document.addEventListener('submit',event=>{if(event.target.matches('form.delete-category')&&!confirm('Slette kategorien og alle varene i den?'))event.preventDefault()})"
   ));
   app.get<{ Params: { slug: string } }>("/handleliste/:slug", async (request, reply) => {
     const list = SLUG.test(request.params.slug) ? (await published()).find((item) => item.slug === request.params.slug) : null;
@@ -70,12 +70,12 @@ export const publicShoppingRoutes: FastifyPluginAsync<{ vault: Vault }> = async 
       if (heading) {
         const close = sectionOpen ? "</section>" : "";
         sectionOpen = true;
-        return `${close}<section class="public-shopping-category" id="kategori-${categoryIndex++}"><h2>${escapeHtml(heading[1])}</h2>`;
+        return `${close}<section class="public-shopping-category" id="kategori-${categoryIndex++}"><div class="public-section-heading"><h2>${escapeHtml(heading[1])}</h2><form class="delete-category" method="post" action="${list.slug}/delete-category"><input type="hidden" name="category" value="${escapeHtml(heading[1])}"><button type="submit" aria-label="Slett kategorien ${escapeHtml(heading[1])}">Slett kategori</button></form></div>`;
       }
       const item = /^- \[([ x])\] (.+)$/.exec(line);
       if (!item) return "";
       const index = itemIndex++;
-      return `<form class="toggle" method="post" action="${list.slug}/toggle"><input type="hidden" name="index" value="${index}"><label class="${item[1] === "x" ? "done" : ""}"><input type="checkbox" ${item[1] === "x" ? "checked" : ""}>${escapeHtml(item[2])}</label><noscript><button type="submit">Endre</button></noscript></form>`;
+      return `<div class="public-shopping-item"><form class="toggle" method="post" action="${list.slug}/toggle"><input type="hidden" name="index" value="${index}"><label class="${item[1] === "x" ? "done" : ""}"><input type="checkbox" ${item[1] === "x" ? "checked" : ""}>${escapeHtml(item[2])}</label><noscript><button type="submit">Endre</button></noscript></form><form method="post" action="${list.slug}/delete-item"><input type="hidden" name="index" value="${index}"><button type="submit" aria-label="Slett ${escapeHtml(item[2])}">Slett</button></form></div>`;
     }).join("") + (sectionOpen ? "</section>" : "");
     const categories = [...list.markdown.matchAll(/^##\s+(.+)$/gm)].map((match) => match[1].trim());
     const add = `<form class="add" method="post" action="${list.slug}/items"><input type="text" name="item" maxlength="120" required placeholder="Ny vare"><select name="category">${categories.map((category) => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`).join("")}</select><button type="submit">Legg til</button></form>`;
@@ -83,12 +83,20 @@ export const publicShoppingRoutes: FastifyPluginAsync<{ vault: Vault }> = async 
     return reply.type("text/html; charset=utf-8").send(html(list.title, `<h1>${escapeHtml(list.title)}</h1><p class="meta">Kryss av underveis, eller legg til det som mangler.</p>${content}${add}${addCategory}<script defer src="../handleliste/app.js"></script>`, categories.map((category, index) => [escapeHtml(category), `#kategori-${index}`])));
   });
 
-  async function mutate(slug: string, payload: Record<string, unknown>, mode: "add" | "toggle" | "category"): Promise<boolean> {
+  async function mutate(slug: string, payload: Record<string, unknown>, mode: "add" | "toggle" | "category" | "delete-item" | "delete-category"): Promise<boolean> {
     const operation = pending.then(async () => {
       const list = (await published()).find((item) => item.slug === slug);
       if (!list) return false;
       let markdown = list.markdown;
-      if (mode === "category") {
+      if (mode === "delete-category") {
+        const category = typeof payload.category === "string" ? payload.category : "";
+        if (!category || ![...markdown.matchAll(/^##\s+(.+)$/gm)].some((match) => match[1].trim() === category)) return false;
+        const lines = markdown.split(/\r?\n/);
+        const start = lines.findIndex((line) => line === `## ${category}`);
+        const end = lines.findIndex((line, index) => index > start && /^##\s+/.test(line));
+        lines.splice(start, (end === -1 ? lines.length : end) - start);
+        markdown = lines.join("\n");
+      } else if (mode === "category") {
         const category = typeof payload.category === "string" ? payload.category.trim() : "";
         if (!category || category.length > 80 || /[\r\n\x00-\x1f#<>]/.test(category) ||
           [...markdown.matchAll(/^##\s+(.+)$/gm)].some((match) => match[1].trim().toLocaleLowerCase("no") === category.toLocaleLowerCase("no"))) return false;
@@ -104,7 +112,7 @@ export const publicShoppingRoutes: FastifyPluginAsync<{ vault: Vault }> = async 
         const index = Number(payload.index);
         if (!Number.isSafeInteger(index) || index < 0) return false;
         let count = 0;
-        markdown = markdown.replace(/^- \[([ x])\] (.+)$/gm, (line, checked: string) => count++ === index ? line.replace(/^(- \[)[ x](\])/, `$1${checked === "x" ? " " : "x"}$2`) : line);
+        markdown = markdown.replace(/^- \[([ x])\] (.+)$/gm, (line, checked: string) => count++ === index ? mode === "delete-item" ? "" : line.replace(/^(- \[)[ x](\])/, `$1${checked === "x" ? " " : "x"}$2`) : line);
         if (count <= index) return false;
       }
       await vault.writeText(list.path, markdown);
@@ -114,9 +122,12 @@ export const publicShoppingRoutes: FastifyPluginAsync<{ vault: Vault }> = async 
     return operation;
   }
 
-  for (const mode of ["add", "toggle", "category"] as const) {
-    app.post<{ Params: { slug: string }; Body: Record<string, unknown> }>(`/handleliste/:slug/${mode === "add" ? "items" : mode === "category" ? "categories" : "toggle"}`, async (request, reply) => {
-      if (!SLUG.test(request.params.slug) || (!request.headers.origin && !request.headers.referer)) return reply.code(403).send();
+  for (const mode of ["add", "toggle", "category", "delete-item", "delete-category"] as const) {
+    app.post<{ Params: { slug: string }; Body: Record<string, unknown> }>(`/handleliste/:slug/${mode === "add" ? "items" : mode === "category" ? "categories" : mode}`, async (request, reply) => {
+      const source = request.headers.origin || request.headers.referer;
+      let sameOrigin = false;
+      try { sameOrigin = !!source && new URL(source).host === (request.headers.host || "localhost"); } catch { /* invalid origin */ }
+      if (!SLUG.test(request.params.slug) || !sameOrigin) return reply.code(403).send();
       const now = Date.now();
       const client = attempts.get(request.ip);
       if (attempts.size > 2000) attempts.clear();

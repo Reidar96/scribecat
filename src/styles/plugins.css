@@ -130,7 +130,8 @@
 /* The collection apps share the compact surfaces and violet selection language
    of Journal and Tasks, without changing those apps or the core tokens. */
 .content-plugin-panel__header { background:var(--surface); gap:.65rem; }
-.content-plugin-panel__header > button:last-child { min-width:6rem; }
+.content-plugin-panel__header > button:last-child { margin-left:.3rem; }
+.content-plugin-panel__icon { display:grid;place-items:center;color:var(--muted-foreground); }.content-plugin-panel__icon svg { width:1rem;height:1rem; }
 .content-plugin-panel__body { padding:clamp(1rem,2.8vw,2.4rem); }
 .content-plugin-panel__overview { display:flex; align-items:end; justify-content:space-between; border-bottom:1px solid var(--border); padding:0 0 1.15rem; margin-bottom:1.2rem; }
 .content-plugin-panel__overview h2 { font-size:clamp(1.65rem,3vw,2.25rem); line-height:1.15; letter-spacing:-.03em; margin:.3rem 0; }
@@ -156,6 +157,7 @@
 .plugin-detail { max-width:68rem; }
 .plugin-detail__preview { display:block; }
 .plugin-detail__preview-main { max-width:68rem; }
+.plugin-detail__reading-list { display:grid;gap:.25rem;list-style:none;padding:0;margin:0; }.plugin-detail__reading-list li { padding:.55rem 0;border-top:1px solid var(--border);margin:0; }.plugin-detail__reading-list label { display:flex;align-items:start;gap:.65rem;cursor:pointer; }.plugin-detail__reading-list input { margin-top:.25rem;width:1.1rem;height:1.1rem;accent-color:var(--primary); }.plugin-detail__reading-list label:has(input:checked) span { text-decoration:line-through;color:var(--muted-foreground); }.plugin-detail__serving-panel { display:flex;gap:1rem;align-items:end; }.plugin-detail__serving-panel .plugin-detail__field { width:8rem; }.plugin-detail__serving-panel > span { color:var(--muted-foreground);padding-bottom:.5rem;font-size:.85rem; }
 .plugin-detail__actions { padding-bottom:.75rem; border-bottom:1px solid var(--border); }
 .plugin-detail__hero { background:var(--card); border:1px solid var(--border); border-radius:.75rem; padding:clamp(.8rem,2vw,1.35rem); }
 .plugin-detail__hero h2 { font-size:clamp(1.5rem,3vw,2.2rem); letter-spacing:-.025em; }

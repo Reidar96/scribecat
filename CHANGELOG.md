@@ -1,3 +1,9 @@
+## [1.2.1] - 2026-10-14
+
+- Give plugin pages a compact, shared header and organize public collection links in a clearer navigation rail. Align public Books, Inventory and Recipes details with the private reading view while keeping personal book notes private.
+- Add a servings selector and checkable ingredients and steps to the private recipe reading view. Keep adjusted amounts tied to the standard servings in readable Markdown.
+- Make shopping categories and items actionable in private reading mode through an explicit saved draft. Let public visitors delete items and categories with validated same-origin requests and serialized Markdown writes.
+
 ## [1.2.0] - 2026-10-14
 
 - Keep heading links inside the editor without a browser `href`; show deleted headings as inactive, navigate across notes only when the target heading exists, and support keyboard activation.

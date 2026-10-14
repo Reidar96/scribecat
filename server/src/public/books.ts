@@ -9,7 +9,7 @@ const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const imagePattern = /\.(?:png|jpe?g|webp|gif)$/i;
 const mime: Record<string, string> = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".gif": "image/gif" };
 const escape = (value: string) => value.replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]!);
-type Book = { path: string; slug: string; title: string; author: string; category: string; series: string; collection: string; status: string; finished: string; summary: string; cover: string | null; token: string | null };
+type Book = { path: string; slug: string; title: string; author: string; category: string; series: string; collection: string; status: string; finished: string; summary: string; fields: Record<string, string>; cover: string | null; token: string | null };
 const facets: Record<string, string> = { kategori: "category", forfatter: "author", serie: "series", samling: "collection" };
 const facetLabels: Record<string, string> = { kategori: "Kategorier", forfatter: "Forfattere", serie: "Serier", samling: "Samlinger" };
 
@@ -69,7 +69,7 @@ export const publicBookRoutes: FastifyPluginAsync<{ vault: Vault }> = async (app
           const candidate = path.posix.normalize(path.posix.join(base, fields.cover));
           if (candidate.startsWith(`${base}/`) && imagePattern.test(candidate)) cover = candidate;
         }
-        result.push({ path: record.relativePath, slug: fields.slug, title: fields.title || fields.slug, author: fields.author || "", category: fields.category || "", series: fields.series || "", collection: fields.collection || "", status: fields.status || "", finished: fields.finished || "", summary, cover,
+        result.push({ path: record.relativePath, slug: fields.slug, title: fields.title || fields.slug, author: fields.author || "", category: fields.category || "", series: fields.series || "", collection: fields.collection || "", status: fields.status || "", finished: fields.finished || "", summary, fields, cover,
           token: cover ? createHash("sha256").update(`${record.relativePath}\0${cover}`).digest("hex").slice(0, 32) : null });
       } catch { /* A file may disappear during the scan. */ }
     }
@@ -103,7 +103,10 @@ export const publicBookRoutes: FastifyPluginAsync<{ vault: Vault }> = async (app
   app.get<{ Params: { slug: string } }>("/boker/:slug", async (request, reply) => {
     const book = slugPattern.test(request.params.slug) ? (await published()).find((entry) => entry.slug === request.params.slug) : null;
     if (!book) return reply.code(404).send();
-    return reply.type("text/html; charset=utf-8").send(page(book.title, `<a class="back" href="../boker">⌂ Bøker</a><article class="detail">${book.token ? `<img src="${book.slug}/media/${book.token}" alt="">` : ""}<div><h1>${escape(book.title)}</h1><p class="meta">${escape([book.author, book.category].filter(Boolean).join(" · "))}</p><p class="summary">${escape(book.summary)}</p></div></article>`));
+    const facts = [["Forfatter", book.author], ["Kategori", book.category], ["Serie", book.series], ["Samling", book.collection], ["Lesestatus", ({ "want-to-read": "Vil lese", reading: "Leser", finished: "Lest" } as Record<string, string>)[book.status] ?? book.status], ["Startet", book.fields.started], ["Fullført", book.finished], ["Vurdering", book.fields.rating]];
+    // Personal reading notes remain private even when the book card is published.
+    const sections = book.summary ? `<section class="public-section"><h2>Oppsummering</h2><div class="description">${escape(book.summary)}</div></section>` : "";
+    return reply.type("text/html; charset=utf-8").send(page(book.title, `<a class="back" href="../boker">← Tilbake</a><article class="public-detail"><div class="public-hero">${book.token ? `<img src="${book.slug}/media/${book.token}" alt="">` : ""}<div><h1>${escape(book.title)}</h1><dl class="public-facts">${facts.filter(([, value]) => value).map(([label, value]) => `<div><dt>${label}</dt><dd>${escape(value)}</dd></div>`).join("")}</dl></div></div>${sections}</article>`));
   });
   app.get<{ Params: { slug: string; token: string } }>("/boker/:slug/media/:token", async (request, reply) => {
     const book = slugPattern.test(request.params.slug) ? (await published()).find((entry) => entry.slug === request.params.slug) : null;

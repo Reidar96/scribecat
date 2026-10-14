@@ -24,7 +24,8 @@ describe("public shopping", () => {
     await configure();
     const url = "/anna/handleliste/uke/items";
     expect((await context.app.inject({ method: "POST", url, payload: "item=Ost&category=Kj%C3%B8l", headers: { "content-type": "application/x-www-form-urlencoded" } })).statusCode).toBe(403);
-    const headers = { "content-type": "application/x-www-form-urlencoded", origin: "http://localhost" };
+    const headers = { "content-type": "application/x-www-form-urlencoded", origin: "http://localhost", host: "localhost" };
+    expect((await context.app.inject({ method: "POST", url, payload: "item=Feil&category=Kj%C3%B8l", headers: { ...headers, origin: "https://unrelated.example" } })).statusCode).toBe(403);
     expect((await context.app.inject({ method: "POST", url, payload: "item=Ost&category=Kj%C3%B8l", headers })).statusCode).toBe(303);
     expect(await readFile(path.join(context.vaultPath, "Handlelister", "Uke.md"), "utf8")).toContain("- [ ] Ost");
     expect((await context.app.inject({ method: "POST", url: "/anna/handleliste/uke/toggle", payload: "index=0", headers })).statusCode).toBe(303);
@@ -34,7 +35,7 @@ describe("public shopping", () => {
   });
   it("lets a public visitor create a category without overwriting the Markdown list", async () => {
     await configure();
-    const headers = { "content-type": "application/x-www-form-urlencoded", origin: "http://localhost" };
+    const headers = { "content-type": "application/x-www-form-urlencoded", origin: "http://localhost", host: "localhost" };
     const url = "/anna/handleliste/uke/categories";
     expect((await context.app.inject({ method: "POST", url, payload: "category=Frukt", headers })).statusCode).toBe(303);
     expect((await context.app.inject({ method: "POST", url, payload: "category=Frukt", headers })).statusCode).toBe(400);
@@ -42,5 +43,20 @@ describe("public shopping", () => {
     const markdown = await readFile(path.join(context.vaultPath, "Handlelister", "Uke.md"), "utf8");
     expect(markdown).toContain("## Kjøl\n\n- [ ] Melk");
     expect(markdown).toContain("## Frukt");
+  });
+  it("deletes a chosen public item or category without changing the others", async () => {
+    await configure();
+    const headers = { "content-type": "application/x-www-form-urlencoded", origin: "http://localhost", host: "localhost" };
+    const file = path.join(context.vaultPath, "Handlelister", "Uke.md");
+    await writeFile(file, (await readFile(file, "utf8")) + "- [ ] Ost\n\n## Frukt\n\n- [ ] Eple\n");
+    expect((await context.app.inject({ method: "POST", url: "/anna/handleliste/uke/delete-item", payload: "index=0", headers })).statusCode).toBe(303);
+    expect(await readFile(file, "utf8")).not.toContain("Melk");
+    expect(await readFile(file, "utf8")).toContain("Ost");
+    expect((await context.app.inject({ method: "POST", url: "/anna/handleliste/uke/delete-category", payload: "category=Frukt", headers })).statusCode).toBe(303);
+    const markdown = await readFile(file, "utf8");
+    expect(markdown).not.toContain("Frukt");
+    expect(markdown).not.toContain("Eple");
+    expect(markdown).toContain("## Kjøl");
+    expect((await context.app.inject({ method: "POST", url: "/anna/handleliste/uke/delete-item", payload: "index=40", headers })).statusCode).toBe(400);
   });
 });

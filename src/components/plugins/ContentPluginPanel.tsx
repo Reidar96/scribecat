@@ -289,10 +289,10 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
   return <main className="content-plugin-panel">
     <header className="content-plugin-panel__header">
       {isPhone || !sidebarVisible ? <Button variant="outline" aria-label="Åpne sidemeny" onClick={isPhone ? onOpenSidebar : onSidebarVisibilityToggle}><PanelLeft /></Button> : null}
-      <h2>{manifest.name}</h2>
-      <Button variant="outline" aria-label="Hjem" title="Hjem" onClick={onClose}><Home size={18} /></Button>
+      <span className="content-plugin-panel__icon" aria-hidden="true">{id === "books" ? <BookOpen /> : id === "recipes" ? <CookingPot /> : id === "inventory" ? <Package /> : id === "shopping" ? <ShoppingBasket /> : <Pencil />}</span><h2>{manifest.name}</h2>
       {!editingEntry && id !== "quick-notes" && <Button variant="outline" onClick={() => setShowStats((value) => !value)}><ChartNoAxesCombined size={16} /> Statistikk</Button>}
       {!editingEntry && <Button onClick={requestAdd}><Plus size={16} /> Ny</Button>}
+      <Button variant="ghost" aria-label="Hjem" title="Hjem" onClick={onClose}><Home size={18} /></Button>
     </header>
     <div className="content-plugin-panel__body">
       {error ? <p role="alert">{error}</p> : null}

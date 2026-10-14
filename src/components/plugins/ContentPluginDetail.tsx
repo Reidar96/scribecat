@@ -72,6 +72,15 @@ function ShoppingItems({ entry, onChange }: { entry: PluginEntry; onChange: (mar
       }} />}</div>;
 }
 
+function RecipeReading({ entry, servings, onServingsChange }: { entry: PluginEntry; servings: number; onServingsChange: (value: number) => void }) {
+  const ingredients = parseIngredients(pluginSection(entry.markdown, "Ingredienser"));
+  const steps = parseSteps(pluginSection(entry.markdown, "Fremgangsmåte"));
+  const base = Number(entry.metadata.servings) || 4;
+  return <><section className="plugin-detail__section plugin-detail__serving-panel"><label className="plugin-detail__field"><span>Porsjoner</span><input type="number" min="1" max="100" value={servings} onChange={(event) => { const next = Number(event.target.value); if (next >= 1 && next <= 100) onServingsChange(next); }} /></label><span>Standard: {base} porsjoner</span></section>
+    <div className="plugin-detail__recipe-grid"><section className="plugin-detail__section"><h3>Ingredienser</h3><ul className="plugin-detail__reading-list">{ingredients.map((item, index) => <li key={index}><label><input type="checkbox" /> <span>{[scaledAmount(item.amount, base, servings), item.unit, item.name].filter(Boolean).join(" ")}</span></label></li>)}</ul></section>
+      <section className="plugin-detail__section"><h3>Fremgangsmåte</h3><ol className="plugin-detail__reading-list">{steps.map((step, index) => <li key={index}><label><input type="checkbox" /> <span>{step}</span></label></li>)}</ol></section></div></>;
+}
+
 function RecipeEditor({ entry, servings, onChange }: { entry: PluginEntry; servings: number; onChange: (markdown: string) => Promise<void> }) {
   const [ingredients, setIngredients] = useState<Ingredient[]>(() => parseIngredients(pluginSection(entry.markdown, "Ingredienser")));
   const [steps, setSteps] = useState<string[]>(() => parseSteps(pluginSection(entry.markdown, "Fremgangsmåte")));
@@ -160,7 +169,7 @@ export function ContentPluginDetail({ id, entry, vaultPath, publicView, isNew, d
     setVersions(await listFileVersions(vaultPath, getRelativeDisplayPath(vaultPath, entry.path)).catch(() => []));
   };
 
-  const previewSections = id === "books" ? ["Oppsummering", "Høydepunkter", "Mine tanker"] : id === "recipes" ? ["Beskrivelse", "Ingredienser", "Fremgangsmåte", "Notater"] : id === "inventory" ? ["Beskrivelse", "Notater"] : [];
+  const previewSections = id === "books" ? ["Oppsummering", "Høydepunkter", "Mine tanker"] : id === "recipes" ? ["Beskrivelse", "Notater"] : id === "inventory" ? ["Beskrivelse", "Notater"] : [];
   const previewFields = id === "books" ? [["Forfatter", "author"], ["Kategori", "category"], ["Serie", "series"], ["Samling", "collection"], ["Fullført", "finished"], ["Vurdering", "rating"]]
     : id === "inventory" ? [["Kategori", "category"], ["Plassering", "location"], ["Antall", "quantity"], ["Kjøpt", "purchased"], ["Pris", "purchase-price"], ["Garanti til", "warranty-until"], ["Serienummer", "serial-number"]]
       : id === "recipes" ? [["Kategori", "category"], ["Porsjoner", "servings"]] : [];
@@ -181,7 +190,8 @@ export function ContentPluginDetail({ id, entry, vaultPath, publicView, isNew, d
       <div><h2>{title}</h2><p className="plugin-detail__badges">{entry.metadata.favorite === "true" && <span>★ Favoritt</span>}{published && <span>Offentlig</span>}</p>
         <dl className="plugin-detail__summary">{previewFields.filter(([, key]) => entry.metadata[key]).map(([label, key]) => <div key={key}><dt>{label}</dt><dd>{entry.metadata[key]}</dd></div>)}</dl></div></div>
       {previewSections.map((heading) => { const content = pluginSection(entry.markdown, heading); return content && <section className="plugin-detail__section" id={`plugin-section-${heading}`} key={heading}><h3>{heading}</h3><div className="plugin-detail__prose" dangerouslySetInnerHTML={{ __html: previewMarkdown.render(content) }} /></section>; })}
-      {id === "shopping" && <section className="plugin-detail__section"><div className="plugin-detail__prose" dangerouslySetInnerHTML={{ __html: previewMarkdown.render(splitFrontmatter(entry.markdown).body.replace(/^# .+\n/, "")) }} /></section>}
+      {id === "recipes" && <RecipeReading key={entry.path} entry={entry} servings={servings ?? Number(entry.metadata.servings || 4)} onServingsChange={setServings} />}
+      {id === "shopping" && <ShoppingItems entry={entry} onChange={async (markdown) => { await onChange(markdown); setEditing(true); }} />}
       {id === "inventory" && entry.metadata.receipt && <section className="plugin-detail__section"><h3>Kvittering</h3><p>{entry.metadata.receipt.split("/").pop()}</p></section>}
     </div></div> : id === "shopping" ? <><h2>{title || "Ny handleliste"}</h2><Field label="Navn" value={title} autoFocus={isNew} onSave={(value) => void onChange(setPluginTitle(entry.markdown, "title", value))} />
       <label className="plugin-detail__field"><span>Offentlig handleliste</span><input type="checkbox" checked={published} disabled={!publicView && !published} onChange={() => void onChange(setPluginField(entry.markdown, "published", !published))} /></label>
