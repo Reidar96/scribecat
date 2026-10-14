@@ -7,7 +7,9 @@ const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const imagePattern = /\.(?:png|jpe?g|webp|gif)$/i;
 const mime: Record<string, string> = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".gif": "image/gif" };
 const escape = (value: string) => value.replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]!);
-type Book = { path: string; slug: string; title: string; author: string; category: string; summary: string; cover: string | null; token: string | null };
+type Book = { path: string; slug: string; title: string; author: string; category: string; series: string; collection: string; status: string; finished: string; summary: string; cover: string | null; token: string | null };
+const facets: Record<string, string> = { kategori: "category", forfatter: "author", serie: "series", samling: "collection" };
+const facetLabels: Record<string, string> = { kategori: "Kategorier", forfatter: "Forfattere", serie: "Serier", samling: "Samlinger" };
 
 function metadata(markdown: string): Record<string, string> {
   const head = /^---\r?\n([\s\S]*?)\r?\n---/.exec(markdown)?.[1] ?? "";
@@ -61,7 +63,7 @@ export const publicBookRoutes: FastifyPluginAsync<{ vault: Vault }> = async (app
           const candidate = path.posix.normalize(path.posix.join(base, fields.cover));
           if (candidate.startsWith(`${base}/`) && imagePattern.test(candidate)) cover = candidate;
         }
-        result.push({ path: record.relativePath, slug: fields.slug, title: fields.title || fields.slug, author: fields.author || "", category: fields.category || "", summary, cover,
+        result.push({ path: record.relativePath, slug: fields.slug, title: fields.title || fields.slug, author: fields.author || "", category: fields.category || "", series: fields.series || "", collection: fields.collection || "", status: fields.status || "", finished: fields.finished || "", summary, cover,
           token: cover ? createHash("sha256").update(`${record.relativePath}\0${cover}`).digest("hex").slice(0, 32) : null });
       } catch { /* A file may disappear during the scan. */ }
     }
@@ -74,7 +76,23 @@ export const publicBookRoutes: FastifyPluginAsync<{ vault: Vault }> = async (app
     const categories = [...new Set(books.map((book) => book.category).filter(Boolean))].sort((a, b) => a.localeCompare(b, "no"));
     const cards = books.filter((book) => (!category || book.category === category) && (!q || `${book.title} ${book.author} ${book.category}`.toLocaleLowerCase("no").includes(q)))
       .map((book) => `<a class="card" href="boker/${book.slug}">${book.token ? `<img loading="lazy" src="boker/${book.slug}/media/${book.token}" alt="">` : ""}<div><strong>${escape(book.title)}</strong><p class="meta">${escape([book.author, book.category].filter(Boolean).join(" · "))}</p></div></a>`).join("");
-    return reply.type("text/html; charset=utf-8").send(page("Bøker", `<h1>Bøker</h1><form class="filters" method="get"><input name="q" type="search" aria-label="Søk" placeholder="Søk i bøker" value="${escape(q)}"><select name="category"><option value="">Alle kategorier</option>${categories.map((item) => `<option value="${escape(item)}" ${item === category ? "selected" : ""}>${escape(item)}</option>`).join("")}</select><button>Søk</button></form><div class="cards">${cards}</div>`));
+    return reply.type("text/html; charset=utf-8").send(page("Bøker", `<h1>Bøker</h1><nav><a href="boker/statistikk">Statistikk</a> · ${Object.keys(facets).map((key) => `<a href="boker/oversikt/${key}">${facetLabels[key]}</a>`).join(" · ")}</nav><form class="filters" method="get"><input name="q" type="search" aria-label="Søk" placeholder="Søk i bøker" value="${escape(q)}"><select name="category"><option value="">Alle kategorier</option>${categories.map((item) => `<option value="${escape(item)}" ${item === category ? "selected" : ""}>${escape(item)}</option>`).join("")}</select><button>Søk</button></form><div class="cards">${cards}</div>`));
+  });
+  app.get("/boker/statistikk", async (_request, reply) => {
+    const books = await published();
+    const months = books.filter((book) => book.status === "finished" && /^\d{4}-\d{2}/.test(book.finished)).reduce<Record<string, number>>((acc, book) => { const month = book.finished.slice(0, 7); acc[month] = (acc[month] ?? 0) + 1; return acc; }, {});
+    return reply.type("text/html; charset=utf-8").send(page("Statistikk", `<a class="back" href="../boker">⌂ Bøker</a><h1>Statistikk</h1><p>${books.length} bøker · ${books.filter((book) => book.status === "finished").length} lest · ${new Set(books.map((book) => book.author).filter(Boolean)).size} forfattere</p><h2>Fullført per måned</h2>${Object.entries(months).sort(([a], [b]) => b.localeCompare(a)).map(([month, count]) => `<p>${escape(month)}: ${count}</p>`).join("") || "<p>Ingen registrerte datoer.</p>"}`));
+  });
+  app.get<{ Params: { field: string } }>("/boker/oversikt/:field", async (request, reply) => {
+    const key = facets[request.params.field]; if (!key) return reply.code(404).send();
+    const values = [...new Set((await published()).map((book) => book[key as "category" | "author" | "series" | "collection"]).filter(Boolean))].sort((a, b) => a.localeCompare(b, "no"));
+    return reply.type("text/html; charset=utf-8").send(page(facetLabels[request.params.field], `<a class="back" href="../../boker">⌂ Bøker</a><h1>${facetLabels[request.params.field]}</h1><div class="cards">${values.map((value) => `<a class="card" href="${request.params.field}/${encodeURIComponent(value)}"><div>${escape(value)}</div></a>`).join("")}</div>`));
+  });
+  app.get<{ Params: { field: string; value: string } }>("/boker/oversikt/:field/:value", async (request, reply) => {
+    const key = facets[request.params.field]; if (!key) return reply.code(404).send();
+    const books = (await published()).filter((book) => book[key as "category" | "author" | "series" | "collection"] === request.params.value);
+    if (!books.length) return reply.code(404).send();
+    return reply.type("text/html; charset=utf-8").send(page(request.params.value, `<a class="back" href="../${request.params.field}">← ${facetLabels[request.params.field]}</a><h1>${escape(request.params.value)}</h1><div class="cards">${books.map((book) => `<a class="card" href="../../${book.slug}">${book.token ? `<img src="../../${book.slug}/media/${book.token}" alt="">` : ""}<div>${escape(book.title)}</div></a>`).join("")}</div>`));
   });
   app.get<{ Params: { slug: string } }>("/boker/:slug", async (request, reply) => {
     const book = slugPattern.test(request.params.slug) ? (await published()).find((entry) => entry.slug === request.params.slug) : null;

@@ -2,7 +2,7 @@
 import { Editor } from "@tiptap/core";
 import { describe, expect, it } from "vitest";
 import { buildPreviewExtensions } from "./extensions";
-import { headingLinkHref, parseHeadingLink, pastedHeadingHref } from "./headingLinks";
+import { headingLinkHref, normalizeHeadingHref, parseHeadingLink, pastedHeadingHref } from "./headingLinks";
 
 describe("heading links", () => {
   it("keeps the vault-relative destination when copied across documents", () => {
@@ -24,5 +24,11 @@ describe("heading links", () => {
     expect(editor.getHTML()).toContain(`href="${href}"`);
     expect(editor.getHTML()).not.toContain("about:blank");
     editor.destroy();
+  });
+  it("recognizes browser-resolved heading fragments without opening an external URL", () => {
+    const fragment = "#scribecat-note/Notater/Min%20bok.md#kapittel-2";
+    expect(normalizeHeadingHref(`about:blank${fragment}`)).toBe(fragment);
+    expect(parseHeadingLink(`about:blank${fragment}`)).toEqual({ relativePath: "Notater/Min bok.md", anchor: "#kapittel-2" });
+    expect(parseHeadingLink(`https://example.org/${fragment}`)).toBeNull();
   });
 });

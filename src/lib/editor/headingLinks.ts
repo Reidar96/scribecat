@@ -5,12 +5,24 @@ import { getRelativeDisplayPath } from "@/lib/fileSystem";
 const PREFIX = "#scribecat-note/";
 const LEGACY_PREFIX = "scribecat://note/";
 
+/** Clipboard HTML can turn a fragment into an absolute about:blank URL. */
+export function normalizeHeadingHref(href: string, currentOrigin?: string): string {
+  if (href.startsWith(PREFIX) || href.startsWith(LEGACY_PREFIX)) return href;
+  try {
+    const parsed = new URL(href);
+    if (!parsed.hash.startsWith(PREFIX)) return href;
+    if (parsed.href.startsWith("about:blank#") || (currentOrigin && parsed.origin === currentOrigin)) return parsed.hash;
+  } catch { /* Relative links are handled by the caller. */ }
+  return href;
+}
+
 export function headingLinkHref(vaultPath: string, filePath: string, anchor: string): string {
   const relative = getRelativeDisplayPath(vaultPath, filePath).replace(/\\/g, "/");
   return `${PREFIX}${relative.split("/").map(encodeURIComponent).join("/")}${anchor}`;
 }
 
 export function parseHeadingLink(href: string): { relativePath: string; anchor: string } | null {
+  href = normalizeHeadingHref(href, typeof location === "undefined" ? undefined : location.origin);
   const prefix = href.startsWith(PREFIX) ? PREFIX : href.startsWith(LEGACY_PREFIX) ? LEGACY_PREFIX : null;
   if (!prefix) return null;
   const [rawPath, rawAnchor] = href.slice(prefix.length).split("#");
@@ -27,5 +39,5 @@ export function pastedHeadingHref(text: string, html: string): string | null {
   if (markdown && parseHeadingLink(markdown[1])) return markdown[1];
   const element = typeof DOMParser !== "undefined" ? new DOMParser().parseFromString(html, "text/html").body : null;
   const href = element?.querySelector("a[href]")?.getAttribute("href") ?? "";
-  return parseHeadingLink(href) ? href : null;
+  return parseHeadingLink(href) ? normalizeHeadingHref(href, typeof location === "undefined" ? undefined : location.origin) : null;
 }

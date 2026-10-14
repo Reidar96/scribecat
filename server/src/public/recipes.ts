@@ -148,7 +148,20 @@ export const publicRecipeRoutes: FastifyPluginAsync<{ vault: Vault; routeBase?: 
       (!query || `${recipe.title} ${recipe.category} ${recipe.description}`.toLocaleLowerCase("no").includes(query)))
       .map((recipe) => `<li><a href="${routeBase.slice(1)}/${encodeURIComponent(recipe.slug)}">${recipe.coverToken ? `<img src="${routeBase.slice(1)}/${encodeURIComponent(recipe.slug)}/media/${recipe.coverToken}" alt="">` : ""}<div class="tile"><strong>${escapeHtml(recipe.title)}</strong><span class="muted">${escapeHtml(recipe.category)}${recipe.servings ? ` · ${escapeHtml(recipe.servings)} porsjoner` : ""}</span><p>${publicText(recipe.description.slice(0, 160))}</p></div></a></li>`).join("");
     const filters = `<form class="filters" method="get"><input type="search" name="q" value="${escapeHtml(query)}" placeholder="Søk etter oppskrift" aria-label="Søk etter oppskrift"><select name="category" aria-label="Kategori"><option value="">Alle kategorier</option>${categories.map((item) => `<option value="${escapeHtml(item)}" ${item === category ? "selected" : ""}>${escapeHtml(item)}</option>`).join("")}</select><button type="submit">Søk</button></form>`;
-    return reply.type("text/html; charset=utf-8").send(page("Oppskrifter", `<h1>Oppskrifter</h1><p class="intro">Finn noe godt å lage.</p>${filters}<ul class="cards">${items}</ul>`, routeBase.slice(1)));
+    return reply.type("text/html; charset=utf-8").send(page("Oppskrifter", `<h1>Oppskrifter</h1><p class="intro">Finn noe godt å lage.</p><p><a href="${routeBase.slice(1)}/statistikk">Statistikk</a> · <a href="${routeBase.slice(1)}/kategorier">Kategorier</a></p>${filters}<ul class="cards">${items}</ul>`, routeBase.slice(1)));
+  });
+  app.get(`${routeBase}/statistikk`, async (_request, reply) => {
+    const recipes = await publishedRecipes();
+    return reply.type("text/html; charset=utf-8").send(page("Statistikk", `<h1>Statistikk</h1><p>${recipes.length} oppskrifter · ${new Set(recipes.map((recipe) => recipe.category).filter(Boolean)).size} kategorier</p><p><a href="kategorier">Se kategorier</a></p>`, `../${routeBase.slice(1)}`));
+  });
+  app.get(`${routeBase}/kategorier`, async (_request, reply) => {
+    const categories = [...new Set((await publishedRecipes()).map((recipe) => recipe.category).filter(Boolean))].sort((a, b) => a.localeCompare(b, "no"));
+    return reply.type("text/html; charset=utf-8").send(page("Kategorier", `<h1>Kategorier</h1><ul class="cards">${categories.map((category) => `<li><a href="kategorier/${encodeURIComponent(category)}"><div class="tile"><strong>${escapeHtml(category)}</strong></div></a></li>`).join("")}</ul>`, `../${routeBase.slice(1)}`));
+  });
+  app.get<{ Params: { category: string } }>(`${routeBase}/kategorier/:category`, async (request, reply) => {
+    const recipes = (await publishedRecipes()).filter((recipe) => recipe.category === request.params.category);
+    if (!recipes.length) return reply.code(404).send();
+    return reply.type("text/html; charset=utf-8").send(page(request.params.category, `<h1>${escapeHtml(request.params.category)}</h1><ul class="cards">${recipes.map((recipe) => `<li><a href="../${recipe.slug}">${recipe.coverToken ? `<img src="../${recipe.slug}/media/${recipe.coverToken}" alt="">` : ""}<div class="tile"><strong>${escapeHtml(recipe.title)}</strong></div></a></li>`).join("")}</ul>`, `../../${routeBase.slice(1)}`));
   });
   app.get<{ Params: { slug: string } }>(`${routeBase}/:slug`, async (request, reply) => {
     if (!SLUG.test(request.params.slug)) return reply.code(404).send();

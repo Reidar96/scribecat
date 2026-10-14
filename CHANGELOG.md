@@ -1,3 +1,11 @@
+## [1.1.4] - 2026-10-14
+
+- Handle heading-link clicks before browser navigation, including absolute clipboard fragments, without opening an extra tab.
+- Create Books, Recipes, Inventory and Shopping entries directly in their detail editor. Save creates a named Markdown document in its own folder, with an attachment directory where supported. Existing entries open in a reading view with an Edit button; Save persists a local draft, checks for outside changes and creates a recoverable file version.
+- Align Favorite and Public controls as clear check tiles. Replace Inventory maintenance with receipt upload and show the receipt alongside the item.
+- Add local statistics and drill-downs by category, author, series, collection and location. Public statistics and grouping pages include only explicitly published items. Published Inventory details show all its recorded fields, description, notes and receipt.
+- Keep plugin pages and public navigation usable under a server URL prefix.
+
 ## [1.1.3] - 2026-10-14
 
 - Intercept editor link clicks before the browser's default action, so heading links navigate within ScribeCat without an extra blank tab.

@@ -16,7 +16,7 @@ describe("public inventory", () => {
     await writeFile(path.join(context.vaultPath, "Inventar", "_attachments", "sykkel.jpg"), Buffer.from([0xff, 0xd8, 0xff, 0xd9]));
   }
 
-  it("shows only opted-in published items and only public fields", async () => {
+  it("shows all fields for opted-in published items without exposing unpublished items", async () => {
     await configure(false);
     expect((await context.app.inject({ method: "GET", url: "/anna/inventar/sykkel" })).statusCode).toBe(404);
     await configure();
@@ -26,12 +26,15 @@ describe("public inventory", () => {
     expect((await context.app.inject({ method: "GET", url: "/anna/inventar?q=ukjent" })).body).not.toContain("Sykkel");
     const detail = await context.app.inject({ method: "GET", url: "/anna/inventar/sykkel" });
     expect(detail.body).toContain("En fin sykkel");
-    expect(detail.body).not.toContain("HEMMELIG");
-    expect(detail.body).not.toContain("Privat notat");
+    expect(detail.body).toContain("HEMMELIG");
+    expect(detail.body).toContain("Privat notat");
     expect(detail.headers["content-security-policy"]).toContain("default-src 'none'");
     const token = /sykkel\/media\/([a-f0-9]{32})/.exec(detail.body)?.[1];
     expect(token).toBeTruthy();
     expect((await context.app.inject({ method: "GET", url: `/anna/inventar/sykkel/media/${token}` })).statusCode).toBe(200);
     expect((await context.app.inject({ method: "GET", url: `/anna/inventar/sykkel/media/${"0".repeat(32)}` })).statusCode).toBe(404);
+    expect((await context.app.inject({ method: "GET", url: "/anna/inventar/oversikt/kategori/Sport" })).body).toContain("Sykkel");
+    expect((await context.app.inject({ method: "GET", url: "/anna/inventar/statistikk" })).body).toContain("1 gjenstander");
+    expect(index.body).toContain('href="inventar/oversikt/plassering"');
   });
 });

@@ -646,7 +646,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 
   const activateAnchor = (anchor: HTMLAnchorElement) => {
     const rawHref = anchor.getAttribute("href") ?? "";
-    const headingLink = parseHeadingLink(rawHref);
+    const headingLink = parseHeadingLink(rawHref) ?? parseHeadingLink(anchor.href);
     if (headingLink) {
       const target = vaultFilePathsRef.current.find((path) => folderPath &&
         getRelativeDisplayPath(folderPath, path).replace(/\\/g, "/").toLowerCase() === headingLink.relativePath.toLowerCase());
@@ -655,7 +655,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
           ?.scrollIntoView({ behavior: "smooth", block: "start" });
       } else if (target) onRequestFileOpen?.(target, headingLink.anchor);
       else setFeedback({ kind: "error", message: t("editor.linkTargetMissing", { href: headingLink.relativePath }) });
-    } else if (rawHref.startsWith("scribecat:")) {
+    } else if (rawHref.startsWith("scribecat:") || rawHref.includes("#scribecat-note/") || anchor.href.includes("#scribecat-note/")) {
       setFeedback({ kind: "error", message: t("editor.linkTargetMissing", { href: rawHref }) });
     } else if (isFileLinkHref(rawHref)) {
       openFileLink(rawHref);
@@ -667,23 +667,23 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       heading?.scrollIntoView({ behavior: "smooth", block: "start" });
     } else if (isLocalDocumentPreviewHref(rawHref)) {
       void openLocalDocument(rawHref);
-    } else {
+    } else if (anchor.href !== "about:blank" && !anchor.href.startsWith("about:blank#")) {
       void platform.shell.openUrl(anchor.href);
     }
   };
 
-  // ProseMirror's delegated click handler may run after the browser has
-  // already followed an anchor (notably on macOS WebKit). Intercept in the
-  // capture phase so an internal heading link cannot spawn about:blank.
+  // Intercept heading links at document capture, before WebKit's default
+  // navigation and before ProseMirror or another delegated link handler.
   useEffect(() => {
     const dom = editor?.view.dom;
     if (!dom) return;
     const intercept = (event: MouseEvent) => {
       const anchor = (event.target as Element | null)?.closest?.("a[href]") as HTMLAnchorElement | null;
-      if (!anchor) return;
+      if (!anchor || !dom.contains(anchor)) return;
+      const href = anchor.getAttribute("href") ?? "";
+      if (!parseHeadingLink(href) && !parseHeadingLink(anchor.href)) return;
       event.preventDefault();
       event.stopImmediatePropagation();
-      const href = anchor.getAttribute("href") ?? "";
       const touch = lastTouchLinkActivationRef.current;
       if (touch?.href === href && Date.now() - touch.at < 800) {
         lastTouchLinkActivationRef.current = null;
@@ -691,8 +691,8 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       }
       activateAnchor(anchor);
     };
-    dom.addEventListener("click", intercept, true);
-    return () => dom.removeEventListener("click", intercept, true);
+    document.addEventListener("click", intercept, true);
+    return () => document.removeEventListener("click", intercept, true);
   });
 
   const openLocalDocument = async (href: string) => {

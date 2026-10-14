@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, FileText, Home, PanelLeft, Plus, Search, X } from "lucide-react";
+import { Home, PanelLeft, Plus, Search, ChartNoAxesCombined } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { splitFrontmatter } from "@/lib/documentFrontmatter";
 import { createPluginApi } from "@/plugins/api";
-import { newPluginDocument, pluginMetadata, safeDocumentName, setPluginField } from "@/plugins/markdown";
+import { newPluginDocument, pluginMetadata, pluginSlug, safeDocumentName, setPluginField } from "@/plugins/markdown";
 import { pluginById, type PluginId } from "@/plugins/registry";
 import { dirname, join } from "@/platform/paths";
 import { exists, mkdir } from "@/platform/vaultFs";
@@ -12,6 +12,7 @@ import { usePluginStore } from "@/store/usePluginStore";
 import { useLayoutMode } from "@/hooks/useLayoutMode";
 import { PluginCover } from "@/components/plugins/PluginCover";
 import { ContentPluginDetail } from "@/components/plugins/ContentPluginDetail";
+import { PluginStatistics } from "@/components/plugins/PluginStatistics";
 import { PluginDialog } from "@/components/plugins/PluginDialog";
 import { useAppStore } from "@/store/useAppStore";
 
@@ -38,14 +39,16 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("");
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
+  const [draftMarkdown, setDraftMarkdown] = useState<string | null>(null);
+  const [savedMarkdown, setSavedMarkdown] = useState<string | null>(null);
   const [newNotePath, setNewNotePath] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
-  const [nameDraft, setNameDraft] = useState("");
   const [savingNew, setSavingNew] = useState(false);
-  const nameInput = useRef<HTMLInputElement>(null);
+  const [showStats, setShowStats] = useState(false);
   const [error, setError] = useState("");
-  const [dialog, setDialog] = useState<{ kind: "delete" | "category"; path?: string; label?: string } | null>(null);
+  const [dialog, setDialog] = useState<{ kind: "delete" | "category" | "discard"; path?: string; label?: string } | null>(null);
   const pendingWrites = useRef(new Map<string, Promise<void>>());
+  const latestMarkdown = useRef(new Map<string, string>());
   const paths = useMemo(() => filePaths.filter((path) => {
     const relative = path.replace(/\\/g, "/");
     const root = folderPath.replace(/\\/g, "/").replace(/\/$/, "");
@@ -63,14 +66,27 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
           || path.split(/[\\/]/).pop()?.replace(/\.md$/i, "") || "";
         return { path, markdown, metadata, title };
       } catch { return null; }
-    })).then((items) => { if (current) setEntries(items.filter((item): item is Entry => item !== null)); });
+    })).then((items) => { if (current) { const next = items.filter((item): item is Entry => item !== null); setEntries(next); for (const item of next) latestMarkdown.current.set(item.path, item.markdown); } });
     return () => { current = false; };
   }, [paths, id]);
 
   useEffect(() => {
     if (newNotePath) document.querySelector<HTMLTextAreaElement>(`[data-note-path="${CSS.escape(newNotePath)}"]`)?.focus();
   }, [newNotePath, entries]);
-  useEffect(() => { if (creating) nameInput.current?.focus(); }, [creating]);
+  const draftKey = (path: string | null) => `scribecat:plugin-draft:${folderPath}:${id}:${path ?? "new"}`;
+  const openEntry = (entry: Entry) => {
+    let savedDraft: string | null = null;
+    try { savedDraft = localStorage.getItem(draftKey(entry.path)); } catch { /* unavailable storage */ }
+    setCreating(false);
+    setSelectedPath(entry.path);
+    setDraftMarkdown(savedDraft ?? entry.markdown);
+    setSavedMarkdown(entry.markdown);
+    setShowStats(false);
+  };
+  useEffect(() => {
+    if (draftMarkdown === null || (!creating && !selectedPath)) return;
+    try { localStorage.setItem(draftKey(creating ? null : selectedPath), draftMarkdown); } catch { /* unavailable storage */ }
+  }, [draftMarkdown, creating, selectedPath, folderPath, id]);
 
   const visible = entries.filter((entry) => {
     if (id === "quick-notes" && filter !== "arkiv" && entry.metadata.archived === "true") return false;
@@ -88,8 +104,8 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
     : id === "recipes" ? ["favoritter", ...new Set(entries.map((entry) => entry.metadata.category).filter(Boolean))]
     : [];
 
-  const add = async (title: string) => {
-    if (!title?.trim()) return;
+  const add = async (title: string, markdown = newPluginDocument(id, title)): Promise<string | null> => {
+    if (!title?.trim()) return null;
     const name = safeDocumentName(title);
     const root = await join(folderPath, ...folder.split("/"));
     let entryFolder = await join(root, name);
@@ -98,32 +114,83 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
       entryFolder = await join(root, `${name} ${number++}`);
     }
     const path = await join(entryFolder, `${entryFolder.split(/[\\/]/).pop()}.md`);
+    const uniqueMarkdown = setPluginField(markdown, "slug", pluginSlug(entryFolder.split(/[\\/]/).pop() || title));
     try {
       setSavingNew(true);
-      if (await api.saveMarkdown(path, newPluginDocument(id, title))) {
+      if (await api.saveMarkdown(path, uniqueMarkdown)) {
         if (manifest.capabilities.includes("attachments")) await mkdir(await join(entryFolder, "_attachments"), { recursive: true });
         if (id === "quick-notes") setNewNotePath(path);
         else setSelectedPath(path);
         setCreating(false);
-        setNameDraft("");
+        setDraftMarkdown(uniqueMarkdown);
+        setSavedMarkdown(uniqueMarkdown);
+        try { localStorage.removeItem(draftKey(null)); } catch { /* unavailable storage */ }
         setError("");
+        return path;
       }
       else setError("Kunne ikke opprette dokumentet.");
     } catch { setError("Kunne ikke opprette dokumentet."); }
     finally { setSavingNew(false); }
+    return null;
   };
 
   const requestAdd = () => {
     if (id === "quick-notes") void add(`Huskelapp ${new Date().toLocaleString("sv-SE").replace(/[ :]/g, "-")}`);
-    else { setSelectedPath(null); setCreating(true); setNameDraft(""); }
+    else {
+      setSelectedPath(null);
+      setCreating(true);
+      let savedDraft: string | null = null;
+      try { savedDraft = localStorage.getItem(draftKey(null)); } catch { /* unavailable storage */ }
+      setDraftMarkdown(savedDraft ?? newPluginDocument(id, ""));
+      setSavedMarkdown(null);
+      setShowStats(false);
+    }
   };
 
-  const change = async (entry: Entry, markdown: string) => {
+  const discard = () => {
+    try { localStorage.removeItem(draftKey(creating ? null : selectedPath)); } catch { /* unavailable storage */ }
+    setCreating(false); setSelectedPath(null); setDraftMarkdown(null); setSavedMarkdown(null); setDialog(null);
+  };
+  const back = () => {
+    if (draftMarkdown !== null && draftMarkdown !== savedMarkdown && (savedMarkdown !== null || pluginMetadata(draftMarkdown).title || pluginMetadata(draftMarkdown).name)) {
+      setDialog({ kind: "discard" });
+    } else discard();
+  };
+  const saveDraft = async () => {
+    if (draftMarkdown === null || savingNew) return;
+    const metadata = pluginMetadata(draftMarkdown);
+    if (creating) {
+      const title = (metadata.title || metadata.name || "").trim();
+      if (!title) { setError("Gi oppføringen et navn før du lagrer."); return; }
+      await add(title, setPluginField(draftMarkdown, "slug", pluginSlug(title)));
+      return;
+    }
+    if (!selectedPath) return;
+    const existing = entries.find((entry) => entry.path === selectedPath);
+    if (!existing) return;
+    setSavingNew(true);
+    try {
+      const current = await api.readMarkdown(selectedPath);
+      if (current !== savedMarkdown) throw new Error("Dokumentet ble endret utenfor denne visningen. Utkastet er beholdt.");
+      if (!await api.saveMarkdown(selectedPath, draftMarkdown)) throw new Error("Lagring mislyktes");
+      setEntries((items) => items.map((item) => item.path === selectedPath ? {
+        ...item, markdown: draftMarkdown, metadata, title: metadata.title || metadata.name || item.title
+      } : item));
+      setSavedMarkdown(draftMarkdown);
+      try { localStorage.removeItem(draftKey(selectedPath)); } catch { /* unavailable storage */ }
+      setError("");
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Kunne ikke lagre endringen. Utkastet er beholdt."); }
+    finally { setSavingNew(false); }
+  };
+
+  const change = async (entry: Entry, update: string | ((current: string) => string)) => {
     const openDocument = useAppStore.getState().fileDocuments[entry.path];
     if (openDocument && openDocument.content !== openDocument.baseContent) {
       setError("Lagre åpne endringer i dokumentet før du endrer kortet.");
       return;
     }
+    const markdown = typeof update === "function" ? update(latestMarkdown.current.get(entry.path) ?? entry.markdown) : update;
+    latestMarkdown.current.set(entry.path, markdown);
     const previous = pendingWrites.current.get(entry.path) ?? Promise.resolve();
     const next = previous.catch(() => undefined).then(async () => {
       if (!await api.saveMarkdown(entry.path, markdown)) throw new Error("Save failed");
@@ -138,33 +205,36 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
   };
 
   const selected = entries.find((entry) => entry.path === selectedPath);
+  const editingEntry: Entry | null = creating && draftMarkdown !== null ? {
+    path: "", markdown: draftMarkdown, metadata: pluginMetadata(draftMarkdown), title: ""
+  } : selected && draftMarkdown !== null ? {
+    ...selected, markdown: draftMarkdown, metadata: pluginMetadata(draftMarkdown)
+  } : null;
 
   return <main className="content-plugin-panel">
     <header className="content-plugin-panel__header">
       {isPhone || !sidebarVisible ? <Button variant="outline" aria-label="Åpne sidemeny" onClick={isPhone ? onOpenSidebar : onSidebarVisibilityToggle}><PanelLeft /></Button> : null}
       <h2>{manifest.name}</h2>
       <Button variant="outline" aria-label="Hjem" title="Hjem" onClick={onClose}><Home size={18} /></Button>
-      {!selected && <Button onClick={requestAdd}><Plus size={16} /> Ny</Button>}
+      {!editingEntry && id !== "quick-notes" && <Button variant="outline" onClick={() => setShowStats((value) => !value)}><ChartNoAxesCombined size={16} /> Statistikk</Button>}
+      {!editingEntry && <Button onClick={requestAdd}><Plus size={16} /> Ny</Button>}
     </header>
     <div className="content-plugin-panel__body">
-      {selected && id !== "quick-notes" ? <ContentPluginDetail id={id} entry={selected} vaultPath={folderPath} publicView={publicView}
-        onBack={() => setSelectedPath(null)} onChange={(next) => change(selected, next)} onDelete={() => setDialog({ kind: "delete", path: selected.path, label: selected.title })} /> : <>
+      {error ? <p role="alert">{error}</p> : null}
+      {editingEntry && id !== "quick-notes" ? <ContentPluginDetail id={id} entry={editingEntry} vaultPath={folderPath} publicView={publicView}
+        isNew={creating} dirty={draftMarkdown !== savedMarkdown} saving={savingNew} onSave={() => void saveDraft()}
+        onBack={back} onChange={async (next) => { setDraftMarkdown(next); }} onDelete={() => selected && setDialog({ kind: "delete", path: selected.path, label: selected.title })} /> : <>
+      {showStats ? <PluginStatistics id={id} entries={entries} onOpen={(path) => { const entry = entries.find((item) => item.path === path); if (entry) openEntry(entry); }} /> : <>
       <label className="content-plugin-panel__search"><Search size={16} /><input type="search" value={query} placeholder={`Søk i ${manifest.name.toLocaleLowerCase()}`} onChange={(event) => setQuery(event.target.value)} /></label>
       {filters.length ? <div className="content-plugin-panel__filters">
         <button className={!filter ? "active" : ""} onClick={() => setFilter("")}>Alle</button>
         {filters.map((value) => <span key={value} className="content-plugin-panel__filter"><button className={filter === value ? "active" : ""} onClick={() => setFilter(value)}>{({ "want-to-read": "Vil lese", reading: "Leser", finished: "Lest", true: "Festet", arkiv: "Arkiv", garanti: "Garanti", favoritter: "Favoritter" } as Record<string, string>)[value] ?? value}</button>
           {!(["want-to-read", "reading", "finished", "true", "arkiv", "garanti", "favoritter"].includes(value)) && <button title={`Slett kategorien ${value}`} aria-label={`Slett kategorien ${value}`} onClick={() => setDialog({ kind: "category", label: value })}>×</button>}</span>)}
       </div> : null}
-      {error ? <p role="alert">{error}</p> : null}
-      <div className={`content-plugin-panel__grid content-plugin-panel__grid--${id}`}>{creating && <form className="content-plugin-panel__card content-plugin-panel__new-card" onSubmit={(event) => { event.preventDefault(); if (!savingNew) void add(nameDraft); }}>
-        <FileText size={25} aria-hidden="true" />
-        <input ref={nameInput} aria-label="Navn på ny oppføring" placeholder="Navn" value={nameDraft} maxLength={90} onChange={(event) => setNameDraft(event.target.value)} onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); setCreating(false); } }} />
-        <button type="submit" disabled={!nameDraft.trim() || savingNew} aria-label="Fullfør"><Check size={20} /></button>
-        <button type="button" aria-label="Avbryt" onClick={() => setCreating(false)}><X size={20} /></button>
-      </form>}{visible.map((entry) => {
+      <div className={`content-plugin-panel__grid content-plugin-panel__grid--${id}`}>{visible.map((entry) => {
         const body = splitFrontmatter(entry.markdown).body;
         return <article key={entry.path} className="content-plugin-panel__card">
-          {id !== "quick-notes" && <button className="content-plugin-panel__tile" onClick={() => setSelectedPath(entry.path)}>
+          {id !== "quick-notes" && <button className="content-plugin-panel__tile" onClick={() => openEntry(entry)}>
             {entry.metadata.cover && (id === "books" || id === "recipes" || id === "inventory")
               ? <PluginCover id={id} vaultPath={folderPath} documentPath={entry.path} reference={entry.metadata.cover} alt={entry.title} />
               : <span className="content-plugin-panel__placeholder" aria-hidden="true">{id === "books" ? "📖" : id === "recipes" ? "🍽" : id === "inventory" ? "📦" : "🛒"}</span>}
@@ -176,37 +246,42 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
               onBlur={(event) => {
                 const next = event.currentTarget.value;
                 const current = body.replace(/^#\s+[^\n]*\n*/, "").trim();
-                if (next.trim() !== current) void change(entry, entry.markdown.slice(0, entry.markdown.length - body.length) + `\n${next.trim()}\n`);
+                if (next.trim() !== current) void change(entry, (markdown) => {
+                  const currentBody = splitFrontmatter(markdown).body;
+                  return markdown.slice(0, markdown.length - currentBody.length) + `\n${next.trim()}\n`;
+                });
                 setNewNotePath(null);
               }} />
-            <div><button onClick={() => void change(entry, setPluginField(entry.markdown, "pinned", entry.metadata.pinned !== "true"))}>{entry.metadata.pinned === "true" ? "Løsne" : "Fest"}</button>
-            {" · "}<button onClick={() => void change(entry, setPluginField(entry.markdown, "archived", entry.metadata.archived !== "true"))}>{entry.metadata.archived === "true" ? "Gjenopprett" : "Arkiver"}</button>
+            <div><button onClick={() => void change(entry, (markdown) => setPluginField(markdown, "pinned", pluginMetadata(markdown).pinned !== "true"))}>{entry.metadata.pinned === "true" ? "Løsne" : "Fest"}</button>
+            {" · "}<button onClick={() => void change(entry, (markdown) => setPluginField(markdown, "archived", pluginMetadata(markdown).archived !== "true"))}>{entry.metadata.archived === "true" ? "Gjenopprett" : "Arkiver"}</button>
             {" · "}<button onClick={() => setDialog({ kind: "delete", path: entry.path, label: "huskelappen" })}>Slett</button></div>
           </> : null}
         </article>;
       })}</div>
-      {visible.length === 0 && !creating ? <p>Ingen oppføringer her ennå.</p> : null}
+      {visible.length === 0 ? <p>Ingen oppføringer her ennå.</p> : null}
+      </>}
       </>}
     </div>
-    {dialog && <PluginDialog key={`${dialog.kind}-${dialog.path ?? dialog.label ?? ""}`} title={dialog.kind === "category" ? `Slette kategorien «${dialog.label}»?` : `Flytte «${dialog.label}» til papirkurven?`}
-      confirmLabel="Slett" destructive
+    {dialog && <PluginDialog key={`${dialog.kind}-${dialog.path ?? dialog.label ?? ""}`} title={dialog.kind === "discard" ? "Forkaste endringer som ikke er lagret?" : dialog.kind === "category" ? `Slette kategorien «${dialog.label}»?` : `Flytte «${dialog.label}» til papirkurven?`}
+      confirmLabel={dialog.kind === "discard" ? "Forkast" : "Slett"} destructive
       onCancel={() => setDialog(null)} onConfirm={() => {
         const action = dialog;
         setDialog(null);
+        if (action.kind === "discard") { discard(); return; }
         if (action.kind === "delete" && action.path) {
           if (pendingWrites.current.has(action.path)) { setError("Vent til endringen er lagret før du sletter."); return; }
           void (async () => {
             const entryFolder = await dirname(action.path!);
             const ownFolder = entryFolder.split(/[\\/]/).pop() === action.path!.split(/[\\/]/).pop()?.replace(/\.md$/i, "");
             return ownFolder ? deleteFolder(entryFolder) : deleteFile(action.path!);
-          })().then((ok) => { if (ok) { setEntries((items) => items.filter((item) => item.path !== action.path)); setSelectedPath(null); } else setError("Kunne ikke slette oppføringen."); });
+          })().then((ok) => { if (ok) { setEntries((items) => items.filter((item) => item.path !== action.path)); discard(); } else setError("Kunne ikke slette oppføringen."); });
         }
         if (action.kind === "category" && action.label) {
           setFilter("");
           for (const entry of entries) {
             const keys = id === "books" ? ["category", "series", "collection"] : id === "inventory" ? ["category", "location"] : ["category"];
             const matching = keys.filter((key) => entry.metadata[key] === action.label);
-            if (matching.length) void change(entry, matching.reduce((markdown, key) => setPluginField(markdown, key, ""), entry.markdown));
+            if (matching.length) void change(entry, (markdown) => matching.reduce((value, key) => setPluginField(value, key, ""), markdown));
           }
         }
       }} />}

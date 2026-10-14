@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, ImagePlus, Plus, Trash2 } from "lucide-react";
+import MarkdownIt from "markdown-it";
+import { ArrowLeft, History, ImagePlus, Pencil, Plus, Save, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PluginCover } from "@/components/plugins/PluginCover";
 import { splitFrontmatter } from "@/lib/documentFrontmatter";
@@ -9,12 +10,17 @@ import { ingredientMarkdown, parseIngredients, parseSteps, scaledAmount, stepsMa
 import { PluginDialog } from "@/components/plugins/PluginDialog";
 import type { PluginId } from "@/plugins/registry";
 import { platform } from "@/platform";
+import { dirname, join } from "@/platform/paths";
+import { writeFile } from "@/platform/vaultFs";
+import { getRelativeDisplayPath } from "@/lib/fileSystem";
+import { listFileVersions, readVersionContent, type FileVersion } from "@/lib/fileVersions";
 
 export type PluginEntry = { path: string; markdown: string; metadata: Record<string, string>; title: string };
-type Props = { id: PluginId; entry: PluginEntry; vaultPath: string; publicView: boolean; onBack: () => void; onChange: (markdown: string) => Promise<void>; onDelete: () => void };
+const previewMarkdown = new MarkdownIt({ html: false, linkify: false }).disable(["image", "link"]);
+type Props = { id: PluginId; entry: PluginEntry; vaultPath: string; publicView: boolean; isNew: boolean; dirty: boolean; saving: boolean; onSave: () => void; onBack: () => void; onChange: (markdown: string) => Promise<void>; onDelete: () => void };
 
-function Field({ label, value, onSave, type = "text" }: { label: string; value: string; onSave: (value: string) => void; type?: string }) {
-  return <label className="plugin-detail__field"><span>{label}</span><input key={`${label}-${value}`} type={type} defaultValue={value}
+function Field({ label, value, onSave, type = "text", autoFocus = false }: { label: string; value: string; onSave: (value: string) => void; type?: string; autoFocus?: boolean }) {
+  return <label className="plugin-detail__field"><span>{label}</span><input key={`${label}-${value}`} type={type} defaultValue={value} autoFocus={autoFocus}
     onBlur={(event) => { if (event.target.value !== value) onSave(event.target.value); }}
     onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }} /></label>;
 }
@@ -117,13 +123,16 @@ function LineItemsEditor({ entry, heading, placeholder, onChange }: { entry: Plu
       <input aria-label={`Legg til i ${heading}`} placeholder={placeholder} value={draft} onChange={(event) => setDraft(event.target.value)} /><Button type="submit" aria-label={`Legg til i ${heading}`}><Plus size={16} /></Button></form></section>;
 }
 
-export function ContentPluginDetail({ id, entry, vaultPath, publicView, onBack, onChange, onDelete }: Props) {
+export function ContentPluginDetail({ id, entry, vaultPath, publicView, isNew, dirty, saving, onSave, onBack, onChange, onDelete }: Props) {
+  const [editing, setEditing] = useState(isNew || dirty);
   const [servings, setServings] = useState<number | null>(null);
+  const [versions, setVersions] = useState<FileVersion[] | null>(null);
   const field = (key: string, value: string) => void onChange(setPluginField(entry.markdown, key, value));
   const section = (heading: string, value: string) => void onChange(setPluginSection(entry.markdown, heading, value));
   const title = entry.metadata.title || entry.metadata.name || entry.title;
   const cover = entry.metadata.cover;
   const uploadCover = async () => {
+    if (isNew) return;
     const files = await platform.imagePicker.pickImages({ title: "Velg bilde", filterName: "Bilder", extensions: ["jpg", "jpeg", "png", "webp", "gif"] });
     const picked = files[0];
     if (!picked) return;
@@ -135,32 +144,64 @@ export function ContentPluginDetail({ id, entry, vaultPath, publicView, onBack, 
   const metadataField = (label: string, key: string, type?: string) => <Field label={label} value={entry.metadata[key] ?? ""} type={type} onSave={(value) => field(key, value)} />;
   const contentSection = (heading: string, placeholder?: string) => <Section title={heading} value={pluginSection(entry.markdown, heading)} placeholder={placeholder} onSave={(value) => section(heading, value)} />;
   const published = entry.metadata.published === "true";
+  useEffect(() => { if (!isNew && !dirty && !saving) setEditing(false); }, [isNew, dirty, saving]);
+  const uploadReceipt = async (file: File | undefined) => {
+    if (!file || isNew || file.size > 12 * 1024 * 1024 || !/^(application\/pdf|image\/(?:png|jpeg|webp))$/.test(file.type)) return;
+    const filename = `kvittering-${Date.now()}.${file.type === "application/pdf" ? "pdf" : file.type.split("/")[1] === "jpeg" ? "jpg" : file.type.split("/")[1]}`;
+    await writeFile(await join(await dirname(entry.path), "_attachments", filename), new Uint8Array(await file.arrayBuffer()));
+    field("receipt", `_attachments/${filename}`);
+  };
+  const showVersions = async () => {
+    if (isNew) return;
+    setVersions(await listFileVersions(vaultPath, getRelativeDisplayPath(vaultPath, entry.path)).catch(() => []));
+  };
 
-  return <div className="plugin-detail"><div className="plugin-detail__actions"><Button variant="ghost" onClick={onBack}><ArrowLeft size={17} /> Tilbake</Button><Button variant="destructive" onClick={onDelete}><Trash2 size={16} /> Slett</Button></div>
-    {id === "shopping" ? <><h2>{title}</h2><Field label="Navn" value={title} onSave={(value) => void onChange(setPluginTitle(entry.markdown, "title", value))} />
+  const previewSections = id === "books" ? ["Oppsummering", "Høydepunkter", "Mine tanker"] : id === "recipes" ? ["Beskrivelse", "Ingredienser", "Fremgangsmåte", "Notater"] : id === "inventory" ? ["Beskrivelse", "Notater"] : [];
+  const previewFields = id === "books" ? [["Forfatter", "author"], ["Kategori", "category"], ["Serie", "series"], ["Samling", "collection"], ["Fullført", "finished"], ["Vurdering", "rating"]]
+    : id === "inventory" ? [["Kategori", "category"], ["Plassering", "location"], ["Antall", "quantity"], ["Kjøpt", "purchased"], ["Pris", "purchase-price"], ["Garanti til", "warranty-until"], ["Serienummer", "serial-number"]]
+      : id === "recipes" ? [["Kategori", "category"], ["Porsjoner", "servings"]] : [];
+
+  return <div className="plugin-detail"><div className="plugin-detail__actions"><Button variant="ghost" onClick={onBack}><ArrowLeft size={17} /> Tilbake</Button><div className="plugin-detail__action-group">
+    {!isNew && <Button variant="outline" onClick={() => void showVersions()}><History size={16} /> Versjoner</Button>}
+    {editing ? <Button onClick={onSave} disabled={saving || (!isNew && !dirty)}><Save size={16} /> {saving ? "Lagrer …" : "Lagre"}</Button>
+      : <Button onClick={() => setEditing(true)}><Pencil size={16} /> Rediger</Button>}
+    {!isNew && <Button variant="destructive" onClick={onDelete}><Trash2 size={16} /> Slett</Button>}</div></div>
+    {dirty && <p className="plugin-detail__unsaved">Endringer som ikke er lagret · Utkastet beholdes lokalt til du lagrer eller forkaster det.</p>}
+    {versions && <section className="plugin-detail__section"><div className="plugin-detail__section-heading"><h3>Versjonshistorikk</h3><button onClick={() => setVersions(null)}>Lukk</button></div>
+      {versions.length ? versions.map((version) => <div key={version.id} className="plugin-detail__version"><time>{new Date(version.createdAt).toLocaleString("no-NO")}</time><button onClick={() => void readVersionContent(vaultPath, version.id).then((markdown) => { void onChange(markdown); setEditing(true); setVersions(null); })}>Bruk som utkast</button></div>) : <p>Ingen lagrede versjoner ennå.</p>}</section>}
+    {!editing ? <div className="plugin-detail__preview"><aside className="plugin-detail__side"><strong>Innhold</strong>{previewSections.filter((heading) => pluginSection(entry.markdown, heading)).map((heading) => <button key={heading} onClick={() => document.getElementById(`plugin-section-${heading}`)?.scrollIntoView({ behavior: "smooth", block: "start" })}>{heading}</button>)}</aside><div className="plugin-detail__preview-main"><div className="plugin-detail__hero">
+      {id !== "shopping" && <div className="plugin-detail__image">{cover ? <PluginCover id={id} vaultPath={vaultPath} documentPath={entry.path} reference={cover} alt={title} /> : <span aria-hidden="true">{id === "books" ? "📖" : id === "recipes" ? "🍽" : "📦"}</span>}</div>}
+      <div><h2>{title}</h2><p className="plugin-detail__badges">{entry.metadata.favorite === "true" && <span>★ Favoritt</span>}{published && <span>Offentlig</span>}</p>
+        <dl className="plugin-detail__summary">{previewFields.filter(([, key]) => entry.metadata[key]).map(([label, key]) => <div key={key}><dt>{label}</dt><dd>{entry.metadata[key]}</dd></div>)}</dl></div></div>
+      {previewSections.map((heading) => { const content = pluginSection(entry.markdown, heading); return content && <section className="plugin-detail__section" id={`plugin-section-${heading}`} key={heading}><h3>{heading}</h3><div className="plugin-detail__prose" dangerouslySetInnerHTML={{ __html: previewMarkdown.render(content) }} /></section>; })}
+      {id === "shopping" && <section className="plugin-detail__section"><div className="plugin-detail__prose" dangerouslySetInnerHTML={{ __html: previewMarkdown.render(splitFrontmatter(entry.markdown).body.replace(/^# .+\n/, "")) }} /></section>}
+      {id === "inventory" && entry.metadata.receipt && <section className="plugin-detail__section"><h3>Kvittering</h3><p>{entry.metadata.receipt.split("/").pop()}</p></section>}
+    </div></div> : id === "shopping" ? <><h2>{title || "Ny handleliste"}</h2><Field label="Navn" value={title} autoFocus={isNew} onSave={(value) => void onChange(setPluginTitle(entry.markdown, "title", value))} />
       <label className="plugin-detail__field"><span>Offentlig handleliste</span><input type="checkbox" checked={published} disabled={!publicView && !published} onChange={() => void onChange(setPluginField(entry.markdown, "published", !published))} /></label>
       {published && publicView && <p>Adresse: /handleliste/{entry.metadata.slug}</p>}<ShoppingItems entry={entry} onChange={onChange} /></> : <>
       <div className="plugin-detail__hero"><div className="plugin-detail__image">{cover ? <PluginCover id={id} vaultPath={vaultPath} documentPath={entry.path} reference={cover} alt={title} /> : <span aria-hidden="true">{id === "books" ? "📖" : id === "recipes" ? "🍽" : "📦"}</span>}
-        <button onClick={() => void uploadCover()}><ImagePlus size={16} /> {cover ? "Bytt bilde" : "Legg til bilde"}</button></div>
-        <div className="plugin-detail__hero-fields"><h2>{title}</h2><Field label={id === "inventory" ? "Navn" : "Tittel"} value={title}
+        <button disabled={isNew} onClick={() => void uploadCover()}><ImagePlus size={16} /> {cover ? "Bytt bilde" : "Legg til bilde"}</button></div>
+        <div className="plugin-detail__hero-fields"><h2>{title || `Ny ${id === "books" ? "bok" : id === "recipes" ? "oppskrift" : "gjenstand"}`}</h2><Field label={id === "inventory" ? "Navn" : "Tittel"} value={title} autoFocus={isNew}
           onSave={(value) => void onChange(setPluginTitle(entry.markdown, id === "inventory" ? "name" : "title", value))} />
           {id === "books" && <>{metadataField("Forfatter", "author")}
             <label className="plugin-detail__field"><span>Lesestatus</span><select value={entry.metadata.status || "want-to-read"} onChange={(event) => field("status", event.target.value)}><option value="want-to-read">Vil lese</option><option value="reading">Leser</option><option value="finished">Lest</option></select></label>
             {metadataField("Kategori", "category")}{metadataField("Serie", "series")}{metadataField("Samling", "collection")}{metadataField("Startet", "started", "date")}{metadataField("Fullført", "finished", "date")}{metadataField("Vurdering (1–5)", "rating", "number")}
-            <label className="plugin-detail__field"><span>Offentlig</span><input type="checkbox" checked={published} disabled={!publicView && !published} onChange={() => field("published", String(!published))} /></label></>}
+            <div className="plugin-detail__checks"><label className="plugin-detail__check-tile"><input type="checkbox" checked={entry.metadata.favorite === "true"} onChange={() => field("favorite", String(entry.metadata.favorite !== "true"))} /> Favoritt</label><label className="plugin-detail__check-tile"><input type="checkbox" checked={published} disabled={!publicView && !published} onChange={() => field("published", String(!published))} /> Offentlig</label></div></>}
           {id === "recipes" && <>{metadataField("Kategori", "category")}{metadataField("Standardporsjoner", "servings", "number")}
-            <button onClick={() => void onChange(setPluginField(entry.markdown, "favorite", entry.metadata.favorite !== "true"))}>{entry.metadata.favorite === "true" ? "★ Favoritt" : "☆ Favoritt"}</button>
-            <label className="plugin-detail__field"><span>Offentlig</span><input type="checkbox" checked={published} disabled={!publicView && !published} onChange={() => {
+            <div className="plugin-detail__checks"><label className="plugin-detail__check-tile"><input type="checkbox" checked={entry.metadata.favorite === "true"} onChange={() => void onChange(setPluginField(entry.markdown, "favorite", entry.metadata.favorite !== "true"))} /> Favoritt</label>
+            <label className="plugin-detail__check-tile"><input type="checkbox" checked={published} disabled={!publicView && !published} onChange={() => {
               void onChange(setPluginField(entry.markdown, "published", !published));
-            }} /></label></>}
+            }} /> Offentlig</label></div></>}
           {id === "inventory" && <>{metadataField("Kategori", "category")}{metadataField("Plassering", "location")}{metadataField("Antall", "quantity", "number")}{metadataField("Kjøpt", "purchased", "date")}{metadataField("Pris", "purchase-price")}{metadataField("Garanti til", "warranty-until", "date")}{metadataField("Serienummer", "serial-number")}
-            <label className="plugin-detail__field"><span>Offentlig</span><input type="checkbox" checked={published} disabled={!publicView && !published} onChange={() => void onChange(setPluginField(entry.markdown, "published", !published))} /></label></>}
+            <div className="plugin-detail__checks"><label className="plugin-detail__check-tile"><input type="checkbox" checked={entry.metadata.favorite === "true"} onChange={() => field("favorite", String(entry.metadata.favorite !== "true"))} /> Favoritt</label><label className="plugin-detail__check-tile"><input type="checkbox" checked={published} disabled={!publicView && !published} onChange={() => void onChange(setPluginField(entry.markdown, "published", !published))} /> Offentlig</label></div></>}
         </div></div>
       {id === "books" && <>{contentSection("Oppsummering", "Hva handler boken om?")}<LineItemsEditor entry={entry} heading="Høydepunkter" placeholder="Legg til sitat eller høydepunkt" onChange={onChange} />{contentSection("Mine tanker")}</>}
       {id === "recipes" && <>{contentSection("Beskrivelse", "Beskriv retten …")}
         <label className="plugin-detail__field plugin-detail__servings"><span>Vis for antall porsjoner</span><input type="number" min="1" max="100" value={servings ?? Number(entry.metadata.servings || 4)} onChange={(event) => setServings(Number(event.target.value))} /></label>
         <RecipeEditor key={entry.path} entry={entry} servings={servings ?? Number(entry.metadata.servings || 4)} onChange={onChange} />{contentSection("Notater")}</>}
-      {id === "inventory" && <>{contentSection("Beskrivelse", "Kort beskrivelse for den offentlige visningen")}{contentSection("Notater")}<LineItemsEditor entry={entry} heading="Vedlikehold" placeholder="Dato og hva som ble gjort" onChange={onChange} /></>}
+      {id === "inventory" && <>{contentSection("Beskrivelse", "Beskrivelse av gjenstanden")}{contentSection("Notater")}
+        <section className="plugin-detail__section"><h3>Kvittering</h3><input type="file" accept="application/pdf,image/png,image/jpeg,image/webp" disabled={isNew} onChange={(event) => void uploadReceipt(event.currentTarget.files?.[0])} />
+          {entry.metadata.receipt && <p>Lagret: {entry.metadata.receipt.split("/").pop()}</p>}</section></>}
     </>}
   </div>;
 }

@@ -9,7 +9,7 @@
 
 services:
   scribecat:
-    image: ${SCRIBECAT_IMAGE:-ghcr.io/reidar96/scribecat-server:1.1.3}
+    image: ${SCRIBECAT_IMAGE:-ghcr.io/reidar96/scribecat-server:1.1.4}
     pull_policy: never
     restart: unless-stopped
     environment:

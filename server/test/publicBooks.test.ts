@@ -24,5 +24,9 @@ describe("public books", () => {
     const token = /eksempel\/media\/([a-f0-9]{32})/.exec(detail.body)?.[1];
     expect(token).toBeTruthy();
     expect((await context.app.inject({ method: "GET", url: `/anna/boker/eksempel/media/${token}` })).statusCode).toBe(200);
+    const author = await context.app.inject({ method: "GET", url: "/anna/boker/oversikt/forfatter/Forfatter" });
+    expect(author.statusCode).toBe(200);
+    expect(author.body).toContain('href="../../eksempel"');
+    expect((await context.app.inject({ method: "GET", url: "/anna/boker/statistikk" })).body).toContain("1 bøker");
   });
 });
