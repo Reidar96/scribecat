@@ -72,4 +72,15 @@ describe("public shopping", () => {
     expect(page).toContain('href="../handleliste/uke"');
     expect(page).toContain('action="uke/rename-category"');
   });
+  it("renders category editing inline and puts completed items below active items", async () => {
+    await configure();
+    const file = path.join(context.vaultPath, "Handlelister", "Uke.md");
+    await writeFile(file, (await readFile(file, "utf8")).replace("- [ ] Melk", "- [ ] Melk\n- [x] Brød"));
+    const page = (await context.app.inject({ method: "GET", url: "/anna/handleliste/uke" })).body;
+    expect(page).toContain('class="public-category-title"');
+    expect(page).toContain('aria-label="Lagre kategorinavn"');
+    expect(page).toContain('aria-label="Slett kategorien Kjøl"');
+    expect(page.indexOf("Melk")).toBeLessThan(page.indexOf("Fullført (1)"));
+    expect(page.indexOf("Fullført (1)")).toBeLessThan(page.indexOf("Brød"));
+  });
 });

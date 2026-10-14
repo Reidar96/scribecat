@@ -1,3 +1,11 @@
+## [1.2.4] - 2026-10-14
+
+- Use the Tasks-style horizontally scrollable mobile navigation for the newer plugins, with a fixed quick-add action for Quick Notes.
+- Quick Notes now auto-save after typing, retain recoverable local drafts, show save status and grow with the note instead of clipping longer text.
+- Public Shopping categories can be renamed inline, removed with a compact close action, and show completed items in a collapsed section beneath active items.
+- Tighten the spacing between shopping checkboxes and their item text.
+- Keep the Inventory reading view focused on recorded details and avoid empty layout areas.
+
 ## [1.2.3] - 2026-10-14
 
 - Navigasjon i bøker, oppskrifter og inventar bruker nå de samme oversiktene som offentlig visning; kategorier og andre grupper viser omslag fra innholdet.

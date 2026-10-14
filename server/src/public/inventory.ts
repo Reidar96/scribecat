@@ -112,9 +112,14 @@ export const publicInventoryRoutes: FastifyPluginAsync<{ vault: Vault }> = async
   app.get<{ Params: { slug: string } }>("/inventar/:slug", async (request, reply) => {
     const item = slugPattern.test(request.params.slug) ? (await published()).find((entry) => entry.slug === request.params.slug) : null;
     if (!item) return reply.code(404).send();
-    const details = readingFields("inventory", item.fields).map(({ label, value }) => `<div><dt>${escape(label)}</dt><dd>${escape(value)}</dd></div>`).join("");
+    const known = readingFields("inventory", item.fields);
+    const knownKeys = new Set(known.map(({ key }) => key));
+    const internalFields = new Set(["scribecat-plugin", "type", "slug", "published", "cover", "receipt", "name"]);
+    const extras = Object.entries(item.fields).filter(([key, value]) => !internalFields.has(key) && !knownKeys.has(key) && !!value)
+      .map(([key, value]) => ({ label: key.replace(/[-_]/g, " ").replace(/\b\w/g, (letter) => letter.toLocaleUpperCase("no")), value }));
+    const details = [...known, ...extras].map(({ label, value }) => `<div><dt>${escape(label)}</dt><dd>${escape(value)}</dd></div>`).join("");
     const sections = readingSections("inventory", item.markdown).map(({ heading, content }) => `<section class="public-section"><h2>${escape(heading)}</h2><div class="public-prose">${publicProse(content)}</div></section>`).join("");
-    return reply.type("text/html; charset=utf-8").send(page(item.title, `<a class="back" href="../inventar">← Tilbake</a><article class="public-detail"><div class="public-hero">${item.token ? `<img src="${item.slug}/media/${item.token}" alt="">` : ""}<div><h1>${escape(item.title)}</h1><dl class="public-facts">${details}</dl></div></div>${sections}${item.receiptToken ? `<section class="public-section"><h2>Kvittering</h2><a href="${item.slug}/kvittering/${item.receiptToken}">Se kvittering</a></section>` : ""}</article>`));
+    return reply.type("text/html; charset=utf-8").send(page(item.title, `<a class="back" href="../inventar">← Tilbake</a><article class="public-detail public-detail--inventory"><div class="public-hero">${item.token ? `<img src="${item.slug}/media/${item.token}" alt="">` : `<div class="public-inventory-placeholder" aria-hidden="true">▧</div>`}<div class="public-inventory-copy"><h1>${escape(item.title)}</h1>${details ? `<dl class="public-facts">${details}</dl>` : ""}</div></div>${sections}${item.receiptToken ? `<section class="public-section"><h2>Kvittering</h2><a href="${item.slug}/kvittering/${item.receiptToken}">Se kvittering</a></section>` : ""}</article>`));
   });
   app.get<{ Params: { slug: string; token: string } }>("/inventar/:slug/kvittering/:token", async (request, reply) => {
     const item = slugPattern.test(request.params.slug) ? (await published()).find((entry) => entry.slug === request.params.slug) : null;

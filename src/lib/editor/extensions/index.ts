@@ -59,11 +59,12 @@ function buildContentExtensions(): Extensions {
       renderHTML({ HTMLAttributes }) {
         const href = String(HTMLAttributes.href ?? "");
         if (parseHeadingLink(href)) {
-          // WebKit can open href fragments in an about:blank tab before a
-          // delegated click handler runs. An internal link has no browser URL.
+          // Never expose the serialized note target as a browser URL. A
+          // harmless same-page fallback also prevents WebKit treating a
+          // pasted fragment as about:blank when a delegated handler races.
           const { href: _href, target: _target, ...attributes } = HTMLAttributes;
           void _href; void _target;
-          return ["a", { ...attributes, "data-heading-link": normalizeHeadingHref(href), role: "link", tabindex: "0" }, 0];
+          return ["a", { ...attributes, href: "#", "data-heading-link": normalizeHeadingHref(href), role: "link", tabindex: "0" }, 0];
         }
         return ["a", HTMLAttributes, 0];
       }

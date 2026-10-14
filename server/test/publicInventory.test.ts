@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createTestContext, type TestContext } from "./helpers.js";
@@ -36,5 +36,15 @@ describe("public inventory", () => {
     expect((await context.app.inject({ method: "GET", url: "/anna/inventar/oversikt/kategori/Sport" })).body).toContain("Sykkel");
     expect((await context.app.inject({ method: "GET", url: "/anna/inventar/statistikk" })).body).toContain("<span>Gjenstander</span><strong>1</strong>");
     expect(index.body).toContain('href="inventar/oversikt/plassering"');
+  });
+  it("uses a balanced inventory cover placeholder when no image exists", async () => {
+    await configure();
+    const file = path.join(context.vaultPath, "Inventar", "Sykkel.md");
+    await writeFile(file, (await readFile(file, "utf8")).replace("cover: _attachments/sykkel.jpg\n", ""));
+    const page = (await context.app.inject({ method: "GET", url: "/anna/inventar/sykkel" })).body;
+    expect(page).toContain("public-detail--inventory");
+    expect(page).toContain("public-inventory-placeholder");
+    expect(page).toContain("public-inventory-copy");
+    expect(page).not.toContain("<dl class=\"public-facts\"></dl>");
   });
 });

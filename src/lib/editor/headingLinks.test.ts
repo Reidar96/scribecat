@@ -22,6 +22,7 @@ describe("heading links", () => {
     const href = headingLinkHref("/vault", "/vault/Notater/Min bok.md", "#kapittel-2");
     const editor = new Editor({ element: document.createElement("div"), extensions: buildPreviewExtensions(), content: `[Kapittel](${href})` });
     expect(editor.getHTML()).toContain(`data-heading-link="${href}"`);
+    expect(editor.getHTML()).toContain('href="#"');
     expect(editor.getHTML()).not.toContain(`href="${href}"`);
     expect(editor.getHTML()).not.toContain("about:blank");
     editor.destroy();

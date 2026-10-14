@@ -41,11 +41,16 @@ function ShoppingItems({ entry, onChange }: { entry: PluginEntry; onChange: (mar
   return <div className="plugin-detail__shopping">{categories.map((category, categoryIndex) => {
     const sectionLines = pluginSection(entry.markdown, category).split("\n");
     const items = sectionLines.map((line, lineIndex) => ({ line, lineIndex })).filter(({ line }) => /^- \[[ x]\] /.test(line));
-    return <section key={category} id={`plugin-category-${category}`} className="plugin-detail__section"><div className="plugin-detail__section-heading"><h3>{category}</h3><button aria-label={`Endre navnet på ${category}`} onClick={() => setDialog({ kind: "rename", category })}><Pencil size={15} /></button>
-      <button disabled={categoryIndex === 0} aria-label={`Flytt ${category} opp`} onClick={() => void onChange(moveMarkdownSection(entry.markdown, category, -1))}>↑</button>
-      <button disabled={categoryIndex === categories.length - 1} aria-label={`Flytt ${category} ned`} onClick={() => void onChange(moveMarkdownSection(entry.markdown, category, 1))}>↓</button>
-      <button className="plugin-detail__remove" aria-label={`Slett kategorien ${category}`} onClick={() => setDialog({ kind: "delete", category })}><Trash2 size={15} /></button></div>
-      {items.map(({ line, lineIndex }, index) => <label key={`${category}-${index}`} className="plugin-detail__item">
+    const activeItems = items.filter(({ line }) => line.startsWith("- [ ]"));
+    const completedItems = items.filter(({ line }) => line.startsWith("- [x]"));
+    const rename = (form: HTMLFormElement) => {
+      const input = form.elements.namedItem("name") as HTMLInputElement;
+      const name = input.value.trim();
+      if (name && name !== category && !/[\r\n#]/.test(name) && !categories.some((item) => item.toLocaleLowerCase("no") === name.toLocaleLowerCase("no"))) {
+        void onChange(entry.markdown.split("\n").map((line) => line === `## ${category}` ? `## ${name}` : line).join("\n"));
+      }
+    };
+    const renderItem = ({ line, lineIndex }: { line: string; lineIndex: number }, index: number) => <label key={`${category}-${index}`} className="plugin-detail__item">
         <input type="checkbox" checked={line.startsWith("- [x]")} onChange={() => {
           const next = sectionLines.map((item, at) => at === lineIndex ? item.replace(/^(- \[)[ x](\])/, `$1${line.startsWith("- [x]") ? " " : "x"}$2`) : item);
           void onChange(setPluginSection(entry.markdown, category, next.join("\n")));
@@ -53,8 +58,13 @@ function ShoppingItems({ entry, onChange }: { entry: PluginEntry; onChange: (mar
         const value = event.currentTarget.value.trim().replace(/[\r\n]/g, " ");
         if (value && value !== line.slice(6)) void onChange(setPluginSection(entry.markdown, category, sectionLines.map((row, at) => at === lineIndex ? `${line.slice(0, 6)}${value}` : row).join("\n")));
       }} />
-        <button aria-label={`Slett ${line.slice(6)}`} onClick={() => void onChange(setPluginSection(entry.markdown, category, sectionLines.filter((_, at) => at !== lineIndex).join("\n")))}><Trash2 size={15} /></button>
-      </label>)}
+        <button aria-label={`Slett ${line.slice(6)}`} onClick={() => void onChange(setPluginSection(entry.markdown, category, sectionLines.filter((_, at) => at !== lineIndex).join("\n")))}>×</button>
+      </label>;
+    return <section key={category} id={`plugin-category-${category}`} className="plugin-detail__section"><div className="plugin-detail__section-heading"><form className="plugin-detail__category-title" onSubmit={(event) => { event.preventDefault(); rename(event.currentTarget); }}><input aria-label={`Kategorinavn: ${category}`} name="name" defaultValue={category} /><button type="submit" aria-label={`Lagre navnet på ${category}`}>✓</button></form>
+      <button disabled={categoryIndex === 0} aria-label={`Flytt ${category} opp`} onClick={() => void onChange(moveMarkdownSection(entry.markdown, category, -1))}>↑</button>
+      <button disabled={categoryIndex === categories.length - 1} aria-label={`Flytt ${category} ned`} onClick={() => void onChange(moveMarkdownSection(entry.markdown, category, 1))}>↓</button>
+      <button className="plugin-detail__remove" aria-label={`Slett kategorien ${category}`} onClick={() => setDialog({ kind: "delete", category })}>×</button></div>
+      {activeItems.map(renderItem)}
       <form onSubmit={(event) => {
         event.preventDefault();
         const input = event.currentTarget.elements.namedItem("item") as HTMLInputElement;
@@ -62,6 +72,7 @@ function ShoppingItems({ entry, onChange }: { entry: PluginEntry; onChange: (mar
         void onChange(setPluginSection(entry.markdown, category, [...sectionLines, `- [ ] ${input.value.trim().replace(/[\r\n]/g, " ")}`].join("\n")));
         input.value = "";
       }}><input name="item" aria-label={`Ny vare i ${category}`} placeholder="Legg til vare" /><button type="submit" aria-label="Legg til"><Plus size={17} /></button></form>
+      {completedItems.length > 0 && <details className="plugin-detail__completed"><summary>Fullført ({completedItems.length})</summary>{completedItems.map(renderItem)}</details>}
     </section>;
   })}<Button variant="outline" onClick={() => setDialog({ kind: "new" })}><Plus size={16} /> Kategori</Button>
     {dialog && <PluginDialog title={dialog.kind === "new" ? "Ny kategori" : dialog.kind === "rename" ? `Endre «${dialog.category}»` : `Slette kategorien «${dialog.category}» og varene i den?`}

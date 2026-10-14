@@ -1,5 +1,5 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
-import { PanelLeft, Plus, Search, ChartNoAxesCombined, Save, X, Trash2, BookOpen, CookingPot, Package, ShoppingBasket, Pin, ArchiveRestore, Archive } from "lucide-react";
+import { Plus, Search, ChartNoAxesCombined, Trash2, BookOpen, CookingPot, Package, ShoppingBasket, Pin, ArchiveRestore, Archive } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { splitFrontmatter } from "@/lib/documentFrontmatter";
@@ -29,25 +29,37 @@ function QuickNoteCard({ entry, initialEdit, onSave, onDelete }: { entry: Entry;
   const [draft, setDraft] = useState(() => restored.current!.value || noteBody(entry.markdown));
   const [saving, setSaving] = useState(false);
   const baseline = useRef(entry.markdown);
+  const textarea = useRef<HTMLTextAreaElement>(null);
   const saved = noteBody(entry.markdown);
   useEffect(() => { if (draft === saved) { baseline.current = entry.markdown; setDraft(saved); } }, [saved, entry.markdown]);
+  useEffect(() => {
+    const field = textarea.current;
+    if (!field) return;
+    field.style.height = "auto";
+    field.style.height = `${Math.max(field.scrollHeight, 128)}px`;
+  }, [draft]);
   useEffect(() => {
     try {
       if (draft !== saved) localStorage.setItem(draftKey, draft);
       else localStorage.removeItem(draftKey);
     } catch { /* Storage can be unavailable in private mode. */ }
   }, [draft, saved, draftKey]);
-  const save = async () => {
-    setSaving(true);
-    try {
-      const body = splitFrontmatter(baseline.current).body;
-      const markdown = baseline.current.slice(0, baseline.current.length - body.length) + `\n${draft.trim()}\n`;
-      if (await onSave(markdown, baseline.current)) baseline.current = markdown;
-    } finally { setSaving(false); }
-  };
+  useEffect(() => {
+    if (draft === saved) return;
+    const timer = window.setTimeout(() => {
+      const expected = baseline.current;
+      const body = splitFrontmatter(expected).body;
+      const markdown = expected.slice(0, expected.length - body.length) + `\n${draft}\n`;
+      setSaving(true);
+      void onSave(markdown, expected).then((ok) => {
+        if (ok) baseline.current = markdown;
+      }).finally(() => setSaving(false));
+    }, 650);
+    return () => window.clearTimeout(timer);
+  }, [draft, saved, onSave]);
   return <div className="content-plugin-panel__note">
-    <textarea data-note-path={entry.path} aria-label="Huskelapp" value={draft} placeholder="Skriv noe …" onChange={(event) => setDraft(event.target.value)} autoFocus={initialEdit} />
-    <div className="content-plugin-panel__note-actions">{draft !== saved && <><button disabled={saving} onClick={() => { setDraft(saved); baseline.current = entry.markdown; }}><X size={14} /> Avbryt</button><button disabled={saving} onClick={() => void save()}><Save size={14} /> Lagre</button></>}<button aria-label="Slett huskelapp" title="Slett" onClick={onDelete}><Trash2 size={15} /></button></div>
+    <textarea ref={textarea} data-note-path={entry.path} aria-label="Huskelapp" value={draft} placeholder="Skriv noe …" onChange={(event) => setDraft(event.target.value)} autoFocus={initialEdit} />
+    <div className="content-plugin-panel__note-actions"><span className="content-plugin-panel__note-status" role="status">{saving ? "Lagrer …" : draft !== saved ? "Lagrer automatisk" : "Lagret"}</span><button aria-label="Slett huskelapp" title="Slett" onClick={onDelete}><Trash2 size={15} /></button></div>
   </div>;
 }
 
@@ -315,7 +327,7 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
         })}</div>}
       </aside>
     <div className="content-plugin-panel__body">
-      <button className="content-plugin-panel__rail-toggle" onClick={() => setSecondaryOpen((open) => !open)} aria-expanded={secondaryOpen}><PanelLeft size={16} /> {secondaryOpen ? "Lukk appmeny" : "Åpne appmeny"}</button>
+      {isPhone && id === "quick-notes" && !editingEntry && <button type="button" className="content-plugin-panel__quick-add" onClick={requestAdd} aria-label="Ny huskelapp" title="Ny huskelapp"><Plus /></button>}
       {error ? <p role="alert">{error}</p> : null}
       {scanRemaining > 0 && <p className="content-plugin-panel__loading" role="status">Laster {scanRemaining} oppføringer …</p>}
       {editingEntry && id !== "quick-notes" ? <ContentPluginDetail id={id} entry={editingEntry} vaultPath={folderPath} publicView={publicView}
