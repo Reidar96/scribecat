@@ -1,5 +1,5 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
-import { Home, PanelLeft, Plus, Search, ChartNoAxesCombined, Pencil, Save, X, Trash2, BookOpen, CookingPot, Package, ShoppingBasket } from "lucide-react";
+import { PanelLeft, Plus, Search, ChartNoAxesCombined, Pencil, Save, X, Trash2, BookOpen, CookingPot, Package, ShoppingBasket } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { splitFrontmatter } from "@/lib/documentFrontmatter";
@@ -15,6 +15,7 @@ import { ContentPluginDetail } from "@/components/plugins/ContentPluginDetail";
 import { PluginStatistics } from "@/components/plugins/PluginStatistics";
 import { PluginDialog } from "@/components/plugins/PluginDialog";
 import { useAppStore } from "@/store/useAppStore";
+import { PluginTopbar } from "@/components/plugins/PluginTopbar";
 
 type Entry = { path: string; markdown: string; metadata: Record<string, string>; title: string };
 const entryCache = new Map<string, { mtime: number; entry: Entry }>();
@@ -84,9 +85,12 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
   const [creating, setCreating] = useState(false);
   const [savingNew, setSavingNew] = useState(false);
   const [showStats, setShowStats] = useState(false);
+  const [secondaryOpen, setSecondaryOpen] = useState(false);
+  const [scanRemaining, setScanRemaining] = useState(0);
   const [error, setError] = useState("");
   const [dialog, setDialog] = useState<{ kind: "delete" | "category" | "discard"; path?: string; label?: string; field?: string } | null>(null);
   const pendingWrites = useRef(new Map<string, Promise<void>>());
+  const pendingNavigation = useRef<(() => void) | null>(null);
   const paths = useMemo(() => filePaths.filter((path) => {
     const relative = path.replace(/\\/g, "/");
     const root = folderPath.replace(/\\/g, "/").replace(/\/$/, "");
@@ -98,6 +102,7 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
     const ready = paths.map((path) => entryCache.get(path)).filter((cached) => cached && cached.mtime === fileMtimeMs[cached.entry.path]).map((cached) => cached!.entry);
     setEntries(ready);
     const missing = paths.filter((path) => !entryCache.has(path) || entryCache.get(path)!.mtime !== fileMtimeMs[path]);
+    setScanRemaining(missing.length);
     void (async () => {
       // Bound vault reads so opening a large collection does not saturate
       // desktop IPC or the remote server. Show cached rows immediately.
@@ -120,6 +125,7 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
           for (const entry of batch) if (entry) all.set(entry.path, entry);
           return paths.flatMap((path) => all.has(path) ? [all.get(path)!] : []);
         });
+        if (current) setScanRemaining(Math.max(0, missing.length - at - batch.length));
       }
     })();
     return () => { current = false; };
@@ -193,7 +199,7 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
     return null;
   };
 
-  const requestAdd = () => {
+  const requestAdd = () => navigate(() => {
     if (id === "quick-notes") void add(`Huskelapp ${new Date().toLocaleString("sv-SE").replace(/[ :]/g, "-")}`);
     else {
       setSelectedPath(null);
@@ -204,7 +210,7 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
       setSavedMarkdown(null);
       setShowStats(false);
     }
-  };
+  });
 
   const discard = () => {
     try { localStorage.removeItem(draftKey(creating ? null : selectedPath)); } catch { /* unavailable storage */ }
@@ -222,6 +228,12 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
       setDialog({ kind: "discard" });
     } else discard();
   };
+  function navigate(action: () => void) {
+    if (draftRef.current !== null && draftRef.current !== savedMarkdown && (savedMarkdown !== null || pluginMetadata(draftRef.current).title || pluginMetadata(draftRef.current).name)) {
+      pendingNavigation.current = action;
+      setDialog({ kind: "discard" });
+    } else action();
+  }
   const saveDraft = async () => {
     if (savingNew) return;
     const active = document.activeElement;
@@ -286,21 +298,31 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
     ...selected, markdown: draftMarkdown, metadata: pluginMetadata(draftMarkdown)
   } : null;
 
+  const selectFilter = (value: string) => navigate(() => { setFilter(value); setShowStats(false); setSelectedPath(null); setCreating(false); updateDraft(null); setSecondaryOpen(false); });
   return <main className="content-plugin-panel">
-    <header className="content-plugin-panel__header">
-      {isPhone || !sidebarVisible ? <Button variant="outline" aria-label="Åpne sidemeny" onClick={isPhone ? onOpenSidebar : onSidebarVisibilityToggle}><PanelLeft /></Button> : null}
-      <span className="content-plugin-panel__icon" aria-hidden="true">{id === "books" ? <BookOpen /> : id === "recipes" ? <CookingPot /> : id === "inventory" ? <Package /> : id === "shopping" ? <ShoppingBasket /> : <Pencil />}</span><h2>{manifest.name}</h2>
-      {!editingEntry && id !== "quick-notes" && <Button variant="outline" onClick={() => setShowStats((value) => !value)}><ChartNoAxesCombined size={16} /> Statistikk</Button>}
-      {!editingEntry && <Button onClick={requestAdd}><Plus size={16} /> Ny</Button>}
-      <Button variant="ghost" aria-label="Hjem" title="Hjem" onClick={onClose}><Home size={18} /></Button>
-    </header>
+    <PluginTopbar title={manifest.name} icon={id} isPhone={isPhone} sidebarVisible={sidebarVisible} onSidebarVisibilityToggle={onSidebarVisibilityToggle} onOpenSidebar={onOpenSidebar} onClose={onClose} />
+    <div className="content-plugin-panel__layout">
+      <aside className={`content-plugin-panel__rail${secondaryOpen ? " content-plugin-panel__rail--open" : ""}`} aria-label={`${manifest.name} navigasjon`}>
+        <div className="content-plugin-panel__rail-group">
+          <Button variant="outline" className="content-plugin-panel__new" onClick={requestAdd}><Plus size={16} /> {id === "books" ? "Ny bok" : id === "recipes" ? "Ny oppskrift" : id === "inventory" ? "Ny gjenstand" : id === "shopping" ? "Ny handleliste" : "Ny huskelapp"}</Button>
+          <button className={!editingEntry && !showStats && !filter ? "active" : ""} onClick={() => selectFilter("")}>Alle <span>{entries.length}</span></button>
+          {id !== "quick-notes" && <button className={showStats ? "active" : ""} onClick={() => navigate(() => { setShowStats(true); setSelectedPath(null); setCreating(false); updateDraft(null); setSecondaryOpen(false); })}><ChartNoAxesCombined size={16} /> Statistikk</button>}
+        </div>
+        {options.length > 0 && <div className="content-plugin-panel__rail-group"><strong>Utforsk</strong>{options.map(([field, value, label]) => {
+          const key = JSON.stringify([field, value]);
+          return <button key={key} className={filter === key ? "active" : ""} onClick={() => selectFilter(key)}>{label}<span>{entries.filter((entry) => entry.metadata[field] === value).length}</span></button>;
+        })}</div>}
+        {id === "shopping" && editingEntry && <div className="content-plugin-panel__rail-group"><strong>Kategorier</strong>{[...splitFrontmatter(editingEntry.markdown).body.matchAll(/^##\s+(.+)$/gm)].map((match) => <button key={match[1]} onClick={() => document.getElementById(`plugin-category-${match[1]}`)?.scrollIntoView({ behavior: "smooth" })}>{match[1]}</button>)}</div>}
+      </aside>
     <div className="content-plugin-panel__body">
+      <button className="content-plugin-panel__rail-toggle" onClick={() => setSecondaryOpen((open) => !open)} aria-expanded={secondaryOpen}><PanelLeft size={16} /> {secondaryOpen ? "Lukk appmeny" : "Åpne appmeny"}</button>
       {error ? <p role="alert">{error}</p> : null}
+      {scanRemaining > 0 && <p className="content-plugin-panel__loading" role="status">Laster {scanRemaining} oppføringer …</p>}
       {editingEntry && id !== "quick-notes" ? <ContentPluginDetail id={id} entry={editingEntry} vaultPath={folderPath} publicView={publicView}
         isNew={creating} dirty={draftMarkdown !== savedMarkdown} saving={savingNew} onSave={() => void saveDraft()}
         onBack={back} onCancelEdit={cancelEdit} onChange={async (next) => { updateDraft(next); }} onDelete={() => selected && setDialog({ kind: "delete", path: selected.path, label: selected.title })} /> : <>
       {showStats ? <PluginStatistics id={id} entries={entries} onBack={() => setShowStats(false)} onOpen={(path) => { const entry = entries.find((item) => item.path === path); if (entry) openEntry(entry); }} /> : <>
-      <div className="content-plugin-panel__overview"><div><span className="content-plugin-panel__eyebrow">SAMLING</span><h2>{manifest.name}</h2><p>{visible.length} {visible.length === 1 ? "oppføring" : "oppføringer"}</p></div></div>
+      <div className="content-plugin-panel__overview"><div><span className="content-plugin-panel__eyebrow">SAMLING</span><h2>{manifest.name}</h2><p>{scanRemaining > 0 ? `Laster … ${visible.length} vist` : `${visible.length} ${visible.length === 1 ? "oppføring" : "oppføringer"}`}</p></div></div>
       <div className="content-plugin-panel__controls"><label className="content-plugin-panel__search"><Search size={16} /><input type="search" value={query} placeholder={`Søk i ${manifest.name.toLocaleLowerCase()}`} onChange={(event) => setQuery(event.target.value)} /></label>
       {options.length ? <label className="content-plugin-panel__select"><span>Vis</span><select aria-label="Filtrer oppføringer" value={filter} onChange={(event) => setFilter(event.target.value)}><option value="">Alle</option>{options.map(([field, value, label]) => <option value={JSON.stringify([field, value])} key={`${field}:${value}`}>{label}</option>)}</select></label> : null}
       {selectedFilter && fields.includes(selectedFilter[0]) && <button className="content-plugin-panel__delete-filter" onClick={() => setDialog({ kind: "category", field: selectedFilter[0], label: selectedFilter[1] })}>Slett {groupLabels[selectedFilter[0]].toLocaleLowerCase()}</button>}</div>
@@ -325,16 +347,16 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
           </> : null}
         </article>;
       })}</div>
-      {visible.length === 0 ? <p>Ingen oppføringer her ennå.</p> : null}
+      {visible.length === 0 && scanRemaining === 0 ? <p>Ingen oppføringer her ennå.</p> : null}
       </>}
       </>}
-    </div>
+    </div></div>
     {dialog && <PluginDialog key={`${dialog.kind}-${dialog.path ?? dialog.label ?? ""}`} title={dialog.kind === "discard" ? "Forkaste endringer som ikke er lagret?" : dialog.kind === "category" ? `Slette ${groupLabels[dialog.field ?? "category"]?.toLocaleLowerCase() ?? "verdien"} «${dialog.label}»?` : `Flytte «${dialog.label}» til papirkurven?`}
       confirmLabel={dialog.kind === "discard" ? "Forkast" : "Slett"} destructive
-      onCancel={() => setDialog(null)} onConfirm={() => {
+      onCancel={() => { pendingNavigation.current = null; setDialog(null); }} onConfirm={() => {
         const action = dialog;
         setDialog(null);
-        if (action.kind === "discard") { discard(); return; }
+        if (action.kind === "discard") { const next = pendingNavigation.current; pendingNavigation.current = null; discard(); next?.(); return; }
         if (action.kind === "delete" && action.path) {
           if (pendingWrites.current.has(action.path)) { setError("Vent til endringen er lagret før du sletter."); return; }
           void (async () => {

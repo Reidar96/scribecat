@@ -1,3 +1,9 @@
+## [1.2.2] - 2026-10-14
+
+- Align the app chooser and plugin top bars with the same sidebar toggle, home placement and icon stroke. Add an internal navigation rail for Books, Recipes, Inventory, Shopping and Quick Notes, with mobile open/close and a clear loading indicator for large collections.
+- Share the Markdown reading model between internal and public Books, Recipes and Inventory. Show book highlights and complete metadata in public reading while keeping private thoughts private; match section cards and recipe layout.
+- Use the same public navigation controls and ScribeCat surfaces across the collection pages, including Shopping. Preserve existing note storage and volumes.
+
 ## [1.2.1] - 2026-10-14
 
 - Give plugin pages a compact, shared header and organize public collection links in a clearer navigation rail. Align public Books, Inventory and Recipes details with the private reading view while keeping personal book notes private.

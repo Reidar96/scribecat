@@ -1415,7 +1415,7 @@ function App() {
           {!startupFolderResolved && folderPath === null ? (
             <div className="workspace-startup-placeholder" aria-busy="true" />
           ) : appsOpen && folderPath ? (
-            <AppsOverview onOpen={openPlugin} onOpenSidebar={() => setIsSidebarSheetOpen(true)} onClose={() => void openCollectionSafely({ kind: "folder", relativePath: "" })} />
+            <AppsOverview onOpen={openPlugin} onOpenSidebar={() => setIsSidebarSheetOpen(true)} sidebarVisible={sidebarVisible} onSidebarVisibilityToggle={toggleSidebarVisible} onClose={() => void openCollectionSafely({ kind: "folder", relativePath: "" })} />
           ) : activeContentPlugin && folderPath ? (
             <ContentPluginPanel id={activeContentPlugin} folderPath={folderPath} filePaths={filePaths}
               sidebarVisible={sidebarVisible} onSidebarVisibilityToggle={toggleSidebarVisible}

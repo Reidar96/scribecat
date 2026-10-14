@@ -16,6 +16,8 @@ RUN npm ci
 COPY index.html vite.config.ts tsconfig.json tsconfig.node.json THIRD_PARTY_LICENSES.md ./
 COPY public ./public
 COPY src ./src
+# The public server and private editor share the pure Markdown reading model.
+COPY server/src/public/readingModel.ts ./server/src/public/readingModel.ts
 RUN npm run build:web
 
 # ---- server: TypeScript -> dist/server ---------------------------------------

@@ -14,6 +14,7 @@ import { dirname, join } from "@/platform/paths";
 import { writeFile } from "@/platform/vaultFs";
 import { getRelativeDisplayPath } from "@/lib/fileSystem";
 import { listFileVersions, readVersionContent, type FileVersion } from "@/lib/fileVersions";
+import { readingFields, readingSections } from "../../../server/src/public/readingModel";
 
 export type PluginEntry = { path: string; markdown: string; metadata: Record<string, string>; title: string };
 const previewMarkdown = new MarkdownIt({ html: false, linkify: false }).disable(["image", "link"]);
@@ -40,7 +41,7 @@ function ShoppingItems({ entry, onChange }: { entry: PluginEntry; onChange: (mar
   return <div className="plugin-detail__shopping">{categories.map((category, categoryIndex) => {
     const sectionLines = pluginSection(entry.markdown, category).split("\n");
     const items = sectionLines.map((line, lineIndex) => ({ line, lineIndex })).filter(({ line }) => /^- \[[ x]\] /.test(line));
-    return <section key={category} className="plugin-detail__section"><div className="plugin-detail__section-heading"><h3>{category}</h3>
+    return <section key={category} id={`plugin-category-${category}`} className="plugin-detail__section"><div className="plugin-detail__section-heading"><h3>{category}</h3>
       <button disabled={categoryIndex === 0} aria-label={`Flytt ${category} opp`} onClick={() => void onChange(moveMarkdownSection(entry.markdown, category, -1))}>↑</button>
       <button disabled={categoryIndex === categories.length - 1} aria-label={`Flytt ${category} ned`} onClick={() => void onChange(moveMarkdownSection(entry.markdown, category, 1))}>↓</button>
       <button className="plugin-detail__remove" aria-label={`Slett kategorien ${category}`} onClick={() => setDialog({ kind: "delete", category })}><Trash2 size={15} /></button></div>
@@ -169,10 +170,9 @@ export function ContentPluginDetail({ id, entry, vaultPath, publicView, isNew, d
     setVersions(await listFileVersions(vaultPath, getRelativeDisplayPath(vaultPath, entry.path)).catch(() => []));
   };
 
-  const previewSections = id === "books" ? ["Oppsummering", "Høydepunkter", "Mine tanker"] : id === "recipes" ? ["Beskrivelse", "Notater"] : id === "inventory" ? ["Beskrivelse", "Notater"] : [];
-  const previewFields = id === "books" ? [["Forfatter", "author"], ["Kategori", "category"], ["Serie", "series"], ["Samling", "collection"], ["Fullført", "finished"], ["Vurdering", "rating"]]
-    : id === "inventory" ? [["Kategori", "category"], ["Plassering", "location"], ["Antall", "quantity"], ["Kjøpt", "purchased"], ["Pris", "purchase-price"], ["Garanti til", "warranty-until"], ["Serienummer", "serial-number"]]
-      : id === "recipes" ? [["Kategori", "category"], ["Porsjoner", "servings"]] : [];
+  const readingKind = id === "books" || id === "recipes" || id === "inventory" ? id : null;
+  const previewFields = readingKind ? readingFields(readingKind, entry.metadata) : [];
+  const previewSections = readingKind ? readingSections(readingKind, entry.markdown).filter(({ heading }) => id !== "recipes" || (heading !== "Ingredienser" && heading !== "Fremgangsmåte")) : [];
 
   return <div className="plugin-detail"><div className="plugin-detail__actions"><Button variant="ghost" onClick={onBack}><ArrowLeft size={17} /> Tilbake</Button><div className="plugin-detail__action-group">
     {!isNew && <Button variant="outline" onClick={() => void showVersions()}><History size={16} /> Versjoner</Button>}
@@ -188,9 +188,10 @@ export function ContentPluginDetail({ id, entry, vaultPath, publicView, isNew, d
     {!editing ? <div className="plugin-detail__preview"><div className="plugin-detail__preview-main"><div className="plugin-detail__hero">
       {id !== "shopping" && <div className="plugin-detail__image">{cover ? <PluginCover id={id} vaultPath={vaultPath} documentPath={entry.path} reference={cover} alt={title} /> : <span aria-hidden="true">{id === "books" ? <BookOpen /> : id === "recipes" ? <CookingPot /> : <Package />}</span>}</div>}
       <div><h2>{title}</h2><p className="plugin-detail__badges">{entry.metadata.favorite === "true" && <span>★ Favoritt</span>}{published && <span>Offentlig</span>}</p>
-        <dl className="plugin-detail__summary">{previewFields.filter(([, key]) => entry.metadata[key]).map(([label, key]) => <div key={key}><dt>{label}</dt><dd>{entry.metadata[key]}</dd></div>)}</dl></div></div>
-      {previewSections.map((heading) => { const content = pluginSection(entry.markdown, heading); return content && <section className="plugin-detail__section" id={`plugin-section-${heading}`} key={heading}><h3>{heading}</h3><div className="plugin-detail__prose" dangerouslySetInnerHTML={{ __html: previewMarkdown.render(content) }} /></section>; })}
+        <dl className="plugin-detail__summary">{previewFields.map(({ key, label, value }) => <div key={key}><dt>{label}</dt><dd>{value}</dd></div>)}</dl></div></div>
+      {previewSections.filter(({ heading }) => id !== "recipes" || heading !== "Notater").map(({ heading, content }) => <section className="plugin-detail__section" id={`plugin-section-${heading}`} key={heading}><h3>{heading}</h3><div className="plugin-detail__prose" dangerouslySetInnerHTML={{ __html: previewMarkdown.render(content) }} /></section>)}
       {id === "recipes" && <RecipeReading key={entry.path} entry={entry} servings={servings ?? Number(entry.metadata.servings || 4)} onServingsChange={setServings} />}
+      {id === "recipes" && previewSections.filter(({ heading }) => heading === "Notater").map(({ heading, content }) => <section className="plugin-detail__section" id={`plugin-section-${heading}`} key={heading}><h3>{heading}</h3><div className="plugin-detail__prose" dangerouslySetInnerHTML={{ __html: previewMarkdown.render(content) }} /></section>)}
       {id === "shopping" && <ShoppingItems entry={entry} onChange={async (markdown) => { await onChange(markdown); setEditing(true); }} />}
       {id === "inventory" && entry.metadata.receipt && <section className="plugin-detail__section"><h3>Kvittering</h3><p>{entry.metadata.receipt.split("/").pop()}</p></section>}
     </div></div> : id === "shopping" ? <><h2>{title || "Ny handleliste"}</h2><Field label="Navn" value={title} autoFocus={isNew} onSave={(value) => void onChange(setPluginTitle(entry.markdown, "title", value))} />

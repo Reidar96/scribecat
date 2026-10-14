@@ -1,5 +1,6 @@
 import { readPluginMarkdown } from "./pluginFiles.js";
-import { publicCss, publicFrame } from "./theme.js";
+import { publicCss, publicFrame, publicProse } from "./theme.js";
+import { readingFields, readingSections } from "./readingModel.js";
 import { createHash } from "node:crypto";
 import path from "node:path";
 import type { FastifyPluginAsync } from "fastify";
@@ -9,7 +10,7 @@ const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const imagePattern = /\.(?:png|jpe?g|webp|gif)$/i;
 const mime: Record<string, string> = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".gif": "image/gif", ".pdf": "application/pdf" };
 const escape = (text: string) => text.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]!);
-type Item = { path: string; slug: string; title: string; category: string; location: string; description: string; notes: string; fields: Record<string, string>; cover: string | null; token: string | null; receipt: string | null; receiptToken: string | null };
+type Item = { path: string; slug: string; title: string; category: string; location: string; description: string; notes: string; fields: Record<string, string>; markdown: string; cover: string | null; token: string | null; receipt: string | null; receiptToken: string | null };
 const facets: Record<string, string> = { kategori: "category", plassering: "location" };
 const labels: Record<string, string> = { kategori: "Kategorier", plassering: "Plasseringer" };
 
@@ -73,7 +74,7 @@ export const publicInventoryRoutes: FastifyPluginAsync<{ vault: Vault }> = async
           if (candidate.startsWith(`${base}/_attachments/`) && mime[path.posix.extname(candidate).toLowerCase()]) receipt = candidate;
         }
         result.push({ path: record.relativePath, slug: fields.slug, title: fields.name || fields.slug,
-          category: fields.category || "", location: fields.location || "", description, notes, fields, cover, receipt,
+          category: fields.category || "", location: fields.location || "", description, notes, fields, markdown, cover, receipt,
           token: cover ? createHash("sha256").update(`${record.relativePath}\0${cover}`).digest("hex").slice(0, 32) : null,
           receiptToken: receipt ? createHash("sha256").update(`${record.relativePath}\0${receipt}`).digest("hex").slice(0, 32) : null });
       } catch { /* skip entries removed while listing */ }
@@ -110,11 +111,9 @@ export const publicInventoryRoutes: FastifyPluginAsync<{ vault: Vault }> = async
   app.get<{ Params: { slug: string } }>("/inventar/:slug", async (request, reply) => {
     const item = slugPattern.test(request.params.slug) ? (await published()).find((entry) => entry.slug === request.params.slug) : null;
     if (!item) return reply.code(404).send();
-    const fieldLabels: Record<string, string> = { category: "Kategori", location: "Plassering", quantity: "Antall", purchased: "Kjøpt", "purchase-price": "Pris", "warranty-until": "Garanti til", "serial-number": "Serienummer", favorite: "Favoritt" };
-    const hidden = new Set(["scribecat-plugin", "type", "name", "slug", "cover", "receipt", "published"]);
-    const details = Object.entries(item.fields).filter(([key, value]) => !hidden.has(key) && value)
-      .map(([key, value]) => `<div><dt>${escape(fieldLabels[key] ?? key.replace(/-/g, " "))}</dt><dd>${escape(value)}</dd></div>`).join("");
-    return reply.type("text/html; charset=utf-8").send(page(item.title, `<a class="back" href="../inventar">← Tilbake</a><article class="public-detail"><div class="public-hero">${item.token ? `<img src="${item.slug}/media/${item.token}" alt="">` : ""}<div><h1>${escape(item.title)}</h1><dl class="public-facts">${details}</dl></div></div>${item.description ? `<section class="public-section"><h2>Beskrivelse</h2><div class="description">${escape(item.description)}</div></section>` : ""}${item.notes ? `<section class="public-section"><h2>Notater</h2><div class="description">${escape(item.notes)}</div></section>` : ""}${item.receiptToken ? `<section class="public-section"><h2>Kvittering</h2><a href="${item.slug}/kvittering/${item.receiptToken}">Se kvittering</a></section>` : ""}</article>`));
+    const details = readingFields("inventory", item.fields).map(({ label, value }) => `<div><dt>${escape(label)}</dt><dd>${escape(value)}</dd></div>`).join("");
+    const sections = readingSections("inventory", item.markdown).map(({ heading, content }) => `<section class="public-section"><h2>${escape(heading)}</h2><div class="public-prose">${publicProse(content)}</div></section>`).join("");
+    return reply.type("text/html; charset=utf-8").send(page(item.title, `<a class="back" href="../inventar">← Tilbake</a><article class="public-detail"><div class="public-hero">${item.token ? `<img src="${item.slug}/media/${item.token}" alt="">` : ""}<div><h1>${escape(item.title)}</h1><dl class="public-facts">${details}</dl></div></div>${sections}${item.receiptToken ? `<section class="public-section"><h2>Kvittering</h2><a href="${item.slug}/kvittering/${item.receiptToken}">Se kvittering</a></section>` : ""}</article>`));
   });
   app.get<{ Params: { slug: string; token: string } }>("/inventar/:slug/kvittering/:token", async (request, reply) => {
     const item = slugPattern.test(request.params.slug) ? (await published()).find((entry) => entry.slug === request.params.slug) : null;

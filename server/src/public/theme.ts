@@ -28,11 +28,45 @@ export const publicCss = `
 .public-content .public-shopping-category{padding:1rem;margin:.85rem 0;scroll-margin-top:1rem}.public-shopping-category h2{margin:0 0 .6rem;font-size:1.2rem}.public-shopping-category .toggle{border-top:1px solid var(--sc-border)}
 .public-shopping-category .public-section-heading{display:flex;align-items:center;justify-content:space-between;gap:.7rem}.public-shopping-item{display:flex;align-items:center;justify-content:space-between;gap:.6rem;border-top:1px solid var(--sc-border)}.public-shopping-item .toggle{border:0;flex:1}.public-shopping-item button,.public-section-heading button{font-size:.8rem;color:var(--sc-muted)}.public-shopping-item button:hover,.public-section-heading button:hover{color:#dc2626}
 .public-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,10rem),1fr));gap:.7rem;margin:1.3rem 0 2rem}.public-stats div{display:grid;gap:.2rem;padding:1rem;border:1px solid var(--sc-border);border-left:3px solid var(--sc-accent);border-radius:.65rem;background:var(--sc-surface)}.public-stats span{font-size:.8rem;color:var(--sc-muted)}.public-stats strong{font-size:1.6rem;line-height:1.2}
+.public-top{height:3.5rem;min-height:3.5rem}.public-top .public-brand{display:inline-flex;align-items:center;gap:.5rem;color:var(--sc-text);font-size:.92rem}.public-top .public-home{display:grid;place-items:center;width:2rem;height:2rem;padding:0}.public-top svg{width:1.1rem;height:1.1rem;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}.public-top .public-brand svg{color:var(--sc-muted)}.public-nav-toggle{display:grid;place-items:center;width:2rem;height:2rem;cursor:pointer;border-radius:.5rem}.public-nav-toggle:hover,.public-nav-toggle:focus-visible{background:var(--sc-accent-soft);color:var(--sc-accent)}.public-nav-checkbox{position:absolute;opacity:0;width:1px;height:1px}.public-nav-checkbox:not(:checked)~.public-layout{grid-template-columns:0 minmax(0,1fr)}.public-nav-checkbox:not(:checked)~.public-layout .public-sidebar{visibility:hidden;padding:0;border:0;overflow:hidden}
+.public-content .public-detail{background:transparent;border:0;border-radius:0;overflow:visible}.public-detail .public-hero{background:var(--sc-surface);border:1px solid var(--sc-border);border-radius:.8rem}.public-content .public-shopping-category{padding:1rem}.public-shopping-item .toggle{flex:1}.public-shopping-item form{margin:0}.public-shopping-item button{white-space:nowrap}.public-content .public-section{background:var(--sc-surface)}
 @media(max-width:48rem){.public-layout{display:block}.public-sidebar{position:static;height:auto;border-right:0;border-bottom:1px solid var(--sc-border);padding:.5rem 1rem;flex-direction:row;overflow-x:auto;white-space:nowrap}.public-sidebar .public-nav-group{display:flex;align-items:center;border:0;padding:0}.public-sidebar strong{display:none}.public-content .recipe-hero,.public-content .recipe-body,.public-detail .public-hero,.public-detail .recipe-body{grid-template-columns:1fr}}
+@media(max-width:48rem){.public-nav-checkbox:not(:checked)~.public-layout .public-sidebar{display:none}}
 @media(prefers-color-scheme:dark){:root{--sc-bg:#151318;--sc-surface:#1e1b24;--sc-raised:#29252f;--sc-text:#f5f1f9;--sc-muted:#b6acbf;--sc-border:#37313f;--sc-accent-soft:#362340}.public-sidebar a:hover,.public-sidebar a:focus-visible{color:#d8b4fe}}
 `;
 
+/** Readable Markdown sections without emitting user-authored HTML or private links. */
+export function publicProse(markdown: string): string {
+  const escape = (value: string) => value.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]!);
+  const lines = markdown.split(/\r?\n/);
+  const result: string[] = [];
+  let list: string[] = [];
+  let paragraph: string[] = [];
+  const flush = () => {
+    if (paragraph.length) { result.push(`<p>${escape(paragraph.join(" "))}</p>`); paragraph = []; }
+    if (list.length) { result.push(`<ul>${list.map((item) => `<li>${escape(item)}</li>`).join("")}</ul>`); list = []; }
+  };
+  for (const line of lines) {
+    const item = /^[-*]\s+(.+)$/.exec(line);
+    if (item) { if (paragraph.length) flush(); list.push(item[1]); }
+    else if (!line.trim()) flush();
+    else { if (list.length) flush(); paragraph.push(line.trim()); }
+  }
+  flush();
+  return result.join("");
+}
+
 export function publicFrame(title: string, content: string, home: string, links: Array<[string, string]>): string {
-  const nav = `<div class="public-nav-group"><strong>${title}</strong><a href="${home}">⌂ Oversikt</a></div>${links.length ? `<div class="public-nav-group"><strong>Utforsk</strong>${links.map(([label, href]) => `<a href="${href}">${label}</a>`).join("")}</div>` : ""}`;
-  return `<header class="public-top"><span class="public-brand">ScribeCat</span><span aria-hidden="true">›</span><span>${title}</span><a class="public-home" href="${home}" aria-label="Oversikt" title="Oversikt">⌂</a></header><div class="public-layout"><aside class="public-sidebar" aria-label="${title}">${nav}</aside><main class="public-content">${content}</main></div>`;
+  const stats = links.filter(([label]) => label === "Statistikk");
+  const explore = links.filter(([label]) => label !== "Statistikk");
+  const nav = `<div class="public-nav-group"><strong>${title}</strong><a href="${home}">Alle</a>${stats.map(([label, href]) => `<a href="${href}">${label}</a>`).join("")}</div>${explore.length ? `<div class="public-nav-group"><strong>Utforsk</strong>${explore.map(([label, href]) => `<a href="${href}">${label}</a>`).join("")}</div>` : ""}`;
+  const icon: Record<string, string> = {
+    "Bøker": `<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>`,
+    "Oppskrifter": `<path d="M6 13.87A4 4 0 0 1 6.5 6a6 6 0 0 1 11 0 4 4 0 0 1 .5 7.87V21H6z"/><path d="M6 17h12"/>`,
+    "Inventar": `<path d="m12 2 9 5-9 5-9-5 9-5z"/><path d="m3 7 9 5 9-5M3 12l9 5 9-5M3 17l9 5 9-5"/>`,
+    "Handleliste": `<path d="m15 11-1 9m5-9-4-7M2 11h20m-18.5 0 1.6 9h13.8l1.6-9M5 11l4-7m0 7 1 9"/>`,
+    "Handlelister": `<path d="m15 11-1 9m5-9-4-7M2 11h20m-18.5 0 1.6 9h13.8l1.6-9M5 11l4-7m0 7 1 9"/>`
+  };
+  const svg = (paths: string) => `<svg viewBox="0 0 24 24" aria-hidden="true">${paths}</svg>`;
+  return `<input class="public-nav-checkbox" id="public-nav" type="checkbox" checked><header class="public-top"><label class="public-nav-toggle" for="public-nav" title="Åpne eller lukk sidemeny" aria-label="Åpne eller lukk sidemeny">${svg('<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/>')}</label><span class="public-brand">${svg(icon[title] ?? icon["Bøker"])}${title}</span><a class="public-home" href="${home}" aria-label="Oversikt" title="Oversikt">${svg('<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M9 21v-7h6v7"/>')}</a></header><div class="public-layout"><aside class="public-sidebar" aria-label="${title}">${nav}</aside><main class="public-content">${content}</main></div>`;
 }

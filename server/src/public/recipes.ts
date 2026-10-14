@@ -93,7 +93,9 @@ function renderBody(recipe: Recipe): string {
     else if (line.trim()) paragraphs.push(`<p>${publicText(line)}</p>`);
   }
   if (paragraphs.length) sections.push(`<section>${paragraphs.join("\n")}</section>`);
-  return sections.join("\n");
+  const checklistSections = sections.filter((section) => /<h[1-3]>(?:Ingredienser|Fremgangsmåte)<\/h[1-3]>/.test(section));
+  const other = sections.filter((section) => !checklistSections.includes(section));
+  return `<div class="recipe-body">${checklistSections.join("\n")}</div>${other.join("\n")}`;
 }
 
 function page(title: string, body: string, indexHref: string): string {
@@ -169,7 +171,7 @@ export const publicRecipeRoutes: FastifyPluginAsync<{ vault: Vault; routeBase?: 
     const recipe = (await publishedRecipes()).find((entry) => entry.slug === request.params.slug);
     if (!recipe) return reply.code(404).send();
     return reply.type("text/html; charset=utf-8").send(page(recipe.title,
-      `<a class="back" href="../${routeBase.slice(1)}">← Tilbake</a><article class="public-detail"><header class="public-hero">${recipe.coverToken ? `<img src="${encodeURIComponent(recipe.slug)}/media/${recipe.coverToken}" alt="">` : ""}<div><h1>${escapeHtml(recipe.title)}</h1><dl class="public-facts">${recipe.category ? `<div><dt>Kategori</dt><dd>${escapeHtml(recipe.category)}</dd></div>` : ""}</dl></div></header>${recipe.description ? `<section class="public-section"><h2>Beskrivelse</h2><div class="description">${publicText(recipe.description)}</div></section>` : ""}${Number(recipe.servings) > 0 ? `<section class="public-section"><label class="servings">Porsjoner <input id="servings" type="number" min="1" max="100" data-base="${escapeHtml(recipe.servings)}" value="${escapeHtml(recipe.servings)}"></label></section>` : ""}<div class="recipe-body">${renderBody(recipe)}</div></article><script defer src="../${routeBase.slice(1)}/app.js"></script>`, `../${routeBase.slice(1)}`));
+      `<a class="back" href="../${routeBase.slice(1)}">← Tilbake</a><article class="public-detail"><header class="public-hero">${recipe.coverToken ? `<img src="${encodeURIComponent(recipe.slug)}/media/${recipe.coverToken}" alt="">` : ""}<div><h1>${escapeHtml(recipe.title)}</h1><dl class="public-facts">${recipe.category ? `<div><dt>Kategori</dt><dd>${escapeHtml(recipe.category)}</dd></div>` : ""}</dl></div></header>${recipe.description ? `<section class="public-section"><h2>Beskrivelse</h2><div class="description">${publicText(recipe.description)}</div></section>` : ""}${Number(recipe.servings) > 0 ? `<section class="public-section"><label class="servings">Porsjoner <input id="servings" type="number" min="1" max="100" data-base="${escapeHtml(recipe.servings)}" value="${escapeHtml(recipe.servings)}"></label></section>` : ""}${renderBody(recipe)}</article><script defer src="../${routeBase.slice(1)}/app.js"></script>`, `../${routeBase.slice(1)}`));
   });
   app.get<{ Params: { slug: string; token: string } }>(`${routeBase}/:slug/media/:token`, async (request, reply) => {
     if (!SLUG.test(request.params.slug) || !/^[a-f0-9]{32}$/.test(request.params.token)) return reply.code(404).send();

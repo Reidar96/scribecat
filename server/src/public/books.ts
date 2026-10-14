@@ -1,5 +1,6 @@
 import { readPluginMarkdown } from "./pluginFiles.js";
-import { publicCss, publicFrame } from "./theme.js";
+import { publicCss, publicFrame, publicProse } from "./theme.js";
+import { readingFields, readingSections } from "./readingModel.js";
 import { createHash } from "node:crypto";
 import path from "node:path";
 import type { FastifyPluginAsync } from "fastify";
@@ -9,7 +10,7 @@ const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const imagePattern = /\.(?:png|jpe?g|webp|gif)$/i;
 const mime: Record<string, string> = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".gif": "image/gif" };
 const escape = (value: string) => value.replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]!);
-type Book = { path: string; slug: string; title: string; author: string; category: string; series: string; collection: string; status: string; finished: string; summary: string; fields: Record<string, string>; cover: string | null; token: string | null };
+type Book = { path: string; slug: string; title: string; author: string; category: string; series: string; collection: string; status: string; finished: string; summary: string; fields: Record<string, string>; markdown: string; cover: string | null; token: string | null };
 const facets: Record<string, string> = { kategori: "category", forfatter: "author", serie: "series", samling: "collection" };
 const facetLabels: Record<string, string> = { kategori: "Kategorier", forfatter: "Forfattere", serie: "Serier", samling: "Samlinger" };
 
@@ -62,14 +63,14 @@ export const publicBookRoutes: FastifyPluginAsync<{ vault: Vault }> = async (app
         const fields = metadata(markdown);
         if (fields["scribecat-plugin"] !== "books" || fields.type !== "book" || fields.published !== "true" || !slugPattern.test(fields.slug ?? "")) continue;
         counts.set(fields.slug, (counts.get(fields.slug) ?? 0) + 1);
-        const summary = /^## Oppsummering\s*\n([\s\S]*?)(?=^## |$(?![\s\S]))/m.exec(markdown)?.[1].trim() ?? "";
+        const summary = readingSections("books", markdown, true).find(({ heading }) => heading === "Oppsummering")?.content ?? "";
         const base = path.posix.dirname(record.relativePath);
         let cover: string | null = null;
         if (fields.cover && !fields.cover.startsWith("/") && !fields.cover.includes("\\") && !fields.cover.includes("?") && !fields.cover.includes("#")) {
           const candidate = path.posix.normalize(path.posix.join(base, fields.cover));
           if (candidate.startsWith(`${base}/`) && imagePattern.test(candidate)) cover = candidate;
         }
-        result.push({ path: record.relativePath, slug: fields.slug, title: fields.title || fields.slug, author: fields.author || "", category: fields.category || "", series: fields.series || "", collection: fields.collection || "", status: fields.status || "", finished: fields.finished || "", summary, fields, cover,
+        result.push({ path: record.relativePath, slug: fields.slug, title: fields.title || fields.slug, author: fields.author || "", category: fields.category || "", series: fields.series || "", collection: fields.collection || "", status: fields.status || "", finished: fields.finished || "", summary, fields, markdown, cover,
           token: cover ? createHash("sha256").update(`${record.relativePath}\0${cover}`).digest("hex").slice(0, 32) : null });
       } catch { /* A file may disappear during the scan. */ }
     }
@@ -103,10 +104,10 @@ export const publicBookRoutes: FastifyPluginAsync<{ vault: Vault }> = async (app
   app.get<{ Params: { slug: string } }>("/boker/:slug", async (request, reply) => {
     const book = slugPattern.test(request.params.slug) ? (await published()).find((entry) => entry.slug === request.params.slug) : null;
     if (!book) return reply.code(404).send();
-    const facts = [["Forfatter", book.author], ["Kategori", book.category], ["Serie", book.series], ["Samling", book.collection], ["Lesestatus", ({ "want-to-read": "Vil lese", reading: "Leser", finished: "Lest" } as Record<string, string>)[book.status] ?? book.status], ["Startet", book.fields.started], ["Fullført", book.finished], ["Vurdering", book.fields.rating]];
-    // Personal reading notes remain private even when the book card is published.
-    const sections = book.summary ? `<section class="public-section"><h2>Oppsummering</h2><div class="description">${escape(book.summary)}</div></section>` : "";
-    return reply.type("text/html; charset=utf-8").send(page(book.title, `<a class="back" href="../boker">← Tilbake</a><article class="public-detail"><div class="public-hero">${book.token ? `<img src="${book.slug}/media/${book.token}" alt="">` : ""}<div><h1>${escape(book.title)}</h1><dl class="public-facts">${facts.filter(([, value]) => value).map(([label, value]) => `<div><dt>${label}</dt><dd>${escape(value)}</dd></div>`).join("")}</dl></div></div>${sections}</article>`));
+    const facts = readingFields("books", book.fields);
+    // Personal thoughts remain private. Published highlights use the same Markdown model as the internal preview.
+    const sections = readingSections("books", book.markdown, true).map(({ heading, content }) => `<section class="public-section"><h2>${escape(heading)}</h2><div class="public-prose">${publicProse(content)}</div></section>`).join("");
+    return reply.type("text/html; charset=utf-8").send(page(book.title, `<a class="back" href="../boker">← Tilbake</a><article class="public-detail"><div class="public-hero">${book.token ? `<img src="${book.slug}/media/${book.token}" alt="">` : ""}<div><h1>${escape(book.title)}</h1><dl class="public-facts">${facts.map(({ label, value }) => `<div><dt>${escape(label)}</dt><dd>${escape(value)}</dd></div>`).join("")}</dl></div></div>${sections}</article>`));
   });
   app.get<{ Params: { slug: string; token: string } }>("/boker/:slug/media/:token", async (request, reply) => {
     const book = slugPattern.test(request.params.slug) ? (await published()).find((entry) => entry.slug === request.params.slug) : null;
