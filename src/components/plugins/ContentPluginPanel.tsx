@@ -29,6 +29,8 @@ function QuickNoteCard({ entry, initialEdit, onSave, onDelete }: { entry: Entry;
   const [draft, setDraft] = useState(() => restored.current!.value || noteBody(entry.markdown));
   const [saving, setSaving] = useState(false);
   const baseline = useRef(entry.markdown);
+  const onSaveRef = useRef(onSave);
+  useEffect(() => { onSaveRef.current = onSave; }, [onSave]);
   const textarea = useRef<HTMLTextAreaElement>(null);
   const saved = noteBody(entry.markdown);
   useEffect(() => { if (draft === saved) { baseline.current = entry.markdown; setDraft(saved); } }, [saved, entry.markdown]);
@@ -51,12 +53,12 @@ function QuickNoteCard({ entry, initialEdit, onSave, onDelete }: { entry: Entry;
       const body = splitFrontmatter(expected).body;
       const markdown = expected.slice(0, expected.length - body.length) + `\n${draft}\n`;
       setSaving(true);
-      void onSave(markdown, expected).then((ok) => {
+      void onSaveRef.current(markdown, expected).then((ok) => {
         if (ok) baseline.current = markdown;
       }).finally(() => setSaving(false));
     }, 650);
     return () => window.clearTimeout(timer);
-  }, [draft, saved, onSave]);
+  }, [draft, saved]);
   return <div className="content-plugin-panel__note">
     <textarea ref={textarea} data-note-path={entry.path} aria-label="Huskelapp" value={draft} placeholder="Skriv noe …" onChange={(event) => setDraft(event.target.value)} autoFocus={initialEdit} />
     <div className="content-plugin-panel__note-actions"><span className="content-plugin-panel__note-status" role="status">{saving ? "Lagrer …" : draft !== saved ? "Lagrer automatisk" : "Lagret"}</span><button aria-label="Slett huskelapp" title="Slett" onClick={onDelete}><Trash2 size={15} /></button></div>
