@@ -15,7 +15,7 @@ function price(raw: string): number {
   return Number(normalized) || 0;
 }
 
-export function PluginStatistics({ id, entries, onOpen }: { id: PluginId; entries: Entry[]; onOpen: (path: string) => void }) {
+export function PluginStatistics({ id, entries, onOpen, onBack }: { id: PluginId; entries: Entry[]; onOpen: (path: string) => void; onBack: () => void }) {
   const [group, setGroup] = useState<string | null>(null);
   const [value, setValue] = useState<string | null>(null);
   const definitions = groups[id] ?? [];
@@ -30,7 +30,7 @@ export function PluginStatistics({ id, entries, onOpen }: { id: PluginId; entrie
     : id === "inventory" ? [["Gjenstander", entries.length], ["Samlet pris", `${new Intl.NumberFormat("nb-NO", { maximumFractionDigits: 2 }).format(total)} kr`], ["Kategorier", unique("category").length], ["Plasseringer", unique("location").length]]
     : [["Oppskrifter", entries.length], ["Favoritter", entries.filter((entry) => entry.metadata.favorite === "true").length], ["Kategorier", unique("category").length], ["Publisert", entries.filter((entry) => entry.metadata.published === "true").length]];
   return <div className="plugin-statistics">
-    <div className="plugin-statistics__nav"><button onClick={() => { setGroup(null); setValue(null); }}>Oversikt</button>{group && <><span>/</span><button onClick={() => setValue(null)}>{definitions.find(([key]) => key === group)?.[1]}</button></>}{value && <><span>/</span><span>{value}</span></>}</div>
+    <div className="plugin-statistics__nav"><button onClick={() => { if (group) { setGroup(null); setValue(null); } else onBack(); }}>Oversikt</button>{group && <><span>/</span><button onClick={() => setValue(null)}>{definitions.find(([key]) => key === group)?.[1]}</button></>}{value && <><span>/</span><span>{value}</span></>}</div>
     {!group ? <><h2>Statistikk</h2><div className="plugin-statistics__facts">{facts.map(([label, fact]) => <div key={label}><span>{label}</span><strong>{fact}</strong></div>)}</div>
       {id === "books" && <section className="plugin-detail__section"><h3>Fullført per måned</h3>{monthly.length ? monthly.map(([month, count]) => <p key={month}>{month}: {count} {count === 1 ? "bok" : "bøker"}</p>) : <p>Ingen fullførte bøker med dato ennå.</p>}</section>}
       <div className="plugin-statistics__groups">{definitions.filter(([key]) => unique(key).length).map(([key, label]) => <button key={key} onClick={() => setGroup(key)}>{label} <span>{unique(key).length} →</span></button>)}</div></>

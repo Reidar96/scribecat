@@ -32,4 +32,15 @@ describe("public shopping", () => {
     expect((await context.app.inject({ method: "POST", url: "/anna/handleliste/privat/items", payload: "item=Hemmelig&category=Annet", headers })).statusCode).toBe(400);
     expect(await readFile(path.join(context.vaultPath, "Handlelister", "Privat.md"), "utf8")).not.toContain("Hemmelig");
   });
+  it("lets a public visitor create a category without overwriting the Markdown list", async () => {
+    await configure();
+    const headers = { "content-type": "application/x-www-form-urlencoded", origin: "http://localhost" };
+    const url = "/anna/handleliste/uke/categories";
+    expect((await context.app.inject({ method: "POST", url, payload: "category=Frukt", headers })).statusCode).toBe(303);
+    expect((await context.app.inject({ method: "POST", url, payload: "category=Frukt", headers })).statusCode).toBe(400);
+    expect((await context.app.inject({ method: "POST", url, payload: "category=%23Hemmelig", headers })).statusCode).toBe(400);
+    const markdown = await readFile(path.join(context.vaultPath, "Handlelister", "Uke.md"), "utf8");
+    expect(markdown).toContain("## Kjøl\n\n- [ ] Melk");
+    expect(markdown).toContain("## Frukt");
+  });
 });

@@ -37,7 +37,7 @@ import {
 import { buildEditorExtensions } from "@/lib/editor/extensions";
 import { collectHeadings, hasHeading, type OutlineHeading } from "@/lib/editor/documentOutline";
 import { headingAnchor, headingMatchesAnchor } from "@/lib/editor/headingAnchors";
-import { headingLinkHref, parseHeadingLink, pastedHeadingHref } from "@/lib/editor/headingLinks";
+import { headingExistsInMarkdown, headingLinkHref, parseHeadingLink, pastedHeadingHref } from "@/lib/editor/headingLinks";
 import { readClipboardText, writeHeadingLink } from "@/platform/clipboardText";
 import { updateOutlineHighlight } from "@/lib/editor/outlineHighlight";
 import {
@@ -73,6 +73,7 @@ import {
   getRelativeDisplayPath,
   getRelativeImageMarkdownPath,
   guessImageMimeType,
+  readMarkdownFile,
   saveImageToFolder
 } from "@/lib/fileSystem";
 import { dirname, join } from "@/platform/paths";
@@ -645,15 +646,19 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   };
 
   const activateAnchor = (anchor: HTMLAnchorElement) => {
-    const rawHref = anchor.getAttribute("href") ?? "";
-    const headingLink = parseHeadingLink(rawHref) ?? parseHeadingLink(anchor.href);
+    const rawHref = anchor.getAttribute("data-heading-link") ?? anchor.getAttribute("href") ?? "";
+    const headingLink = parseHeadingLink(rawHref);
     if (headingLink) {
       const target = vaultFilePathsRef.current.find((path) => folderPath &&
         getRelativeDisplayPath(folderPath, path).replace(/\\/g, "/").toLowerCase() === headingLink.relativePath.toLowerCase());
       if (target && target === filePath) {
-        headingMatchesAnchor(Array.from(editorRef.current?.view.dom.querySelectorAll("h1, h2, h3, h4, h5, h6") ?? []), headingLink.anchor)
-          ?.scrollIntoView({ behavior: "smooth", block: "start" });
-      } else if (target) onRequestFileOpen?.(target, headingLink.anchor);
+        const heading = headingMatchesAnchor(Array.from(editorRef.current?.view.dom.querySelectorAll("h1, h2, h3, h4, h5, h6") ?? []), headingLink.anchor);
+        if (heading) heading.scrollIntoView({ behavior: "smooth", block: "start" });
+        else setFeedback({ kind: "error", message: "Overskriften finnes ikke lenger." });
+      } else if (target) void readMarkdownFile(target).then((markdown) => {
+        if (headingExistsInMarkdown(markdown, headingLink.anchor)) onRequestFileOpen?.(target, headingLink.anchor);
+        else setFeedback({ kind: "error", message: "Overskriften finnes ikke lenger." });
+      }).catch(() => setFeedback({ kind: "error", message: t("editor.linkTargetMissing", { href: headingLink.relativePath }) }));
       else setFeedback({ kind: "error", message: t("editor.linkTargetMissing", { href: headingLink.relativePath }) });
     } else if (rawHref.startsWith("scribecat:") || rawHref.includes("#scribecat-note/") || anchor.href.includes("#scribecat-note/")) {
       setFeedback({ kind: "error", message: t("editor.linkTargetMissing", { href: rawHref }) });
@@ -678,10 +683,10 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     const dom = editor?.view.dom;
     if (!dom) return;
     const intercept = (event: MouseEvent) => {
-      const anchor = (event.target as Element | null)?.closest?.("a[href]") as HTMLAnchorElement | null;
+      const anchor = (event.target as Element | null)?.closest?.("a[data-heading-link], a[href]") as HTMLAnchorElement | null;
       if (!anchor || !dom.contains(anchor)) return;
-      const href = anchor.getAttribute("href") ?? "";
-      if (!parseHeadingLink(href) && !parseHeadingLink(anchor.href)) return;
+      const href = anchor.getAttribute("data-heading-link") ?? anchor.getAttribute("href") ?? "";
+      if (!parseHeadingLink(href)) return;
       event.preventDefault();
       event.stopImmediatePropagation();
       const touch = lastTouchLinkActivationRef.current;
@@ -1340,9 +1345,9 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
           const pointer = event as PointerEvent;
           if (pointer.pointerType === "touch" || pointer.pointerType === "pen") {
             const target = pointer.target as HTMLElement | null;
-            const anchor = target?.closest("a[href]") as HTMLAnchorElement | null;
+            const anchor = target?.closest("a[data-heading-link], a[href]") as HTMLAnchorElement | null;
             touchLinkPressRef.current = anchor
-              ? { href: anchor.getAttribute("href") ?? "", startedAt: Date.now() }
+              ? { href: anchor.getAttribute("data-heading-link") ?? anchor.getAttribute("href") ?? "", startedAt: Date.now() }
               : null;
           }
           return false;
@@ -1354,8 +1359,8 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
           if (!press || (pointer.pointerType !== "touch" && pointer.pointerType !== "pen")) return false;
           if (Date.now() - press.startedAt > 500) return false;
           const target = pointer.target as HTMLElement | null;
-          const anchor = target?.closest("a[href]") as HTMLAnchorElement | null;
-          if (!anchor || (anchor.getAttribute("href") ?? "") !== press.href) return false;
+          const anchor = target?.closest("a[data-heading-link], a[href]") as HTMLAnchorElement | null;
+          if (!anchor || (anchor.getAttribute("data-heading-link") ?? anchor.getAttribute("href") ?? "") !== press.href) return false;
           event.preventDefault();
           event.stopPropagation();
           event.stopImmediatePropagation();
@@ -1365,7 +1370,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         },
         click: (_view, event) => {
           const target = event.target as HTMLElement | null;
-          const anchor = target?.closest("a[href]") as HTMLAnchorElement | null;
+          const anchor = target?.closest("a[data-heading-link], a[href]") as HTMLAnchorElement | null;
 
           if (!anchor) {
             // A URL inside a code block is plain text carrying a decoration
@@ -1392,7 +1397,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
           // other target in the system browser. The raw attribute is what a
           // note link has to be resolved from: the DOM property would resolve
           // the relative path against the app's own base URL.
-          const rawHref = anchor.getAttribute("href") ?? "";
+          const rawHref = anchor.getAttribute("data-heading-link") ?? anchor.getAttribute("href") ?? "";
           const touchActivation = lastTouchLinkActivationRef.current;
           if (touchActivation?.href === rawHref && Date.now() - touchActivation.at < 800) {
             lastTouchLinkActivationRef.current = null;
@@ -1638,6 +1643,24 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     });
     return () => window.cancelAnimationFrame(frame);
   }, [editor, filePath, headingJump]);
+
+  useEffect(() => {
+    if (!editor || !folderPath || !filePath) return;
+    const refresh = () => {
+      const headings = Array.from(editor.view.dom.querySelectorAll("h1, h2, h3, h4, h5, h6"));
+      for (const anchor of editor.view.dom.querySelectorAll<HTMLAnchorElement>("a[data-heading-link]")) {
+        const link = parseHeadingLink(anchor.dataset.headingLink ?? "");
+        if (!link) continue;
+        const target = getRelativeDisplayPath(folderPath, filePath).replace(/\\/g, "/");
+        const missing = target.toLowerCase() === link.relativePath.toLowerCase() && !headingMatchesAnchor(headings, link.anchor);
+        if (missing) anchor.setAttribute("aria-disabled", "true");
+        else anchor.removeAttribute("aria-disabled");
+      }
+    };
+    refresh();
+    editor.on("update", refresh);
+    return () => { editor.off("update", refresh); };
+  }, [editor, filePath, folderPath]);
 
   useEffect(() => {
     editor?.view.dom.setAttribute("spellcheck", "false");

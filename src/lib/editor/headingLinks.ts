@@ -1,4 +1,5 @@
 import { getRelativeDisplayPath } from "@/lib/fileSystem";
+import { slugifyHeading } from "@/lib/editor/headingAnchors";
 
 // A same-document fragment survives TipTap's URL sanitizer and cannot launch a
 // browser tab. Keep parsing the old scheme for links already stored in notes.
@@ -40,4 +41,17 @@ export function pastedHeadingHref(text: string, html: string): string | null {
   const element = typeof DOMParser !== "undefined" ? new DOMParser().parseFromString(html, "text/html").body : null;
   const href = element?.querySelector("a[href]")?.getAttribute("href") ?? "";
   return parseHeadingLink(href) ? normalizeHeadingHref(href, typeof location === "undefined" ? undefined : location.origin) : null;
+}
+
+/** Match the same duplicate-heading numbering used by the editor outline. */
+export function headingExistsInMarkdown(markdown: string, anchor: string): boolean {
+  const expected = decodeURIComponent(anchor.replace(/^#/, ""));
+  const counts = new Map<string, number>();
+  for (const match of markdown.matchAll(/^#{1,6}\s+(.+?)\s*#*\s*$/gm)) {
+    const slug = slugifyHeading(match[1]);
+    const count = (counts.get(slug) ?? 0) + 1;
+    counts.set(slug, count);
+    if (`${slug}${count > 1 ? `-${count}` : ""}` === expected) return true;
+  }
+  return false;
 }

@@ -289,9 +289,11 @@
 
 /* Every link is followed by a plain click (notes open in the editor, anything
    else in the browser), so links always show the pointer cursor. */
-.editor-view__surface a[href] {
+.editor-view__surface a[href], .editor-view__surface a[data-heading-link] {
   cursor: pointer;
 }
+.editor-view__surface a[data-heading-link] { color:var(--primary); text-decoration:underline; text-underline-offset:.17em; }
+.editor-view__surface a[data-heading-link][aria-disabled="true"] { color:var(--muted-foreground); text-decoration:line-through; }
 
 /* A URL inside a code block (src/lib/editor/codeBlockLinks.ts): plain text
    under a decoration, so it keeps the code colour and only gains the

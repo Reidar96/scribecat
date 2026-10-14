@@ -1,3 +1,5 @@
+import { pluginMarkdownPaths } from "./pluginFiles.js";
+import { publicCss, publicFrame } from "./theme.js";
 import { createHash } from "node:crypto";
 import path from "node:path";
 import type { FastifyPluginAsync } from "fastify";
@@ -95,7 +97,8 @@ function renderBody(recipe: Recipe): string {
 }
 
 function page(title: string, body: string, indexHref: string): string {
-  return `<!doctype html><html lang="no"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)} · Oppskrifter</title><style>:root{color-scheme:light dark}*{box-sizing:border-box}body{font:1rem/1.65 system-ui,sans-serif;margin:0;color:#252724;background:#f5f4f1}a{color:inherit;text-decoration:none}nav{max-width:76rem;margin:auto;padding:1.2rem clamp(1rem,4vw,3rem);font-weight:650}main{max-width:76rem;margin:auto;padding:0 clamp(1rem,4vw,3rem) 4rem}h1,h2,h3{line-height:1.2}h1{font-size:clamp(2rem,5vw,3.5rem);margin:.4rem 0}h2{font-size:1.35rem}.intro{color:#626760;max-width:45rem}.filters{display:flex;flex-wrap:wrap;gap:.65rem;margin:1.6rem 0}.filters input,.filters select,.filters button,.servings input{font:inherit;border:1px solid #c9cec7;border-radius:.6rem;padding:.65rem;background:#fff;color:#252724}.filters input{flex:1;min-width:12rem}.filters button{background:#345f49;color:white;cursor:pointer}.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,15rem),1fr));gap:1rem;list-style:none;padding:0}.cards a{display:block;height:100%;overflow:hidden;background:#fff;border:1px solid #e2e5df;border-radius:1rem;box-shadow:0 2px 10px #00000008}.cards img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover}.cards .tile{padding:1rem}.cards strong{display:block;font-size:1.15rem}.muted{color:#687168;font-size:.9rem}.recipe{background:#fff;border:1px solid #e2e5df;border-radius:1.2rem;overflow:hidden}.recipe-hero{display:grid;grid-template-columns:1fr 1fr}.recipe-hero>div{padding:clamp(1.2rem,4vw,3rem);align-self:center}.recipe-hero img{width:100%;height:100%;min-height:18rem;max-height:31rem;object-fit:cover}.recipe-body{display:grid;grid-template-columns:minmax(14rem,1fr) minmax(0,1.6fr);gap:2rem;padding:clamp(1.2rem,4vw,3rem)}.recipe-body h2{border-bottom:1px solid #e2e5df;padding-bottom:.6rem}.item{display:flex;gap:.6rem;padding:.65rem .1rem;border-bottom:1px solid #eeefeb}.item input{width:1.1rem;height:1.1rem;accent-color:#345f49;flex:none;margin-top:.3rem}.item:has(input:checked){opacity:.55;text-decoration:line-through}.recipe-body p{max-width:70ch}.servings input{width:5rem}.recipe-body h3{font-size:1.04rem}.recipe-body ol{padding-left:1.3rem}@media(max-width:44rem){.recipe-hero,.recipe-body{grid-template-columns:1fr}.recipe-hero img{min-height:13rem;max-height:20rem;grid-row:1}.recipe-body{gap:.4rem}}@media(prefers-color-scheme:dark){body{background:#171a18;color:#f3f4f0}.intro,.muted{color:#acb5aa}.recipe,.cards a{background:#252a26;border-color:#414942}.filters input,.filters select,.servings input{background:#252a26;color:#f3f4f0;border-color:#555e57}.item,.recipe-body h2{border-color:#414942}}</style></head><body><nav><a href="${indexHref}">⌂ Oppskrifter</a></nav><main>${body}</main></body></html>`;
+  const clean = body.replace(/<p><a href="[^"]+\/statistikk">Statistikk<\/a> · <a href="[^"]+\/kategorier">Kategorier<\/a><\/p>/, "");
+  return `<!doctype html><html lang="no"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)} · Oppskrifter</title><style>${publicCss}</style></head><body>${publicFrame("Oppskrifter", clean, indexHref, [["Statistikk", `${indexHref}/statistikk`], ["Kategorier", `${indexHref}/kategorier`]])}</body></html>`;
 }
 
 export const publicRecipeRoutes: FastifyPluginAsync<{ vault: Vault; routeBase?: string }> = async (app, { vault, routeBase = "/recipes" }) => {
@@ -108,11 +111,11 @@ export const publicRecipeRoutes: FastifyPluginAsync<{ vault: Vault; routeBase?: 
       folder = safeFolder(preference.folder ?? "Oppskrifter");
     } catch { return []; }
     if (!folder) return [];
-    const records = await vault.listMarkdownFiles();
+    const records = await pluginMarkdownPaths(vault, folder);
     const result: Recipe[] = [];
     const slugCounts = new Map<string, number>();
-    for (const record of records) {
-      if (!record.relativePath.startsWith(`${folder}/`)) continue;
+    for (const relativePath of records) {
+      const record = { relativePath };
       let markdown: string;
       try { markdown = await vault.readText(record.relativePath); } catch { continue; }
       const { fields, body } = frontmatter(markdown);
@@ -152,7 +155,7 @@ export const publicRecipeRoutes: FastifyPluginAsync<{ vault: Vault; routeBase?: 
   });
   app.get(`${routeBase}/statistikk`, async (_request, reply) => {
     const recipes = await publishedRecipes();
-    return reply.type("text/html; charset=utf-8").send(page("Statistikk", `<h1>Statistikk</h1><p>${recipes.length} oppskrifter · ${new Set(recipes.map((recipe) => recipe.category).filter(Boolean)).size} kategorier</p><p><a href="kategorier">Se kategorier</a></p>`, `../${routeBase.slice(1)}`));
+    return reply.type("text/html; charset=utf-8").send(page("Statistikk", `<h1>Statistikk</h1><div class="public-stats"><div><span>Oppskrifter</span><strong>${recipes.length}</strong></div><div><span>Kategorier</span><strong>${new Set(recipes.map((recipe) => recipe.category).filter(Boolean)).size}</strong></div></div>`, `../${routeBase.slice(1)}`));
   });
   app.get(`${routeBase}/kategorier`, async (_request, reply) => {
     const categories = [...new Set((await publishedRecipes()).map((recipe) => recipe.category).filter(Boolean))].sort((a, b) => a.localeCompare(b, "no"));

@@ -34,7 +34,7 @@ describe("public inventory", () => {
     expect((await context.app.inject({ method: "GET", url: `/anna/inventar/sykkel/media/${token}` })).statusCode).toBe(200);
     expect((await context.app.inject({ method: "GET", url: `/anna/inventar/sykkel/media/${"0".repeat(32)}` })).statusCode).toBe(404);
     expect((await context.app.inject({ method: "GET", url: "/anna/inventar/oversikt/kategori/Sport" })).body).toContain("Sykkel");
-    expect((await context.app.inject({ method: "GET", url: "/anna/inventar/statistikk" })).body).toContain("1 gjenstander");
+    expect((await context.app.inject({ method: "GET", url: "/anna/inventar/statistikk" })).body).toContain("<span>Gjenstander</span><strong>1</strong>");
     expect(index.body).toContain('href="inventar/oversikt/plassering"');
   });
 });

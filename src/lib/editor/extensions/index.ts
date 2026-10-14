@@ -6,6 +6,7 @@ import { Markdown } from "tiptap-markdown";
 import { CodeBlockLinks } from "@/lib/editor/codeBlockLinks";
 import { HeadingNumbering } from "@/lib/editor/headingNumbering";
 import { InactiveSelection } from "@/lib/inactiveSelection";
+import { normalizeHeadingHref, parseHeadingLink } from "@/lib/editor/headingLinks";
 import { OutlineHighlight } from "@/lib/editor/outlineHighlight";
 import { SearchHighlight } from "@/lib/searchHighlight";
 import { VoiceInsertWidget } from "@/lib/voiceInsertWidget";
@@ -48,7 +49,25 @@ function buildContentExtensions(): Extensions {
     TableRow,
     TableHeader,
     TableCell,
-    Link.configure({
+    Link.extend({
+      parseHTML() {
+        return [...(this.parent?.() ?? []), {
+          tag: "a[data-heading-link]",
+          getAttrs: (element) => ({ href: (element as HTMLElement).getAttribute("data-heading-link") })
+        }];
+      },
+      renderHTML({ HTMLAttributes }) {
+        const href = String(HTMLAttributes.href ?? "");
+        if (parseHeadingLink(href)) {
+          // WebKit can open href fragments in an about:blank tab before a
+          // delegated click handler runs. An internal link has no browser URL.
+          const { href: _href, target: _target, ...attributes } = HTMLAttributes;
+          void _href; void _target;
+          return ["a", { ...attributes, "data-heading-link": normalizeHeadingHref(href), role: "link", tabindex: "0" }, 0];
+        }
+        return ["a", HTMLAttributes, 0];
+      }
+    }).configure({
       autolink: false,
       linkOnPaste: false,
       openOnClick: false,

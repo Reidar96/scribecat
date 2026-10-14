@@ -27,6 +27,6 @@ describe("public books", () => {
     const author = await context.app.inject({ method: "GET", url: "/anna/boker/oversikt/forfatter/Forfatter" });
     expect(author.statusCode).toBe(200);
     expect(author.body).toContain('href="../../eksempel"');
-    expect((await context.app.inject({ method: "GET", url: "/anna/boker/statistikk" })).body).toContain("1 bøker");
+    expect((await context.app.inject({ method: "GET", url: "/anna/boker/statistikk" })).body).toContain("<span>Bøker</span><strong>1</strong>");
   });
 });

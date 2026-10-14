@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import MarkdownIt from "markdown-it";
-import { ArrowLeft, History, ImagePlus, Pencil, Plus, Save, Trash2 } from "lucide-react";
+import { ArrowLeft, History, ImagePlus, Pencil, Plus, Save, Trash2, X, BookOpen, CookingPot, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PluginCover } from "@/components/plugins/PluginCover";
 import { splitFrontmatter } from "@/lib/documentFrontmatter";
@@ -17,7 +17,7 @@ import { listFileVersions, readVersionContent, type FileVersion } from "@/lib/fi
 
 export type PluginEntry = { path: string; markdown: string; metadata: Record<string, string>; title: string };
 const previewMarkdown = new MarkdownIt({ html: false, linkify: false }).disable(["image", "link"]);
-type Props = { id: PluginId; entry: PluginEntry; vaultPath: string; publicView: boolean; isNew: boolean; dirty: boolean; saving: boolean; onSave: () => void; onBack: () => void; onChange: (markdown: string) => Promise<void>; onDelete: () => void };
+type Props = { id: PluginId; entry: PluginEntry; vaultPath: string; publicView: boolean; isNew: boolean; dirty: boolean; saving: boolean; onSave: () => void; onBack: () => void; onCancelEdit: () => void; onChange: (markdown: string) => Promise<void>; onDelete: () => void };
 
 function Field({ label, value, onSave, type = "text", autoFocus = false }: { label: string; value: string; onSave: (value: string) => void; type?: string; autoFocus?: boolean }) {
   return <label className="plugin-detail__field"><span>{label}</span><input key={`${label}-${value}`} type={type} defaultValue={value} autoFocus={autoFocus}
@@ -123,7 +123,7 @@ function LineItemsEditor({ entry, heading, placeholder, onChange }: { entry: Plu
       <input aria-label={`Legg til i ${heading}`} placeholder={placeholder} value={draft} onChange={(event) => setDraft(event.target.value)} /><Button type="submit" aria-label={`Legg til i ${heading}`}><Plus size={16} /></Button></form></section>;
 }
 
-export function ContentPluginDetail({ id, entry, vaultPath, publicView, isNew, dirty, saving, onSave, onBack, onChange, onDelete }: Props) {
+export function ContentPluginDetail({ id, entry, vaultPath, publicView, isNew, dirty, saving, onSave, onBack, onCancelEdit, onChange, onDelete }: Props) {
   const [editing, setEditing] = useState(isNew || dirty);
   const [servings, setServings] = useState<number | null>(null);
   const [versions, setVersions] = useState<FileVersion[] | null>(null);
@@ -163,14 +163,14 @@ export function ContentPluginDetail({ id, entry, vaultPath, publicView, isNew, d
 
   return <div className="plugin-detail"><div className="plugin-detail__actions"><Button variant="ghost" onClick={onBack}><ArrowLeft size={17} /> Tilbake</Button><div className="plugin-detail__action-group">
     {!isNew && <Button variant="outline" onClick={() => void showVersions()}><History size={16} /> Versjoner</Button>}
-    {editing ? <Button onClick={onSave} disabled={saving || (!isNew && !dirty)}><Save size={16} /> {saving ? "Lagrer …" : "Lagre"}</Button>
+    {editing ? <><Button variant="outline" onClick={() => { onCancelEdit(); if (!dirty && !isNew) setEditing(false); }} disabled={saving}><X size={16} /> Avbryt</Button><Button onClick={onSave} disabled={saving || (!isNew && !dirty)}><Save size={16} /> {saving ? "Lagrer …" : "Lagre"}</Button></>
       : <Button onClick={() => setEditing(true)}><Pencil size={16} /> Rediger</Button>}
     {!isNew && <Button variant="destructive" onClick={onDelete}><Trash2 size={16} /> Slett</Button>}</div></div>
     {dirty && <p className="plugin-detail__unsaved">Endringer som ikke er lagret · Utkastet beholdes lokalt til du lagrer eller forkaster det.</p>}
     {versions && <section className="plugin-detail__section"><div className="plugin-detail__section-heading"><h3>Versjonshistorikk</h3><button onClick={() => setVersions(null)}>Lukk</button></div>
       {versions.length ? versions.map((version) => <div key={version.id} className="plugin-detail__version"><time>{new Date(version.createdAt).toLocaleString("no-NO")}</time><button onClick={() => void readVersionContent(vaultPath, version.id).then((markdown) => { void onChange(markdown); setEditing(true); setVersions(null); })}>Bruk som utkast</button></div>) : <p>Ingen lagrede versjoner ennå.</p>}</section>}
-    {!editing ? <div className="plugin-detail__preview"><aside className="plugin-detail__side"><strong>Innhold</strong>{previewSections.filter((heading) => pluginSection(entry.markdown, heading)).map((heading) => <button key={heading} onClick={() => document.getElementById(`plugin-section-${heading}`)?.scrollIntoView({ behavior: "smooth", block: "start" })}>{heading}</button>)}</aside><div className="plugin-detail__preview-main"><div className="plugin-detail__hero">
-      {id !== "shopping" && <div className="plugin-detail__image">{cover ? <PluginCover id={id} vaultPath={vaultPath} documentPath={entry.path} reference={cover} alt={title} /> : <span aria-hidden="true">{id === "books" ? "📖" : id === "recipes" ? "🍽" : "📦"}</span>}</div>}
+    {!editing ? <div className="plugin-detail__preview"><div className="plugin-detail__preview-main"><div className="plugin-detail__hero">
+      {id !== "shopping" && <div className="plugin-detail__image">{cover ? <PluginCover id={id} vaultPath={vaultPath} documentPath={entry.path} reference={cover} alt={title} /> : <span aria-hidden="true">{id === "books" ? <BookOpen /> : id === "recipes" ? <CookingPot /> : <Package />}</span>}</div>}
       <div><h2>{title}</h2><p className="plugin-detail__badges">{entry.metadata.favorite === "true" && <span>★ Favoritt</span>}{published && <span>Offentlig</span>}</p>
         <dl className="plugin-detail__summary">{previewFields.filter(([, key]) => entry.metadata[key]).map(([label, key]) => <div key={key}><dt>{label}</dt><dd>{entry.metadata[key]}</dd></div>)}</dl></div></div>
       {previewSections.map((heading) => { const content = pluginSection(entry.markdown, heading); return content && <section className="plugin-detail__section" id={`plugin-section-${heading}`} key={heading}><h3>{heading}</h3><div className="plugin-detail__prose" dangerouslySetInnerHTML={{ __html: previewMarkdown.render(content) }} /></section>; })}
@@ -179,7 +179,7 @@ export function ContentPluginDetail({ id, entry, vaultPath, publicView, isNew, d
     </div></div> : id === "shopping" ? <><h2>{title || "Ny handleliste"}</h2><Field label="Navn" value={title} autoFocus={isNew} onSave={(value) => void onChange(setPluginTitle(entry.markdown, "title", value))} />
       <label className="plugin-detail__field"><span>Offentlig handleliste</span><input type="checkbox" checked={published} disabled={!publicView && !published} onChange={() => void onChange(setPluginField(entry.markdown, "published", !published))} /></label>
       {published && publicView && <p>Adresse: /handleliste/{entry.metadata.slug}</p>}<ShoppingItems entry={entry} onChange={onChange} /></> : <>
-      <div className="plugin-detail__hero"><div className="plugin-detail__image">{cover ? <PluginCover id={id} vaultPath={vaultPath} documentPath={entry.path} reference={cover} alt={title} /> : <span aria-hidden="true">{id === "books" ? "📖" : id === "recipes" ? "🍽" : "📦"}</span>}
+      <div className="plugin-detail__hero"><div className="plugin-detail__image">{cover ? <PluginCover id={id} vaultPath={vaultPath} documentPath={entry.path} reference={cover} alt={title} /> : <span aria-hidden="true">{id === "books" ? <BookOpen /> : id === "recipes" ? <CookingPot /> : <Package />}</span>}
         <button disabled={isNew} onClick={() => void uploadCover()}><ImagePlus size={16} /> {cover ? "Bytt bilde" : "Legg til bilde"}</button></div>
         <div className="plugin-detail__hero-fields"><h2>{title || `Ny ${id === "books" ? "bok" : id === "recipes" ? "oppskrift" : "gjenstand"}`}</h2><Field label={id === "inventory" ? "Navn" : "Tittel"} value={title} autoFocus={isNew}
           onSave={(value) => void onChange(setPluginTitle(entry.markdown, id === "inventory" ? "name" : "title", value))} />

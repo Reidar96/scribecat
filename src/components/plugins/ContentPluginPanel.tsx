@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Home, PanelLeft, Plus, Search, ChartNoAxesCombined } from "lucide-react";
+import { Home, PanelLeft, Plus, Search, ChartNoAxesCombined, Pencil, Save, X, Trash2, BookOpen, CookingPot, Package, ShoppingBasket } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { splitFrontmatter } from "@/lib/documentFrontmatter";
@@ -17,6 +17,28 @@ import { PluginDialog } from "@/components/plugins/PluginDialog";
 import { useAppStore } from "@/store/useAppStore";
 
 type Entry = { path: string; markdown: string; metadata: Record<string, string>; title: string };
+const entryCache = new Map<string, { mtime: number; entry: Entry }>();
+function noteBody(markdown: string) { return splitFrontmatter(markdown).body.replace(/^#\s+[^\n]*\n*/, "").trim(); }
+function QuickNoteCard({ entry, initialEdit, onSave, onDelete }: { entry: Entry; initialEdit: boolean; onSave: (markdown: string) => Promise<boolean>; onDelete: () => void }) {
+  const [editing, setEditing] = useState(initialEdit);
+  const [draft, setDraft] = useState(() => noteBody(entry.markdown));
+  const [saving, setSaving] = useState(false);
+  const saved = noteBody(entry.markdown);
+  useEffect(() => { if (initialEdit) setEditing(true); }, [initialEdit]);
+  useEffect(() => { if (!editing) setDraft(saved); }, [saved, editing]);
+  const save = async () => {
+    setSaving(true);
+    try {
+      const body = splitFrontmatter(entry.markdown).body;
+      if (await onSave(entry.markdown.slice(0, entry.markdown.length - body.length) + `\n${draft.trim()}\n`)) setEditing(false);
+    } finally { setSaving(false); }
+  };
+  return <div className="content-plugin-panel__note">
+    {editing ? <><textarea data-note-path={entry.path} aria-label="Huskelapp" value={draft} placeholder="Skriv noe …" onChange={(event) => setDraft(event.target.value)} autoFocus={initialEdit} />
+      <div className="content-plugin-panel__note-actions"><button disabled={saving} onClick={() => { setDraft(saved); setEditing(false); }}><X size={14} /> Avbryt</button><button disabled={saving || draft === saved} onClick={() => void save()}><Save size={14} /> Lagre</button></div></>
+      : <><button className="content-plugin-panel__note-preview" onClick={() => setEditing(true)}>{saved || "Tom huskelapp"}</button><div className="content-plugin-panel__note-actions"><button aria-label="Rediger huskelapp" onClick={() => setEditing(true)}><Pencil size={15} /></button><button aria-label="Slett huskelapp" onClick={onDelete}><Trash2 size={15} /></button></div></>}
+  </div>;
+}
 
 export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, onSidebarVisibilityToggle, onOpenSidebar, onOpenFile, onClose }: {
   id: PluginId;
@@ -34,6 +56,7 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
   const publicView = usePluginStore((state) => state.config.plugins[id]?.publicView ?? false);
   const deleteFile = useAppStore((state) => state.deleteFilePath);
   const deleteFolder = useAppStore((state) => state.deleteFolderPath);
+  const fileMtimeMs = useAppStore((state) => state.fileMtimeMs);
   const api = createPluginApi(id, folderPath, onOpenFile);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [query, setQuery] = useState("");
@@ -57,18 +80,36 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
 
   useEffect(() => {
     let current = true;
-    void Promise.all(paths.map(async (path) => {
-      try {
-        const markdown = await api.readMarkdown(path);
-        const metadata = pluginMetadata(markdown);
-        if (metadata["scribecat-plugin"] && metadata["scribecat-plugin"] !== id) return null;
-        const title = metadata.title || metadata.name || /^#\s+(.+)$/m.exec(splitFrontmatter(markdown).body)?.[1]
-          || path.split(/[\\/]/).pop()?.replace(/\.md$/i, "") || "";
-        return { path, markdown, metadata, title };
-      } catch { return null; }
-    })).then((items) => { if (current) { const next = items.filter((item): item is Entry => item !== null); setEntries(next); for (const item of next) latestMarkdown.current.set(item.path, item.markdown); } });
+    const ready = paths.map((path) => entryCache.get(path)).filter((cached) => cached && cached.mtime === fileMtimeMs[cached.entry.path]).map((cached) => cached!.entry);
+    for (const entry of ready) latestMarkdown.current.set(entry.path, entry.markdown);
+    setEntries(ready);
+    const missing = paths.filter((path) => !entryCache.has(path) || entryCache.get(path)!.mtime !== fileMtimeMs[path]);
+    void (async () => {
+      // Bound vault reads so opening a large collection does not saturate
+      // desktop IPC or the remote server. Show cached rows immediately.
+      for (let at = 0; at < missing.length && current; at += 8) {
+        const batch = await Promise.all(missing.slice(at, at + 8).map(async (path) => {
+          try {
+            const markdown = await api.readMarkdown(path);
+            const metadata = pluginMetadata(markdown);
+            if (metadata["scribecat-plugin"] && metadata["scribecat-plugin"] !== id) return null;
+            const title = metadata.title || metadata.name || /^#\s+(.+)$/m.exec(splitFrontmatter(markdown).body)?.[1]
+              || path.split(/[\\/]/).pop()?.replace(/\.md$/i, "") || "";
+            const entry = { path, markdown, metadata, title };
+            entryCache.set(path, { mtime: fileMtimeMs[path], entry });
+            while (entryCache.size > 1_400) entryCache.delete(entryCache.keys().next().value!);
+            return entry;
+          } catch { return null; }
+        }));
+        if (current) setEntries((previous) => {
+          const all = new Map(previous.map((entry) => [entry.path, entry]));
+          for (const entry of batch) if (entry) { all.set(entry.path, entry); latestMarkdown.current.set(entry.path, entry.markdown); }
+          return paths.flatMap((path) => all.has(path) ? [all.get(path)!] : []);
+        });
+      }
+    })();
     return () => { current = false; };
-  }, [paths, id]);
+  }, [paths, id, fileMtimeMs]);
 
   useEffect(() => {
     if (newNotePath) document.querySelector<HTMLTextAreaElement>(`[data-note-path="${CSS.escape(newNotePath)}"]`)?.focus();
@@ -151,6 +192,13 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
     try { localStorage.removeItem(draftKey(creating ? null : selectedPath)); } catch { /* unavailable storage */ }
     setCreating(false); setSelectedPath(null); setDraftMarkdown(null); setSavedMarkdown(null); setDialog(null);
   };
+  const cancelEdit = () => {
+    if (creating) { discard(); return; }
+    if (selectedPath) {
+      try { localStorage.removeItem(draftKey(selectedPath)); } catch { /* unavailable storage */ }
+      setDraftMarkdown(savedMarkdown);
+    }
+  };
   const back = () => {
     if (draftMarkdown !== null && draftMarkdown !== savedMarkdown && (savedMarkdown !== null || pluginMetadata(draftMarkdown).title || pluginMetadata(draftMarkdown).name)) {
       setDialog({ kind: "discard" });
@@ -177,6 +225,7 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
         ...item, markdown: draftMarkdown, metadata, title: metadata.title || metadata.name || item.title
       } : item));
       setSavedMarkdown(draftMarkdown);
+      entryCache.set(selectedPath, { mtime: fileMtimeMs[selectedPath], entry: { ...existing, markdown: draftMarkdown, metadata, title: metadata.title || metadata.name || existing.title } });
       try { localStorage.removeItem(draftKey(selectedPath)); } catch { /* unavailable storage */ }
       setError("");
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Kunne ikke lagre endringen. Utkastet er beholdt."); }
@@ -187,21 +236,24 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
     const openDocument = useAppStore.getState().fileDocuments[entry.path];
     if (openDocument && openDocument.content !== openDocument.baseContent) {
       setError("Lagre åpne endringer i dokumentet før du endrer kortet.");
-      return;
+      return false;
     }
     const markdown = typeof update === "function" ? update(latestMarkdown.current.get(entry.path) ?? entry.markdown) : update;
     latestMarkdown.current.set(entry.path, markdown);
+    entryCache.set(entry.path, { mtime: fileMtimeMs[entry.path], entry: { ...entry, markdown, metadata: pluginMetadata(markdown) } });
     const previous = pendingWrites.current.get(entry.path) ?? Promise.resolve();
+    let succeeded = true;
     const next = previous.catch(() => undefined).then(async () => {
       if (!await api.saveMarkdown(entry.path, markdown)) throw new Error("Save failed");
       setError("");
-    }).catch(() => setError("Kunne ikke lagre endringen."));
+    }).catch(() => { succeeded = false; setError("Kunne ikke lagre endringen."); });
     pendingWrites.current.set(entry.path, next);
     const metadata = pluginMetadata(markdown);
     setEntries((items) => items.map((item) => item.path === entry.path
       ? { ...item, markdown, metadata, title: metadata.title || metadata.name || item.title } : item));
     await next;
     if (pendingWrites.current.get(entry.path) === next) pendingWrites.current.delete(entry.path);
+    return succeeded;
   };
 
   const selected = entries.find((entry) => entry.path === selectedPath);
@@ -223,38 +275,26 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
       {error ? <p role="alert">{error}</p> : null}
       {editingEntry && id !== "quick-notes" ? <ContentPluginDetail id={id} entry={editingEntry} vaultPath={folderPath} publicView={publicView}
         isNew={creating} dirty={draftMarkdown !== savedMarkdown} saving={savingNew} onSave={() => void saveDraft()}
-        onBack={back} onChange={async (next) => { setDraftMarkdown(next); }} onDelete={() => selected && setDialog({ kind: "delete", path: selected.path, label: selected.title })} /> : <>
-      {showStats ? <PluginStatistics id={id} entries={entries} onOpen={(path) => { const entry = entries.find((item) => item.path === path); if (entry) openEntry(entry); }} /> : <>
-      <label className="content-plugin-panel__search"><Search size={16} /><input type="search" value={query} placeholder={`Søk i ${manifest.name.toLocaleLowerCase()}`} onChange={(event) => setQuery(event.target.value)} /></label>
-      {filters.length ? <div className="content-plugin-panel__filters">
-        <button className={!filter ? "active" : ""} onClick={() => setFilter("")}>Alle</button>
-        {filters.map((value) => <span key={value} className="content-plugin-panel__filter"><button className={filter === value ? "active" : ""} onClick={() => setFilter(value)}>{({ "want-to-read": "Vil lese", reading: "Leser", finished: "Lest", true: "Festet", arkiv: "Arkiv", garanti: "Garanti", favoritter: "Favoritter" } as Record<string, string>)[value] ?? value}</button>
-          {!(["want-to-read", "reading", "finished", "true", "arkiv", "garanti", "favoritter"].includes(value)) && <button title={`Slett kategorien ${value}`} aria-label={`Slett kategorien ${value}`} onClick={() => setDialog({ kind: "category", label: value })}>×</button>}</span>)}
-      </div> : null}
+        onBack={back} onCancelEdit={cancelEdit} onChange={async (next) => { setDraftMarkdown(next); }} onDelete={() => selected && setDialog({ kind: "delete", path: selected.path, label: selected.title })} /> : <>
+      {showStats ? <PluginStatistics id={id} entries={entries} onBack={() => setShowStats(false)} onOpen={(path) => { const entry = entries.find((item) => item.path === path); if (entry) openEntry(entry); }} /> : <>
+      <div className="content-plugin-panel__overview"><div><span className="content-plugin-panel__eyebrow">SAMLING</span><h2>{manifest.name}</h2><p>{visible.length} {visible.length === 1 ? "oppføring" : "oppføringer"}</p></div></div>
+      <div className="content-plugin-panel__controls"><label className="content-plugin-panel__search"><Search size={16} /><input type="search" value={query} placeholder={`Søk i ${manifest.name.toLocaleLowerCase()}`} onChange={(event) => setQuery(event.target.value)} /></label>
+      {filters.length ? <label className="content-plugin-panel__select"><span>Vis</span><select aria-label="Filtrer oppføringer" value={filter} onChange={(event) => setFilter(event.target.value)}><option value="">Alle</option>{filters.map((value) => <option value={value} key={value}>{({ "want-to-read": "Vil lese", reading: "Leser", finished: "Lest", true: "Festet", arkiv: "Arkiv", garanti: "Garanti", favoritter: "Favoritter" } as Record<string, string>)[value] ?? value}</option>)}</select></label> : null}
+      {filter && !["want-to-read", "reading", "finished", "true", "arkiv", "garanti", "favoritter"].includes(filter) && <button className="content-plugin-panel__delete-filter" onClick={() => setDialog({ kind: "category", label: filter })}>Slett kategori</button>}</div>
       <div className={`content-plugin-panel__grid content-plugin-panel__grid--${id}`}>{visible.map((entry) => {
-        const body = splitFrontmatter(entry.markdown).body;
         return <article key={entry.path} className="content-plugin-panel__card">
           {id !== "quick-notes" && <button className="content-plugin-panel__tile" onClick={() => openEntry(entry)}>
             {entry.metadata.cover && (id === "books" || id === "recipes" || id === "inventory")
               ? <PluginCover id={id} vaultPath={folderPath} documentPath={entry.path} reference={entry.metadata.cover} alt={entry.title} />
-              : <span className="content-plugin-panel__placeholder" aria-hidden="true">{id === "books" ? "📖" : id === "recipes" ? "🍽" : id === "inventory" ? "📦" : "🛒"}</span>}
+              : <span className="content-plugin-panel__placeholder" aria-hidden="true">{id === "books" ? <BookOpen /> : id === "recipes" ? <CookingPot /> : id === "inventory" ? <Package /> : <ShoppingBasket />}</span>}
             <strong>{entry.metadata.title || entry.metadata.name || entry.title}</strong>
             <span>{[entry.metadata.author, id === "books" ? ({ "want-to-read": "Vil lese", reading: "Leser", finished: "Lest" } as Record<string, string>)[entry.metadata.status] : "", entry.metadata.category, entry.metadata.location].filter(Boolean).join(" · ")}</span>
           </button>}
           {id === "quick-notes" ? <>
-            <textarea data-note-path={entry.path} aria-label="Huskelapp" key={entry.path} defaultValue={body.replace(/^#\s+[^\n]*\n*/, "").trim()} placeholder="Skriv noe …"
-              onBlur={(event) => {
-                const next = event.currentTarget.value;
-                const current = body.replace(/^#\s+[^\n]*\n*/, "").trim();
-                if (next.trim() !== current) void change(entry, (markdown) => {
-                  const currentBody = splitFrontmatter(markdown).body;
-                  return markdown.slice(0, markdown.length - currentBody.length) + `\n${next.trim()}\n`;
-                });
-                setNewNotePath(null);
-              }} />
+            <QuickNoteCard entry={entry} initialEdit={newNotePath === entry.path} onSave={async (markdown) => { const saved = await change(entry, markdown); if (saved) setNewNotePath(null); return saved; }} onDelete={() => setDialog({ kind: "delete", path: entry.path, label: "huskelappen" })} />
             <div><button onClick={() => void change(entry, (markdown) => setPluginField(markdown, "pinned", pluginMetadata(markdown).pinned !== "true"))}>{entry.metadata.pinned === "true" ? "Løsne" : "Fest"}</button>
             {" · "}<button onClick={() => void change(entry, (markdown) => setPluginField(markdown, "archived", pluginMetadata(markdown).archived !== "true"))}>{entry.metadata.archived === "true" ? "Gjenopprett" : "Arkiver"}</button>
-            {" · "}<button onClick={() => setDialog({ kind: "delete", path: entry.path, label: "huskelappen" })}>Slett</button></div>
+            </div>
           </> : null}
         </article>;
       })}</div>

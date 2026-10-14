@@ -1,3 +1,5 @@
+import { pluginMarkdownPaths } from "./pluginFiles.js";
+import { publicCss, publicFrame } from "./theme.js";
 import { createHash } from "node:crypto";
 import path from "node:path";
 import type { FastifyPluginAsync } from "fastify";
@@ -31,7 +33,12 @@ function safeFolder(folder: string): boolean {
   return !!folder && !folder.startsWith("/") && !folder.includes("\\") && folder.split("/").every((part) => part && part !== "." && part !== ".." && part !== ".scribecat");
 }
 
-const page = (title: string, content: string) => `<!doctype html><html lang="no"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escape(title)} · Bøker</title><style>:root{color-scheme:light dark}*{box-sizing:border-box}body{font:1rem/1.6 system-ui,sans-serif;background:#f5f4f1;color:#262626;margin:0}main{max-width:70rem;margin:auto;padding:clamp(1rem,4vw,3rem)}a{color:inherit;text-decoration:none}.back{display:inline-block;margin-bottom:1.5rem;color:#395d4e}.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,13rem),1fr));gap:1rem}.card,.detail{background:#fff;border:1px solid #e3e1db;border-radius:1rem;overflow:hidden}.card img,.detail img{display:block;width:100%;aspect-ratio:3/4;object-fit:cover}.card div,.detail div{padding:1rem}.meta{color:#686864;font-size:.9rem}.filters{display:flex;gap:.6rem;flex-wrap:wrap;margin:1rem 0 1.5rem}input,select,button{font:inherit;padding:.65rem;border:1px solid #c9c7c1;border-radius:.5rem;max-width:100%}.filters input{flex:1;min-width:11rem}.detail{max-width:46rem}.summary{white-space:pre-line}@media(prefers-color-scheme:dark){body{background:#17191a;color:#f3f3f0}.card,.detail{background:#242729;border-color:#424649}.meta{color:#b8bab8}.back{color:#9bd1b4}input,select,button{background:#242729;color:#f3f3f0;border-color:#565a5c}}</style></head><body><main>${content}</main></body></html>`;
+const page = (title: string, content: string) => {
+  const back = /class="back" href="([^"]+)"/.exec(content)?.[1];
+  const home = back?.endsWith("/boker") ? back : back ? "../../../boker" : "boker";
+  const clean = content.replace(/<nav>[\s\S]*?<\/nav>/, "");
+  return `<!doctype html><html lang="no"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escape(title)} · Bøker</title><style>${publicCss}</style></head><body>${publicFrame("Bøker", clean, home, [["Statistikk", `${home}/statistikk`], ["Kategorier", `${home}/oversikt/kategori`], ["Forfattere", `${home}/oversikt/forfatter`], ["Serier", `${home}/oversikt/serie`], ["Samlinger", `${home}/oversikt/samling`]] as Array<[string, string]>)}</body></html>`;
+};
 
 export const publicBookRoutes: FastifyPluginAsync<{ vault: Vault }> = async (app, { vault }) => {
   app.addHook("onRequest", async (_request, reply) => {
@@ -49,8 +56,8 @@ export const publicBookRoutes: FastifyPluginAsync<{ vault: Vault }> = async (app
     } catch { return []; }
     const result: Book[] = [];
     const counts = new Map<string, number>();
-    for (const record of await vault.listMarkdownFiles()) {
-      if (!record.relativePath.startsWith(`${folder}/`)) continue;
+    for (const relativePath of await pluginMarkdownPaths(vault, folder)) {
+      const record = { relativePath };
       try {
         const markdown = await vault.readText(record.relativePath);
         const fields = metadata(markdown);
@@ -81,7 +88,7 @@ export const publicBookRoutes: FastifyPluginAsync<{ vault: Vault }> = async (app
   app.get("/boker/statistikk", async (_request, reply) => {
     const books = await published();
     const months = books.filter((book) => book.status === "finished" && /^\d{4}-\d{2}/.test(book.finished)).reduce<Record<string, number>>((acc, book) => { const month = book.finished.slice(0, 7); acc[month] = (acc[month] ?? 0) + 1; return acc; }, {});
-    return reply.type("text/html; charset=utf-8").send(page("Statistikk", `<a class="back" href="../boker">⌂ Bøker</a><h1>Statistikk</h1><p>${books.length} bøker · ${books.filter((book) => book.status === "finished").length} lest · ${new Set(books.map((book) => book.author).filter(Boolean)).size} forfattere</p><h2>Fullført per måned</h2>${Object.entries(months).sort(([a], [b]) => b.localeCompare(a)).map(([month, count]) => `<p>${escape(month)}: ${count}</p>`).join("") || "<p>Ingen registrerte datoer.</p>"}`));
+    return reply.type("text/html; charset=utf-8").send(page("Statistikk", `<a class="back" href="../boker">⌂ Bøker</a><h1>Statistikk</h1><div class="public-stats"><div><span>Bøker</span><strong>${books.length}</strong></div><div><span>Lest</span><strong>${books.filter((book) => book.status === "finished").length}</strong></div><div><span>Forfattere</span><strong>${new Set(books.map((book) => book.author).filter(Boolean)).size}</strong></div></div><h2>Fullført per måned</h2>${Object.entries(months).sort(([a], [b]) => b.localeCompare(a)).map(([month, count]) => `<p>${escape(month)}: ${count}</p>`).join("") || "<p>Ingen registrerte datoer.</p>"}`));
   });
   app.get<{ Params: { field: string } }>("/boker/oversikt/:field", async (request, reply) => {
     const key = facets[request.params.field]; if (!key) return reply.code(404).send();

@@ -1,3 +1,5 @@
+import { pluginMarkdownPaths } from "./pluginFiles.js";
+import { publicCss, publicFrame } from "./theme.js";
 import type { FastifyPluginAsync } from "fastify";
 import type { Vault } from "../vault/files.js";
 
@@ -35,8 +37,8 @@ export const publicShoppingRoutes: FastifyPluginAsync<{ vault: Vault }> = async 
     } catch { return []; }
     const lists: List[] = [];
     const slugs = new Map<string, number>();
-    for (const record of await vault.listMarkdownFiles()) {
-      if (!record.relativePath.startsWith(`${folder}/`)) continue;
+    for (const relativePath of await pluginMarkdownPaths(vault, folder)) {
+      const record = { relativePath };
       try {
         const markdown = await vault.readText(record.relativePath);
         const meta = fields(markdown);
@@ -48,11 +50,11 @@ export const publicShoppingRoutes: FastifyPluginAsync<{ vault: Vault }> = async 
     return lists.filter((list) => slugs.get(list.slug) === 1);
   }
 
-  const html = (title: string, body: string) => `<!doctype html><html lang="no"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)} · Handleliste</title><style>body{font:1rem/1.55 system-ui,sans-serif;max-width:42rem;margin:auto;padding:1rem;color:#242424;background:#faf9f6}main{background:white;border:1px solid #e4e2de;border-radius:.8rem;padding:clamp(1rem,4vw,2rem)}a{color:#245d42}label{display:flex;gap:.65rem;padding:.4rem 0;align-items:center}input,button,select{font:inherit}input[type=text],select{min-width:0;padding:.55rem;border:1px solid #aaa;border-radius:.4rem}input[type=checkbox]{width:1.15rem;height:1.15rem;accent-color:#245d42}button{padding:.5rem .75rem;border:1px solid #aaa;border-radius:.4rem;background:#f4f4f1}form.add{display:flex;gap:.5rem;margin-top:1rem}form.add input{flex:1}.done{text-decoration:line-through;color:#777}section{border-top:1px solid #e4e2de;margin-top:1rem}</style></head><body><nav><a href="../handleliste">⌂ Handlelister</a></nav><main>${body}</main></body></html>`;
+  const html = (title: string, body: string) => `<!doctype html><html lang="no"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)} · Handleliste</title><style>${publicCss}</style></head><body>${publicFrame("Handlelister", body, title === "Handlelister" ? "handleliste" : "../handleliste", [])}</body></html>`;
 
   app.get("/handleliste", async (_request, reply) => {
     const lists = await published();
-    return reply.type("text/html; charset=utf-8").send(html("Handlelister", `<h1>Handlelister</h1><ul>${lists.map((list) => `<li><a href="handleliste/${list.slug}">${escapeHtml(list.title)}</a></li>`).join("")}</ul>`));
+    return reply.type("text/html; charset=utf-8").send(html("Handlelister", `<h1>Handlelister</h1><p class="meta">Delte lister du kan handle sammen med andre.</p><div class="cards">${lists.map((list) => `<a class="card" href="handleliste/${list.slug}"><div><strong>${escapeHtml(list.title)}</strong><p class="meta">Åpne handleliste →</p></div></a>`).join("")}</div>`));
   });
   app.get("/handleliste/app.js", async (_request, reply) => reply.type("application/javascript; charset=utf-8").send(
     "document.addEventListener('change',event=>{if(event.target.matches('form.toggle input[type=checkbox]'))event.target.form.requestSubmit()})"
@@ -72,15 +74,21 @@ export const publicShoppingRoutes: FastifyPluginAsync<{ vault: Vault }> = async 
     }).join("");
     const categories = [...list.markdown.matchAll(/^##\s+(.+)$/gm)].map((match) => match[1].trim());
     const add = `<form class="add" method="post" action="${list.slug}/items"><input type="text" name="item" maxlength="120" required placeholder="Ny vare"><select name="category">${categories.map((category) => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`).join("")}</select><button type="submit">Legg til</button></form>`;
-    return reply.type("text/html; charset=utf-8").send(html(list.title, `<h1>${escapeHtml(list.title)}</h1>${content}${add}<script defer src="../handleliste/app.js"></script>`));
+    const addCategory = `<form class="add" method="post" action="${list.slug}/categories"><input type="text" name="category" maxlength="80" required placeholder="Ny kategori" aria-label="Ny kategori"><button type="submit">+ Kategori</button></form>`;
+    return reply.type("text/html; charset=utf-8").send(html(list.title, `<h1>${escapeHtml(list.title)}</h1>${content}${add}${addCategory}<script defer src="../handleliste/app.js"></script>`));
   });
 
-  async function mutate(slug: string, payload: Record<string, unknown>, mode: "add" | "toggle"): Promise<boolean> {
+  async function mutate(slug: string, payload: Record<string, unknown>, mode: "add" | "toggle" | "category"): Promise<boolean> {
     const operation = pending.then(async () => {
       const list = (await published()).find((item) => item.slug === slug);
       if (!list) return false;
       let markdown = list.markdown;
-      if (mode === "add") {
+      if (mode === "category") {
+        const category = typeof payload.category === "string" ? payload.category.trim() : "";
+        if (!category || category.length > 80 || /[\r\n\x00-\x1f#<>]/.test(category) ||
+          [...markdown.matchAll(/^##\s+(.+)$/gm)].some((match) => match[1].trim().toLocaleLowerCase("no") === category.toLocaleLowerCase("no"))) return false;
+        markdown = `${markdown.trimEnd()}\n\n## ${category}\n`;
+      } else if (mode === "add") {
         const item = typeof payload.item === "string" ? payload.item.trim() : "";
         const category = typeof payload.category === "string" ? payload.category : "";
         if (!item || item.length > 120 || /[\r\n\x00-\x1f]/.test(item) || ![...markdown.matchAll(/^##\s+(.+)$/gm)].some((match) => match[1].trim() === category)) return false;
@@ -101,8 +109,8 @@ export const publicShoppingRoutes: FastifyPluginAsync<{ vault: Vault }> = async 
     return operation;
   }
 
-  for (const mode of ["add", "toggle"] as const) {
-    app.post<{ Params: { slug: string }; Body: Record<string, unknown> }>(`/handleliste/:slug/${mode === "add" ? "items" : "toggle"}`, async (request, reply) => {
+  for (const mode of ["add", "toggle", "category"] as const) {
+    app.post<{ Params: { slug: string }; Body: Record<string, unknown> }>(`/handleliste/:slug/${mode === "add" ? "items" : mode === "category" ? "categories" : "toggle"}`, async (request, reply) => {
       if (!SLUG.test(request.params.slug) || (!request.headers.origin && !request.headers.referer)) return reply.code(403).send();
       const now = Date.now();
       const client = attempts.get(request.ip);
