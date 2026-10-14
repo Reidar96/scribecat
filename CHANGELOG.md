@@ -1,3 +1,11 @@
+## [1.2.3] - 2026-10-14
+
+- Navigasjon i bøker, oppskrifter og inventar bruker nå de samme oversiktene som offentlig visning; kategorier og andre grupper viser omslag fra innholdet.
+- Bøker viser utdrag som sitater, og nye bøker lagrer seksjonen som «Utdrag». Eldre «Høydepunkter» kan fortsatt leses og redigeres.
+- Handlelistens sidemeny viser listene; kategorier kan gis nytt navn internt og på den offentlige siden.
+- Hurtignotater kan redigeres direkte på kortet; festing og arkivering bruker egne ikoner.
+- Offentlige kort og handlelister har fått romsligere layout; tomme innholdsseksjoner og publiseringsmerket skjules i lesevisning.
+
 ## [1.2.2] - 2026-10-14
 
 - Align the app chooser and plugin top bars with the same sidebar toggle, home placement and icon stroke. Add an internal navigation rail for Books, Recipes, Inventory, Shopping and Quick Notes, with mobile open/close and a clear loading indicator for large collections.

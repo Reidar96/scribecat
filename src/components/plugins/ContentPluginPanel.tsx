@@ -1,5 +1,5 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
-import { PanelLeft, Plus, Search, ChartNoAxesCombined, Pencil, Save, X, Trash2, BookOpen, CookingPot, Package, ShoppingBasket } from "lucide-react";
+import { PanelLeft, Plus, Search, ChartNoAxesCombined, Save, X, Trash2, BookOpen, CookingPot, Package, ShoppingBasket, Pin, ArchiveRestore, Archive } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { splitFrontmatter } from "@/lib/documentFrontmatter";
@@ -26,31 +26,28 @@ function QuickNoteCard({ entry, initialEdit, onSave, onDelete }: { entry: Entry;
   if (restored.current === null) {
     try { restored.current = { value: localStorage.getItem(draftKey) ?? "" }; } catch { restored.current = { value: "" }; }
   }
-  const [editing, setEditing] = useState(initialEdit || !!restored.current.value);
   const [draft, setDraft] = useState(() => restored.current!.value || noteBody(entry.markdown));
   const [saving, setSaving] = useState(false);
   const baseline = useRef(entry.markdown);
   const saved = noteBody(entry.markdown);
-  useEffect(() => { if (initialEdit) setEditing(true); }, [initialEdit]);
-  useEffect(() => { if (!editing) setDraft(saved); }, [saved, editing]);
+  useEffect(() => { if (draft === saved) { baseline.current = entry.markdown; setDraft(saved); } }, [saved, entry.markdown]);
   useEffect(() => {
     try {
-      if (editing && draft !== saved) localStorage.setItem(draftKey, draft);
+      if (draft !== saved) localStorage.setItem(draftKey, draft);
       else localStorage.removeItem(draftKey);
     } catch { /* Storage can be unavailable in private mode. */ }
-  }, [draft, saved, editing, draftKey]);
+  }, [draft, saved, draftKey]);
   const save = async () => {
     setSaving(true);
     try {
       const body = splitFrontmatter(baseline.current).body;
       const markdown = baseline.current.slice(0, baseline.current.length - body.length) + `\n${draft.trim()}\n`;
-      if (await onSave(markdown, baseline.current)) { baseline.current = markdown; setEditing(false); }
+      if (await onSave(markdown, baseline.current)) baseline.current = markdown;
     } finally { setSaving(false); }
   };
   return <div className="content-plugin-panel__note">
-    {editing ? <><textarea data-note-path={entry.path} aria-label="Huskelapp" value={draft} placeholder="Skriv noe …" onChange={(event) => setDraft(event.target.value)} autoFocus={initialEdit} />
-      <div className="content-plugin-panel__note-actions"><button disabled={saving} onClick={() => { setDraft(saved); baseline.current = entry.markdown; setEditing(false); }}><X size={14} /> Avbryt</button><button disabled={saving || draft === saved} onClick={() => void save()}><Save size={14} /> Lagre</button></div></>
-      : <><button className="content-plugin-panel__note-preview" onClick={() => { baseline.current = entry.markdown; setEditing(true); }}>{saved || "Tom huskelapp"}</button><div className="content-plugin-panel__note-actions"><button aria-label="Rediger huskelapp" onClick={() => { baseline.current = entry.markdown; setEditing(true); }}><Pencil size={15} /></button><button aria-label="Slett huskelapp" onClick={onDelete}><Trash2 size={15} /></button></div></>}
+    <textarea data-note-path={entry.path} aria-label="Huskelapp" value={draft} placeholder="Skriv noe …" onChange={(event) => setDraft(event.target.value)} autoFocus={initialEdit} />
+    <div className="content-plugin-panel__note-actions">{draft !== saved && <><button disabled={saving} onClick={() => { setDraft(saved); baseline.current = entry.markdown; }}><X size={14} /> Avbryt</button><button disabled={saving} onClick={() => void save()}><Save size={14} /> Lagre</button></>}<button aria-label="Slett huskelapp" title="Slett" onClick={onDelete}><Trash2 size={15} /></button></div>
   </div>;
 }
 
@@ -76,6 +73,7 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query);
   const [filter, setFilter] = useState("");
+  const [groupView, setGroupView] = useState<string | null>(null);
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [draftMarkdown, setDraftMarkdown] = useState<string | null>(null);
   const draftRef = useRef<string | null>(null);
@@ -168,6 +166,7 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
   const groupLabels: Record<string, string> = { category: "Kategori", author: "Forfatter", series: "Serie", collection: "Samling", location: "Plassering" };
   const fields = id === "books" ? ["category", "author", "series", "collection"] : id === "inventory" ? ["category", "location"] : id === "recipes" ? ["category"] : [];
   for (const field of fields) for (const value of new Set(entries.map((entry) => entry.metadata[field]).filter(Boolean))) options.push([field, value, `${groupLabels[field]}: ${value}`]);
+  const groupNames: Record<string, string> = { category: "Kategorier", author: "Forfattere", series: "Serier", collection: "Samlinger", location: "Plasseringer" };
 
   const add = async (title: string, markdown = newPluginDocument(id, title)): Promise<string | null> => {
     if (!title?.trim()) return null;
@@ -298,21 +297,22 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
     ...selected, markdown: draftMarkdown, metadata: pluginMetadata(draftMarkdown)
   } : null;
 
-  const selectFilter = (value: string) => navigate(() => { setFilter(value); setShowStats(false); setSelectedPath(null); setCreating(false); updateDraft(null); setSecondaryOpen(false); });
+  const selectFilter = (value: string, group: string | null = null) => navigate(() => { setFilter(value); setGroupView(group); setShowStats(false); setSelectedPath(null); setCreating(false); updateDraft(null); setSecondaryOpen(false); });
   return <main className="content-plugin-panel">
     <PluginTopbar title={manifest.name} icon={id} isPhone={isPhone} sidebarVisible={sidebarVisible} onSidebarVisibilityToggle={onSidebarVisibilityToggle} onOpenSidebar={onOpenSidebar} onClose={onClose} />
     <div className="content-plugin-panel__layout">
       <aside className={`content-plugin-panel__rail${secondaryOpen ? " content-plugin-panel__rail--open" : ""}`} aria-label={`${manifest.name} navigasjon`}>
         <div className="content-plugin-panel__rail-group">
           <Button variant="outline" className="content-plugin-panel__new" onClick={requestAdd}><Plus size={16} /> {id === "books" ? "Ny bok" : id === "recipes" ? "Ny oppskrift" : id === "inventory" ? "Ny gjenstand" : id === "shopping" ? "Ny handleliste" : "Ny huskelapp"}</Button>
-          <button className={!editingEntry && !showStats && !filter ? "active" : ""} onClick={() => selectFilter("")}>Alle <span>{entries.length}</span></button>
+          <button className={!editingEntry && !showStats && !filter && !groupView ? "active" : ""} onClick={() => selectFilter("")}>Alle <span>{entries.length}</span></button>
           {id !== "quick-notes" && <button className={showStats ? "active" : ""} onClick={() => navigate(() => { setShowStats(true); setSelectedPath(null); setCreating(false); updateDraft(null); setSecondaryOpen(false); })}><ChartNoAxesCombined size={16} /> Statistikk</button>}
         </div>
-        {options.length > 0 && <div className="content-plugin-panel__rail-group"><strong>Utforsk</strong>{options.map(([field, value, label]) => {
+        {id === "shopping" && <div className="content-plugin-panel__rail-group"><strong>Handlelister</strong>{entries.map((entry) => <button key={entry.path} className={selectedPath === entry.path ? "active" : ""} onClick={() => navigate(() => openEntry(entry))}>{entry.title}</button>)}</div>}
+        {fields.length > 0 && <div className="content-plugin-panel__rail-group"><strong>Utforsk</strong>{fields.map((field) => <button key={field} className={groupView === field ? "active" : ""} onClick={() => selectFilter("", field)}>{groupNames[field]}<span>{new Set(entries.map((entry) => entry.metadata[field]).filter(Boolean)).size}</span></button>)}</div>}
+        {!fields.length && id !== "shopping" && options.length > 0 && <div className="content-plugin-panel__rail-group"><strong>Utforsk</strong>{options.map(([field, value, label]) => {
           const key = JSON.stringify([field, value]);
           return <button key={key} className={filter === key ? "active" : ""} onClick={() => selectFilter(key)}>{label}<span>{entries.filter((entry) => entry.metadata[field] === value).length}</span></button>;
         })}</div>}
-        {id === "shopping" && editingEntry && <div className="content-plugin-panel__rail-group"><strong>Kategorier</strong>{[...splitFrontmatter(editingEntry.markdown).body.matchAll(/^##\s+(.+)$/gm)].map((match) => <button key={match[1]} onClick={() => document.getElementById(`plugin-category-${match[1]}`)?.scrollIntoView({ behavior: "smooth" })}>{match[1]}</button>)}</div>}
       </aside>
     <div className="content-plugin-panel__body">
       <button className="content-plugin-panel__rail-toggle" onClick={() => setSecondaryOpen((open) => !open)} aria-expanded={secondaryOpen}><PanelLeft size={16} /> {secondaryOpen ? "Lukk appmeny" : "Åpne appmeny"}</button>
@@ -322,11 +322,14 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
         isNew={creating} dirty={draftMarkdown !== savedMarkdown} saving={savingNew} onSave={() => void saveDraft()}
         onBack={back} onCancelEdit={cancelEdit} onChange={async (next) => { updateDraft(next); }} onDelete={() => selected && setDialog({ kind: "delete", path: selected.path, label: selected.title })} /> : <>
       {showStats ? <PluginStatistics id={id} entries={entries} onBack={() => setShowStats(false)} onOpen={(path) => { const entry = entries.find((item) => item.path === path); if (entry) openEntry(entry); }} /> : <>
-      <div className="content-plugin-panel__overview"><div><span className="content-plugin-panel__eyebrow">SAMLING</span><h2>{manifest.name}</h2><p>{scanRemaining > 0 ? `Laster … ${visible.length} vist` : `${visible.length} ${visible.length === 1 ? "oppføring" : "oppføringer"}`}</p></div></div>
+      <div className="content-plugin-panel__overview"><div><span className="content-plugin-panel__eyebrow">SAMLING</span><h2>{selectedFilter?.[1] || (groupView ? groupNames[groupView] : manifest.name)}</h2><p>{scanRemaining > 0 ? `Laster … ${visible.length} vist` : `${visible.length} ${visible.length === 1 ? "oppføring" : "oppføringer"}`}</p></div></div>
       <div className="content-plugin-panel__controls"><label className="content-plugin-panel__search"><Search size={16} /><input type="search" value={query} placeholder={`Søk i ${manifest.name.toLocaleLowerCase()}`} onChange={(event) => setQuery(event.target.value)} /></label>
-      {options.length ? <label className="content-plugin-panel__select"><span>Vis</span><select aria-label="Filtrer oppføringer" value={filter} onChange={(event) => setFilter(event.target.value)}><option value="">Alle</option>{options.map(([field, value, label]) => <option value={JSON.stringify([field, value])} key={`${field}:${value}`}>{label}</option>)}</select></label> : null}
+      {!groupView && options.length && id !== "shopping" ? <label className="content-plugin-panel__select"><span>Vis</span><select aria-label="Filtrer oppføringer" value={filter} onChange={(event) => { setGroupView(null); setFilter(event.target.value); }}><option value="">Alle</option>{options.map(([field, value, label]) => <option value={JSON.stringify([field, value])} key={`${field}:${value}`}>{label}</option>)}</select></label> : null}
       {selectedFilter && fields.includes(selectedFilter[0]) && <button className="content-plugin-panel__delete-filter" onClick={() => setDialog({ kind: "category", field: selectedFilter[0], label: selectedFilter[1] })}>Slett {groupLabels[selectedFilter[0]].toLocaleLowerCase()}</button>}</div>
-      <div className={`content-plugin-panel__grid content-plugin-panel__grid--${id}`}>{visible.map((entry) => {
+      {groupView && !filter ? <div className="content-plugin-panel__grid content-plugin-panel__groups">{[...new Set(entries.map((entry) => entry.metadata[groupView]).filter(Boolean))].sort((a, b) => a.localeCompare(b, "no")).map((value) => {
+        const members = entries.filter((entry) => entry.metadata[groupView] === value);
+        return <button className="content-plugin-panel__group-card" key={value} onClick={() => selectFilter(JSON.stringify([groupView, value]), groupView)}><span className="content-plugin-panel__mosaic">{members.filter((entry) => entry.metadata.cover).slice(0, 4).map((entry) => <PluginCover key={entry.path} id={id} vaultPath={folderPath} documentPath={entry.path} reference={entry.metadata.cover} alt="" />)}</span><strong>{value}</strong><small>{members.length} {members.length === 1 ? "oppføring" : "oppføringer"}</small></button>;
+      })}</div> : <div className={`content-plugin-panel__grid content-plugin-panel__grid--${id}`}>{visible.map((entry) => {
         return <article key={entry.path} className="content-plugin-panel__card">
           {id !== "quick-notes" && <button className="content-plugin-panel__tile" onClick={() => openEntry(entry)}>
             {entry.metadata.cover && (id === "books" || id === "recipes" || id === "inventory")
@@ -341,12 +344,12 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
               if (await api.readMarkdown(entry.path).catch(() => "") !== expected) { setError("Huskelappen er endret utenfor denne visningen. Teksten din er beholdt i skrivefeltet."); return false; }
               const saved = await change(entry, markdown); if (saved) setNewNotePath(null); return saved;
             }} onDelete={() => setDialog({ kind: "delete", path: entry.path, label: "huskelappen" })} />
-            <div><button onClick={() => void change(entry, (markdown) => setPluginField(markdown, "pinned", pluginMetadata(markdown).pinned !== "true"))}>{entry.metadata.pinned === "true" ? "Løsne" : "Fest"}</button>
-            {" · "}<button onClick={() => void change(entry, (markdown) => setPluginField(markdown, "archived", pluginMetadata(markdown).archived !== "true"))}>{entry.metadata.archived === "true" ? "Gjenopprett" : "Arkiver"}</button>
+            <div className="content-plugin-panel__note-controls"><button aria-label={entry.metadata.pinned === "true" ? "Løsne huskelapp" : "Fest huskelapp"} title={entry.metadata.pinned === "true" ? "Løsne" : "Fest"} aria-pressed={entry.metadata.pinned === "true"} onClick={() => void change(entry, (markdown) => setPluginField(markdown, "pinned", pluginMetadata(markdown).pinned !== "true"))}><Pin size={16} /></button>
+            <button aria-label={entry.metadata.archived === "true" ? "Gjenopprett huskelapp" : "Arkiver huskelapp"} title={entry.metadata.archived === "true" ? "Gjenopprett" : "Arkiver"} onClick={() => void change(entry, (markdown) => setPluginField(markdown, "archived", pluginMetadata(markdown).archived !== "true"))}>{entry.metadata.archived === "true" ? <ArchiveRestore size={16} /> : <Archive size={16} />}</button>
             </div>
           </> : null}
         </article>;
-      })}</div>
+      })}</div>}
       {visible.length === 0 && scanRemaining === 0 ? <p>Ingen oppføringer her ennå.</p> : null}
       </>}
       </>}

@@ -99,8 +99,9 @@ export const publicInventoryRoutes: FastifyPluginAsync<{ vault: Vault }> = async
   });
   app.get<{ Params: { field: string } }>("/inventar/oversikt/:field", async (request, reply) => {
     const field = facets[request.params.field]; if (!field) return reply.code(404).send();
-    const values = [...new Set((await published()).map((item) => item[field as "category" | "location"]).filter(Boolean))].sort((a, b) => a.localeCompare(b, "no"));
-    return reply.type("text/html; charset=utf-8").send(page(labels[request.params.field], `<a class="back" href="../../inventar">⌂ Inventar</a><h1>${labels[request.params.field]}</h1><div class="cards">${values.map((value) => `<a class="card" href="${request.params.field}/${encodeURIComponent(value)}"><div>${escape(value)}</div></a>`).join("")}</div>`));
+    const items = await published();
+    const values = [...new Set(items.map((item) => item[field as "category" | "location"]).filter(Boolean))].sort((a, b) => a.localeCompare(b, "no"));
+    return reply.type("text/html; charset=utf-8").send(page(labels[request.params.field], `<a class="back" href="../../inventar">⌂ Inventar</a><h1>${labels[request.params.field]}</h1><div class="cards">${values.map((value) => { const members = items.filter((item) => item[field as "category" | "location"] === value); return `<a class="card public-group-card" href="${request.params.field}/${encodeURIComponent(value)}"><span class="public-cover-mosaic">${members.filter((item) => item.token).slice(0, 4).map((item) => `<img loading="lazy" src="../../${item.slug}/media/${item.token}" alt="">`).join("")}</span><span class="public-group-caption"><strong>${escape(value)}</strong><small>${members.length} ${members.length === 1 ? "gjenstand" : "gjenstander"}</small></span></a>`; }).join("")}</div>`));
   });
   app.get<{ Params: { field: string; value: string } }>("/inventar/oversikt/:field/:value", async (request, reply) => {
     const field = facets[request.params.field]; if (!field) return reply.code(404).send();

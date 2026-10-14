@@ -67,9 +67,9 @@ function renderBody(recipe: Recipe): string {
     const heading = /^(#{1,3})\s+(.+)$/.exec(line);
     if (heading) {
       if (heading[1].length === 1 && heading[2].trim() === recipe.title) continue;
-      if (heading[2].trim() === "Beskrivelse") { if (paragraphs.length) sections.push(`<section>${paragraphs.join("\n")}</section>`); paragraphs = []; checklist = false; skipDescription = true; continue; }
+      if (heading[2].trim() === "Beskrivelse") { if ((paragraphs.length > 1 || (paragraphs.length === 1 && !/^<h[1-3]>/.test(paragraphs[0])))) sections.push(`<section>${paragraphs.join("\n")}</section>`); paragraphs = []; checklist = false; skipDescription = true; continue; }
       skipDescription = false;
-      if (paragraphs.length) sections.push(`<section>${paragraphs.join("\n")}</section>`);
+      if ((paragraphs.length > 1 || (paragraphs.length === 1 && !/^<h[1-3]>/.test(paragraphs[0])))) sections.push(`<section>${paragraphs.join("\n")}</section>`);
       paragraphs = [`<h${heading[1].length}>${publicText(heading[2])}</h${heading[1].length}>`];
       checklist = /^Ingredienser$|^Fremgangsmåte$/i.test(heading[2].trim());
       continue;
@@ -92,7 +92,7 @@ function renderBody(recipe: Recipe): string {
     }
     else if (line.trim()) paragraphs.push(`<p>${publicText(line)}</p>`);
   }
-  if (paragraphs.length) sections.push(`<section>${paragraphs.join("\n")}</section>`);
+  if ((paragraphs.length > 1 || (paragraphs.length === 1 && !/^<h[1-3]>/.test(paragraphs[0])))) sections.push(`<section>${paragraphs.join("\n")}</section>`);
   const checklistSections = sections.filter((section) => /<h[1-3]>(?:Ingredienser|Fremgangsmåte)<\/h[1-3]>/.test(section));
   const other = sections.filter((section) => !checklistSections.includes(section));
   return `<div class="recipe-body">${checklistSections.join("\n")}</div>${other.join("\n")}`;
@@ -158,8 +158,9 @@ export const publicRecipeRoutes: FastifyPluginAsync<{ vault: Vault; routeBase?: 
     return reply.type("text/html; charset=utf-8").send(page("Statistikk", `<h1>Statistikk</h1><div class="public-stats"><div><span>Oppskrifter</span><strong>${recipes.length}</strong></div><div><span>Kategorier</span><strong>${new Set(recipes.map((recipe) => recipe.category).filter(Boolean)).size}</strong></div></div>`, `../${routeBase.slice(1)}`));
   });
   app.get(`${routeBase}/kategorier`, async (_request, reply) => {
-    const categories = [...new Set((await publishedRecipes()).map((recipe) => recipe.category).filter(Boolean))].sort((a, b) => a.localeCompare(b, "no"));
-    return reply.type("text/html; charset=utf-8").send(page("Kategorier", `<h1>Kategorier</h1><ul class="cards">${categories.map((category) => `<li><a href="kategorier/${encodeURIComponent(category)}"><div class="tile"><strong>${escapeHtml(category)}</strong></div></a></li>`).join("")}</ul>`, `../${routeBase.slice(1)}`));
+    const recipes = await publishedRecipes();
+    const categories = [...new Set(recipes.map((recipe) => recipe.category).filter(Boolean))].sort((a, b) => a.localeCompare(b, "no"));
+    return reply.type("text/html; charset=utf-8").send(page("Kategorier", `<h1>Kategorier</h1><div class="cards">${categories.map((category) => { const members = recipes.filter((recipe) => recipe.category === category); return `<a class="card public-group-card" href="kategorier/${encodeURIComponent(category)}"><span class="public-cover-mosaic">${members.filter((recipe) => recipe.coverToken).slice(0, 4).map((recipe) => `<img loading="lazy" src="${recipe.slug}/media/${recipe.coverToken}" alt="">`).join("")}</span><span class="public-group-caption"><strong>${escapeHtml(category)}</strong><small>${members.length} ${members.length === 1 ? "oppskrift" : "oppskrifter"}</small></span></a>`; }).join("")}</div>`, `../${routeBase.slice(1)}`));
   });
   app.get<{ Params: { category: string } }>(`${routeBase}/kategorier/:category`, async (request, reply) => {
     const recipes = (await publishedRecipes()).filter((recipe) => recipe.category === request.params.category);

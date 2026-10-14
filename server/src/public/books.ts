@@ -92,8 +92,9 @@ export const publicBookRoutes: FastifyPluginAsync<{ vault: Vault }> = async (app
   });
   app.get<{ Params: { field: string } }>("/boker/oversikt/:field", async (request, reply) => {
     const key = facets[request.params.field]; if (!key) return reply.code(404).send();
-    const values = [...new Set((await published()).map((book) => book[key as "category" | "author" | "series" | "collection"]).filter(Boolean))].sort((a, b) => a.localeCompare(b, "no"));
-    return reply.type("text/html; charset=utf-8").send(page(facetLabels[request.params.field], `<a class="back" href="../../boker">⌂ Bøker</a><h1>${facetLabels[request.params.field]}</h1><div class="cards">${values.map((value) => `<a class="card" href="${request.params.field}/${encodeURIComponent(value)}"><div>${escape(value)}</div></a>`).join("")}</div>`));
+    const books = await published();
+    const values = [...new Set(books.map((book) => book[key as "category" | "author" | "series" | "collection"]).filter(Boolean))].sort((a, b) => a.localeCompare(b, "no"));
+    return reply.type("text/html; charset=utf-8").send(page(facetLabels[request.params.field], `<a class="back" href="../../boker">⌂ Bøker</a><h1>${facetLabels[request.params.field]}</h1><div class="cards">${values.map((value) => { const members = books.filter((book) => book[key as "category" | "author" | "series" | "collection"] === value); return `<a class="card public-group-card" href="${request.params.field}/${encodeURIComponent(value)}"><span class="public-cover-mosaic">${members.filter((book) => book.token).slice(0, 4).map((book) => `<img loading="lazy" src="../../${book.slug}/media/${book.token}" alt="">`).join("")}</span><span class="public-group-caption"><strong>${escape(value)}</strong><small>${members.length} ${members.length === 1 ? "bok" : "bøker"}</small></span></a>`; }).join("")}</div>`));
   });
   app.get<{ Params: { field: string; value: string } }>("/boker/oversikt/:field/:value", async (request, reply) => {
     const key = facets[request.params.field]; if (!key) return reply.code(404).send();
@@ -106,7 +107,7 @@ export const publicBookRoutes: FastifyPluginAsync<{ vault: Vault }> = async (app
     if (!book) return reply.code(404).send();
     const facts = readingFields("books", book.fields);
     // Personal thoughts remain private. Published highlights use the same Markdown model as the internal preview.
-    const sections = readingSections("books", book.markdown, true).map(({ heading, content }) => `<section class="public-section"><h2>${escape(heading)}</h2><div class="public-prose">${publicProse(content)}</div></section>`).join("");
+    const sections = readingSections("books", book.markdown, true).map(({ heading, content }) => `<section class="public-section${heading === "Høydepunkter" || heading === "Utdrag" ? " public-excerpts" : ""}"><h2>${escape(heading === "Høydepunkter" ? "Utdrag" : heading)}</h2><div class="public-prose">${publicProse(content)}</div></section>`).join("");
     return reply.type("text/html; charset=utf-8").send(page(book.title, `<a class="back" href="../boker">← Tilbake</a><article class="public-detail"><div class="public-hero">${book.token ? `<img src="${book.slug}/media/${book.token}" alt="">` : ""}<div><h1>${escape(book.title)}</h1><dl class="public-facts">${facts.map(({ label, value }) => `<div><dt>${escape(label)}</dt><dd>${escape(value)}</dd></div>`).join("")}</dl></div></div>${sections}</article>`));
   });
   app.get<{ Params: { slug: string; token: string } }>("/boker/:slug/media/:token", async (request, reply) => {

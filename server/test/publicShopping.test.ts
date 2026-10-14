@@ -59,4 +59,17 @@ describe("public shopping", () => {
     expect(markdown).toContain("## Kjøl");
     expect((await context.app.inject({ method: "POST", url: "/anna/handleliste/uke/delete-item", payload: "index=40", headers })).statusCode).toBe(400);
   });
+  it("renames a category without losing its items and shows lists in navigation", async () => {
+    await configure();
+    const headers = { "content-type": "application/x-www-form-urlencoded", origin: "http://localhost", host: "localhost" };
+    const url = "/anna/handleliste/uke/rename-category";
+    expect((await context.app.inject({ method: "POST", url, payload: "category=Kj%C3%B8l&name=Meieri", headers })).statusCode).toBe(303);
+    expect((await context.app.inject({ method: "POST", url, payload: "category=Meieri&name=%23Bad", headers })).statusCode).toBe(400);
+    const markdown = await readFile(path.join(context.vaultPath, "Handlelister", "Uke.md"), "utf8");
+    expect(markdown).toContain("## Meieri\n\n- [ ] Melk");
+    expect(markdown).not.toContain("## Kjøl");
+    const page = (await context.app.inject({ method: "GET", url: "/anna/handleliste/uke" })).body;
+    expect(page).toContain('href="../handleliste/uke"');
+    expect(page).toContain('action="uke/rename-category"');
+  });
 });

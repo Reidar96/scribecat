@@ -9,7 +9,7 @@ const fields: Record<ReadingKind, Array<[string, string]>> = {
   inventory: [["category", "Kategori"], ["location", "Plassering"], ["quantity", "Antall"], ["purchased", "Kjøpt"], ["purchase-price", "Pris"], ["warranty-until", "Garanti til"], ["serial-number", "Serienummer"]]
 };
 const sections: Record<ReadingKind, string[]> = {
-  books: ["Oppsummering", "Høydepunkter", "Mine tanker"],
+  books: ["Oppsummering", "Utdrag", "Mine tanker"],
   recipes: ["Beskrivelse", "Ingredienser", "Fremgangsmåte", "Notater"],
   inventory: ["Beskrivelse", "Notater"]
 };
@@ -32,6 +32,6 @@ export function readingSection(markdown: string, heading: string): string {
 
 export function readingSections(kind: ReadingKind, markdown: string, publicView = false): ReadingSection[] {
   return sections[kind].filter((heading) => !publicView || kind !== "books" || heading !== "Mine tanker")
-    .map((heading) => ({ heading, content: readingSection(markdown, heading) }))
+    .map((heading) => ({ heading, content: readingSection(markdown, heading) || (kind === "books" && heading === "Utdrag" ? readingSection(markdown, "Høydepunkter") : "") }))
     .filter(({ content }) => !!content);
 }

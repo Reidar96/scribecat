@@ -36,12 +36,12 @@ function Section({ title, value, onSave, placeholder }: { title: string; value: 
 }
 
 function ShoppingItems({ entry, onChange }: { entry: PluginEntry; onChange: (markdown: string) => Promise<void> }) {
-  const [dialog, setDialog] = useState<{ kind: "new" | "delete"; category?: string } | null>(null);
+  const [dialog, setDialog] = useState<{ kind: "new" | "delete" | "rename"; category?: string } | null>(null);
   const categories = [...splitFrontmatter(entry.markdown).body.matchAll(/^##\s+(.+)$/gm)].map((match) => match[1].trim());
   return <div className="plugin-detail__shopping">{categories.map((category, categoryIndex) => {
     const sectionLines = pluginSection(entry.markdown, category).split("\n");
     const items = sectionLines.map((line, lineIndex) => ({ line, lineIndex })).filter(({ line }) => /^- \[[ x]\] /.test(line));
-    return <section key={category} id={`plugin-category-${category}`} className="plugin-detail__section"><div className="plugin-detail__section-heading"><h3>{category}</h3>
+    return <section key={category} id={`plugin-category-${category}`} className="plugin-detail__section"><div className="plugin-detail__section-heading"><h3>{category}</h3><button aria-label={`Endre navnet på ${category}`} onClick={() => setDialog({ kind: "rename", category })}><Pencil size={15} /></button>
       <button disabled={categoryIndex === 0} aria-label={`Flytt ${category} opp`} onClick={() => void onChange(moveMarkdownSection(entry.markdown, category, -1))}>↑</button>
       <button disabled={categoryIndex === categories.length - 1} aria-label={`Flytt ${category} ned`} onClick={() => void onChange(moveMarkdownSection(entry.markdown, category, 1))}>↓</button>
       <button className="plugin-detail__remove" aria-label={`Slett kategorien ${category}`} onClick={() => setDialog({ kind: "delete", category })}><Trash2 size={15} /></button></div>
@@ -64,10 +64,13 @@ function ShoppingItems({ entry, onChange }: { entry: PluginEntry; onChange: (mar
       }}><input name="item" aria-label={`Ny vare i ${category}`} placeholder="Legg til vare" /><button type="submit" aria-label="Legg til"><Plus size={17} /></button></form>
     </section>;
   })}<Button variant="outline" onClick={() => setDialog({ kind: "new" })}><Plus size={16} /> Kategori</Button>
-    {dialog && <PluginDialog title={dialog.kind === "new" ? "Ny kategori" : `Slette kategorien «${dialog.category}» og varene i den?`}
-      label={dialog.kind === "new" ? "Navn" : undefined} confirmLabel={dialog.kind === "new" ? "Opprett" : "Slett"} destructive={dialog.kind === "delete"}
+    {dialog && <PluginDialog title={dialog.kind === "new" ? "Ny kategori" : dialog.kind === "rename" ? `Endre «${dialog.category}»` : `Slette kategorien «${dialog.category}» og varene i den?`}
+      label={dialog.kind === "delete" ? undefined : "Navn"} confirmLabel={dialog.kind === "new" ? "Opprett" : dialog.kind === "rename" ? "Lagre" : "Slett"} destructive={dialog.kind === "delete"}
       onCancel={() => setDialog(null)} onConfirm={(value) => {
         if (dialog.kind === "new" && !categories.some((item) => item.toLowerCase() === value.toLowerCase())) void onChange(setPluginSection(entry.markdown, value, ""));
+        if (dialog.kind === "rename" && dialog.category && value.trim() && !/[\r\n#]/.test(value) && !categories.some((item) => item.toLocaleLowerCase("no") === value.trim().toLocaleLowerCase("no") && item !== dialog.category)) {
+          void onChange(entry.markdown.split("\n").map((line) => line === `## ${dialog.category}` ? `## ${value.trim()}` : line).join("\n"));
+        }
         if (dialog.kind === "delete" && dialog.category) void onChange(removeMarkdownSection(entry.markdown, dialog.category));
         setDialog(null);
       }} />}</div>;
@@ -77,9 +80,9 @@ function RecipeReading({ entry, servings, onServingsChange }: { entry: PluginEnt
   const ingredients = parseIngredients(pluginSection(entry.markdown, "Ingredienser"));
   const steps = parseSteps(pluginSection(entry.markdown, "Fremgangsmåte"));
   const base = Number(entry.metadata.servings) || 4;
-  return <><section className="plugin-detail__section plugin-detail__serving-panel"><label className="plugin-detail__field"><span>Porsjoner</span><input type="number" min="1" max="100" value={servings} onChange={(event) => { const next = Number(event.target.value); if (next >= 1 && next <= 100) onServingsChange(next); }} /></label><span>Standard: {base} porsjoner</span></section>
-    <div className="plugin-detail__recipe-grid"><section className="plugin-detail__section"><h3>Ingredienser</h3><ul className="plugin-detail__reading-list">{ingredients.map((item, index) => <li key={index}><label><input type="checkbox" /> <span>{[scaledAmount(item.amount, base, servings), item.unit, item.name].filter(Boolean).join(" ")}</span></label></li>)}</ul></section>
-      <section className="plugin-detail__section"><h3>Fremgangsmåte</h3><ol className="plugin-detail__reading-list">{steps.map((step, index) => <li key={index}><label><input type="checkbox" /> <span>{step}</span></label></li>)}</ol></section></div></>;
+  return <>{(ingredients.length > 0 || steps.length > 0) && <section className="plugin-detail__section plugin-detail__serving-panel"><label className="plugin-detail__field"><span>Porsjoner</span><input type="number" min="1" max="100" value={servings} onChange={(event) => { const next = Number(event.target.value); if (next >= 1 && next <= 100) onServingsChange(next); }} /></label><span>Standard: {base} porsjoner</span></section>}
+    <div className="plugin-detail__recipe-grid">{ingredients.length > 0 && <section className="plugin-detail__section"><h3>Ingredienser</h3><ul className="plugin-detail__reading-list">{ingredients.map((item, index) => <li key={index}><label><input type="checkbox" /> <span>{[scaledAmount(item.amount, base, servings), item.unit, item.name].filter(Boolean).join(" ")}</span></label></li>)}</ul></section>}
+      {steps.length > 0 && <section className="plugin-detail__section"><h3>Fremgangsmåte</h3><ol className="plugin-detail__reading-list">{steps.map((step, index) => <li key={index}><label><input type="checkbox" /> <span>{step}</span></label></li>)}</ol></section>}</div></>;
 }
 
 function RecipeEditor({ entry, servings, onChange }: { entry: PluginEntry; servings: number; onChange: (markdown: string) => Promise<void> }) {
@@ -128,7 +131,7 @@ function LineItemsEditor({ entry, heading, placeholder, onChange }: { entry: Plu
   const [draft, setDraft] = useState("");
   const save = (next: string[]) => void onChange(setPluginSection(entry.markdown, heading,
     next.filter((line) => line.trim()).map((line) => `- ${line.trim().replace(/[\r\n]/g, " ")}`).join("\n")));
-  return <section className="plugin-detail__section"><h3>{heading}</h3><ul className="plugin-detail__recipe-list">{lines.map((line, index) =>
+  return <section className="plugin-detail__section"><h3>{heading === "Høydepunkter" ? "Utdrag" : heading}</h3><ul className="plugin-detail__recipe-list">{lines.map((line, index) =>
     <li key={index} className="plugin-detail__simple-row"><input aria-label={`${heading} ${index + 1}`} defaultValue={line} onBlur={(event) => {
       const value = event.currentTarget.value.trim();
       if (value && value !== line) save(lines.map((row, at) => at === index ? value : row));
@@ -187,9 +190,9 @@ export function ContentPluginDetail({ id, entry, vaultPath, publicView, isNew, d
       {versions.length ? versions.map((version) => <div key={version.id} className="plugin-detail__version"><time>{new Date(version.createdAt).toLocaleString("no-NO")}</time><button onClick={() => void readVersionContent(vaultPath, version.id).then((markdown) => { void onChange(markdown); setEditing(true); setVersions(null); })}>Bruk som utkast</button></div>) : <p>Ingen lagrede versjoner ennå.</p>}</section>}
     {!editing ? <div className="plugin-detail__preview"><div className="plugin-detail__preview-main"><div className="plugin-detail__hero">
       {id !== "shopping" && <div className="plugin-detail__image">{cover ? <PluginCover id={id} vaultPath={vaultPath} documentPath={entry.path} reference={cover} alt={title} /> : <span aria-hidden="true">{id === "books" ? <BookOpen /> : id === "recipes" ? <CookingPot /> : <Package />}</span>}</div>}
-      <div><h2>{title}</h2><p className="plugin-detail__badges">{entry.metadata.favorite === "true" && <span>★ Favoritt</span>}{published && <span>Offentlig</span>}</p>
-        <dl className="plugin-detail__summary">{previewFields.map(({ key, label, value }) => <div key={key}><dt>{label}</dt><dd>{value}</dd></div>)}</dl></div></div>
-      {previewSections.filter(({ heading }) => id !== "recipes" || heading !== "Notater").map(({ heading, content }) => <section className="plugin-detail__section" id={`plugin-section-${heading}`} key={heading}><h3>{heading}</h3><div className="plugin-detail__prose" dangerouslySetInnerHTML={{ __html: previewMarkdown.render(content) }} /></section>)}
+      <div><h2>{title}</h2>{entry.metadata.favorite === "true" && <p className="plugin-detail__badges"><span>★ Favoritt</span></p>}
+        {previewFields.length > 0 && <dl className="plugin-detail__summary">{previewFields.map(({ key, label, value }) => <div key={key}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>}</div></div>
+      {previewSections.filter(({ heading }) => id !== "recipes" || heading !== "Notater").map(({ heading, content }) => <section className={`plugin-detail__section${heading === "Høydepunkter" || heading === "Utdrag" ? " plugin-detail__quotes" : ""}`} id={`plugin-section-${heading}`} key={heading}><h3>{heading === "Høydepunkter" ? "Utdrag" : heading}</h3><div className="plugin-detail__prose" dangerouslySetInnerHTML={{ __html: previewMarkdown.render(content) }} /></section>)}
       {id === "recipes" && <RecipeReading key={entry.path} entry={entry} servings={servings ?? Number(entry.metadata.servings || 4)} onServingsChange={setServings} />}
       {id === "recipes" && previewSections.filter(({ heading }) => heading === "Notater").map(({ heading, content }) => <section className="plugin-detail__section" id={`plugin-section-${heading}`} key={heading}><h3>{heading}</h3><div className="plugin-detail__prose" dangerouslySetInnerHTML={{ __html: previewMarkdown.render(content) }} /></section>)}
       {id === "shopping" && <ShoppingItems entry={entry} onChange={async (markdown) => { await onChange(markdown); setEditing(true); }} />}
@@ -213,7 +216,7 @@ export function ContentPluginDetail({ id, entry, vaultPath, publicView, isNew, d
           {id === "inventory" && <>{metadataField("Kategori", "category")}{metadataField("Plassering", "location")}{metadataField("Antall", "quantity", "number")}{metadataField("Kjøpt", "purchased", "date")}{metadataField("Pris", "purchase-price")}{metadataField("Garanti til", "warranty-until", "date")}{metadataField("Serienummer", "serial-number")}
             <div className="plugin-detail__checks"><label className="plugin-detail__check-tile"><input type="checkbox" checked={entry.metadata.favorite === "true"} onChange={() => field("favorite", String(entry.metadata.favorite !== "true"))} /> Favoritt</label><label className="plugin-detail__check-tile"><input type="checkbox" checked={published} disabled={!publicView && !published} onChange={() => void onChange(setPluginField(entry.markdown, "published", !published))} /> Offentlig</label></div></>}
         </div></div>
-      {id === "books" && <>{contentSection("Oppsummering", "Hva handler boken om?")}<LineItemsEditor entry={entry} heading="Høydepunkter" placeholder="Legg til sitat eller høydepunkt" onChange={onChange} />{contentSection("Mine tanker")}</>}
+      {id === "books" && <>{contentSection("Oppsummering", "Hva handler boken om?")}<LineItemsEditor entry={entry} heading={/^## Høydepunkter\s*$/m.test(splitFrontmatter(entry.markdown).body) ? "Høydepunkter" : "Utdrag"} placeholder="Legg til sitat eller utdrag" onChange={onChange} />{contentSection("Mine tanker")}</>}
       {id === "recipes" && <>{contentSection("Beskrivelse", "Beskriv retten …")}
         <label className="plugin-detail__field plugin-detail__servings"><span>Vis for antall porsjoner</span><input type="number" min="1" max="100" value={servings ?? Number(entry.metadata.servings || 4)} onChange={(event) => setServings(Number(event.target.value))} /></label>
         <RecipeEditor key={entry.path} entry={entry} servings={servings ?? Number(entry.metadata.servings || 4)} onChange={onChange} />{contentSection("Notater")}</>}

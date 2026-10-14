@@ -21,6 +21,8 @@ describe("public books", () => {
     const detail = await context.app.inject({ method: "GET", url: "/anna/boker/eksempel" });
     expect(detail.body).toContain("Offentlig omtale");
     expect(detail.body).toContain("Et godt sitat");
+    expect(detail.body).toContain("<h2>Utdrag</h2>");
+    expect(detail.body).not.toContain("<h2>Høydepunkter</h2>");
     expect(detail.body).toContain("Lesestatus</dt><dd>Lest");
     expect(detail.body).toContain("Startet</dt><dd>2026-10-01");
     expect(detail.body).toContain('aria-label="Åpne eller lukk sidemeny"');
@@ -29,6 +31,9 @@ describe("public books", () => {
     expect(token).toBeTruthy();
     expect((await context.app.inject({ method: "GET", url: `/anna/boker/eksempel/media/${token}` })).statusCode).toBe(200);
     const author = await context.app.inject({ method: "GET", url: "/anna/boker/oversikt/forfatter/Forfatter" });
+    const groups = await context.app.inject({ method: "GET", url: "/anna/boker/oversikt/forfatter" });
+    expect(groups.body).toContain('class="public-cover-mosaic"');
+    expect(groups.body).toContain(`../../eksempel/media/${token}`);
     expect(author.statusCode).toBe(200);
     expect(author.body).toContain('href="../../eksempel"');
     expect((await context.app.inject({ method: "GET", url: "/anna/boker/statistikk" })).body).toContain("<span>Bøker</span><strong>1</strong>");
