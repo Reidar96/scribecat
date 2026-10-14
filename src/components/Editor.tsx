@@ -697,7 +697,19 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       activateAnchor(anchor);
     };
     document.addEventListener("click", intercept, true);
-    return () => document.removeEventListener("click", intercept, true);
+    const keydown = (event: KeyboardEvent) => {
+      if (event.key !== "Enter") return;
+      const anchor = (event.target as Element | null)?.closest?.("a[data-heading-link]") as HTMLAnchorElement | null;
+      if (!anchor || !dom.contains(anchor)) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      activateAnchor(anchor);
+    };
+    document.addEventListener("keydown", keydown, true);
+    return () => {
+      document.removeEventListener("click", intercept, true);
+      document.removeEventListener("keydown", keydown, true);
+    };
   });
 
   const openLocalDocument = async (href: string) => {

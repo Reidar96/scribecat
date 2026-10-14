@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { Home, PanelLeft, Plus, Search, ChartNoAxesCombined, Pencil, Save, X, Trash2, BookOpen, CookingPot, Package, ShoppingBasket } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -60,6 +60,7 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
   const api = createPluginApi(id, folderPath, onOpenFile);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [query, setQuery] = useState("");
+  const deferredQuery = useDeferredValue(query);
   const [filter, setFilter] = useState("");
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [draftMarkdown, setDraftMarkdown] = useState<string | null>(null);
@@ -129,7 +130,7 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
     try { localStorage.setItem(draftKey(creating ? null : selectedPath), draftMarkdown); } catch { /* unavailable storage */ }
   }, [draftMarkdown, creating, selectedPath, folderPath, id]);
 
-  const visible = entries.filter((entry) => {
+  const visible = useMemo(() => entries.filter((entry) => {
     if (id === "quick-notes" && filter !== "arkiv" && entry.metadata.archived === "true") return false;
     if (id === "inventory" && filter === "garanti" && (!entry.metadata["warranty-until"] || entry.metadata["warranty-until"] < new Date().toISOString().slice(0, 10))) return false;
     if (id === "recipes" && filter === "favoritter" && entry.metadata.favorite !== "true") return false;
@@ -137,8 +138,8 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
       (id === "books" ? [entry.metadata.status, entry.metadata.category, entry.metadata.series, entry.metadata.collection].includes(filter)
         : id === "quick-notes" ? filter === "arkiv" ? entry.metadata.archived === "true" : entry.metadata.pinned === filter
         : id === "inventory" ? [entry.metadata.category, entry.metadata.location].includes(filter) : entry.metadata.category === filter) !== true) return false;
-    return `${entry.title} ${entry.markdown}`.toLocaleLowerCase().includes(query.toLocaleLowerCase());
-  });
+    return `${entry.title} ${entry.markdown}`.toLocaleLowerCase().includes(deferredQuery.toLocaleLowerCase());
+  }), [entries, filter, deferredQuery, id]);
   const filters = id === "books" ? ["want-to-read", "reading", "finished", ...new Set(entries.flatMap((entry) => [entry.metadata.category, entry.metadata.series, entry.metadata.collection]).filter(Boolean))]
     : id === "quick-notes" ? ["true", "arkiv"]
     : id === "inventory" ? ["garanti", ...new Set(entries.flatMap((entry) => [entry.metadata.category, entry.metadata.location]).filter(Boolean))]
