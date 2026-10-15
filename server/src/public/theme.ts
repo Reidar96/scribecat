@@ -2,8 +2,8 @@
  * accent vocabulary as ScribeCat's internal calendar and task views. */
 export const publicCss = `
 :root{color-scheme:light dark;--sc-bg:#f7f6fa;--sc-surface:#fff;--sc-raised:#faf9fc;--sc-text:#211d29;--sc-muted:#716b7d;--sc-border:#e6e1eb;--sc-accent:#a855f7;--sc-accent-soft:#f3e8ff}
-*{box-sizing:border-box}body{margin:0;background:var(--sc-bg);color:var(--sc-text);font:1rem/1.55 system-ui,-apple-system,sans-serif}a{color:inherit;text-decoration:none}
-.public-top{min-height:3.5rem;display:flex;align-items:center;gap:.75rem;padding:.55rem 1rem;border-bottom:1px solid var(--sc-border);background:var(--sc-surface);font-size:.92rem;font-weight:650}.public-top .public-brand{color:var(--sc-muted);font-size:.78rem}.public-top .public-home{margin-left:auto;font-size:1.25rem;line-height:1;border-radius:.5rem;padding:.2rem .5rem}.public-top a:hover,.public-top a:focus-visible{color:var(--sc-accent);background:var(--sc-accent-soft)}
+*{box-sizing:border-box}body{margin:0;padding-bottom:env(safe-area-inset-bottom);background:var(--sc-bg);color:var(--sc-text);font:1rem/1.55 system-ui,-apple-system,sans-serif}a{color:inherit;text-decoration:none}
+.public-top{padding-top:calc(.55rem + env(safe-area-inset-top));min-height:3.5rem;display:flex;align-items:center;gap:.75rem;padding:.55rem 1rem;border-bottom:1px solid var(--sc-border);background:var(--sc-surface);font-size:.92rem;font-weight:650}.public-top .public-brand{color:var(--sc-muted);font-size:.78rem}.public-top .public-home{margin-left:auto;font-size:1.25rem;line-height:1;border-radius:.5rem;padding:.2rem .5rem}.public-top a:hover,.public-top a:focus-visible{color:var(--sc-accent);background:var(--sc-accent-soft)}
 .public-layout{display:grid;grid-template-columns:minmax(12rem,15rem) minmax(0,1fr);min-height:calc(100vh - 3.4rem)}
 .public-sidebar{display:flex;flex-direction:column;gap:.28rem;padding:1.3rem .8rem;border-right:1px solid var(--sc-border);background:var(--sc-surface);position:sticky;top:0;height:100vh;overflow-y:auto}
 .public-sidebar strong{padding:.65rem .7rem;color:var(--sc-muted);font-size:.72rem;letter-spacing:.13em;text-transform:uppercase}

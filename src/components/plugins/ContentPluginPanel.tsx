@@ -1,4 +1,4 @@
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Plus, Search, ChartNoAxesCombined, Trash2, BookOpen, CookingPot, Package, ShoppingBasket, Pin, ArchiveRestore, Archive } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,7 @@ import { quickNoteBody, retainCollectionEntries, updateQuickNoteBody } from "@/p
 type Entry = { path: string; markdown: string; metadata: Record<string, string>; title: string };
 const entryCache = new Map<string, { mtime: number; entry: Entry }>();
 function noteBody(markdown: string) { return quickNoteBody(markdown); }
-function QuickNoteCard({ entry, initialEdit, onSave, onCategoryChange }: { entry: Entry; initialEdit: boolean; onSave: (text: string, expected: string) => Promise<boolean>; onCategoryChange: (category: string) => void }) {
+function QuickNoteCard({ entry, initialEdit, onSave, onCategoryChange, children }: { entry: Entry; initialEdit: boolean; onSave: (text: string, expected: string) => Promise<boolean>; onCategoryChange: (category: string) => void; children: ReactNode }) {
   const draftKey = `scribecat:quick-note-draft:${entry.path}`;
   const restored = useRef<{ value: string } | null>(null);
   if (restored.current === null) {
@@ -42,7 +42,7 @@ function QuickNoteCard({ entry, initialEdit, onSave, onCategoryChange }: { entry
     const field = textarea.current;
     if (!field) return;
     field.style.height = "auto";
-    field.style.height = `${Math.max(field.scrollHeight, 128)}px`;
+    field.style.height = `${Math.max(field.scrollHeight, 44)}px`;
   }, [draft]);
   useEffect(() => {
     try {
@@ -61,11 +61,15 @@ function QuickNoteCard({ entry, initialEdit, onSave, onCategoryChange }: { entry
     }, 650);
     return () => window.clearTimeout(timer);
   }, [draft, saved]);
-  return <div className="content-plugin-panel__note">
-    <textarea ref={textarea} data-note-path={entry.path} aria-label="Huskelapp" value={draft} placeholder="Skriv noe …" onChange={(event) => setDraft(event.target.value)} autoFocus={initialEdit} />
-    <div className="content-plugin-panel__note-actions"><span className="content-plugin-panel__note-status" role="status">{saveError ? "Kunne ikke lagre – teksten er beholdt" : saving ? "Lagrer …" : draft !== saved ? "Lagrer automatisk" : "Lagret"}</span></div>
-    <input className="content-plugin-panel__note-category" aria-label="Kategori for huskelapp" list="quick-note-categories" placeholder="Legg til kategori" value={category} onChange={(event) => setCategory(event.target.value)} onBlur={() => { if (category.trim() !== (entry.metadata.category ?? "")) onCategoryChange(category.trim()); }} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }} />
-  </div>;
+  const status = saveError ? "Kunne ikke lagre – teksten er beholdt" : saving ? "Lagrer …" : draft !== saved ? "Lagrer automatisk" : "Lagret";
+  return <>
+    <div className="content-plugin-panel__note"><textarea ref={textarea} data-note-path={entry.path} aria-label="Huskelapp" value={draft} placeholder="Skriv noe …" onChange={(event) => setDraft(event.target.value)} autoFocus={initialEdit} /></div>
+    <div className="content-plugin-panel__note-controls">
+      <input className="content-plugin-panel__note-category" aria-label="Kategori for huskelapp" list="quick-note-categories" placeholder="Kategori" value={category} onChange={(event) => setCategory(event.target.value)} onBlur={() => { if (category.trim() !== (entry.metadata.category ?? "")) onCategoryChange(category.trim()); }} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }} />
+      <span className="content-plugin-panel__note-status" role="status" title={status}>{status}</span>
+      {children}
+    </div>
+  </>;
 }
 
 export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, onSidebarVisibilityToggle, onOpenSidebar, onOpenFile, onClose }: {
@@ -372,7 +376,7 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
               ? <PluginCover id={id} vaultPath={folderPath} documentPath={entry.path} reference={entry.metadata.cover} alt={entry.title} />
               : <span className="content-plugin-panel__placeholder" aria-hidden="true">{id === "books" ? <BookOpen /> : id === "recipes" ? <CookingPot /> : id === "inventory" ? <Package /> : <ShoppingBasket />}</span>}
             <strong>{entry.metadata.title || entry.metadata.name || entry.title}</strong>
-            <span>{[entry.metadata.author, id === "books" ? ({ "want-to-read": "Vil lese", reading: "Leser", finished: "Lest" } as Record<string, string>)[entry.metadata.status] : "", entry.metadata.category, entry.metadata.location].filter(Boolean).join(" · ")}</span>
+            {id !== "recipes" && <span>{[entry.metadata.author, id === "books" ? ({ "want-to-read": "Vil lese", reading: "Leser", finished: "Lest" } as Record<string, string>)[entry.metadata.status] : "", entry.metadata.category, entry.metadata.location].filter(Boolean).join(" · ")}</span>}
           </button>}
           {id === "quick-notes" ? <>
             <QuickNoteCard entry={entry} initialEdit={newNotePath === entry.path} onSave={async (text, expected) => {
@@ -385,11 +389,11 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
               });
               if (saved) { quickNoteSavedBodies.current.set(entry.path, text); setNewNotePath(null); }
               return saved;
-            }} onCategoryChange={(category) => { void change(entry, (markdown) => setPluginField(markdown, "category", category)); }} />
-            <div className="content-plugin-panel__note-controls"><button aria-label={entry.metadata.pinned === "true" ? "Løsne huskelapp" : "Fest huskelapp"} title={entry.metadata.pinned === "true" ? "Løsne" : "Fest"} aria-pressed={entry.metadata.pinned === "true"} onClick={() => void change(entry, (markdown) => setPluginField(markdown, "pinned", pluginMetadata(markdown).pinned !== "true"))}><Pin size={16} /></button>
+            }} onCategoryChange={(category) => { void change(entry, (markdown) => setPluginField(markdown, "category", category)); }}>
+            <button aria-label={entry.metadata.pinned === "true" ? "Løsne huskelapp" : "Fest huskelapp"} title={entry.metadata.pinned === "true" ? "Løsne" : "Fest"} aria-pressed={entry.metadata.pinned === "true"} onClick={() => void change(entry, (markdown) => setPluginField(markdown, "pinned", pluginMetadata(markdown).pinned !== "true"))}><Pin size={16} /></button>
             <button aria-label={entry.metadata.archived === "true" ? "Gjenopprett huskelapp" : "Arkiver huskelapp"} title={entry.metadata.archived === "true" ? "Gjenopprett" : "Arkiver"} onClick={() => void change(entry, (markdown) => setPluginField(markdown, "archived", pluginMetadata(markdown).archived !== "true"))}>{entry.metadata.archived === "true" ? <ArchiveRestore size={16} /> : <Archive size={16} />}</button>
             <button className="content-plugin-panel__note-delete" aria-label="Slett huskelapp" title="Slett" onClick={() => setDialog({ kind: "delete", path: entry.path, label: "huskelappen" })}><Trash2 size={16} /></button>
-            </div>
+            </QuickNoteCard>
           </> : null}
         </article>;
       })}</div>}

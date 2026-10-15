@@ -1,3 +1,9 @@
+## [1.2.7] - 2026-10-15
+
+- Simplify public and private recipe cards to focus on the title, image and optional description instead of repeating the category and portion count.
+- Give Recipes, Books, Inventory and Shopping Lists their own scoped iOS Home Screen manifests, icons and standalone display metadata across the entire public app. Respect the device safe area.
+- Move the Quick Notes category and save state into the card toolbar and let the note height follow its text.
+
 ## [1.2.6] - 2026-10-15
 
 - Keep Quick Notes cards visible while changed Markdown is reloaded, including during auto-save. Preserve concurrent pin, archive and category edits when saving note text, and keep draft text if a conflict occurs.

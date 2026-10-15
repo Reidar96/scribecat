@@ -1,4 +1,5 @@
 import { readPluginMarkdown } from "./pluginFiles.js";
+import { registerPublicWebApp } from "./webApp.js";
 import { publicCss, publicFrame, publicProse } from "./theme.js";
 import { readingFields, readingSections } from "./readingModel.js";
 import { createHash } from "node:crypto";
@@ -31,17 +32,19 @@ function safeFolder(folder: string): boolean {
   return !!folder && !folder.startsWith("/") && !folder.includes("\\") && folder.split("/").every((part) => part && part !== "." && part !== ".." && part !== ".scribecat");
 }
 
-const page = (title: string, content: string) => {
+const page = (title: string, content: string, webAppHead: string) => {
   const back = /class="back" href="([^"]+)"/.exec(content)?.[1];
   const home = back?.endsWith("/inventar") ? back : back ? "../../../inventar" : "inventar";
   const clean = content.replace(/<nav>[\s\S]*?<\/nav>/, "");
-  return `<!doctype html><html lang="no"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escape(title)} · Inventar</title><style>${publicCss}</style></head><body>${publicFrame("Inventar", clean, home, [["Statistikk", `${home}/statistikk`], ["Kategorier", `${home}/oversikt/kategori`], ["Plasseringer", `${home}/oversikt/plassering`]] as Array<[string, string]>)}</body></html>`;
+  return `<!doctype html><html lang="no"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">${webAppHead}<title>${escape(title)} · Inventar</title><style>${publicCss}</style></head><body>${publicFrame("Inventar", clean, home, [["Statistikk", `${home}/statistikk`], ["Kategorier", `${home}/oversikt/kategori`], ["Plasseringer", `${home}/oversikt/plassering`]] as Array<[string, string]>)}</body></html>`;
 };
 
 export const publicInventoryRoutes: FastifyPluginAsync<{ vault: Vault }> = async (app, { vault }) => {
+  const webAppHead = registerPublicWebApp(app, "/inventar", "Inventar");
+  const renderPage = (title: string, content: string) => page(title, content, webAppHead);
   app.addHook("onRequest", async (_request, reply) => {
     reply.header("Cache-Control", "no-store").header("X-Content-Type-Options", "nosniff").header("Referrer-Policy", "no-referrer")
-      .header("Content-Security-Policy", "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'");
+      .header("Content-Security-Policy", "default-src 'none'; manifest-src 'self'; img-src 'self'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'");
   });
   async function published(): Promise<Item[]> {
     let folder: string;
@@ -90,24 +93,24 @@ export const publicInventoryRoutes: FastifyPluginAsync<{ vault: Vault }> = async
       (!query || `${item.title} ${item.category} ${item.description}`.toLocaleLowerCase("no").includes(query)))
       .map((item) => `<a class="card" href="inventar/${item.slug}" data-category="${escape(item.category)}">${item.token ? `<img loading="lazy" src="inventar/${item.slug}/media/${item.token}" alt="">` : ""}<div><strong>${escape(item.title)}</strong><p class="meta">${escape([item.category, item.location].filter(Boolean).join(" · "))}</p></div></a>`).join("");
     // A native GET form keeps search usable with the restrictive CSP.
-    return reply.type("text/html; charset=utf-8").send(page("Inventar", `<h1>Inventar</h1><nav><a href="inventar/statistikk">Statistikk</a> · <a href="inventar/oversikt/kategori">Kategorier</a> · <a href="inventar/oversikt/plassering">Plasseringer</a></nav><form class="filters" method="get"><input type="search" name="q" value="${escape(query)}" placeholder="Søk i inventar" aria-label="Søk"><select name="category"><option value="">Alle kategorier</option>${categories.map((category) => `<option value="${escape(category)}" ${category === selectedCategory ? "selected" : ""}>${escape(category)}</option>`).join("")}</select><button>Søk</button></form><div class="cards">${cards}</div>`));
+    return reply.type("text/html; charset=utf-8").send(renderPage("Inventar", `<h1>Inventar</h1><nav><a href="inventar/statistikk">Statistikk</a> · <a href="inventar/oversikt/kategori">Kategorier</a> · <a href="inventar/oversikt/plassering">Plasseringer</a></nav><form class="filters" method="get"><input type="search" name="q" value="${escape(query)}" placeholder="Søk i inventar" aria-label="Søk"><select name="category"><option value="">Alle kategorier</option>${categories.map((category) => `<option value="${escape(category)}" ${category === selectedCategory ? "selected" : ""}>${escape(category)}</option>`).join("")}</select><button>Søk</button></form><div class="cards">${cards}</div>`));
   });
   app.get("/inventar/statistikk", async (_request, reply) => {
     const items = await published();
     const total = items.reduce((sum, item) => sum + (Number(item.fields["purchase-price"]?.replace(/[^\d,.-]/g, "").replace(",", ".")) || 0) * (Number(item.fields.quantity) || 1), 0);
-    return reply.type("text/html; charset=utf-8").send(page("Statistikk", `<a class="back" href="../inventar">⌂ Inventar</a><h1>Statistikk</h1><div class="public-stats"><div><span>Gjenstander</span><strong>${items.length}</strong></div><div><span>Kategorier</span><strong>${new Set(items.map((item) => item.category).filter(Boolean)).size}</strong></div><div><span>Plasseringer</span><strong>${new Set(items.map((item) => item.location).filter(Boolean)).size}</strong></div><div><span>Samlet pris</span><strong>${escape(new Intl.NumberFormat("nb-NO", { maximumFractionDigits: 2 }).format(total))} kr</strong></div></div>`));
+    return reply.type("text/html; charset=utf-8").send(renderPage("Statistikk", `<a class="back" href="../inventar">⌂ Inventar</a><h1>Statistikk</h1><div class="public-stats"><div><span>Gjenstander</span><strong>${items.length}</strong></div><div><span>Kategorier</span><strong>${new Set(items.map((item) => item.category).filter(Boolean)).size}</strong></div><div><span>Plasseringer</span><strong>${new Set(items.map((item) => item.location).filter(Boolean)).size}</strong></div><div><span>Samlet pris</span><strong>${escape(new Intl.NumberFormat("nb-NO", { maximumFractionDigits: 2 }).format(total))} kr</strong></div></div>`));
   });
   app.get<{ Params: { field: string } }>("/inventar/oversikt/:field", async (request, reply) => {
     const field = facets[request.params.field]; if (!field) return reply.code(404).send();
     const items = await published();
     const values = [...new Set(items.map((item) => item[field as "category" | "location"]).filter(Boolean))].sort((a, b) => a.localeCompare(b, "no"));
-    return reply.type("text/html; charset=utf-8").send(page(labels[request.params.field], `<a class="back" href="../../inventar">⌂ Inventar</a><h1>${labels[request.params.field]}</h1><div class="cards">${values.map((value) => { const members = items.filter((item) => item[field as "category" | "location"] === value); return `<a class="card public-group-card" href="${request.params.field}/${encodeURIComponent(value)}"><span class="public-cover-mosaic">${members.filter((item) => item.token).slice(0, 4).map((item) => `<img loading="lazy" src="../../${item.slug}/media/${item.token}" alt="">`).join("")}</span><span class="public-group-caption"><strong>${escape(value)}</strong><small>${members.length} ${members.length === 1 ? "gjenstand" : "gjenstander"}</small></span></a>`; }).join("")}</div>`));
+    return reply.type("text/html; charset=utf-8").send(renderPage(labels[request.params.field], `<a class="back" href="../../inventar">⌂ Inventar</a><h1>${labels[request.params.field]}</h1><div class="cards">${values.map((value) => { const members = items.filter((item) => item[field as "category" | "location"] === value); return `<a class="card public-group-card" href="${request.params.field}/${encodeURIComponent(value)}"><span class="public-cover-mosaic">${members.filter((item) => item.token).slice(0, 4).map((item) => `<img loading="lazy" src="../../${item.slug}/media/${item.token}" alt="">`).join("")}</span><span class="public-group-caption"><strong>${escape(value)}</strong><small>${members.length} ${members.length === 1 ? "gjenstand" : "gjenstander"}</small></span></a>`; }).join("")}</div>`));
   });
   app.get<{ Params: { field: string; value: string } }>("/inventar/oversikt/:field/:value", async (request, reply) => {
     const field = facets[request.params.field]; if (!field) return reply.code(404).send();
     const items = (await published()).filter((item) => item[field as "category" | "location"] === request.params.value);
     if (!items.length) return reply.code(404).send();
-    return reply.type("text/html; charset=utf-8").send(page(request.params.value, `<a class="back" href="../${request.params.field}">← ${labels[request.params.field]}</a><h1>${escape(request.params.value)}</h1><div class="cards">${items.map((item) => `<a class="card" href="../../${item.slug}">${item.token ? `<img src="../../${item.slug}/media/${item.token}" alt="">` : ""}<div>${escape(item.title)}</div></a>`).join("")}</div>`));
+    return reply.type("text/html; charset=utf-8").send(renderPage(request.params.value, `<a class="back" href="../${request.params.field}">← ${labels[request.params.field]}</a><h1>${escape(request.params.value)}</h1><div class="cards">${items.map((item) => `<a class="card" href="../../${item.slug}">${item.token ? `<img src="../../${item.slug}/media/${item.token}" alt="">` : ""}<div>${escape(item.title)}</div></a>`).join("")}</div>`));
   });
   app.get<{ Params: { slug: string } }>("/inventar/:slug", async (request, reply) => {
     const item = slugPattern.test(request.params.slug) ? (await published()).find((entry) => entry.slug === request.params.slug) : null;
@@ -119,7 +122,7 @@ export const publicInventoryRoutes: FastifyPluginAsync<{ vault: Vault }> = async
       .map(([key, value]) => ({ label: key.replace(/[-_]/g, " ").replace(/\b\w/g, (letter) => letter.toLocaleUpperCase("no")), value }));
     const details = [...known, ...extras].map(({ label, value }) => `<div><dt>${escape(label)}</dt><dd>${escape(value)}</dd></div>`).join("");
     const sections = readingSections("inventory", item.markdown).map(({ heading, content }) => `<section class="public-section"><h2>${escape(heading)}</h2><div class="public-prose">${publicProse(content)}</div></section>`).join("");
-    return reply.type("text/html; charset=utf-8").send(page(item.title, `<a class="back" href="../inventar">← Tilbake</a><article class="public-detail public-detail--inventory"><div class="public-hero">${item.token ? `<img src="${item.slug}/media/${item.token}" alt="">` : `<div class="public-inventory-placeholder" aria-hidden="true">▧</div>`}<div class="public-inventory-copy"><h1>${escape(item.title)}</h1>${details ? `<dl class="public-facts">${details}</dl>` : ""}</div></div>${sections}${item.receiptToken ? `<section class="public-section"><h2>Kvittering</h2><a href="${item.slug}/kvittering/${item.receiptToken}">Se kvittering</a></section>` : ""}</article>`));
+    return reply.type("text/html; charset=utf-8").send(renderPage(item.title, `<a class="back" href="../inventar">← Tilbake</a><article class="public-detail public-detail--inventory"><div class="public-hero">${item.token ? `<img src="${item.slug}/media/${item.token}" alt="">` : `<div class="public-inventory-placeholder" aria-hidden="true">▧</div>`}<div class="public-inventory-copy"><h1>${escape(item.title)}</h1>${details ? `<dl class="public-facts">${details}</dl>` : ""}</div></div>${sections}${item.receiptToken ? `<section class="public-section"><h2>Kvittering</h2><a href="${item.slug}/kvittering/${item.receiptToken}">Se kvittering</a></section>` : ""}</article>`));
   });
   app.get<{ Params: { slug: string; token: string } }>("/inventar/:slug/kvittering/:token", async (request, reply) => {
     const item = slugPattern.test(request.params.slug) ? (await published()).find((entry) => entry.slug === request.params.slug) : null;

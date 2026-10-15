@@ -1,4 +1,5 @@
 import { readPluginMarkdown } from "./pluginFiles.js";
+import { registerPublicWebApp } from "./webApp.js";
 import { publicCss, publicFrame, publicProse } from "./theme.js";
 import { readingFields, readingSections } from "./readingModel.js";
 import { createHash } from "node:crypto";
@@ -34,17 +35,19 @@ function safeFolder(folder: string): boolean {
   return !!folder && !folder.startsWith("/") && !folder.includes("\\") && folder.split("/").every((part) => part && part !== "." && part !== ".." && part !== ".scribecat");
 }
 
-const page = (title: string, content: string) => {
+const page = (title: string, content: string, webAppHead: string) => {
   const back = /class="back" href="([^"]+)"/.exec(content)?.[1];
   const home = back?.endsWith("/boker") ? back : back ? "../../../boker" : "boker";
   const clean = content.replace(/<nav>[\s\S]*?<\/nav>/, "");
-  return `<!doctype html><html lang="no"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escape(title)} · Bøker</title><style>${publicCss}</style></head><body>${publicFrame("Bøker", clean, home, [["Statistikk", `${home}/statistikk`], ["Kategorier", `${home}/oversikt/kategori`], ["Forfattere", `${home}/oversikt/forfatter`], ["Serier", `${home}/oversikt/serie`], ["Samlinger", `${home}/oversikt/samling`]] as Array<[string, string]>)}</body></html>`;
+  return `<!doctype html><html lang="no"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">${webAppHead}<title>${escape(title)} · Bøker</title><style>${publicCss}</style></head><body>${publicFrame("Bøker", clean, home, [["Statistikk", `${home}/statistikk`], ["Kategorier", `${home}/oversikt/kategori`], ["Forfattere", `${home}/oversikt/forfatter`], ["Serier", `${home}/oversikt/serie`], ["Samlinger", `${home}/oversikt/samling`]] as Array<[string, string]>)}</body></html>`;
 };
 
 export const publicBookRoutes: FastifyPluginAsync<{ vault: Vault }> = async (app, { vault }) => {
+  const webAppHead = registerPublicWebApp(app, "/boker", "Bøker");
+  const renderPage = (title: string, content: string) => page(title, content, webAppHead);
   app.addHook("onRequest", async (_request, reply) => {
     reply.header("Cache-Control", "no-store").header("X-Content-Type-Options", "nosniff").header("Referrer-Policy", "no-referrer")
-      .header("Content-Security-Policy", "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");
+      .header("Content-Security-Policy", "default-src 'none'; manifest-src 'self'; img-src 'self'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");
   });
   async function published(): Promise<Book[]> {
     let folder: string;
@@ -83,24 +86,24 @@ export const publicBookRoutes: FastifyPluginAsync<{ vault: Vault }> = async (app
     const categories = [...new Set(books.map((book) => book.category).filter(Boolean))].sort((a, b) => a.localeCompare(b, "no"));
     const cards = books.filter((book) => (!category || book.category === category) && (!q || `${book.title} ${book.author} ${book.category}`.toLocaleLowerCase("no").includes(q)))
       .map((book) => `<a class="card" href="boker/${book.slug}">${book.token ? `<img loading="lazy" src="boker/${book.slug}/media/${book.token}" alt="">` : ""}<div><strong>${escape(book.title)}</strong><p class="meta">${escape([book.author, book.category].filter(Boolean).join(" · "))}</p></div></a>`).join("");
-    return reply.type("text/html; charset=utf-8").send(page("Bøker", `<h1>Bøker</h1><nav><a href="boker/statistikk">Statistikk</a> · ${Object.keys(facets).map((key) => `<a href="boker/oversikt/${key}">${facetLabels[key]}</a>`).join(" · ")}</nav><form class="filters" method="get"><input name="q" type="search" aria-label="Søk" placeholder="Søk i bøker" value="${escape(q)}"><select name="category"><option value="">Alle kategorier</option>${categories.map((item) => `<option value="${escape(item)}" ${item === category ? "selected" : ""}>${escape(item)}</option>`).join("")}</select><button>Søk</button></form><div class="cards">${cards}</div>`));
+    return reply.type("text/html; charset=utf-8").send(renderPage("Bøker", `<h1>Bøker</h1><nav><a href="boker/statistikk">Statistikk</a> · ${Object.keys(facets).map((key) => `<a href="boker/oversikt/${key}">${facetLabels[key]}</a>`).join(" · ")}</nav><form class="filters" method="get"><input name="q" type="search" aria-label="Søk" placeholder="Søk i bøker" value="${escape(q)}"><select name="category"><option value="">Alle kategorier</option>${categories.map((item) => `<option value="${escape(item)}" ${item === category ? "selected" : ""}>${escape(item)}</option>`).join("")}</select><button>Søk</button></form><div class="cards">${cards}</div>`));
   });
   app.get("/boker/statistikk", async (_request, reply) => {
     const books = await published();
     const months = books.filter((book) => book.status === "finished" && /^\d{4}-\d{2}/.test(book.finished)).reduce<Record<string, number>>((acc, book) => { const month = book.finished.slice(0, 7); acc[month] = (acc[month] ?? 0) + 1; return acc; }, {});
-    return reply.type("text/html; charset=utf-8").send(page("Statistikk", `<a class="back" href="../boker">⌂ Bøker</a><h1>Statistikk</h1><div class="public-stats"><div><span>Bøker</span><strong>${books.length}</strong></div><div><span>Lest</span><strong>${books.filter((book) => book.status === "finished").length}</strong></div><div><span>Forfattere</span><strong>${new Set(books.map((book) => book.author).filter(Boolean)).size}</strong></div></div><h2>Fullført per måned</h2>${Object.entries(months).sort(([a], [b]) => b.localeCompare(a)).map(([month, count]) => `<p>${escape(month)}: ${count}</p>`).join("") || "<p>Ingen registrerte datoer.</p>"}`));
+    return reply.type("text/html; charset=utf-8").send(renderPage("Statistikk", `<a class="back" href="../boker">⌂ Bøker</a><h1>Statistikk</h1><div class="public-stats"><div><span>Bøker</span><strong>${books.length}</strong></div><div><span>Lest</span><strong>${books.filter((book) => book.status === "finished").length}</strong></div><div><span>Forfattere</span><strong>${new Set(books.map((book) => book.author).filter(Boolean)).size}</strong></div></div><h2>Fullført per måned</h2>${Object.entries(months).sort(([a], [b]) => b.localeCompare(a)).map(([month, count]) => `<p>${escape(month)}: ${count}</p>`).join("") || "<p>Ingen registrerte datoer.</p>"}`));
   });
   app.get<{ Params: { field: string } }>("/boker/oversikt/:field", async (request, reply) => {
     const key = facets[request.params.field]; if (!key) return reply.code(404).send();
     const books = await published();
     const values = [...new Set(books.map((book) => book[key as "category" | "author" | "series" | "collection"]).filter(Boolean))].sort((a, b) => a.localeCompare(b, "no"));
-    return reply.type("text/html; charset=utf-8").send(page(facetLabels[request.params.field], `<a class="back" href="../../boker">⌂ Bøker</a><h1>${facetLabels[request.params.field]}</h1><div class="cards">${values.map((value) => { const members = books.filter((book) => book[key as "category" | "author" | "series" | "collection"] === value); return `<a class="card public-group-card" href="${request.params.field}/${encodeURIComponent(value)}"><span class="public-cover-mosaic">${members.filter((book) => book.token).slice(0, 4).map((book) => `<img loading="lazy" src="../../${book.slug}/media/${book.token}" alt="">`).join("")}</span><span class="public-group-caption"><strong>${escape(value)}</strong><small>${members.length} ${members.length === 1 ? "bok" : "bøker"}</small></span></a>`; }).join("")}</div>`));
+    return reply.type("text/html; charset=utf-8").send(renderPage(facetLabels[request.params.field], `<a class="back" href="../../boker">⌂ Bøker</a><h1>${facetLabels[request.params.field]}</h1><div class="cards">${values.map((value) => { const members = books.filter((book) => book[key as "category" | "author" | "series" | "collection"] === value); return `<a class="card public-group-card" href="${request.params.field}/${encodeURIComponent(value)}"><span class="public-cover-mosaic">${members.filter((book) => book.token).slice(0, 4).map((book) => `<img loading="lazy" src="../../${book.slug}/media/${book.token}" alt="">`).join("")}</span><span class="public-group-caption"><strong>${escape(value)}</strong><small>${members.length} ${members.length === 1 ? "bok" : "bøker"}</small></span></a>`; }).join("")}</div>`));
   });
   app.get<{ Params: { field: string; value: string } }>("/boker/oversikt/:field/:value", async (request, reply) => {
     const key = facets[request.params.field]; if (!key) return reply.code(404).send();
     const books = (await published()).filter((book) => book[key as "category" | "author" | "series" | "collection"] === request.params.value);
     if (!books.length) return reply.code(404).send();
-    return reply.type("text/html; charset=utf-8").send(page(request.params.value, `<a class="back" href="../${request.params.field}">← ${facetLabels[request.params.field]}</a><h1>${escape(request.params.value)}</h1><div class="cards">${books.map((book) => `<a class="card" href="../../${book.slug}">${book.token ? `<img src="../../${book.slug}/media/${book.token}" alt="">` : ""}<div>${escape(book.title)}</div></a>`).join("")}</div>`));
+    return reply.type("text/html; charset=utf-8").send(renderPage(request.params.value, `<a class="back" href="../${request.params.field}">← ${facetLabels[request.params.field]}</a><h1>${escape(request.params.value)}</h1><div class="cards">${books.map((book) => `<a class="card" href="../../${book.slug}">${book.token ? `<img src="../../${book.slug}/media/${book.token}" alt="">` : ""}<div>${escape(book.title)}</div></a>`).join("")}</div>`));
   });
   app.get<{ Params: { slug: string } }>("/boker/:slug", async (request, reply) => {
     const book = slugPattern.test(request.params.slug) ? (await published()).find((entry) => entry.slug === request.params.slug) : null;
@@ -108,7 +111,7 @@ export const publicBookRoutes: FastifyPluginAsync<{ vault: Vault }> = async (app
     const facts = readingFields("books", book.fields);
     // Personal thoughts remain private. Published highlights use the same Markdown model as the internal preview.
     const sections = readingSections("books", book.markdown, true).map(({ heading, content }) => `<section class="public-section${heading === "Høydepunkter" || heading === "Utdrag" ? " public-excerpts" : ""}"><h2>${escape(heading === "Høydepunkter" ? "Utdrag" : heading)}</h2><div class="public-prose">${publicProse(content)}</div></section>`).join("");
-    return reply.type("text/html; charset=utf-8").send(page(book.title, `<a class="back" href="../boker">← Tilbake</a><article class="public-detail"><div class="public-hero">${book.token ? `<img src="${book.slug}/media/${book.token}" alt="">` : ""}<div><h1>${escape(book.title)}</h1><dl class="public-facts">${facts.map(({ label, value }) => `<div><dt>${escape(label)}</dt><dd>${escape(value)}</dd></div>`).join("")}</dl></div></div>${sections}</article>`));
+    return reply.type("text/html; charset=utf-8").send(renderPage(book.title, `<a class="back" href="../boker">← Tilbake</a><article class="public-detail"><div class="public-hero">${book.token ? `<img src="${book.slug}/media/${book.token}" alt="">` : ""}<div><h1>${escape(book.title)}</h1><dl class="public-facts">${facts.map(({ label, value }) => `<div><dt>${escape(label)}</dt><dd>${escape(value)}</dd></div>`).join("")}</dl></div></div>${sections}</article>`));
   });
   app.get<{ Params: { slug: string; token: string } }>("/boker/:slug/media/:token", async (request, reply) => {
     const book = slugPattern.test(request.params.slug) ? (await published()).find((entry) => entry.slug === request.params.slug) : null;

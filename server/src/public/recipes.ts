@@ -1,4 +1,5 @@
 import { readPluginMarkdown } from "./pluginFiles.js";
+import { registerPublicWebApp } from "./webApp.js";
 import { publicCss, publicFrame } from "./theme.js";
 import { createHash } from "node:crypto";
 import path from "node:path";
@@ -98,12 +99,14 @@ function renderBody(recipe: Recipe): string {
   return `<div class="recipe-body">${checklistSections.join("\n")}</div>${other.join("\n")}`;
 }
 
-function page(title: string, body: string, indexHref: string): string {
+function page(title: string, body: string, indexHref: string, webAppHead: string): string {
   const clean = body.replace(/<p><a href="[^"]+\/statistikk">Statistikk<\/a> · <a href="[^"]+\/kategorier">Kategorier<\/a><\/p>/, "");
-  return `<!doctype html><html lang="no"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)} · Oppskrifter</title><style>${publicCss}</style></head><body>${publicFrame("Oppskrifter", clean, indexHref, [["Statistikk", `${indexHref}/statistikk`], ["Kategorier", `${indexHref}/kategorier`]])}</body></html>`;
+  return `<!doctype html><html lang="no"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">${webAppHead}<title>${escapeHtml(title)} · Oppskrifter</title><style>${publicCss}</style></head><body>${publicFrame("Oppskrifter", clean, indexHref, [["Statistikk", `${indexHref}/statistikk`], ["Kategorier", `${indexHref}/kategorier`]])}</body></html>`;
 }
 
 export const publicRecipeRoutes: FastifyPluginAsync<{ vault: Vault; routeBase?: string }> = async (app, { vault, routeBase = "/recipes" }) => {
+  const webAppHead = registerPublicWebApp(app, routeBase, "Oppskrifter");
+  const renderPage = (title: string, body: string, home: string) => page(title, body, home, webAppHead);
   async function publishedRecipes(): Promise<Recipe[]> {
     let folder: string | null = null;
     try {
@@ -135,7 +138,7 @@ export const publicRecipeRoutes: FastifyPluginAsync<{ vault: Vault; routeBase?: 
     reply.header("Cache-Control", "no-store");
     reply.header("X-Content-Type-Options", "nosniff");
     reply.header("Referrer-Policy", "no-referrer");
-    reply.header("Content-Security-Policy", "default-src 'none'; img-src 'self'; script-src 'self'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'");
+    reply.header("Content-Security-Policy", "default-src 'none'; manifest-src 'self'; img-src 'self'; script-src 'self'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'");
   });
 
   app.get(`${routeBase}/app.js`, async (_request, reply) => reply.type("application/javascript; charset=utf-8").send(
@@ -149,29 +152,29 @@ export const publicRecipeRoutes: FastifyPluginAsync<{ vault: Vault; routeBase?: 
     const categories = [...new Set(recipes.map((recipe) => recipe.category).filter(Boolean))].sort((a, b) => a.localeCompare(b, "no"));
     const items = recipes.filter((recipe) => (!category || recipe.category === category) &&
       (!query || `${recipe.title} ${recipe.category} ${recipe.description}`.toLocaleLowerCase("no").includes(query)))
-      .map((recipe) => `<li><a href="${routeBase.slice(1)}/${encodeURIComponent(recipe.slug)}">${recipe.coverToken ? `<img src="${routeBase.slice(1)}/${encodeURIComponent(recipe.slug)}/media/${recipe.coverToken}" alt="">` : ""}<div class="tile"><strong>${escapeHtml(recipe.title)}</strong><span class="muted">${escapeHtml(recipe.category)}${recipe.servings ? ` · ${escapeHtml(recipe.servings)} porsjoner` : ""}</span><p>${publicText(recipe.description.slice(0, 160))}</p></div></a></li>`).join("");
+      .map((recipe) => `<li><a href="${routeBase.slice(1)}/${encodeURIComponent(recipe.slug)}">${recipe.coverToken ? `<img src="${routeBase.slice(1)}/${encodeURIComponent(recipe.slug)}/media/${recipe.coverToken}" alt="">` : ""}<div class="tile"><strong>${escapeHtml(recipe.title)}</strong>${recipe.description ? `<p>${publicText(recipe.description.slice(0, 160))}</p>` : ""}</div></a></li>`).join("");
     const filters = `<form class="filters" method="get"><input type="search" name="q" value="${escapeHtml(query)}" placeholder="Søk etter oppskrift" aria-label="Søk etter oppskrift"><select name="category" aria-label="Kategori"><option value="">Alle kategorier</option>${categories.map((item) => `<option value="${escapeHtml(item)}" ${item === category ? "selected" : ""}>${escapeHtml(item)}</option>`).join("")}</select><button type="submit">Søk</button></form>`;
-    return reply.type("text/html; charset=utf-8").send(page("Oppskrifter", `<h1>Oppskrifter</h1><p class="intro">Finn noe godt å lage.</p><p><a href="${routeBase.slice(1)}/statistikk">Statistikk</a> · <a href="${routeBase.slice(1)}/kategorier">Kategorier</a></p>${filters}<ul class="cards">${items}</ul>`, routeBase.slice(1)));
+    return reply.type("text/html; charset=utf-8").send(renderPage("Oppskrifter", `<h1>Oppskrifter</h1><p class="intro">Finn noe godt å lage.</p><p><a href="${routeBase.slice(1)}/statistikk">Statistikk</a> · <a href="${routeBase.slice(1)}/kategorier">Kategorier</a></p>${filters}<ul class="cards">${items}</ul>`, routeBase.slice(1)));
   });
   app.get(`${routeBase}/statistikk`, async (_request, reply) => {
     const recipes = await publishedRecipes();
-    return reply.type("text/html; charset=utf-8").send(page("Statistikk", `<h1>Statistikk</h1><div class="public-stats"><div><span>Oppskrifter</span><strong>${recipes.length}</strong></div><div><span>Kategorier</span><strong>${new Set(recipes.map((recipe) => recipe.category).filter(Boolean)).size}</strong></div></div>`, `../${routeBase.slice(1)}`));
+    return reply.type("text/html; charset=utf-8").send(renderPage("Statistikk", `<h1>Statistikk</h1><div class="public-stats"><div><span>Oppskrifter</span><strong>${recipes.length}</strong></div><div><span>Kategorier</span><strong>${new Set(recipes.map((recipe) => recipe.category).filter(Boolean)).size}</strong></div></div>`, `../${routeBase.slice(1)}`));
   });
   app.get(`${routeBase}/kategorier`, async (_request, reply) => {
     const recipes = await publishedRecipes();
     const categories = [...new Set(recipes.map((recipe) => recipe.category).filter(Boolean))].sort((a, b) => a.localeCompare(b, "no"));
-    return reply.type("text/html; charset=utf-8").send(page("Kategorier", `<h1>Kategorier</h1><div class="cards">${categories.map((category) => { const members = recipes.filter((recipe) => recipe.category === category); return `<a class="card public-group-card" href="kategorier/${encodeURIComponent(category)}"><span class="public-cover-mosaic">${members.filter((recipe) => recipe.coverToken).slice(0, 4).map((recipe) => `<img loading="lazy" src="${recipe.slug}/media/${recipe.coverToken}" alt="">`).join("")}</span><span class="public-group-caption"><strong>${escapeHtml(category)}</strong><small>${members.length} ${members.length === 1 ? "oppskrift" : "oppskrifter"}</small></span></a>`; }).join("")}</div>`, `../${routeBase.slice(1)}`));
+    return reply.type("text/html; charset=utf-8").send(renderPage("Kategorier", `<h1>Kategorier</h1><div class="cards">${categories.map((category) => { const members = recipes.filter((recipe) => recipe.category === category); return `<a class="card public-group-card" href="kategorier/${encodeURIComponent(category)}"><span class="public-cover-mosaic">${members.filter((recipe) => recipe.coverToken).slice(0, 4).map((recipe) => `<img loading="lazy" src="${recipe.slug}/media/${recipe.coverToken}" alt="">`).join("")}</span><span class="public-group-caption"><strong>${escapeHtml(category)}</strong><small>${members.length} ${members.length === 1 ? "oppskrift" : "oppskrifter"}</small></span></a>`; }).join("")}</div>`, `../${routeBase.slice(1)}`));
   });
   app.get<{ Params: { category: string } }>(`${routeBase}/kategorier/:category`, async (request, reply) => {
     const recipes = (await publishedRecipes()).filter((recipe) => recipe.category === request.params.category);
     if (!recipes.length) return reply.code(404).send();
-    return reply.type("text/html; charset=utf-8").send(page(request.params.category, `<h1>${escapeHtml(request.params.category)}</h1><ul class="cards">${recipes.map((recipe) => `<li><a href="../${recipe.slug}">${recipe.coverToken ? `<img src="../${recipe.slug}/media/${recipe.coverToken}" alt="">` : ""}<div class="tile"><strong>${escapeHtml(recipe.title)}</strong></div></a></li>`).join("")}</ul>`, `../../${routeBase.slice(1)}`));
+    return reply.type("text/html; charset=utf-8").send(renderPage(request.params.category, `<h1>${escapeHtml(request.params.category)}</h1><ul class="cards">${recipes.map((recipe) => `<li><a href="../${recipe.slug}">${recipe.coverToken ? `<img src="../${recipe.slug}/media/${recipe.coverToken}" alt="">` : ""}<div class="tile"><strong>${escapeHtml(recipe.title)}</strong></div></a></li>`).join("")}</ul>`, `../../${routeBase.slice(1)}`));
   });
   app.get<{ Params: { slug: string } }>(`${routeBase}/:slug`, async (request, reply) => {
     if (!SLUG.test(request.params.slug)) return reply.code(404).send();
     const recipe = (await publishedRecipes()).find((entry) => entry.slug === request.params.slug);
     if (!recipe) return reply.code(404).send();
-    return reply.type("text/html; charset=utf-8").send(page(recipe.title,
+    return reply.type("text/html; charset=utf-8").send(renderPage(recipe.title,
       `<a class="back" href="../${routeBase.slice(1)}">← Tilbake</a><article class="public-detail"><header class="public-hero">${recipe.coverToken ? `<img src="${encodeURIComponent(recipe.slug)}/media/${recipe.coverToken}" alt="">` : ""}<div><h1>${escapeHtml(recipe.title)}</h1><dl class="public-facts">${recipe.category ? `<div><dt>Kategori</dt><dd>${escapeHtml(recipe.category)}</dd></div>` : ""}</dl></div></header>${recipe.description ? `<section class="public-section"><h2>Beskrivelse</h2><div class="description">${publicText(recipe.description)}</div></section>` : ""}${Number(recipe.servings) > 0 ? `<section class="public-section"><label class="servings">Porsjoner <input id="servings" type="number" min="1" max="100" data-base="${escapeHtml(recipe.servings)}" value="${escapeHtml(recipe.servings)}"></label></section>` : ""}${renderBody(recipe)}</article><script defer src="../${routeBase.slice(1)}/app.js"></script>`, `../${routeBase.slice(1)}`));
   });
   app.get<{ Params: { slug: string; token: string } }>(`${routeBase}/:slug/media/:token`, async (request, reply) => {

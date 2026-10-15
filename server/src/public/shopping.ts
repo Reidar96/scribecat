@@ -1,4 +1,5 @@
 import { readPluginMarkdown } from "./pluginFiles.js";
+import { registerPublicWebApp } from "./webApp.js";
 import { publicCss, publicFrame } from "./theme.js";
 import type { FastifyPluginAsync } from "fastify";
 import type { Vault } from "../vault/files.js";
@@ -14,6 +15,7 @@ function fields(markdown: string): Record<string, string> {
 }
 
 export const publicShoppingRoutes: FastifyPluginAsync<{ vault: Vault }> = async (app, { vault }) => {
+  const webAppHead = registerPublicWebApp(app, "/handleliste", "Handlelister");
   const attempts = new Map<string, { count: number; reset: number }>();
   let pending: Promise<unknown> = Promise.resolve();
   app.addContentTypeParser("application/x-www-form-urlencoded", { parseAs: "string" }, (_request, body, done) => {
@@ -23,7 +25,7 @@ export const publicShoppingRoutes: FastifyPluginAsync<{ vault: Vault }> = async 
     reply.header("Cache-Control", "no-store");
     reply.header("X-Content-Type-Options", "nosniff");
     reply.header("Referrer-Policy", "same-origin");
-    reply.header("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; script-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");
+    reply.header("Content-Security-Policy", "default-src 'none'; manifest-src 'self'; img-src 'self'; style-src 'unsafe-inline'; script-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");
   });
 
   async function published(): Promise<List[]> {
@@ -49,7 +51,7 @@ export const publicShoppingRoutes: FastifyPluginAsync<{ vault: Vault }> = async 
     return lists.filter((list) => slugs.get(list.slug) === 1);
   }
 
-  const html = (title: string, body: string, links: Array<[string, string]> = []) => `<!doctype html><html lang="no"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)} · Handleliste</title><style>${publicCss}</style></head><body>${publicFrame("Handlelister", body, title === "Handlelister" ? "handleliste" : "../handleliste", links)}</body></html>`;
+  const html = (title: string, body: string, links: Array<[string, string]> = []) => `<!doctype html><html lang="no"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">${webAppHead}<title>${escapeHtml(title)} · Handleliste</title><style>${publicCss}</style></head><body>${publicFrame("Handlelister", body, title === "Handlelister" ? "handleliste" : "../handleliste", links)}</body></html>`;
 
   app.get("/handleliste", async (_request, reply) => {
     const lists = await published();

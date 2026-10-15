@@ -73,6 +73,10 @@ describe("public recipes", () => {
     await writeFile(path.join(context.vaultPath, "Oppskrifter", "Focaccia.md"),
       `---\nscribecat-plugin: recipes\ntype: recipe\ntitle: Focaccia\nslug: focaccia\ncategory: Bakst\npublished: true\n---\n\n# Focaccia\n\n## Beskrivelse\n\nLuftig brød.\n\n## Ingredienser\n\n- 500 g Mel\n`);
     expect((await get(context, "?q=luftig&category=Bakst")).body).toContain("Focaccia");
+    const listing = (await get(context, "?q=luftig&category=Bakst")).body;
+    expect(listing).toContain('<strong>Focaccia</strong>');
+    expect(listing).not.toContain('<span class="muted">Bakst');
+    expect(listing).not.toContain('porsjoner</span>');
     expect((await get(context, "?q=ukjent")).body).not.toContain("<strong>Focaccia</strong>");
     expect((await get(context, "/focaccia")).body).toContain("Luftig brød.");
   });
