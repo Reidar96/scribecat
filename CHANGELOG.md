@@ -1,3 +1,9 @@
+## [1.2.6] - 2026-10-15
+
+- Keep Quick Notes cards visible while changed Markdown is reloaded, including during auto-save. Preserve concurrent pin, archive and category edits when saving note text, and keep draft text if a conflict occurs.
+- Add editable Markdown-backed Quick Notes categories with category exploration on desktop and mobile, and sorting by pinned, date or text. Move Delete into the note's bottom action row.
+- Slightly increase the spacing between shopping-list checkboxes and item names.
+
 ## [1.2.5] - 2026-10-15
 
 - Wait for the restored folder, vault settings and plugin navigation before displaying the workspace. This eliminates the empty and partial sidebar layouts flashing at startup.
