@@ -6,8 +6,9 @@ import { platform } from "@/platform";
  *  light default webview background never flashes before the themed UI is
  *  there. Reveal it once React has committed and the browser has painted that
  *  first frame. A Rust-side timeout shows it anyway if this never runs. */
-export function useWindowReveal(): void {
+export function useWindowReveal(ready: boolean): void {
   useEffect(() => {
+    if (!ready) return;
     let cancelled = false;
 
     const frame = requestAnimationFrame(() => {
@@ -23,5 +24,5 @@ export function useWindowReveal(): void {
       cancelled = true;
       cancelAnimationFrame(frame);
     };
-  }, []);
+  }, [ready]);
 }

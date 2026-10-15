@@ -46,6 +46,7 @@ import { useWebviewZoom } from "@/hooks/useWebviewZoom";
 import { useWindowReveal } from "@/hooks/useWindowReveal";
 import { useZenMode } from "@/hooks/useZenMode";
 import { getRecentFolderPaths, getRelativeDisplayPath } from "@/lib/fileSystem";
+import { isWorkspaceReady } from "@/lib/startupLayout";
 import {
   describeNotePath,
   getFolderNoteFolderPath,
@@ -120,6 +121,8 @@ function App() {
   const [activeContentPlugin, setActiveContentPlugin] = useState<PluginId | null>(null);
   const [appsOpen, setAppsOpen] = useState(false);
   const pluginConfig = usePluginStore((state) => state.config);
+  const pluginsReady = usePluginStore((state) => state.ready);
+  const pluginsVaultPath = usePluginStore((state) => state.vaultPath);
   const [openTabs, setOpenTabs] = useState<string[]>([]);
   const [secondaryFilePath, setSecondaryFilePath] = useState<string | null>(null);
   const appVersion = useAppVersion();
@@ -139,6 +142,8 @@ function App() {
   const taskSettings = useEditorSettingsStore((state) => state.taskSettings);
   const journalSettings = useEditorSettingsStore((state) => state.journalSettings);
   const legacyVaultSettingsReady = useEditorSettingsStore((state) => state.vaultSettingsReady && state.headingNumberingVaultPath === folderPath);
+  const vaultSettingsReady = useEditorSettingsStore((state) => state.vaultSettingsReady);
+  const vaultSettingsPath = useEditorSettingsStore((state) => state.headingNumberingVaultPath);
   const isLoading = useAppStore((state) => state.isLoading);
   const isFileLoading = useAppStore((state) => state.isFileLoading);
   const isSaving = useAppStore((state) => state.isSaving);
@@ -378,7 +383,6 @@ function App() {
       }
     }
   });
-  useWindowReveal();
   useViewportHeight();
 
   const layout = useLayoutMode();
@@ -1195,6 +1199,11 @@ function App() {
   }, [selectedFilePath]);
 
   const startupFolderResolved = useStartupFolder(openFolderAtPath);
+  const workspaceReady = isWorkspaceReady({
+    startupFolderResolved, isLoading, folderPath,
+    vaultSettingsReady, vaultSettingsPath, pluginsReady, pluginsVaultPath
+  });
+  useWindowReveal(workspaceReady);
   useFolderWatcher(refreshFolderFiles);
   const remoteVaultDialog = useRemoteVaultDialog({ openVault: openRecentFolderSafely });
 
@@ -1363,6 +1372,12 @@ function App() {
 
 
 
+  if (!workspaceReady) {
+    return <main className="app-shell app-shell--starting" aria-label={t("app.shellLabel")} aria-busy="true">
+      <div className="workspace-startup-placeholder" role="status">{t("app.startupLoading")}</div>
+    </main>;
+  }
+
   return (
     <main
       className={cn("app-shell", isZenMode && "app-shell--zen")}
@@ -1412,9 +1427,7 @@ function App() {
             <span className="workspace-resizer__grip" aria-hidden="true" />
           </div> : null}
 
-          {!startupFolderResolved && folderPath === null ? (
-            <div className="workspace-startup-placeholder" aria-busy="true" />
-          ) : appsOpen && folderPath ? (
+          {appsOpen && folderPath ? (
             <AppsOverview onOpen={openPlugin} onOpenSidebar={() => setIsSidebarSheetOpen(true)} sidebarVisible={sidebarVisible} onSidebarVisibilityToggle={toggleSidebarVisible} onClose={() => void openCollectionSafely({ kind: "folder", relativePath: "" })} />
           ) : activeContentPlugin && folderPath ? (
             <ContentPluginPanel id={activeContentPlugin} folderPath={folderPath} filePaths={filePaths}

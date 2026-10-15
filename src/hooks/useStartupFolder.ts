@@ -12,25 +12,20 @@ export function useStartupFolder(
     let isActive = true;
 
     const loadStartupFolder = async () => {
-      const startupFolderPath = await platform.vault.getStartupFolderPath();
-      const targetFolderPath =
-        startupFolderPath ?? (platform.features.localFolders ? getLastOpenedFolderPath() : null);
-
-      if (!isActive) {
-        return;
-      }
-
-      if (!targetFolderPath) {
-        setResolved(true);
-        return;
-      }
-
       try {
+        const startupFolderPath = await platform.vault.getStartupFolderPath();
+        const targetFolderPath =
+          startupFolderPath ?? (platform.features.localFolders ? getLastOpenedFolderPath() : null);
+
+        if (!isActive || !targetFolderPath) return;
         const didOpenFolder = await openFolderAtPath(targetFolderPath);
 
         if (!didOpenFolder && !startupFolderPath) {
           clearLastOpenedFolderPath();
         }
+      } catch (error) {
+        // A failed startup lookup should leave the empty workspace usable.
+        console.error("Could not restore the startup folder", error);
       } finally {
         if (isActive) {
           setResolved(true);

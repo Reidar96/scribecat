@@ -20,6 +20,7 @@
   },
   "app": {
     "shellLabel": "ScribeCat-programvindu",
+    "startupLoading": "Åpner arbeidsområdet …",
     "workspaceLabel": "Redigeringsområde",
     "documentAreaLabel": "Dokumentområde",
     "navigateBack": "Tilbake",

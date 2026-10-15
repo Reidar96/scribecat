@@ -20,6 +20,7 @@
   },
   "app": {
     "shellLabel": "ScribeCat app shell",
+    "startupLoading": "Opening workspace…",
     "workspaceLabel": "Editor workspace",
     "documentAreaLabel": "Document area",
     "navigateBack": "Back",

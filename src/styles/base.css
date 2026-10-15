@@ -23,6 +23,14 @@ body {
   overflow: hidden;
 }
 
+.workspace-startup-placeholder {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  color: rgba(var(--muted-rgb), 0.9);
+  font-size: var(--font-ui-sm);
+}
+
 .workspace {
   position: relative;
   z-index: 1;
