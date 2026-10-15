@@ -46,7 +46,7 @@ Turn a project into manageable steps, then use links, backlinks and tags to keep
 
 ### On your computer
 
-The desktop app works with local files and can also connect to a ScribeCat server vault. The latest desktop installers are in the [1.0.9 release](https://github.com/Reidar96/scribecat/releases/tag/v1.0.9); the 1.2.4 release provides the server image and source code. Desktop packages require native builds and signing before distribution.
+The desktop app works with local files and can also connect to a ScribeCat server vault. The latest desktop installers are in the [1.0.9 release](https://github.com/Reidar96/scribecat/releases/tag/v1.0.9); the 1.2.5 release provides the server image and source code. Desktop packages require native builds and signing before distribution.
 
 | Platform | Available downloads |
 | --- | --- |
@@ -69,7 +69,7 @@ cp .env.example .env
 docker compose up -d
 ```
 
-Follow the [server setup guide](server/docs/getting-started.md) for hostname, certificate and first-sign-in instructions. Docker releases use explicit version tags, such as `ghcr.io/reidar96/scribecat-server:1.2.4`; there is no moving `latest` tag.
+Follow the [server setup guide](server/docs/getting-started.md) for hostname, certificate and first-sign-in instructions. Docker releases use explicit version tags, such as `ghcr.io/reidar96/scribecat-server:1.2.5`; there is no moving `latest` tag.
 
 **Desktop and web share the same core workspace.** The web edition uses your server's storage; local offline dictation is a desktop feature. Phone and tablet access is through the responsive web app, not a separate native mobile release.
 

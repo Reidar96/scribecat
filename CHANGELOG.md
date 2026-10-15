@@ -1,3 +1,8 @@
+## [1.2.5] - 2026-10-15
+
+- Wait for the restored folder, vault settings and plugin navigation before displaying the workspace. This eliminates the empty and partial sidebar layouts flashing at startup.
+- Reveal the desktop window only after the workspace is ready. A failed startup-folder lookup leaves the empty workspace usable.
+
 ## [1.2.4] - 2026-10-14
 
 - Use the Tasks-style horizontally scrollable mobile navigation for the newer plugins, with a fixed quick-add action for Quick Notes.
