@@ -154,6 +154,7 @@
 .plugin-detail__image > span svg { width:3.4rem; height:3.4rem; stroke-width:1.3; }
 .content-plugin-panel__tile strong { padding:.35rem .2rem 0; }
 .content-plugin-panel__tile span:last-child { padding:0 .2rem .35rem; }
+.content-plugin-panel__tile-description { margin:0;padding:0 .2rem .35rem;color:var(--muted-foreground);font-size:.86rem;line-height:1.45;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden; }
 .plugin-detail { max-width:68rem; }
 .plugin-detail__preview { display:block; }
 .plugin-detail__preview-main { max-width:68rem; }

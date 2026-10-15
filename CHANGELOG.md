@@ -1,3 +1,8 @@
+## [1.2.8] - 2026-10-15
+
+- Edit public shopping-list item names inline; persist them in Markdown while preserving checked state and the other entries. Press Enter to finish editing an item in the private list.
+- Show the Markdown description or summary on private Recipe, Book and Inventory cards, and match the public card content for Books and Inventory.
+
 ## [1.2.7] - 2026-10-15
 
 - Simplify public and private recipe cards to focus on the title, image and optional description instead of repeating the category and portion count.

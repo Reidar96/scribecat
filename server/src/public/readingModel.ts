@@ -35,3 +35,9 @@ export function readingSections(kind: ReadingKind, markdown: string, publicView 
     .map((heading) => ({ heading, content: readingSection(markdown, heading) || (kind === "books" && heading === "Utdrag" ? readingSection(markdown, "Høydepunkter") : "") }))
     .filter(({ content }) => !!content);
 }
+
+/** A compact excerpt for collection cards in both the private and public UI. */
+export function readingCardSummary(kind: ReadingKind, markdown: string): string {
+  const heading = kind === "books" ? "Oppsummering" : "Beskrivelse";
+  return readingSection(markdown, heading).replace(/\s+/g, " ").trim().slice(0, 160);
+}

@@ -1,6 +1,6 @@
 services:
   scribecat:
-    image: ghcr.io/reidar96/scribecat-server:1.2.7
+    image: ghcr.io/reidar96/scribecat-server:1.2.8
     pull_policy: never
     container_name: ScribeCat
     ports:

@@ -17,6 +17,7 @@ import { PluginDialog } from "@/components/plugins/PluginDialog";
 import { useAppStore } from "@/store/useAppStore";
 import { PluginTopbar } from "@/components/plugins/PluginTopbar";
 import { quickNoteBody, retainCollectionEntries, updateQuickNoteBody } from "@/plugins/collectionState";
+import { readingCardSummary } from "../../../server/src/public/readingModel";
 
 type Entry = { path: string; markdown: string; metadata: Record<string, string>; title: string };
 const entryCache = new Map<string, { mtime: number; entry: Entry }>();
@@ -377,6 +378,7 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
               : <span className="content-plugin-panel__placeholder" aria-hidden="true">{id === "books" ? <BookOpen /> : id === "recipes" ? <CookingPot /> : id === "inventory" ? <Package /> : <ShoppingBasket />}</span>}
             <strong>{entry.metadata.title || entry.metadata.name || entry.title}</strong>
             {id !== "recipes" && <span>{[entry.metadata.author, id === "books" ? ({ "want-to-read": "Vil lese", reading: "Leser", finished: "Lest" } as Record<string, string>)[entry.metadata.status] : "", entry.metadata.category, entry.metadata.location].filter(Boolean).join(" · ")}</span>}
+            {(id === "recipes" || id === "books" || id === "inventory") && readingCardSummary(id, entry.markdown) && <p className="content-plugin-panel__tile-description">{readingCardSummary(id, entry.markdown)}</p>}
           </button>}
           {id === "quick-notes" ? <>
             <QuickNoteCard entry={entry} initialEdit={newNotePath === entry.path} onSave={async (text, expected) => {

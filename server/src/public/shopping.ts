@@ -58,7 +58,7 @@ export const publicShoppingRoutes: FastifyPluginAsync<{ vault: Vault }> = async 
     return reply.type("text/html; charset=utf-8").send(html("Handlelister", `<h1>Handlelister</h1><p class="meta">Delte lister du kan handle sammen med andre.</p><div class="cards">${lists.map((list) => `<a class="card" href="handleliste/${list.slug}"><div><strong>${escapeHtml(list.title)}</strong><p class="meta">Åpne handleliste →</p></div></a>`).join("")}</div>`));
   });
   app.get("/handleliste/app.js", async (_request, reply) => reply.type("application/javascript; charset=utf-8").send(
-    "document.addEventListener('change',event=>{if(event.target.matches('form.toggle input[type=checkbox]'))event.target.form.requestSubmit()});document.addEventListener('submit',event=>{if(event.target.matches('form.delete-category')&&!confirm('Slette kategorien og alle varene i den?'))event.preventDefault()})"
+    "document.addEventListener('change',event=>{if(event.target.matches('form.toggle input[type=checkbox],form.rename-item input[name=name]'))event.target.form.requestSubmit()});document.addEventListener('submit',event=>{if(event.target.matches('form.delete-category')&&!confirm('Slette kategorien og alle varene i den?'))event.preventDefault()})"
   ));
   app.get<{ Params: { slug: string } }>("/handleliste/:slug", async (request, reply) => {
     const list = SLUG.test(request.params.slug) ? (await published()).find((item) => item.slug === request.params.slug) : null;
@@ -75,14 +75,14 @@ export const publicShoppingRoutes: FastifyPluginAsync<{ vault: Vault }> = async 
       const category = categories.at(-1);
       if (category) (item[1] === "x" ? category.done : category.active).push({ index, text: item[2] });
     }
-    const renderItem = (item: { index: number; text: string }, done = false) => `<div class="public-shopping-item"><form class="toggle" method="post" action="${list.slug}/toggle"><input type="hidden" name="index" value="${item.index}"><label class="${done ? "done" : ""}"><input type="checkbox" ${done ? "checked" : ""}>${escapeHtml(item.text)}</label><noscript><button type="submit">Endre</button></noscript></form><form method="post" action="${list.slug}/delete-item"><input type="hidden" name="index" value="${item.index}"><button type="submit" aria-label="Slett ${escapeHtml(item.text)}">×</button></form></div>`;
+    const renderItem = (item: { index: number; text: string }, done = false) => `<div class="public-shopping-item"><form class="toggle" method="post" action="${list.slug}/toggle"><input type="hidden" name="index" value="${item.index}"><label><input type="checkbox" aria-label="Fullført ${escapeHtml(item.text)}" ${done ? "checked" : ""}></label><noscript><button type="submit">Endre</button></noscript></form><form class="rename-item" method="post" action="${list.slug}/rename-item"><input type="hidden" name="index" value="${item.index}"><input type="text" name="name" required maxlength="120" aria-label="Navn på vare: ${escapeHtml(item.text)}" value="${escapeHtml(item.text)}" class="${done ? "done" : ""}"><noscript><button type="submit">Lagre</button></noscript></form><form method="post" action="${list.slug}/delete-item"><input type="hidden" name="index" value="${item.index}"><button type="submit" aria-label="Slett ${escapeHtml(item.text)}">×</button></form></div>`;
     const content = categories.map((category, index) => `<section class="public-shopping-category" id="kategori-${index}"><div class="public-section-heading"><form class="public-category-title" method="post" action="${list.slug}/rename-category"><input type="hidden" name="category" value="${escapeHtml(category.name)}"><input name="name" required maxlength="80" aria-label="Kategorinavn" value="${escapeHtml(category.name)}"><button type="submit" aria-label="Lagre kategorinavn" title="Lagre">✓</button></form><form class="delete-category" method="post" action="${list.slug}/delete-category"><input type="hidden" name="category" value="${escapeHtml(category.name)}"><button type="submit" aria-label="Slett kategorien ${escapeHtml(category.name)}" title="Slett kategori">×</button></form></div>${category.active.map((item) => renderItem(item)).join("")}<form class="add public-category-add" method="post" action="${list.slug}/items"><input type="hidden" name="category" value="${escapeHtml(category.name)}"><input type="text" name="item" maxlength="120" required placeholder="Legg til vare" aria-label="Ny vare i ${escapeHtml(category.name)}"><button type="submit" aria-label="Legg til vare">+</button></form>${category.done.length ? `<details class="public-completed"><summary>Fullført (${category.done.length})</summary>${category.done.map((item) => renderItem(item, true)).join("")}</details>` : ""}</section>`).join("");
     const addCategory = `<form class="add" method="post" action="${list.slug}/categories"><input type="text" name="category" maxlength="80" required placeholder="Ny kategori" aria-label="Ny kategori"><button type="submit">+ Kategori</button></form>`;
     const lists = await published();
     return reply.type("text/html; charset=utf-8").send(html(list.title, `<h1>${escapeHtml(list.title)}</h1><p class="meta">Kryss av underveis, eller legg til det som mangler.</p>${content}${addCategory}<script defer src="../handleliste/app.js"></script>`, lists.map((item) => [escapeHtml(item.title), `../handleliste/${item.slug}`])));
   });
 
-  async function mutate(slug: string, payload: Record<string, unknown>, mode: "add" | "toggle" | "category" | "delete-item" | "delete-category" | "rename-category"): Promise<boolean> {
+  async function mutate(slug: string, payload: Record<string, unknown>, mode: "add" | "toggle" | "category" | "delete-item" | "delete-category" | "rename-category" | "rename-item"): Promise<boolean> {
     const operation = pending.then(async () => {
       const list = (await published()).find((item) => item.slug === slug);
       if (!list) return false;
@@ -116,8 +116,10 @@ export const publicShoppingRoutes: FastifyPluginAsync<{ vault: Vault }> = async 
       } else {
         const index = Number(payload.index);
         if (!Number.isSafeInteger(index) || index < 0) return false;
+        const name = mode === "rename-item" && typeof payload.name === "string" ? payload.name.trim() : "";
+        if (mode === "rename-item" && (!name || name.length > 120 || /[\r\n\x00-\x1f]/.test(name))) return false;
         let count = 0;
-        markdown = markdown.replace(/^- \[([ x])\] (.+)$/gm, (line, checked: string) => count++ === index ? mode === "delete-item" ? "" : line.replace(/^(- \[)[ x](\])/, `$1${checked === "x" ? " " : "x"}$2`) : line);
+        markdown = markdown.replace(/^- \[([ x])\] (.+)$/gm, (line, checked: string) => count++ === index ? mode === "delete-item" ? "" : mode === "rename-item" ? `- [${checked}] ${name.replace(/[\\[\]*_`<>]/g, "")}` : line.replace(/^(- \[)[ x](\])/, `$1${checked === "x" ? " " : "x"}$2`) : line);
         if (count <= index) return false;
       }
       await vault.writeText(list.path, markdown);
@@ -127,7 +129,7 @@ export const publicShoppingRoutes: FastifyPluginAsync<{ vault: Vault }> = async 
     return operation;
   }
 
-  for (const mode of ["add", "toggle", "category", "delete-item", "delete-category", "rename-category"] as const) {
+  for (const mode of ["add", "toggle", "category", "delete-item", "delete-category", "rename-category", "rename-item"] as const) {
     app.post<{ Params: { slug: string }; Body: Record<string, unknown> }>(`/handleliste/:slug/${mode === "add" ? "items" : mode === "category" ? "categories" : mode}`, async (request, reply) => {
       const source = request.headers.origin || request.headers.referer;
       let sameOrigin = false;

@@ -499,7 +499,7 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.2.76"
+version = "1.2.86"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f5d6cac793997bd970000024b2934968efe83b382de4fdcf4fcb46b6ee4ad996"
 dependencies = [
@@ -3895,7 +3895,7 @@ checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 
 [[package]]
 name = "scribecat"
-version = "1.2.7"
+version = "1.2.8"
 dependencies = [
  "base64 0.22.1",
  "cpal",

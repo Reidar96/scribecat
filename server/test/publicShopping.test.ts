@@ -83,4 +83,19 @@ describe("public shopping", () => {
     expect(page.indexOf("Melk")).toBeLessThan(page.indexOf("Fullført (1)"));
     expect(page.indexOf("Fullført (1)")).toBeLessThan(page.indexOf("Brød"));
   });
+  it("renames one item inline without changing its completed state or neighboring items", async () => {
+    await configure();
+    const headers = { "content-type": "application/x-www-form-urlencoded", origin: "http://localhost", host: "localhost" };
+    const file = path.join(context.vaultPath, "Handlelister", "Uke.md");
+    await writeFile(file, (await readFile(file, "utf8")).replace("- [ ] Melk", "- [x] Melk\n- [ ] Ost"));
+    const before = (await context.app.inject({ method: "GET", url: "/anna/handleliste/uke" })).body;
+    expect(before).toContain('action="uke/rename-item"');
+    expect(before).toContain('aria-label="Navn på vare: Melk"');
+    expect((await context.app.inject({ method: "POST", url: "/anna/handleliste/uke/rename-item", payload: "index=0&name=Kefir", headers })).statusCode).toBe(303);
+    const markdown = await readFile(file, "utf8");
+    expect(markdown).toContain("- [x] Kefir\n- [ ] Ost");
+    expect((await context.app.inject({ method: "POST", url: "/anna/handleliste/uke/rename-item", payload: "index=1&name=%23+Overskrift", headers })).statusCode).toBe(303);
+    expect(await readFile(file, "utf8")).toContain("- [ ] # Overskrift");
+    expect((await context.app.inject({ method: "POST", url: "/anna/handleliste/uke/rename-item", payload: "index=0&name=Feil%0ANavn", headers })).statusCode).toBe(400);
+  });
 });

@@ -54,7 +54,7 @@ function ShoppingItems({ entry, onChange }: { entry: PluginEntry; onChange: (mar
         <input type="checkbox" checked={line.startsWith("- [x]")} onChange={() => {
           const next = sectionLines.map((item, at) => at === lineIndex ? item.replace(/^(- \[)[ x](\])/, `$1${line.startsWith("- [x]") ? " " : "x"}$2`) : item);
           void onChange(setPluginSection(entry.markdown, category, next.join("\n")));
-      }} /><input aria-label={`Vare ${line.slice(6)}`} defaultValue={line.slice(6)} onBlur={(event) => {
+      }} /><input aria-label={`Vare ${line.slice(6)}`} defaultValue={line.slice(6)} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }} onBlur={(event) => {
         const value = event.currentTarget.value.trim().replace(/[\r\n]/g, " ");
         if (value && value !== line.slice(6)) void onChange(setPluginSection(entry.markdown, category, sectionLines.map((row, at) => at === lineIndex ? `${line.slice(0, 6)}${value}` : row).join("\n")));
       }} />
