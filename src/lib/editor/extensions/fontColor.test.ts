@@ -15,6 +15,8 @@ describe("font colors", () => {
   it("snaps Word RGB colors to the nearest palette color", () => {
     expect(nearestFontColor("rgb(190, 55, 72)")).toBe(FONT_COLORS[0].value);
     expect(nearestFontColor("#1f2328")).toBeNull();
+    expect(nearestFontColor("rgb(255, 255, 255)")).toBeNull();
+    expect(nearestFontColor("rgb(180, 180, 180)")).toBeNull();
     expect(nearestFontColor("url(javascript:bad)")).toBeNull();
   });
 

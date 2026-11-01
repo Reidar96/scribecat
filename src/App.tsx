@@ -7,6 +7,7 @@ import type { EditorHandle } from "@/components/Editor";
 import type { SettingsTab } from "@/components/SettingsDialog";
 import { Sidebar } from "@/components/Sidebar";
 import { AppDialogs } from "@/components/app/AppDialogs";
+import { GlobalContextMenu } from "@/components/app/GlobalContextMenu";
 import { RemoteVaultDialog } from "@/components/remote/RemoteVaultDialog";
 import { DocumentPanel } from "@/components/app/DocumentPanel";
 import { CollectionPanel } from "@/components/app/CollectionPanel";
@@ -1673,6 +1674,7 @@ function App() {
 
 
 
+      <GlobalContextMenu />
       <AppDialogs
         closingFileLabel={
           workingSetActions.closeRequest ? labelNotePath(workingSetActions.closeRequest.filePath) : null

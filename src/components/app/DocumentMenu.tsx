@@ -13,9 +13,7 @@ import {
   Printer,
   Search,
   Type,
-  Trash2,
-  ZoomIn,
-  ZoomOut
+  Trash2
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -32,7 +30,7 @@ import {
   MenuPositioner,
   MenuTrigger
 } from "@/components/ui/menu";
-import { ZOOM_MAX, ZOOM_MIN, ZOOM_STEP, useEditorSettingsStore } from "@/store/useEditorSettingsStore";
+import { useEditorSettingsStore } from "@/store/useEditorSettingsStore";
 import { useSearchStore } from "@/store/useSearchStore";
 
 type DocumentMenuProps = {
@@ -87,8 +85,6 @@ export function DocumentMenu({
   const setDetailsSheetOpen = useEditorSettingsStore((state) => state.setDetailsSheetOpen);
   const autoSaveEnabled = useEditorSettingsStore((state) => state.autoSaveEnabled);
   const setAutoSaveEnabled = useEditorSettingsStore((state) => state.setAutoSaveEnabled);
-  const zoomLevel = useEditorSettingsStore((state) => state.zoomLevel);
-  const setZoomLevel = useEditorSettingsStore((state) => state.setZoomLevel);
 
   return (
     <Menu
@@ -184,28 +180,6 @@ export function DocumentMenu({
             <MenuItem onClick={onDocumentLockToggle}>
               {documentLocked ? <LockOpen className="size-4" /> : <Lock className="size-4" />}
               {t(documentLocked ? "toolbar.unlockDocument" : "toolbar.lockDocument")}
-            </MenuItem>
-            <div className="editor-toolbar__menu-separator" role="separator" />
-
-            <MenuItem
-              closeOnClick={false}
-              disabled={zoomLevel >= ZOOM_MAX}
-              onClick={() => setZoomLevel(zoomLevel + ZOOM_STEP)}
-            >
-              <ZoomIn className="size-4" />
-              {t("zoomControl.zoomIn")}
-            </MenuItem>
-            <MenuItem
-              closeOnClick={false}
-              disabled={zoomLevel <= ZOOM_MIN}
-              onClick={() => setZoomLevel(zoomLevel - ZOOM_STEP)}
-            >
-              <ZoomOut className="size-4" />
-              {t("zoomControl.zoomOut")}
-            </MenuItem>
-            <MenuItem disabled={zoomLevel === 0} onClick={() => setZoomLevel(0)}>
-              <span className="size-4" aria-hidden="true" />
-              {t("zoomControl.reset")}
             </MenuItem>
             <div className="editor-toolbar__menu-separator" role="separator" />
 

@@ -1739,7 +1739,15 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       markdown !== lastSyncedMarkdownRef.current &&
       markdown !== getEditorMarkdown(currentEditor, "")
     ) {
+      // A storage echo can arrive while the user is editing in the middle of
+      // the document. Keep the caret anchored when applying external content.
+      const { from, to } = currentEditor.state.selection;
+      const focused = currentEditor.isFocused;
       currentEditor.commands.setContent(markdown, { emitUpdate: false });
+      if (focused) {
+        const end = currentEditor.state.doc.content.size;
+        currentEditor.commands.setTextSelection({ from: Math.min(from, end), to: Math.min(to, end) });
+      }
     }
 
     lastSyncedMarkdownRef.current = markdown;

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import MarkdownIt from "markdown-it";
 import { ArrowLeft, History, ImagePlus, Pencil, Plus, Save, Trash2, X, BookOpen, CookingPot, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import { PluginDialog } from "@/components/plugins/PluginDialog";
 import type { PluginId } from "@/plugins/registry";
 import { platform } from "@/platform";
 import { dirname, join } from "@/platform/paths";
-import { writeFile } from "@/platform/vaultFs";
+import { readFile, writeFile } from "@/platform/vaultFs";
 import { getRelativeDisplayPath } from "@/lib/fileSystem";
 import { listFileVersions, readVersionContent, type FileVersion } from "@/lib/fileVersions";
 import { readingFields, readingSections } from "../../../server/src/public/readingModel";
@@ -152,6 +152,7 @@ function LineItemsEditor({ entry, heading, placeholder, onChange }: { entry: Plu
 }
 
 export function ContentPluginDetail({ id, entry, vaultPath, publicView, isNew, dirty, saving, onSave, onBack, onCancelEdit, onChange, onDelete }: Props) {
+  const receiptPicker = useRef<HTMLInputElement>(null);
   const [editing, setEditing] = useState(isNew || dirty);
   const [servings, setServings] = useState<number | null>(null);
   const [versions, setVersions] = useState<FileVersion[] | null>(null);
@@ -173,11 +174,25 @@ export function ContentPluginDetail({ id, entry, vaultPath, publicView, isNew, d
   const contentSection = (heading: string, placeholder?: string) => <Section title={heading} value={pluginSection(entry.markdown, heading)} placeholder={placeholder} onSave={(value) => section(heading, value)} />;
   const published = entry.metadata.published === "true";
   useEffect(() => { if (!isNew && !dirty && !saving) setEditing(false); }, [isNew, dirty, saving]);
-  const uploadReceipt = async (file: File | undefined) => {
-    if (!file || isNew || file.size > 12 * 1024 * 1024 || !/^(application\/pdf|image\/(?:png|jpeg|webp))$/.test(file.type)) return;
-    const filename = `kvittering-${Date.now()}.${file.type === "application/pdf" ? "pdf" : file.type.split("/")[1] === "jpeg" ? "jpg" : file.type.split("/")[1]}`;
-    await writeFile(await join(await dirname(entry.path), "_attachments", filename), new Uint8Array(await file.arrayBuffer()));
-    field("receipt", `_attachments/${filename}`);
+  const receipts = [...new Set([entry.metadata.receipt, ...pluginSection(entry.markdown, "Kvitteringer").split("\n").map((line) => /^- (_attachments\/[^\r\n]+)$/.exec(line)?.[1])].filter((value): value is string => !!value && /^_attachments\/[^/\\]+$/.test(value)))];
+  const uploadReceipts = async (files: FileList | null) => {
+    if (!files?.length || isNew) return;
+    const next = [...receipts];
+    for (const [index, file] of Array.from(files).entries()) {
+      if (file.size > 12 * 1024 * 1024 || !/^(application\/pdf|image\/(?:png|jpeg|webp))$/.test(file.type)) continue;
+      const filename = `kvittering-${Date.now()}-${index}.${file.type === "application/pdf" ? "pdf" : file.type.split("/")[1] === "jpeg" ? "jpg" : file.type.split("/")[1]}`;
+      await writeFile(await join(await dirname(entry.path), "_attachments", filename), new Uint8Array(await file.arrayBuffer()));
+      next.push(`_attachments/${filename}`);
+    }
+    if (next.length !== receipts.length) await onChange(setPluginSection(entry.markdown, "Kvitteringer", next.map((path) => `- ${path}`).join("\n")));
+  };
+  const downloadReceipt = async (relative: string) => {
+    const bytes = await readFile(await join(await dirname(entry.path), "_attachments", relative.split("/").pop()!));
+    const blob = new Blob([new Uint8Array(bytes)], { type: relative.toLowerCase().endsWith(".pdf") ? "application/pdf" : "application/octet-stream" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url; anchor.download = relative.split("/").pop()!; anchor.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
   };
   const showVersions = async () => {
     if (isNew) return;
@@ -207,7 +222,7 @@ export function ContentPluginDetail({ id, entry, vaultPath, publicView, isNew, d
       {id === "recipes" && <RecipeReading key={entry.path} entry={entry} servings={servings ?? Number(entry.metadata.servings || 4)} onServingsChange={setServings} />}
       {id === "recipes" && previewSections.filter(({ heading }) => heading === "Notater").map(({ heading, content }) => <section className="plugin-detail__section" id={`plugin-section-${heading}`} key={heading}><h3>{heading}</h3><div className="plugin-detail__prose" dangerouslySetInnerHTML={{ __html: previewMarkdown.render(content) }} /></section>)}
       {id === "shopping" && <ShoppingItems entry={entry} onChange={async (markdown) => { await onChange(markdown); setEditing(true); }} />}
-      {id === "inventory" && entry.metadata.receipt && <section className="plugin-detail__section"><h3>Kvittering</h3><p>{entry.metadata.receipt.split("/").pop()}</p></section>}
+      {id === "inventory" && receipts.length > 0 && <section className="plugin-detail__section"><h3>Kvitteringer</h3>{receipts.map((receipt) => <button key={receipt} type="button" onClick={() => void downloadReceipt(receipt)} title="Last ned kvittering">↓ {receipt.split("/").pop()}</button>)}</section>}
     </div></div> : id === "shopping" ? <><h2>{title || "Ny handleliste"}</h2><Field label="Navn" value={title} autoFocus={isNew} onSave={(value) => void onChange(setPluginTitle(entry.markdown, "title", value))} />
       <label className="plugin-detail__field"><span>Offentlig handleliste</span><input type="checkbox" checked={published} disabled={!publicView && !published} onChange={() => void onChange(setPluginField(entry.markdown, "published", !published))} /></label>
       {published && publicView && <p>Adresse: /handleliste/{entry.metadata.slug}</p>}<ShoppingItems entry={entry} onChange={onChange} /></> : <>
@@ -232,8 +247,10 @@ export function ContentPluginDetail({ id, entry, vaultPath, publicView, isNew, d
         <label className="plugin-detail__field plugin-detail__servings"><span>Vis for antall porsjoner</span><input type="number" min="1" max="100" value={servings ?? Number(entry.metadata.servings || 4)} onChange={(event) => setServings(Number(event.target.value))} /></label>
         <RecipeEditor key={entry.path} entry={entry} servings={servings ?? Number(entry.metadata.servings || 4)} onChange={onChange} />{contentSection("Notater")}</>}
       {id === "inventory" && <>{contentSection("Beskrivelse", "Beskrivelse av gjenstanden")}{contentSection("Notater")}
-        <section className="plugin-detail__section"><h3>Kvittering</h3><input type="file" accept="application/pdf,image/png,image/jpeg,image/webp" disabled={isNew} onChange={(event) => void uploadReceipt(event.currentTarget.files?.[0])} />
-          {entry.metadata.receipt && <p>Lagret: {entry.metadata.receipt.split("/").pop()}</p>}</section></>}
+        <section className="plugin-detail__section"><h3>Kvitteringer</h3><input ref={receiptPicker} type="file" multiple accept="application/pdf,image/png,image/jpeg,image/webp" hidden onChange={(event) => { void uploadReceipts(event.currentTarget.files); event.currentTarget.value = ""; }} />
+          <Button type="button" variant="outline" disabled={isNew} onClick={() => receiptPicker.current?.click()}><Plus size={16} /> Legg til kvitteringer</Button>
+          {isNew && <p>Lagre gjenstanden før du legger til kvitteringer.</p>}
+          {receipts.map((receipt) => <button key={receipt} type="button" onClick={() => void downloadReceipt(receipt)} title="Last ned kvittering">↓ {receipt.split("/").pop()}</button>)}</section></>}
     </>}
   </div>;
 }

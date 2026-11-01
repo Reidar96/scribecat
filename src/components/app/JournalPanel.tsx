@@ -664,6 +664,8 @@ function JournalEntryView({
   const [imageError, setImageError] = useState<string | null>(null);
   const [imageDropActive, setImageDropActive] = useState(false);
   const textEditorRef = useRef<HTMLTextAreaElement>(null);
+  const lastTypedTextRef = useRef<string | null>(null);
+  const previousFilePathRef = useRef(filePath);
   const swipeStart = useRef<SwipePoint | null>(null);
   useEffect(() => {
     const onArrow = (event: KeyboardEvent) => {
@@ -695,6 +697,12 @@ function JournalEntryView({
   const previousGalleryRectsRef = useRef<Map<string, DOMRect> | null>(null);
 
   useEffect(() => {
+    const changedFile = previousFilePathRef.current !== filePath;
+    previousFilePathRef.current = filePath;
+    if (changedFile) lastTypedTextRef.current = null;
+    // Ignore an older save echo while the person is typing inside the note.
+    if (!changedFile && document.activeElement === textEditorRef.current &&
+      lastTypedTextRef.current !== null && parsed.textMarkdown !== lastTypedTextRef.current) return;
     setDraftText(parsed.textMarkdown);
   }, [filePath, parsed.textMarkdown]);
 
@@ -803,6 +811,7 @@ function JournalEntryView({
   };
 
   const commitText = (nextText: string) => {
+    lastTypedTextRef.current = nextText;
     setDraftText(nextText);
     onMarkdownChange(
       composeJournalMarkdown(markdown, nextText, currentGalleryImages)
@@ -1755,8 +1764,7 @@ export function JournalPanel({
     const day = index - offset + 1;
     if (day < 1 || day > count) return null;
 
-    const date = { year, month, day };
-    return dateToNumber(date) <= dateToNumber(today) ? day : null;
+    return day;
   });
 
   const atCurrentMonth = year === today.year && month === today.month;
@@ -2054,6 +2062,7 @@ export function JournalPanel({
               const isToday = sameDate(today, date);
               const isSelected = sameDate(selectedDate, date);
               const busy = openingKey === key;
+              const isFuture = dateToNumber(date) > dateToNumber(today);
 
               return (
                 <button
@@ -2062,10 +2071,12 @@ export function JournalPanel({
                   className={cn(
                     "journal-calendar__day",
                     hasNote && "journal-calendar__day--has-note",
+                    isFuture && "journal-calendar__day--future",
                     isToday && "journal-calendar__day--today",
                     isSelected && "journal-calendar__day--selected"
                   )}
                   onClick={() => void openJournalDate(date)}
+                  disabled={isFuture}
                   aria-label={t(
                     hasNote ? "journal.openDate" : "journal.createDate",
                     { date: key }

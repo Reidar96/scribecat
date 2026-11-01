@@ -1,5 +1,5 @@
-import { useRef, useState } from "react";
-import { GripVertical, Grid2X2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { GripVertical, Grid2X2, Puzzle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { BUILTIN_PLUGINS, type PluginId } from "@/plugins/registry";
@@ -7,6 +7,8 @@ import { usePluginStore } from "@/store/usePluginStore";
 import { useLayoutMode } from "@/hooks/useLayoutMode";
 
 import { PluginTopbar, pluginIcons } from "@/components/plugins/PluginTopbar";
+import { listInstalledPackages, type PackageManifest } from "@/plugins/packages";
+import { CustomPackagePanel } from "@/components/plugins/CustomPackagePanel";
 
 export function PluginNavigation({ active, appsOpen, onOpen, onOpenApps, disabled = false }: {
   active: PluginId | null;
@@ -39,12 +41,16 @@ export function AppsOverview({ onOpen, onClose, onOpenSidebar, sidebarVisible, o
   const config = usePluginStore((state) => state.config);
   const reorder = usePluginStore((state) => state.reorder);
   const isPhone = useLayoutMode() === "phone";
+  const vault = usePluginStore((state) => state.vaultPath);
+  const [packages, setPackages] = useState<PackageManifest[]>([]);
+  const [custom, setCustom] = useState<PackageManifest | null>(null);
+  useEffect(() => { if (vault) void listInstalledPackages(vault).then(setPackages).catch(() => setPackages([])); }, [vault]);
   const available = config.order.map((id) => BUILTIN_PLUGINS.find((item) => item.id === id)!).filter((item) => item && config.plugins[item.id]?.enabled);
   const dragging = useRef<PluginId | null>(null);
   const [over, setOver] = useState<PluginId | null>(null);
   return <main className="content-plugin-panel">
     <PluginTopbar title="Apper" icon="apps" isPhone={isPhone} sidebarVisible={sidebarVisible} onSidebarVisibilityToggle={onSidebarVisibilityToggle} onOpenSidebar={onOpenSidebar} onClose={onClose} />
-    <div className="content-plugin-panel__body"><p>Dra håndtaket for å endre rekkefølgen.</p><div className="apps-overview__grid">
+    <div className="content-plugin-panel__body">{custom && vault ? <CustomPackagePanel manifest={custom} vault={vault} onBack={() => setCustom(null)} /> : <><p>Dra håndtaket for å endre rekkefølgen.</p><div className="apps-overview__grid">
       {available.map((item) => {
         const Icon = pluginIcons[item.id];
         return <div key={item.id} data-plugin-id={item.id} className={`apps-overview__card${over === item.id ? " apps-overview__card--over" : ""}`}>
@@ -68,6 +74,7 @@ export function AppsOverview({ onOpen, onClose, onOpenSidebar, sidebarVisible, o
             }}><GripVertical size={20} /></button>
         </div>;
       })}
-    </div></div>
+      {packages.map((item) => <div className="apps-overview__card" key={item.id}><button className="apps-overview__open" onClick={() => setCustom(item)}><Puzzle size={24} aria-hidden="true" /><strong>{item.name}</strong></button></div>)}
+    </div></>}</div>
   </main>;
 }

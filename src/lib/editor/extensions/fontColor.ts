@@ -43,6 +43,10 @@ export function nearestFontColor(value: string): string | null {
   const source = rgb(value);
   if (!source) return null;
 
+  // Neutral colors from Word, email and dark-mode pages are ordinary text.
+  // Let the editor theme choose black or white instead of saving a gray mark.
+  if (Math.max(...source) - Math.min(...source) <= 30) return null;
+
   const candidates = [DEFAULT_TEXT, ...FONT_COLORS.map((entry) => entry.value)];
   const distance = (color: string) => {
     const target = rgb(color)!;
@@ -63,7 +67,8 @@ export function fontColorMarkdownItPlugin(markdownit: MarkdownIt): void {
     if (open) {
       if (!silent) {
         const token = state.push("font_color_open", "span", 1);
-        token.attrSet("color", nearestFontColor(open[1]) ?? DEFAULT_TEXT);
+        const color = nearestFontColor(open[1]);
+        if (color) token.attrSet("color", color);
         depthState.fontColorDepth = (depthState.fontColorDepth ?? 0) + 1;
       }
       state.pos += open[0].length;
@@ -79,8 +84,10 @@ export function fontColorMarkdownItPlugin(markdownit: MarkdownIt): void {
     }
     return false;
   });
-  markdownit.renderer.rules.font_color_open = (tokens, index) =>
-    `<span style="color: ${tokens[index].attrGet("color")}">`;
+  markdownit.renderer.rules.font_color_open = (tokens, index) => {
+    const color = tokens[index].attrGet("color");
+    return color ? `<span style="color: ${color}">` : "<span>";
+  };
   markdownit.renderer.rules.font_color_close = () => "</span>";
 }
 

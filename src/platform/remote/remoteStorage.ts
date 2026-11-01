@@ -42,6 +42,7 @@ function firstRelativeImagePath(markdown: string, markdownPath: string): string 
  * on a local folder.
  */
 export function createRemoteVaultStorage(api: ServerApi, root: string): VaultStorage {
+  const listedMtimes = new Map<string, number>();
   function toVaultRelative(path: string): string {
     // The desktop store may hand over a path with the other separator; the
     // server speaks forward slashes only.
@@ -71,6 +72,8 @@ export function createRemoteVaultStorage(api: ServerApi, root: string): VaultSto
         if (!cachedFiles) throw error;
         remoteFiles = cachedFiles;
       }
+      listedMtimes.clear();
+      for (const file of remoteFiles) listedMtimes.set(file.relativePath, file.mtimeMs);
 
       const records = remoteFiles.map((file) => ({
         filePath: joinPosixPath(rootPath, file.relativePath), relativePath: file.relativePath, mtimeMs: file.mtimeMs
@@ -167,10 +170,17 @@ export function createRemoteVaultStorage(api: ServerApi, root: string): VaultSto
     mkdir: async (path, options) => api.mkdir(toVaultRelative(path), options?.recursive === true),
     async readTextFile(path) {
       const relative = toVaultRelative(path);
+      // The listing is an mtime snapshot. A matching persistent copy can be
+      // used immediately, avoiding a network round-trip for every Quick Note.
+      const listed = listedMtimes.get(relative);
+      if (listed !== undefined) {
+        const cached = await getCached(root, relative).catch(() => null);
+        if (cached?.kind === "text" && cached.mtimeMs === listed) return cached.content;
+      }
       try {
         const content = await api.readText(relative);
         const previous = await getCached(root, relative).catch(() => null);
-        const knownMtime = previous?.kind === "text" || previous?.kind === "bytes" ? previous.mtimeMs : null;
+        const knownMtime = listed ?? (previous?.kind === "text" || previous?.kind === "bytes" ? previous.mtimeMs : null);
         void putCached(root, relative, { kind: "text", content, mtimeMs: knownMtime }).catch(() => undefined);
         return content;
       } catch (error) {
@@ -184,7 +194,8 @@ export function createRemoteVaultStorage(api: ServerApi, root: string): VaultSto
       // Offline edits stay in the persistent draft store. Keep this cached
       // server copy intact as the baseline for the later conflict comparison.
       const result = await api.writeText(relative, contents);
-      void putCached(root, relative, { kind: "text", content: contents, mtimeMs: result.mtimeMs }).catch(() => undefined);
+      if (result.mtimeMs !== null) listedMtimes.set(relative, result.mtimeMs);
+      await putCached(root, relative, { kind: "text", content: contents, mtimeMs: result.mtimeMs }).catch(() => undefined);
     },
     async readFile(path) {
       const relative = toVaultRelative(path);

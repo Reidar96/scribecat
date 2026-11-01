@@ -67,7 +67,6 @@ import { Toggle } from "@/components/ui/toggle";
 import { EmojiPicker } from "@/components/EmojiPicker";
 import { TableGridPicker } from "@/components/TableGridPicker";
 import { TableMenu } from "@/components/TableMenu";
-import { ZoomControl } from "@/components/ZoomControl";
 import { CALLOUT_VARIANTS, type CalloutVariant } from "@/lib/editor/extensions/callout";
 import { isHighlighterModeActive } from "@/lib/editor/extensions/highlight";
 import { FONT_COLORS } from "@/lib/editor/extensions/fontColor";
@@ -782,7 +781,6 @@ export function Toolbar({
         </Button>
         {detailsPanelDisabled ? null : <DetailsPanelToggle />}
         <DocumentWidthToggle />
-        <ZoomControl />
         <Button
           type="button"
           size="icon-sm"

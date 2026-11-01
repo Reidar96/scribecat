@@ -1,5 +1,5 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Plus, Search, ChartNoAxesCombined, Trash2, BookOpen, CookingPot, Package, ShoppingBasket, Pin, ArchiveRestore, Archive } from "lucide-react";
+import { Plus, Search, ChartNoAxesCombined, Trash2, BookOpen, CookingPot, Package, ShoppingBasket, Pin, ArchiveRestore, Archive, GripVertical } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { splitFrontmatter } from "@/lib/documentFrontmatter";
@@ -63,8 +63,9 @@ function QuickNoteCard({ entry, initialEdit, onSave, onCategoryChange, children 
     return () => window.clearTimeout(timer);
   }, [draft, saved]);
   const status = saveError ? "Kunne ikke lagre – teksten er beholdt" : saving ? "Lagrer …" : draft !== saved ? "Lagrer automatisk" : "Lagret";
+  const links = [...new Set((draft.match(/https?:\/\/[^\s<>"')]+/g) ?? []).map((url) => url.replace(/[.,;!?]+$/, "")))].slice(0, 8);
   return <>
-    <div className="content-plugin-panel__note"><textarea ref={textarea} data-note-path={entry.path} aria-label="Huskelapp" value={draft} placeholder="Skriv noe …" onChange={(event) => setDraft(event.target.value)} autoFocus={initialEdit} /></div>
+    <div className="content-plugin-panel__note"><textarea ref={textarea} data-note-path={entry.path} aria-label="Huskelapp" value={draft} placeholder="Skriv noe …" onChange={(event) => setDraft(event.target.value)} autoFocus={initialEdit} />{links.length > 0 && <div className="content-plugin-panel__note-links">{links.map((url) => <a key={url} href={url} target="_blank" rel="noopener noreferrer" title={url}>{url}</a>)}</div>}</div>
     <div className="content-plugin-panel__note-controls">
       <input className="content-plugin-panel__note-category" aria-label="Kategori for huskelapp" list="quick-note-categories" placeholder="Kategori" value={category} onChange={(event) => setCategory(event.target.value)} onBlur={() => { if (category.trim() !== (entry.metadata.category ?? "")) onCategoryChange(category.trim()); }} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }} />
       <span className="content-plugin-panel__note-status" role="status" title={status}>{status}</span>
@@ -95,7 +96,11 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query);
   const [filter, setFilter] = useState("");
-  const [quickSort, setQuickSort] = useState<"pinned" | "newest" | "oldest" | "title">("pinned");
+  const [quickSort, setQuickSort] = useState<"pinned" | "newest" | "oldest" | "title" | "manual">("pinned");
+  const quickSortChosen = useRef(false);
+  const [reordering, setReordering] = useState(false);
+  const [draggedPath, setDraggedPath] = useState<string | null>(null);
+  const pointerDrag = useRef<string | null>(null);
   const [groupView, setGroupView] = useState<string | null>(null);
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [draftMarkdown, setDraftMarkdown] = useState<string | null>(null);
@@ -103,6 +108,7 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
   const updateDraft = (markdown: string | null) => { draftRef.current = markdown; setDraftMarkdown(markdown); };
   const [savedMarkdown, setSavedMarkdown] = useState<string | null>(null);
   const [newNotePath, setNewNotePath] = useState<string | null>(null);
+  const focusedNewNote = useRef<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [savingNew, setSavingNew] = useState(false);
   const [showStats, setShowStats] = useState(false);
@@ -128,8 +134,8 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
     void (async () => {
       // Bound vault reads so opening a large collection does not saturate
       // desktop IPC or the remote server. Show cached rows immediately.
-      for (let at = 0; at < missing.length && current; at += 8) {
-        const batch = await Promise.all(missing.slice(at, at + 8).map(async (path) => {
+      for (let at = 0; at < missing.length && current; at += 24) {
+        const batch = await Promise.all(missing.slice(at, at + 24).map(async (path) => {
           try {
             const markdown = await api.readMarkdown(path);
             const metadata = pluginMetadata(markdown);
@@ -152,8 +158,14 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
   }, [paths, id, fileMtimeMs]);
 
   useEffect(() => {
-    if (newNotePath) document.querySelector<HTMLTextAreaElement>(`[data-note-path="${CSS.escape(newNotePath)}"]`)?.focus();
+    if (!newNotePath) { focusedNewNote.current = null; return; }
+    if (focusedNewNote.current === newNotePath) return;
+    const field = document.querySelector<HTMLTextAreaElement>(`[data-note-path="${CSS.escape(newNotePath)}"]`);
+    if (field) { field.focus(); focusedNewNote.current = newNotePath; }
   }, [newNotePath, entries]);
+  useEffect(() => {
+    if (id === "quick-notes" && !quickSortChosen.current && entries.some((entry) => entry.metadata.order)) setQuickSort("manual");
+  }, [id, entries]);
   const draftKey = (path: string | null) => `scribecat:plugin-draft:${folderPath}:${id}:${path ?? "new"}`;
   const openEntry = (entry: Entry) => {
     let savedDraft: string | null = null;
@@ -182,6 +194,7 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
     return `${entry.title} ${entry.markdown}`.toLocaleLowerCase().includes(deferredQuery.toLocaleLowerCase());
   }).sort((a, b) => {
     if (id !== "quick-notes") return 0;
+    if (quickSort === "manual") return (Number(a.metadata.order || 0) - Number(b.metadata.order || 0)) || a.path.localeCompare(b.path);
     if (quickSort === "title") return noteBody(a.markdown).localeCompare(noteBody(b.markdown), "no") || a.path.localeCompare(b.path);
     if (quickSort === "pinned" && a.metadata.pinned !== b.metadata.pinned) return a.metadata.pinned === "true" ? -1 : 1;
     const aTime = Date.parse(a.metadata.created ?? "") || fileMtimeMs[a.path] || 0;
@@ -326,6 +339,34 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
   };
 
   const selected = entries.find((entry) => entry.path === selectedPath);
+  const moveNote = async (targetPath: string, sourcePath = draggedPath) => {
+    if (!sourcePath || sourcePath === targetPath) return;
+    const ordered = visible.map((entry) => entry.path);
+    const from = ordered.indexOf(sourcePath);
+    const to = ordered.indexOf(targetPath);
+    if (from < 0 || to < 0) return;
+    ordered.splice(to, 0, ...ordered.splice(from, 1));
+    setQuickSort("manual");
+    const orderOf = (path: string) => Number(entries.find((item) => item.path === path)?.metadata.order);
+    const before = to > 0 ? orderOf(ordered[to - 1]) : null;
+    const after = to < ordered.length - 1 ? orderOf(ordered[to + 1]) : null;
+    const nextOrder = before === null ? (after === null ? 1024 : after - 1024)
+      : after === null ? before + 1024 : (before + after) / 2;
+    const moved = entries.find((item) => item.path === sourcePath);
+    if (moved && ordered.every((path) => Number(entries.find((item) => item.path === path)?.metadata.order) !== 0) &&
+      (before === null || nextOrder > before) && (after === null || nextOrder < after)) {
+      await change(moved, (markdown) => setPluginField(markdown, "order", String(nextOrder)));
+    } else {
+      // Initialize old notes without an order, or renumber a crowded gap.
+      for (let at = 0; at < ordered.length; at += 8) {
+        await Promise.all(ordered.slice(at, at + 8).map((path, offset) => {
+          const entry = entries.find((item) => item.path === path);
+          return entry ? change(entry, (markdown) => setPluginField(markdown, "order", String((at + offset + 1) * 1024))) : Promise.resolve(false);
+        }));
+      }
+    }
+    setDraggedPath(null);
+  };
   const editingEntry: Entry | null = creating && draftMarkdown !== null ? {
     path: "", markdown: draftMarkdown, metadata: pluginMetadata(draftMarkdown), title: ""
   } : selected && draftMarkdown !== null ? {
@@ -340,10 +381,11 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
         <div className="content-plugin-panel__rail-group">
           <Button variant="outline" className="content-plugin-panel__new" onClick={requestAdd}><Plus size={16} /> {id === "books" ? "Ny bok" : id === "recipes" ? "Ny oppskrift" : id === "inventory" ? "Ny gjenstand" : id === "shopping" ? "Ny handleliste" : "Ny huskelapp"}</Button>
           <button className={!editingEntry && !showStats && !filter && !groupView ? "active" : ""} onClick={() => selectFilter("")}>Alle <span>{entries.length}</span></button>
-          {id !== "quick-notes" && <button className={showStats ? "active" : ""} onClick={() => navigate(() => { setShowStats(true); setSelectedPath(null); setCreating(false); updateDraft(null); setSecondaryOpen(false); })}><ChartNoAxesCombined size={16} /> Statistikk</button>}
+          {id !== "quick-notes" && id !== "shopping" && <button className={showStats ? "active" : ""} onClick={() => navigate(() => { setShowStats(true); setSelectedPath(null); setCreating(false); updateDraft(null); setSecondaryOpen(false); })}><ChartNoAxesCombined size={16} /> Statistikk</button>}
         </div>
         {id === "shopping" && <div className="content-plugin-panel__rail-group"><strong>Handlelister</strong>{entries.map((entry) => <button key={entry.path} className={selectedPath === entry.path ? "active" : ""} onClick={() => navigate(() => openEntry(entry))}>{entry.title}</button>)}</div>}
         {fields.length > 0 && <div className="content-plugin-panel__rail-group"><strong>Utforsk</strong>{fields.map((field) => <button key={field} className={groupView === field ? "active" : ""} onClick={() => selectFilter("", field)}>{groupNames[field]}<span>{new Set(entries.map((entry) => entry.metadata[field]).filter(Boolean)).size}</span></button>)}</div>}
+        {id === "quick-notes" && [...new Set(entries.map((entry) => entry.metadata.category).filter(Boolean))].sort().map((category) => <button key={category} data-quick-category={category} className={filter === JSON.stringify(["category", category]) ? "active" : ""} onClick={() => selectFilter(JSON.stringify(["category", category]))} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); const path = draggedPath || event.dataTransfer.getData("text/plain"); const entry = entries.find((item) => item.path === path); if (entry) void change(entry, (markdown) => setPluginField(markdown, "category", category)); setDraggedPath(null); }}>{category}</button>)}
         {id === "quick-notes" && options.length > 0 && <div className="content-plugin-panel__rail-group"><strong>Vis</strong>{options.slice(0, 2).map(([field, value, label]) => {
           const key = JSON.stringify([field, value]);
           return <button key={key} className={filter === key ? "active" : ""} onClick={() => selectFilter(key)}>{label}<span>{entries.filter((entry) => entry.metadata[field] === value).length}</span></button>;
@@ -364,14 +406,14 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
       <div className="content-plugin-panel__overview"><div><span className="content-plugin-panel__eyebrow">SAMLING</span><h2>{selectedFilter?.[1] || (groupView ? groupNames[groupView] : manifest.name)}</h2><p>{scanRemaining > 0 ? `Laster … ${visible.length} vist` : `${visible.length} ${visible.length === 1 ? "oppføring" : "oppføringer"}`}</p></div></div>
       <div className="content-plugin-panel__controls"><label className="content-plugin-panel__search"><Search size={16} /><input type="search" value={query} placeholder={`Søk i ${manifest.name.toLocaleLowerCase()}`} onChange={(event) => setQuery(event.target.value)} /></label>
       {!groupView && options.length && id !== "shopping" ? <label className="content-plugin-panel__select"><span>Vis</span><select aria-label="Filtrer oppføringer" value={filter} onChange={(event) => { setGroupView(null); setFilter(event.target.value); }}><option value="">Alle</option>{options.map(([field, value, label]) => <option value={JSON.stringify([field, value])} key={`${field}:${value}`}>{label}</option>)}</select></label> : null}
-      {id === "quick-notes" && <label className="content-plugin-panel__select"><span>Sorter</span><select aria-label="Sorter huskelapper" value={quickSort} onChange={(event) => setQuickSort(event.target.value as typeof quickSort)}><option value="pinned">Festede først</option><option value="newest">Nyeste først</option><option value="oldest">Eldste først</option><option value="title">Alfabetisk</option></select></label>}
+      {id === "quick-notes" && <><label className="content-plugin-panel__select"><span>Sorter</span><select aria-label="Sorter huskelapper" value={quickSort} onChange={(event) => { quickSortChosen.current = true; setQuickSort(event.target.value as typeof quickSort); }}><option value="pinned">Festede først</option><option value="newest">Nyeste først</option><option value="oldest">Eldste først</option><option value="title">Alfabetisk</option><option value="manual">Egen rekkefølge</option></select></label><button type="button" onClick={() => { setReordering((value) => !value); setQuickSort("manual"); }}>{reordering ? "Ferdig" : "Endre rekkefølge"}</button></>}
       {selectedFilter && fields.includes(selectedFilter[0]) && <button className="content-plugin-panel__delete-filter" onClick={() => setDialog({ kind: "category", field: selectedFilter[0], label: selectedFilter[1] })}>Slett {groupLabels[selectedFilter[0]].toLocaleLowerCase()}</button>}</div>
       {id === "quick-notes" && <datalist id="quick-note-categories">{[...new Set(entries.map((entry) => entry.metadata.category).filter(Boolean))].sort((a, b) => a.localeCompare(b, "no")).map((name) => <option key={name} value={name} />)}</datalist>}
       {groupView && !filter ? <div className="content-plugin-panel__grid content-plugin-panel__groups">{[...new Set(entries.map((entry) => entry.metadata[groupView]).filter(Boolean))].sort((a, b) => a.localeCompare(b, "no")).map((value) => {
         const members = entries.filter((entry) => entry.metadata[groupView] === value);
         return <button className="content-plugin-panel__group-card" key={value} onClick={() => selectFilter(JSON.stringify([groupView, value]), groupView)}><span className={`content-plugin-panel__mosaic${id === "quick-notes" ? " content-plugin-panel__mosaic--notes" : ""}`}>{id === "quick-notes" ? members.slice(0, 4).map((entry) => <span key={entry.path}>{noteBody(entry.markdown) || "Huskelapp"}</span>) : members.filter((entry) => entry.metadata.cover).slice(0, 4).map((entry) => <PluginCover key={entry.path} id={id} vaultPath={folderPath} documentPath={entry.path} reference={entry.metadata.cover} alt="" />)}</span><strong>{value}</strong><small>{members.length} {members.length === 1 ? "oppføring" : "oppføringer"}</small></button>;
       })}</div> : <div className={`content-plugin-panel__grid content-plugin-panel__grid--${id}`}>{visible.map((entry) => {
-        return <article key={entry.path} className="content-plugin-panel__card">
+        return <article key={entry.path} data-note-drop-path={id === "quick-notes" ? entry.path : undefined} className="content-plugin-panel__card" draggable={id === "quick-notes" && !isPhone} onContextMenu={(event) => { if (id === "quick-notes") { event.preventDefault(); setReordering(true); setQuickSort("manual"); if (isPhone) setSecondaryOpen(true); } }} onDragStart={(event) => { if (id !== "quick-notes") return; setDraggedPath(entry.path); event.dataTransfer.setData("text/plain", entry.path); }} onDragOver={(event) => { if (id === "quick-notes") event.preventDefault(); }} onDrop={(event) => { event.preventDefault(); void moveNote(entry.path); }} onDragEnd={() => setDraggedPath(null)}>
           {id !== "quick-notes" && <button className="content-plugin-panel__tile" onClick={() => openEntry(entry)}>
             {entry.metadata.cover && (id === "books" || id === "recipes" || id === "inventory")
               ? <PluginCover id={id} vaultPath={folderPath} documentPath={entry.path} reference={entry.metadata.cover} alt={entry.title} />
@@ -381,6 +423,14 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
             {(id === "recipes" || id === "books" || id === "inventory") && readingCardSummary(id, entry.markdown) && <p className="content-plugin-panel__tile-description">{readingCardSummary(id, entry.markdown)}</p>}
           </button>}
           {id === "quick-notes" ? <>
+            {reordering && <button className="content-plugin-panel__note-handle" aria-label="Dra huskelappen for å endre rekkefølge" title="Dra til en annen huskelapp eller kategori" onPointerDown={(event) => { pointerDrag.current = entry.path; event.currentTarget.setPointerCapture(event.pointerId); }} onPointerUp={(event) => {
+              const source = pointerDrag.current;
+              const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-note-drop-path], [data-quick-category]");
+              pointerDrag.current = null;
+              if (!source || !target) return;
+              if (target.dataset.noteDropPath) void moveNote(target.dataset.noteDropPath, source);
+              else if (target.dataset.quickCategory) { const item = entries.find((row) => row.path === source); if (item) void change(item, (markdown) => setPluginField(markdown, "category", target.dataset.quickCategory!)); }
+            }} onPointerCancel={() => { pointerDrag.current = null; }}><GripVertical size={17} /></button>}
             <QuickNoteCard entry={entry} initialEdit={newNotePath === entry.path} onSave={async (text, expected) => {
               const saved = await change(entry, (current) => {
                 const currentBody = noteBody(current);

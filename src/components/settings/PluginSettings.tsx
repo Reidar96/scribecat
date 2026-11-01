@@ -4,10 +4,17 @@ import { SettingRow } from "@/components/settings/SettingRow";
 import { VaultSettings } from "@/components/settings/VaultSettings";
 import { BUILTIN_PLUGINS, validPluginFolder, type PluginId } from "@/plugins/registry";
 import { usePluginStore } from "@/store/usePluginStore";
+import { installPackage, listInstalledPackages, type PackageManifest } from "@/plugins/packages";
+import { join } from "@/platform/paths";
+import { remove } from "@/platform/vaultFs";
 
 export function PluginSettings() {
   const [selected, setSelected] = useState<PluginId>("journal");
   const { config, ready, error, update, pin } = usePluginStore();
+  const vaultPath = usePluginStore((state) => state.vaultPath);
+  const [installed, setInstalled] = useState<PackageManifest[]>([]);
+  const [packageError, setPackageError] = useState("");
+  useEffect(() => { if (vaultPath) void listInstalledPackages(vaultPath).then(setInstalled).catch(() => setInstalled([])); }, [vaultPath]);
   const plugin = BUILTIN_PLUGINS.find((item) => item.id === selected)!;
   const preference = config.plugins[selected]!;
   const [folderDraft, setFolderDraft] = useState(preference.folder ?? "");
@@ -46,5 +53,16 @@ export function PluginSettings() {
       </section> : null}
     </div>
     {selected === "journal" || selected === "tasks" ? <VaultSettings pluginId={selected} /> : null}
+    <section className="plugin-settings__packages"><h3>Egne apper</h3>
+      <p>Installer en ZIP med manifest.json. Appen bruker bare deklarerte felt og Markdown; kode fra ZIP-filen kjøres aldri. Pakkemappen ligger i .scribecat/plugins og dataene i appens innholdsmappe.</p>
+      <label>Installer app fra ZIP <input type="file" accept=".zip,application/zip" disabled={!ready || !vaultPath} onChange={(event) => {
+        const file = event.currentTarget.files?.[0];
+        event.currentTarget.value = "";
+        if (!file || !vaultPath) return;
+        void file.arrayBuffer().then((bytes) => installPackage(vaultPath, new Uint8Array(bytes))).then(() => listInstalledPackages(vaultPath)).then((items) => { setInstalled(items); setPackageError(""); }).catch((cause) => setPackageError(cause instanceof Error ? cause.message : "Kunne ikke installere appen."));
+      }} /></label>
+      {packageError && <p role="alert">{packageError}</p>}
+      {installed.map((item) => <div key={item.id}><strong>{item.name}</strong> · {item.folder} <button type="button" onClick={() => { if (!vaultPath) return; void join(vaultPath, ".scribecat", "plugins", item.id).then((path) => remove(path, { recursive: true })).then(() => listInstalledPackages(vaultPath)).then(setInstalled).catch(() => setPackageError("Kunne ikke fjerne appen.")); }}>Fjern app (behold data)</button></div>)}
+    </section>
   </div>;
 }

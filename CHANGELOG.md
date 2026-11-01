@@ -1,3 +1,13 @@
+## [1.3.0] - 2026-11-01
+
+- Show future days dimmed in the calendar; preserve the editor caret during external content updates and journal save echoes.
+- Normalize neutral pasted colors to the current theme while keeping intentional colors.
+- Add multiple downloadable inventory receipts, including on published inventory pages.
+- Make Quick Notes links clickable, use a masonry layout, add manual ordering and category drag targets, and speed up cached remote vault reads.
+- Remove shopping statistics and disable application interface zoom; provide a fallback ScribeCat copy/paste context menu.
+- Add a declarative ZIP app format backed by Markdown, with installation and removal through settings.
+- Build versioned desktop packages on native Actions runners and attach a Portainer Docker archive with matching Compose file.
+
 ## [1.2.8] - 2026-10-15
 
 - Edit public shopping-list item names inline; persist them in Markdown while preserving checked state and the other entries. Press Enter to finish editing an item in the private list.
