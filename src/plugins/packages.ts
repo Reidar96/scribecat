@@ -5,6 +5,45 @@ import { BUILTIN_PLUGINS } from "@/plugins/registry";
 
 export type PackageField = { key: string; label: string; multiline?: boolean };
 export type PackageManifest = { schemaVersion: 1; id: string; name: string; description?: string; folder: string; fields: PackageField[] };
+export const CUSTOM_PACKAGE_INSTRUCTIONS = `# Egen app for ScribeCat
+
+Opprett manifest.json og pakk den som ZIP med manifest.json på øverste nivå.
+Gå til Innstillinger → Apper → Last opp ZIP.
+
+Eksempel på manifest.json:
+
+\`\`\`json
+{
+  "schemaVersion": 1,
+  "id": "mine-planter",
+  "name": "Mine planter",
+  "description": "Min planteoversikt",
+  "folder": "Mine planter",
+  "fields": [
+    { "key": "sted", "label": "Sted" },
+    { "key": "stell", "label": "Stell", "multiline": true }
+  ]
+}
+\`\`\`
+
+Oppføringene blir vanlige Markdown-filer under innholdsmappen:
+
+\`\`\`markdown
+# Basilikum
+
+## sted
+
+Kjøkkenvindu
+
+## stell
+
+Vann når jorden er tørr.
+\`\`\`
+
+Manifestet lagres i .scribecat/plugins/mine-planter/manifest.json.
+Slett den mappen for å fjerne appen. Innholdsmappen beholdes.
+ZIP-filen kjører aldri JavaScript eller annen kode.
+`;
 const idPattern = /^[a-z][a-z0-9-]{1,39}$/;
 const safeSegment = (value: string) => !!value && !/[/\\:\x00-\x1f]/.test(value) && value !== "." && value !== "..";
 

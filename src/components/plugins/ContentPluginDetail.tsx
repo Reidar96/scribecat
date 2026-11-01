@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import MarkdownIt from "markdown-it";
-import { ArrowLeft, History, ImagePlus, Pencil, Plus, Save, Trash2, X, BookOpen, CookingPot, Package } from "lucide-react";
+import { ArrowLeft, Download, History, ImagePlus, Pencil, Plus, Save, Trash2, X, BookOpen, CookingPot, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PluginCover } from "@/components/plugins/PluginCover";
 import { splitFrontmatter } from "@/lib/documentFrontmatter";
@@ -194,6 +194,8 @@ export function ContentPluginDetail({ id, entry, vaultPath, publicView, isNew, d
     anchor.href = url; anchor.download = relative.split("/").pop()!; anchor.click();
     window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
   };
+  const receiptLinks = <div className="plugin-detail__receipts">{receipts.map((receipt) =>
+    <button key={receipt} type="button" onClick={() => void downloadReceipt(receipt)} title="Last ned kvittering"><Download size={16} /><span>{receipt.split("/").pop()}</span></button>)}</div>;
   const showVersions = async () => {
     if (isNew) return;
     setVersions(await listFileVersions(vaultPath, getRelativeDisplayPath(vaultPath, entry.path)).catch(() => []));
@@ -201,7 +203,8 @@ export function ContentPluginDetail({ id, entry, vaultPath, publicView, isNew, d
 
   const readingKind = id === "books" || id === "recipes" || id === "inventory" ? id : null;
   const previewFields = readingKind ? readingFields(readingKind, entry.metadata) : [];
-  const previewSections = readingKind ? readingSections(readingKind, entry.markdown).filter(({ heading }) => id !== "recipes" || (heading !== "Ingredienser" && heading !== "Fremgangsmåte")) : [];
+  const previewSections = readingKind ? readingSections(readingKind, entry.markdown).filter(({ heading }) =>
+    heading !== "Kvitteringer" && (id !== "recipes" || (heading !== "Ingredienser" && heading !== "Fremgangsmåte"))) : [];
 
   return <div className="plugin-detail"><div className="plugin-detail__actions"><Button variant="ghost" onClick={onBack}><ArrowLeft size={17} /> Tilbake</Button><div className="plugin-detail__action-group">
     {!isNew && <Button variant="outline" onClick={() => void showVersions()}><History size={16} /> Versjoner</Button>}
@@ -222,7 +225,7 @@ export function ContentPluginDetail({ id, entry, vaultPath, publicView, isNew, d
       {id === "recipes" && <RecipeReading key={entry.path} entry={entry} servings={servings ?? Number(entry.metadata.servings || 4)} onServingsChange={setServings} />}
       {id === "recipes" && previewSections.filter(({ heading }) => heading === "Notater").map(({ heading, content }) => <section className="plugin-detail__section" id={`plugin-section-${heading}`} key={heading}><h3>{heading}</h3><div className="plugin-detail__prose" dangerouslySetInnerHTML={{ __html: previewMarkdown.render(content) }} /></section>)}
       {id === "shopping" && <ShoppingItems entry={entry} onChange={async (markdown) => { await onChange(markdown); setEditing(true); }} />}
-      {id === "inventory" && receipts.length > 0 && <section className="plugin-detail__section"><h3>Kvitteringer</h3>{receipts.map((receipt) => <button key={receipt} type="button" onClick={() => void downloadReceipt(receipt)} title="Last ned kvittering">↓ {receipt.split("/").pop()}</button>)}</section>}
+      {id === "inventory" && receipts.length > 0 && <section className="plugin-detail__section"><h3>Kvitteringer</h3>{receiptLinks}</section>}
     </div></div> : id === "shopping" ? <><h2>{title || "Ny handleliste"}</h2><Field label="Navn" value={title} autoFocus={isNew} onSave={(value) => void onChange(setPluginTitle(entry.markdown, "title", value))} />
       <label className="plugin-detail__field"><span>Offentlig handleliste</span><input type="checkbox" checked={published} disabled={!publicView && !published} onChange={() => void onChange(setPluginField(entry.markdown, "published", !published))} /></label>
       {published && publicView && <p>Adresse: /handleliste/{entry.metadata.slug}</p>}<ShoppingItems entry={entry} onChange={onChange} /></> : <>
@@ -250,7 +253,7 @@ export function ContentPluginDetail({ id, entry, vaultPath, publicView, isNew, d
         <section className="plugin-detail__section"><h3>Kvitteringer</h3><input ref={receiptPicker} type="file" multiple accept="application/pdf,image/png,image/jpeg,image/webp" hidden onChange={(event) => { void uploadReceipts(event.currentTarget.files); event.currentTarget.value = ""; }} />
           <Button type="button" variant="outline" disabled={isNew} onClick={() => receiptPicker.current?.click()}><Plus size={16} /> Legg til kvitteringer</Button>
           {isNew && <p>Lagre gjenstanden før du legger til kvitteringer.</p>}
-          {receipts.map((receipt) => <button key={receipt} type="button" onClick={() => void downloadReceipt(receipt)} title="Last ned kvittering">↓ {receipt.split("/").pop()}</button>)}</section></>}
+          {receiptLinks}</section></>}
     </>}
   </div>;
 }

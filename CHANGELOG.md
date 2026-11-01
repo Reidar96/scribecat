@@ -1,3 +1,9 @@
+## [1.3.1] - 2026-11-01
+
+- Stabilize Quick Notes columns, ordering and editing: show before/after drop indicators, avoid rebalancing cards while typing, and add new notes at the end without moving the mobile viewport.
+- Show inventory receipts as individually stacked download buttons.
+- Give custom apps clear buttons to download Markdown instructions and upload a ZIP package.
+
 ## [1.3.0] - 2026-11-01
 
 - Show future days dimmed in the calendar; preserve the editor caret during external content updates and journal save echoes.

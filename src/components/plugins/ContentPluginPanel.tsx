@@ -1,4 +1,4 @@
-import { useDeferredValue, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Plus, Search, ChartNoAxesCombined, Trash2, BookOpen, CookingPot, Package, ShoppingBasket, Pin, ArchiveRestore, Archive, GripVertical } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import { PluginDialog } from "@/components/plugins/PluginDialog";
 import { useAppStore } from "@/store/useAppStore";
 import { PluginTopbar } from "@/components/plugins/PluginTopbar";
 import { quickNoteBody, retainCollectionEntries, updateQuickNoteBody } from "@/plugins/collectionState";
+import { insertNote, noteColumns as partitionNotes } from "@/plugins/quickNoteLayout";
 import { readingCardSummary } from "../../../server/src/public/readingModel";
 
 type Entry = { path: string; markdown: string; metadata: Record<string, string>; title: string };
@@ -100,6 +101,9 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
   const quickSortChosen = useRef(false);
   const [reordering, setReordering] = useState(false);
   const [draggedPath, setDraggedPath] = useState<string | null>(null);
+  const [dropTarget, setDropTarget] = useState<{ path: string; edge: "before" | "after" } | null>(null);
+  const [noteColumns, setNoteColumns] = useState(2);
+  const noteGridRef = useRef<HTMLDivElement>(null);
   const pointerDrag = useRef<string | null>(null);
   const [groupView, setGroupView] = useState<string | null>(null);
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
@@ -124,6 +128,18 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
     const root = folderPath.replace(/\\/g, "/").replace(/\/$/, "");
     return relative.startsWith(`${root}/${folder}/`);
   }), [filePaths, folderPath, folder]);
+  useLayoutEffect(() => {
+    if (id !== "quick-notes" || !noteGridRef.current) return;
+    const grid = noteGridRef.current;
+    const update = () => {
+      const width = grid.clientWidth;
+      setNoteColumns(width < 560 ? 1 : Math.max(2, Math.floor((width + 16) / 288)));
+    };
+    const observer = new ResizeObserver(update);
+    observer.observe(grid);
+    update();
+    return () => observer.disconnect();
+  }, [id, groupView, filter]);
 
   useEffect(() => {
     let current = true;
@@ -132,6 +148,7 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
     const missing = paths.filter((path) => !entryCache.has(path) || entryCache.get(path)!.mtime !== fileMtimeMs[path]);
     setScanRemaining(missing.length);
     void (async () => {
+      const loadedNotes: Entry[] = [];
       // Bound vault reads so opening a large collection does not saturate
       // desktop IPC or the remote server. Show cached rows immediately.
       for (let at = 0; at < missing.length && current; at += 24) {
@@ -148,21 +165,25 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
             return entry;
           } catch { return null; }
         }));
-        if (current) setEntries((previous) => {
-          return retainCollectionEntries(paths, previous, batch.filter((entry): entry is Entry => entry !== null));
-        });
+        if (current) {
+          const loaded = batch.filter((entry): entry is Entry => entry !== null);
+          if (id === "quick-notes") loadedNotes.push(...loaded);
+          else setEntries((previous) => retainCollectionEntries(paths, previous, loaded));
+        }
         if (current) setScanRemaining(Math.max(0, missing.length - at - batch.length));
       }
+      if (current && loadedNotes.length) setEntries((previous) => retainCollectionEntries(paths, previous, loadedNotes));
     })();
     return () => { current = false; };
   }, [paths, id, fileMtimeMs]);
 
   useEffect(() => {
     if (!newNotePath) { focusedNewNote.current = null; return; }
+    if (isPhone) return;
     if (focusedNewNote.current === newNotePath) return;
     const field = document.querySelector<HTMLTextAreaElement>(`[data-note-path="${CSS.escape(newNotePath)}"]`);
     if (field) { field.focus(); focusedNewNote.current = newNotePath; }
-  }, [newNotePath, entries]);
+  }, [newNotePath, entries, isPhone]);
   useEffect(() => {
     if (id === "quick-notes" && !quickSortChosen.current && entries.some((entry) => entry.metadata.order)) setQuickSort("manual");
   }, [id, entries]);
@@ -194,7 +215,10 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
     return `${entry.title} ${entry.markdown}`.toLocaleLowerCase().includes(deferredQuery.toLocaleLowerCase());
   }).sort((a, b) => {
     if (id !== "quick-notes") return 0;
-    if (quickSort === "manual") return (Number(a.metadata.order || 0) - Number(b.metadata.order || 0)) || a.path.localeCompare(b.path);
+    if (quickSort === "manual") {
+      const order = (entry: Entry) => entry.metadata.order ? Number(entry.metadata.order) : -(Date.parse(entry.metadata.created ?? "") || fileMtimeMs[entry.path] || 0);
+      return order(a) - order(b) || a.path.localeCompare(b.path);
+    }
     if (quickSort === "title") return noteBody(a.markdown).localeCompare(noteBody(b.markdown), "no") || a.path.localeCompare(b.path);
     if (quickSort === "pinned" && a.metadata.pinned !== b.metadata.pinned) return a.metadata.pinned === "true" ? -1 : 1;
     const aTime = Date.parse(a.metadata.created ?? "") || fileMtimeMs[a.path] || 0;
@@ -220,7 +244,14 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
       entryFolder = await join(root, `${name} ${number++}`);
     }
     const path = await join(entryFolder, `${entryFolder.split(/[\\/]/).pop()}.md`);
-    const uniqueMarkdown = setPluginField(markdown, "slug", pluginSlug(entryFolder.split(/[\\/]/).pop() || title));
+    let uniqueMarkdown = setPluginField(markdown, "slug", pluginSlug(entryFolder.split(/[\\/]/).pop() || title));
+    if (id === "quick-notes") {
+      const lastOrder = entries.reduce((last, entry) => Math.max(last, Number(entry.metadata.order) || 0), 0);
+      uniqueMarkdown = setPluginField(uniqueMarkdown, "order", String(lastOrder + 1024));
+      const selectedCategory = filter ? JSON.parse(filter) as [string, string] : null;
+      if (selectedCategory?.[0] === "category") uniqueMarkdown = setPluginField(uniqueMarkdown, "category", selectedCategory[1]);
+      setQuickSort("manual");
+    }
     try {
       setSavingNew(true);
       if (await api.saveMarkdown(path, uniqueMarkdown)) {
@@ -339,21 +370,20 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
   };
 
   const selected = entries.find((entry) => entry.path === selectedPath);
-  const moveNote = async (targetPath: string, sourcePath = draggedPath) => {
+  const moveNote = async (targetPath: string, sourcePath = draggedPath, edge: "before" | "after" = "before") => {
     if (!sourcePath || sourcePath === targetPath) return;
-    const ordered = visible.map((entry) => entry.path);
-    const from = ordered.indexOf(sourcePath);
-    const to = ordered.indexOf(targetPath);
-    if (from < 0 || to < 0) return;
-    ordered.splice(to, 0, ...ordered.splice(from, 1));
+    const original = visible.map((entry) => entry.path);
+    if (!original.includes(sourcePath) || !original.includes(targetPath)) return;
+    const ordered = insertNote(original, sourcePath, targetPath, edge);
+    const newIndex = ordered.indexOf(sourcePath);
     setQuickSort("manual");
     const orderOf = (path: string) => Number(entries.find((item) => item.path === path)?.metadata.order);
-    const before = to > 0 ? orderOf(ordered[to - 1]) : null;
-    const after = to < ordered.length - 1 ? orderOf(ordered[to + 1]) : null;
+    const before = newIndex > 0 ? orderOf(ordered[newIndex - 1]) : null;
+    const after = newIndex < ordered.length - 1 ? orderOf(ordered[newIndex + 1]) : null;
     const nextOrder = before === null ? (after === null ? 1024 : after - 1024)
       : after === null ? before + 1024 : (before + after) / 2;
     const moved = entries.find((item) => item.path === sourcePath);
-    if (moved && ordered.every((path) => Number(entries.find((item) => item.path === path)?.metadata.order) !== 0) &&
+    if (moved && ordered.every((path) => entries.find((item) => item.path === path)?.metadata.order !== undefined) &&
       (before === null || nextOrder > before) && (after === null || nextOrder < after)) {
       await change(moved, (markdown) => setPluginField(markdown, "order", String(nextOrder)));
     } else {
@@ -366,6 +396,7 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
       }
     }
     setDraggedPath(null);
+    setDropTarget(null);
   };
   const editingEntry: Entry | null = creating && draftMarkdown !== null ? {
     path: "", markdown: draftMarkdown, metadata: pluginMetadata(draftMarkdown), title: ""
@@ -374,6 +405,45 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
   } : null;
 
   const selectFilter = (value: string, group: string | null = null) => navigate(() => { setFilter(value); setGroupView(group); setShowStats(false); setSelectedPath(null); setCreating(false); updateDraft(null); setSecondaryOpen(false); });
+  const renderEntry = (entry: Entry) => {
+        return <article key={entry.path} data-note-drop-path={id === "quick-notes" ? entry.path : undefined} className={`content-plugin-panel__card${dropTarget?.path === entry.path ? ` content-plugin-panel__card--drop-${dropTarget.edge}` : ""}`} draggable={id === "quick-notes" && !isPhone && reordering} onContextMenu={(event) => { if (id === "quick-notes" && !(event.target instanceof Element && event.target.closest("textarea,input,a"))) { event.preventDefault(); setReordering(true); setQuickSort("manual"); if (isPhone) setSecondaryOpen(true); } }} onDragStart={(event) => { if (id !== "quick-notes") return; setDraggedPath(entry.path); event.dataTransfer.setData("text/plain", entry.path); }} onDragOver={(event) => { if (id !== "quick-notes" || !draggedPath || draggedPath === entry.path) return; event.preventDefault(); const edge = event.clientY < event.currentTarget.getBoundingClientRect().top + event.currentTarget.offsetHeight / 2 ? "before" : "after"; setDropTarget((old) => old?.path === entry.path && old.edge === edge ? old : { path: entry.path, edge }); }} onDrop={(event) => { event.preventDefault(); void moveNote(entry.path, draggedPath, dropTarget?.path === entry.path ? dropTarget.edge : "before"); setDropTarget(null); }} onDragEnd={() => { setDraggedPath(null); setDropTarget(null); }}>
+          {id !== "quick-notes" && <button className="content-plugin-panel__tile" onClick={() => openEntry(entry)}>
+            {entry.metadata.cover && (id === "books" || id === "recipes" || id === "inventory")
+              ? <PluginCover id={id} vaultPath={folderPath} documentPath={entry.path} reference={entry.metadata.cover} alt={entry.title} />
+              : <span className="content-plugin-panel__placeholder" aria-hidden="true">{id === "books" ? <BookOpen /> : id === "recipes" ? <CookingPot /> : id === "inventory" ? <Package /> : <ShoppingBasket />}</span>}
+            <strong>{entry.metadata.title || entry.metadata.name || entry.title}</strong>
+            {id !== "recipes" && <span>{[entry.metadata.author, id === "books" ? ({ "want-to-read": "Vil lese", reading: "Leser", finished: "Lest" } as Record<string, string>)[entry.metadata.status] : "", entry.metadata.category, entry.metadata.location].filter(Boolean).join(" · ")}</span>}
+            {(id === "recipes" || id === "books" || id === "inventory") && readingCardSummary(id, entry.markdown) && <p className="content-plugin-panel__tile-description">{readingCardSummary(id, entry.markdown)}</p>}
+          </button>}
+          {id === "quick-notes" ? <>
+            {reordering && <button className="content-plugin-panel__note-handle" aria-label="Dra huskelappen for å endre rekkefølge" title="Dra til en annen huskelapp eller kategori" onPointerDown={(event) => { pointerDrag.current = entry.path; event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (!pointerDrag.current) return; const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-note-drop-path]"); if (!target || target.dataset.noteDropPath === pointerDrag.current) { setDropTarget(null); return; } const edge = event.clientY < target.getBoundingClientRect().top + target.offsetHeight / 2 ? "before" : "after"; setDropTarget((old) => old?.path === target.dataset.noteDropPath && old?.edge === edge ? old : { path: target.dataset.noteDropPath!, edge }); }} onPointerUp={(event) => {
+              const source = pointerDrag.current;
+              const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-note-drop-path], [data-quick-category]");
+              pointerDrag.current = null;
+              setDropTarget(null);
+              if (!source || !target) return;
+              if (target.dataset.noteDropPath) void moveNote(target.dataset.noteDropPath, source, dropTarget?.path === target.dataset.noteDropPath ? dropTarget.edge : "before");
+              else if (target.dataset.quickCategory) { const item = entries.find((row) => row.path === source); if (item) void change(item, (markdown) => setPluginField(markdown, "category", target.dataset.quickCategory!)); }
+            }} onPointerCancel={() => { pointerDrag.current = null; setDropTarget(null); }}><GripVertical size={17} /></button>}
+            <QuickNoteCard entry={entry} initialEdit={!isPhone && newNotePath === entry.path} onSave={async (text, expected) => {
+              const saved = await change(entry, (current) => {
+                const currentBody = noteBody(current);
+                if (currentBody !== noteBody(expected) && currentBody !== quickNoteSavedBodies.current.get(entry.path)) {
+                  throw new Error("Huskelappen er endret utenfor denne visningen. Teksten din er beholdt i skrivefeltet.");
+                }
+                return updateQuickNoteBody(current, text);
+              });
+              if (saved) { quickNoteSavedBodies.current.set(entry.path, text); setNewNotePath(null); }
+              return saved;
+            }} onCategoryChange={(category) => { void change(entry, (markdown) => setPluginField(markdown, "category", category)); }}>
+            <button aria-label={entry.metadata.pinned === "true" ? "Løsne huskelapp" : "Fest huskelapp"} title={entry.metadata.pinned === "true" ? "Løsne" : "Fest"} aria-pressed={entry.metadata.pinned === "true"} onClick={() => void change(entry, (markdown) => setPluginField(markdown, "pinned", pluginMetadata(markdown).pinned !== "true"))}><Pin size={16} /></button>
+            <button aria-label={entry.metadata.archived === "true" ? "Gjenopprett huskelapp" : "Arkiver huskelapp"} title={entry.metadata.archived === "true" ? "Gjenopprett" : "Arkiver"} onClick={() => void change(entry, (markdown) => setPluginField(markdown, "archived", pluginMetadata(markdown).archived !== "true"))}>{entry.metadata.archived === "true" ? <ArchiveRestore size={16} /> : <Archive size={16} />}</button>
+            <button className="content-plugin-panel__note-delete" aria-label="Slett huskelapp" title="Slett" onClick={() => setDialog({ kind: "delete", path: entry.path, label: "huskelappen" })}><Trash2 size={16} /></button>
+            </QuickNoteCard>
+          </> : null}
+        </article>;
+
+  };
   return <main className="content-plugin-panel">
     <PluginTopbar title={manifest.name} icon={id} isPhone={isPhone} sidebarVisible={sidebarVisible} onSidebarVisibilityToggle={onSidebarVisibilityToggle} onOpenSidebar={onOpenSidebar} onClose={onClose} />
     <div className="content-plugin-panel__layout">
@@ -412,43 +482,7 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
       {groupView && !filter ? <div className="content-plugin-panel__grid content-plugin-panel__groups">{[...new Set(entries.map((entry) => entry.metadata[groupView]).filter(Boolean))].sort((a, b) => a.localeCompare(b, "no")).map((value) => {
         const members = entries.filter((entry) => entry.metadata[groupView] === value);
         return <button className="content-plugin-panel__group-card" key={value} onClick={() => selectFilter(JSON.stringify([groupView, value]), groupView)}><span className={`content-plugin-panel__mosaic${id === "quick-notes" ? " content-plugin-panel__mosaic--notes" : ""}`}>{id === "quick-notes" ? members.slice(0, 4).map((entry) => <span key={entry.path}>{noteBody(entry.markdown) || "Huskelapp"}</span>) : members.filter((entry) => entry.metadata.cover).slice(0, 4).map((entry) => <PluginCover key={entry.path} id={id} vaultPath={folderPath} documentPath={entry.path} reference={entry.metadata.cover} alt="" />)}</span><strong>{value}</strong><small>{members.length} {members.length === 1 ? "oppføring" : "oppføringer"}</small></button>;
-      })}</div> : <div className={`content-plugin-panel__grid content-plugin-panel__grid--${id}`}>{visible.map((entry) => {
-        return <article key={entry.path} data-note-drop-path={id === "quick-notes" ? entry.path : undefined} className="content-plugin-panel__card" draggable={id === "quick-notes" && !isPhone} onContextMenu={(event) => { if (id === "quick-notes") { event.preventDefault(); setReordering(true); setQuickSort("manual"); if (isPhone) setSecondaryOpen(true); } }} onDragStart={(event) => { if (id !== "quick-notes") return; setDraggedPath(entry.path); event.dataTransfer.setData("text/plain", entry.path); }} onDragOver={(event) => { if (id === "quick-notes") event.preventDefault(); }} onDrop={(event) => { event.preventDefault(); void moveNote(entry.path); }} onDragEnd={() => setDraggedPath(null)}>
-          {id !== "quick-notes" && <button className="content-plugin-panel__tile" onClick={() => openEntry(entry)}>
-            {entry.metadata.cover && (id === "books" || id === "recipes" || id === "inventory")
-              ? <PluginCover id={id} vaultPath={folderPath} documentPath={entry.path} reference={entry.metadata.cover} alt={entry.title} />
-              : <span className="content-plugin-panel__placeholder" aria-hidden="true">{id === "books" ? <BookOpen /> : id === "recipes" ? <CookingPot /> : id === "inventory" ? <Package /> : <ShoppingBasket />}</span>}
-            <strong>{entry.metadata.title || entry.metadata.name || entry.title}</strong>
-            {id !== "recipes" && <span>{[entry.metadata.author, id === "books" ? ({ "want-to-read": "Vil lese", reading: "Leser", finished: "Lest" } as Record<string, string>)[entry.metadata.status] : "", entry.metadata.category, entry.metadata.location].filter(Boolean).join(" · ")}</span>}
-            {(id === "recipes" || id === "books" || id === "inventory") && readingCardSummary(id, entry.markdown) && <p className="content-plugin-panel__tile-description">{readingCardSummary(id, entry.markdown)}</p>}
-          </button>}
-          {id === "quick-notes" ? <>
-            {reordering && <button className="content-plugin-panel__note-handle" aria-label="Dra huskelappen for å endre rekkefølge" title="Dra til en annen huskelapp eller kategori" onPointerDown={(event) => { pointerDrag.current = entry.path; event.currentTarget.setPointerCapture(event.pointerId); }} onPointerUp={(event) => {
-              const source = pointerDrag.current;
-              const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-note-drop-path], [data-quick-category]");
-              pointerDrag.current = null;
-              if (!source || !target) return;
-              if (target.dataset.noteDropPath) void moveNote(target.dataset.noteDropPath, source);
-              else if (target.dataset.quickCategory) { const item = entries.find((row) => row.path === source); if (item) void change(item, (markdown) => setPluginField(markdown, "category", target.dataset.quickCategory!)); }
-            }} onPointerCancel={() => { pointerDrag.current = null; }}><GripVertical size={17} /></button>}
-            <QuickNoteCard entry={entry} initialEdit={newNotePath === entry.path} onSave={async (text, expected) => {
-              const saved = await change(entry, (current) => {
-                const currentBody = noteBody(current);
-                if (currentBody !== noteBody(expected) && currentBody !== quickNoteSavedBodies.current.get(entry.path)) {
-                  throw new Error("Huskelappen er endret utenfor denne visningen. Teksten din er beholdt i skrivefeltet.");
-                }
-                return updateQuickNoteBody(current, text);
-              });
-              if (saved) { quickNoteSavedBodies.current.set(entry.path, text); setNewNotePath(null); }
-              return saved;
-            }} onCategoryChange={(category) => { void change(entry, (markdown) => setPluginField(markdown, "category", category)); }}>
-            <button aria-label={entry.metadata.pinned === "true" ? "Løsne huskelapp" : "Fest huskelapp"} title={entry.metadata.pinned === "true" ? "Løsne" : "Fest"} aria-pressed={entry.metadata.pinned === "true"} onClick={() => void change(entry, (markdown) => setPluginField(markdown, "pinned", pluginMetadata(markdown).pinned !== "true"))}><Pin size={16} /></button>
-            <button aria-label={entry.metadata.archived === "true" ? "Gjenopprett huskelapp" : "Arkiver huskelapp"} title={entry.metadata.archived === "true" ? "Gjenopprett" : "Arkiver"} onClick={() => void change(entry, (markdown) => setPluginField(markdown, "archived", pluginMetadata(markdown).archived !== "true"))}>{entry.metadata.archived === "true" ? <ArchiveRestore size={16} /> : <Archive size={16} />}</button>
-            <button className="content-plugin-panel__note-delete" aria-label="Slett huskelapp" title="Slett" onClick={() => setDialog({ kind: "delete", path: entry.path, label: "huskelappen" })}><Trash2 size={16} /></button>
-            </QuickNoteCard>
-          </> : null}
-        </article>;
-      })}</div>}
+      })}</div> : <div ref={noteGridRef} className={`content-plugin-panel__grid content-plugin-panel__grid--${id}`} style={id === "quick-notes" ? { gridTemplateColumns: `repeat(${noteColumns}, minmax(0, 1fr))` } : undefined}>{id === "quick-notes" ? partitionNotes(visible, noteColumns).map((column, index) => <div className="content-plugin-panel__note-column" key={index}>{column.map(renderEntry)}</div>) : visible.map(renderEntry)}</div>}
       {visible.length === 0 && scanRemaining === 0 ? <p>Ingen oppføringer her ennå.</p> : null}
       </>}
       </>}
