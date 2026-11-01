@@ -1,3 +1,10 @@
+## [1.3.5] - 2026-11-01
+
+- Put newly created Quick Notes first and preserve their position while editing.
+- Show a clear before/after insertion line in the actual destination column; use the same placement for mouse and touch drops and persist the column in Markdown.
+- Use the standard ScribeCat text context menu without an empty-area popup or colored glow.
+- Let inventory receipts have readable names in Markdown and download with those names in private and public views without moving the attachments.
+
 ## [1.3.4] - 2026-11-01
 
 - Give Quick Notes text a ScribeCat context menu with copy, cut, paste, select all and note actions.

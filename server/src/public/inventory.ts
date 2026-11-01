@@ -2,6 +2,7 @@ import { readPluginMarkdown } from "./pluginFiles.js";
 import { registerPublicWebApp } from "./webApp.js";
 import { publicCss, publicFrame, publicProse } from "./theme.js";
 import { readingFields, readingSections } from "./readingModel.js";
+import { parseReceiptReferences } from "./receiptModel.js";
 import { createHash } from "node:crypto";
 import path from "node:path";
 import type { FastifyPluginAsync } from "fastify";
@@ -11,7 +12,7 @@ const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const imagePattern = /\.(?:png|jpe?g|webp|gif)$/i;
 const mime: Record<string, string> = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".gif": "image/gif", ".pdf": "application/pdf" };
 const escape = (text: string) => text.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]!);
-type Receipt = { path: string; token: string };
+type Receipt = { path: string; token: string; name: string };
 type Item = { path: string; slug: string; title: string; category: string; location: string; description: string; notes: string; fields: Record<string, string>; markdown: string; cover: string | null; token: string | null; receipts: Receipt[] };
 const facets: Record<string, string> = { kategori: "category", plassering: "location" };
 const labels: Record<string, string> = { kategori: "Kategorier", plassering: "Plasseringer" };
@@ -73,12 +74,11 @@ export const publicInventoryRoutes: FastifyPluginAsync<{ vault: Vault }> = async
           if (candidate.startsWith(`${base}/`) && imagePattern.test(candidate)) cover = candidate;
         }
         const receiptLines = /^## Kvitteringer\s*\n([\s\S]*?)(?=^## |$(?![\s\S]))/m.exec(markdown)?.[1] ?? "";
-        const receiptPaths = [fields.receipt, ...[...receiptLines.matchAll(/^- (_attachments\/[^\r\n]+)$/gm)].map((match) => match[1])];
-        const receipts: Receipt[] = [...new Set(receiptPaths)].flatMap((relative) => {
+        const receipts: Receipt[] = parseReceiptReferences(receiptLines, fields.receipt).flatMap(({ path: relative, name }) => {
           if (!relative || !/^_attachments\/[^/\\?#]+$/.test(relative)) return [];
           const candidate = path.posix.normalize(path.posix.join(base, relative));
           return candidate.startsWith(`${base}/_attachments/`) && mime[path.posix.extname(candidate).toLowerCase()]
-            ? [{ path: candidate, token: createHash("sha256").update(`${record.relativePath}\0${candidate}`).digest("hex").slice(0, 32) }] : [];
+            ? [{ path: candidate, name, token: createHash("sha256").update(`${record.relativePath}\0${candidate}`).digest("hex").slice(0, 32) }] : [];
         });
         result.push({ path: record.relativePath, slug: fields.slug, title: fields.name || fields.slug,
           category: fields.category || "", location: fields.location || "", description, notes, fields, markdown, cover, receipts,
@@ -125,7 +125,7 @@ export const publicInventoryRoutes: FastifyPluginAsync<{ vault: Vault }> = async
       .map(([key, value]) => ({ label: key.replace(/[-_]/g, " ").replace(/\b\w/g, (letter) => letter.toLocaleUpperCase("no")), value }));
     const details = [...known, ...extras].map(({ label, value }) => `<div><dt>${escape(label)}</dt><dd>${escape(value)}</dd></div>`).join("");
     const sections = readingSections("inventory", item.markdown).filter(({ heading }) => heading !== "Kvitteringer").map(({ heading, content }) => `<section class="public-section"><h2>${escape(heading)}</h2><div class="public-prose">${publicProse(content)}</div></section>`).join("");
-    return reply.type("text/html; charset=utf-8").send(renderPage(item.title, `<a class="back" href="../inventar">← Tilbake</a><article class="public-detail public-detail--inventory"><div class="public-hero">${item.token ? `<img src="${item.slug}/media/${item.token}" alt="">` : `<div class="public-inventory-placeholder" aria-hidden="true">▧</div>`}<div class="public-inventory-copy"><h1>${escape(item.title)}</h1>${details ? `<dl class="public-facts">${details}</dl>` : ""}</div></div>${sections}${item.receipts.length ? `<section class="public-section"><h2>Kvitteringer</h2>${item.receipts.map((receipt) => `<p><a download href="${item.slug}/kvittering/${receipt.token}">↓ ${escape(path.posix.basename(receipt.path))}</a></p>`).join("")}</section>` : ""}</article>`));
+    return reply.type("text/html; charset=utf-8").send(renderPage(item.title, `<a class="back" href="../inventar">← Tilbake</a><article class="public-detail public-detail--inventory"><div class="public-hero">${item.token ? `<img src="${item.slug}/media/${item.token}" alt="">` : `<div class="public-inventory-placeholder" aria-hidden="true">▧</div>`}<div class="public-inventory-copy"><h1>${escape(item.title)}</h1>${details ? `<dl class="public-facts">${details}</dl>` : ""}</div></div>${sections}${item.receipts.length ? `<section class="public-section"><h2>Kvitteringer</h2>${item.receipts.map((receipt) => `<p><a download="${escape(receipt.name)}" href="${item.slug}/kvittering/${receipt.token}">↓ ${escape(receipt.name)}</a></p>`).join("")}</section>` : ""}</article>`));
   });
   app.get<{ Params: { slug: string; token: string } }>("/inventar/:slug/kvittering/:token", async (request, reply) => {
     const item = slugPattern.test(request.params.slug) ? (await published()).find((entry) => entry.slug === request.params.slug) : null;
@@ -134,7 +134,8 @@ export const publicInventoryRoutes: FastifyPluginAsync<{ vault: Vault }> = async
     try {
       const info = await vault.stat(receipt.path);
       if (!info.isFile || info.isSymlink || info.size > 12 * 1024 * 1024) return reply.code(404).send();
-      return reply.header("Content-Disposition", `attachment; filename="${path.posix.basename(receipt.path)}"`).type(mime[path.posix.extname(receipt.path).toLowerCase()]).send(await vault.readBytes(receipt.path));
+      const fallback = path.posix.basename(receipt.path).replace(/[^a-zA-Z0-9._-]/g, "_");
+      return reply.header("Content-Disposition", `attachment; filename="${fallback}"; filename*=UTF-8''${encodeURIComponent(receipt.name)}`).type(mime[path.posix.extname(receipt.path).toLowerCase()]).send(await vault.readBytes(receipt.path));
     } catch { return reply.code(404).send(); }
   });
   app.get<{ Params: { slug: string; token: string } }>("/inventar/:slug/media/:token", async (request, reply) => {

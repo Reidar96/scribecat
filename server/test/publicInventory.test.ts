@@ -51,11 +51,11 @@ describe("public inventory", () => {
     await configure();
     const folder = path.join(context.vaultPath, "Inventar");
     const file = path.join(folder, "Sykkel.md");
-    await writeFile(file, (await readFile(file, "utf8")) + "\n## Kvitteringer\n\n- _attachments/en.pdf\n- _attachments/to.jpg\n");
+    await writeFile(file, (await readFile(file, "utf8")) + "\n## Kvitteringer\n\n- [Sykkelkjøp.pdf](_attachments/en.pdf)\n- _attachments/to.jpg\n");
     await writeFile(path.join(folder, "_attachments", "en.pdf"), Buffer.from("%PDF-1.4"));
     await writeFile(path.join(folder, "_attachments", "to.jpg"), Buffer.from([0xff, 0xd8, 0xff, 0xd9]));
     const detail = await context.app.inject({ method: "GET", url: "/anna/inventar/sykkel" });
-    expect(detail.body).toContain("en.pdf");
+    expect(detail.body).toContain("Sykkelkjøp.pdf");
     expect(detail.body).toContain("to.jpg");
     const tokens = [...detail.body.matchAll(/sykkel\/kvittering\/([a-f0-9]{32})/g)].map((match) => match[1]);
     expect(tokens).toHaveLength(2);
@@ -64,6 +64,8 @@ describe("public inventory", () => {
       expect(response.statusCode).toBe(200);
       expect(response.headers["content-disposition"]).toContain("attachment;");
     }
+    const renamed = await context.app.inject({ method: "GET", url: `/anna/inventar/sykkel/kvittering/${tokens[0]}` });
+    expect(renamed.headers["content-disposition"]).toContain(encodeURIComponent("Sykkelkjøp.pdf"));
     expect((await context.app.inject({ method: "GET", url: `/anna/inventar/sykkel/kvittering/${"0".repeat(32)}` })).statusCode).toBe(404);
   });
 });

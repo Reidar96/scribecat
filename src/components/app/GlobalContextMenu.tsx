@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
 import { readClipboardText, writeClipboardText } from "@/platform/clipboardText";
+import { ContextMenuSurface } from "@/components/fileTree/ContextMenuSurface";
 
 /** Fallback for surfaces without their own richer ScribeCat context menu. */
 export function GlobalContextMenu() {
@@ -10,7 +10,14 @@ export function GlobalContextMenu() {
       if (event.defaultPrevented) return;
       event.preventDefault();
       const target = event.target;
-      if (target instanceof HTMLElement) setMenu({ x: event.clientX, y: event.clientY, target });
+      if (!(target instanceof HTMLElement)) return;
+      const input = target.closest("input,textarea");
+      const editable = input || target.closest("[contenteditable=true]");
+      const selection = input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement
+        ? input.selectionStart !== input.selectionEnd : !!window.getSelection()?.toString();
+      // Empty space has no action. Suppress the browser menu without showing
+      // a misleading, custom-styled "Ingen handlinger her" popup.
+      setMenu(editable || selection ? { x: event.clientX, y: event.clientY, target } : null);
     };
     const close = () => setMenu(null);
     window.addEventListener("contextmenu", context);
@@ -31,10 +38,9 @@ export function GlobalContextMenu() {
     } else document.execCommand("insertText", false, text);
   };
   const action = (fn: () => void) => { fn(); setMenu(null); };
-  return createPortal(<div className="global-context-menu" role="menu" style={{ left: Math.min(menu.x, window.innerWidth - 200), top: Math.min(menu.y, window.innerHeight - 160) }} onPointerDown={(event) => event.stopPropagation()}>
-    {selection && <button role="menuitem" onClick={() => action(() => void writeClipboardText(selection))}>Kopier</button>}
-    {editable && <button role="menuitem" onClick={() => action(() => void readClipboardText().then(insert).catch(() => undefined))}>Lim inn</button>}
-    {editable && <button role="menuitem" onClick={() => action(() => { editable.focus(); if (input) input.select(); else document.execCommand("selectAll"); })}>Marker alt</button>}
-    {!editable && !selection && <span>Ingen handlinger her</span>}
-  </div>, document.body);
+  return <ContextMenuSurface x={menu.x} y={menu.y} title="Teksthandlinger" className="app-context-menu" onMouseDown={(event) => event.preventDefault()} onClick={(event) => event.stopPropagation()}>
+    {selection && <button type="button" role="menuitem" className="file-tree-context-menu__item" onClick={() => action(() => void writeClipboardText(selection))}>Kopier</button>}
+    {editable && <button type="button" role="menuitem" className="file-tree-context-menu__item" onClick={() => action(() => void readClipboardText().then(insert).catch(() => undefined))}>Lim inn</button>}
+    {editable && <button type="button" role="menuitem" className="file-tree-context-menu__item" onClick={() => action(() => { editable.focus(); if (input) input.select(); else document.execCommand("selectAll"); })}>Marker alt</button>}
+  </ContextMenuSurface>;
 }

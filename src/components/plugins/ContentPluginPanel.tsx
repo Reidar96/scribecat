@@ -21,7 +21,7 @@ import { useContextMenuState } from "@/components/fileTree/useContextMenuState";
 import { useLongPressContextMenu } from "@/hooks/useLongPressContextMenu";
 import { readClipboardText, writeClipboardText } from "@/platform/clipboardText";
 import { quickNoteBody, retainCollectionEntries, updateQuickNoteBody } from "@/plugins/collectionState";
-import { insertNote, noteColumns as partitionNotes, noteCreatedAt, noteManualPosition } from "@/plugins/quickNoteLayout";
+import { moveNoteColumns, nextNoteTopOrder, noteColumns as partitionNotes, noteCreatedAt, noteDropPlacement, noteManualPosition } from "@/plugins/quickNoteLayout";
 import { readingCardSummary } from "../../../server/src/public/readingModel";
 
 type Entry = { path: string; markdown: string; metadata: Record<string, string>; title: string };
@@ -124,6 +124,7 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
   const [dropTarget, setDropTarget] = useState<{ path: string; edge: "before" | "after" } | null>(null);
   const [noteColumns, setNoteColumns] = useState(2);
   const noteGridRef = useRef<HTMLDivElement>(null);
+  const noteColumnAssignments = useRef(new Map<string, number>());
   const pointerDrag = useRef<string | null>(null);
   const [groupView, setGroupView] = useState<string | null>(null);
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
@@ -249,6 +250,20 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
     const bTime = noteCreatedAt(b.metadata);
     return (quickSort === "oldest" ? aTime - bTime : bTime - aTime) || a.path.localeCompare(b.path);
   }), [entries, filter, deferredQuery, id, quickSort]);
+  const columnOf = (entry: Entry, index: number) => {
+    if (noteColumns === 1) return 0;
+    const stored = Number(entry.metadata["note-column"]);
+    if (entry.metadata["note-column"] === "0" || entry.metadata["note-column"] === "1") {
+      noteColumnAssignments.current.set(entry.path, stored);
+      return stored;
+    }
+    const remembered = noteColumnAssignments.current.get(entry.path);
+    if (remembered !== undefined) return remembered;
+    const initial = index % noteColumns;
+    noteColumnAssignments.current.set(entry.path, initial);
+    return initial;
+  };
+  const visibleColumns = id === "quick-notes" ? partitionNotes(visible, noteColumns, columnOf) : [];
   const options: Array<[string, string, string]> = id === "books" ? [["status", "want-to-read", "Vil lese"], ["status", "reading", "Leser"], ["status", "finished", "Lest"]]
     : id === "quick-notes" ? [["pinned", "true", "Festet"], ["archived", "true", "Arkiv"]]
     : id === "inventory" ? [["warranty-until", "active", "Garanti"]]
@@ -270,8 +285,7 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
     const path = await join(entryFolder, `${entryFolder.split(/[\\/]/).pop()}.md`);
     let uniqueMarkdown = setPluginField(markdown, "slug", pluginSlug(entryFolder.split(/[\\/]/).pop() || title));
     if (id === "quick-notes") {
-      const lastOrder = entries.reduce((last, entry) => Math.max(last, Number(entry.metadata.order) || 0), 0);
-      uniqueMarkdown = setPluginField(uniqueMarkdown, "order", String(lastOrder + 1024));
+      uniqueMarkdown = setPluginField(uniqueMarkdown, "order", String(nextNoteTopOrder(entries)));
       const selectedCategory = filter ? JSON.parse(filter) as [string, string] : null;
       if (selectedCategory?.[0] === "category") uniqueMarkdown = setPluginField(uniqueMarkdown, "category", selectedCategory[1]);
       setQuickSort("manual");
@@ -394,38 +408,38 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
   };
 
   const selected = entries.find((entry) => entry.path === selectedPath);
+  // The indicator and the saved order use this exact same insertion point.
+  // Looking at card centres also gives the gap between cards a usable target.
+  const noteDropAt = (column: HTMLElement, y: number, source: string) => {
+    const cards = [...column.querySelectorAll<HTMLElement>("[data-note-drop-path]")].map((card) => {
+      const rect = card.getBoundingClientRect();
+      return { path: card.dataset.noteDropPath!, midpoint: rect.top + rect.height / 2 };
+    });
+    return noteDropPlacement(cards, y, source);
+  };
   const moveNote = async (targetPath: string, sourcePath = draggedPath, edge: "before" | "after" = "before") => {
     if (!sourcePath || sourcePath === targetPath) return;
-    const original = visible.map((entry) => entry.path);
-    if (!original.includes(sourcePath) || !original.includes(targetPath)) return;
-    const ordered = insertNote(original, sourcePath, targetPath, edge);
-    const newIndex = ordered.indexOf(sourcePath);
+    const sourceColumn = visibleColumns.findIndex((column) => column.some((item) => item.path === sourcePath));
+    const targetColumn = visibleColumns.findIndex((column) => column.some((item) => item.path === targetPath));
+    if (sourceColumn < 0 || targetColumn < 0) return;
+    const columns = moveNoteColumns(visibleColumns.map((column) => column.map((item) => item.path)), sourcePath, targetPath, edge);
+    if (noteColumns > 1) noteColumnAssignments.current.set(sourcePath, targetColumn);
     setQuickSort("manual");
-    const orderOf = (path: string) => Number(entries.find((item) => item.path === path)?.metadata.order);
-    const before = newIndex > 0 ? orderOf(ordered[newIndex - 1]) : null;
-    const after = newIndex < ordered.length - 1 ? orderOf(ordered[newIndex + 1]) : null;
-    const nextOrder = before === null ? (after === null ? 1024 : after - 1024)
-      : after === null ? before + 1024 : (before + after) / 2;
-    const moved = entries.find((item) => item.path === sourcePath);
-    if (moved && ordered.every((path) => entries.find((item) => item.path === path)?.metadata.order !== undefined) &&
-      (before === null || nextOrder > before) && (after === null || nextOrder < after)) {
-      await change(moved, (markdown) => setPluginField(markdown, "order", String(nextOrder)));
-    } else {
-      // Initialize old notes without an order, or renumber a crowded gap.
-      // Apply the complete visual order in one render. Saving each card may
-      // take several round trips, but must not shuffle the other column after
-      // each individual response.
-      const newOrders = new Map(ordered.map((path, index) => [path, String((index + 1) * 1024)]));
-      setEntries((items) => items.map((item) => {
-        const order = newOrders.get(item.path);
-        return order === undefined ? item : { ...item, metadata: { ...item.metadata, order } };
-      }));
-      for (let at = 0; at < ordered.length; at += 8) {
-        await Promise.all(ordered.slice(at, at + 8).map((path, offset) => {
-          const entry = entries.find((item) => item.path === path);
-          return entry ? change(entry, (markdown) => setPluginField(markdown, "order", String((at + offset + 1) * 1024))) : Promise.resolve(false);
-        }));
-      }
+    const placements = new Map(columns.flatMap((column, col) => column.map((path, index) => [path, { order: String((index + 1) * 1024), column: String(col) }] as const)));
+    setEntries((items) => items.map((item) => {
+      const placement = placements.get(item.path);
+      return placement ? { ...item, metadata: { ...item.metadata, order: placement.order, ...(noteColumns > 1 ? { "note-column": placement.column } : {}) } } : item;
+    }));
+    const changed = entries.filter((item) => {
+      const placement = placements.get(item.path);
+      return placement && (item.metadata.order !== placement.order || (noteColumns > 1 && item.metadata["note-column"] !== placement.column));
+    });
+    for (let at = 0; at < changed.length; at += 8) {
+      await Promise.all(changed.slice(at, at + 8).map((item) => change(item, (markdown) => {
+        const placement = placements.get(item.path)!;
+        const ordered = setPluginField(markdown, "order", placement.order);
+        return noteColumns > 1 ? setPluginField(ordered, "note-column", placement.column) : ordered;
+      })));
     }
     setDraggedPath(null);
     setDropTarget(null);
@@ -449,7 +463,7 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
           onClickCapture={id === "quick-notes" ? longPress.onClickCapture : undefined}
           onContextMenuCapture={(event) => { if (id === "quick-notes" && !(event.target instanceof Element && event.target.closest("textarea,input,a"))) longPress.onContextMenuCapture(event); }}
           onContextMenu={(event) => { if (id !== "quick-notes") return; if (event.target instanceof Element && event.target.closest("textarea,input,a")) return; event.preventDefault(); event.stopPropagation(); setNoteMenu({ path: entry.path, x: event.clientX, y: event.clientY }); }}
-          onDragStart={(event) => { if (id !== "quick-notes") return; if (event.target instanceof Element && event.target.closest("textarea,input,a,button:not(.content-plugin-panel__note-handle)")) { event.preventDefault(); return; } setDraggedPath(entry.path); event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", entry.path); }} onDragOver={(event) => { if (id !== "quick-notes" || !draggedPath || draggedPath === entry.path) return; event.preventDefault(); const edge = event.clientY < event.currentTarget.getBoundingClientRect().top + event.currentTarget.offsetHeight / 2 ? "before" : "after"; setDropTarget((old) => old?.path === entry.path && old.edge === edge ? old : { path: entry.path, edge }); }} onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setDropTarget((old) => old?.path === entry.path ? null : old); }} onDrop={(event) => { event.preventDefault(); const edge = event.clientY < event.currentTarget.getBoundingClientRect().top + event.currentTarget.offsetHeight / 2 ? "before" : "after"; void moveNote(entry.path, draggedPath, edge); setDropTarget(null); }} onDragEnd={() => { setDraggedPath(null); setDropTarget(null); }}>
+          onDragStart={(event) => { if (id !== "quick-notes") return; if (event.target instanceof Element && event.target.closest("textarea,input,a,button:not(.content-plugin-panel__note-handle)")) { event.preventDefault(); return; } setDraggedPath(entry.path); event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", entry.path); }} onDragEnd={() => { setDraggedPath(null); setDropTarget(null); }}>
           {id !== "quick-notes" && <button className="content-plugin-panel__tile" onClick={() => openEntry(entry)}>
             {entry.metadata.cover && (id === "books" || id === "recipes" || id === "inventory")
               ? <PluginCover id={id} vaultPath={folderPath} documentPath={entry.path} reference={entry.metadata.cover} alt={entry.title} />
@@ -470,13 +484,13 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
               if (saved) { quickNoteSavedBodies.current.set(entry.path, text); setNewNotePath(null); }
               return saved;
             }} onCategoryChange={(category) => { void change(entry, (markdown) => setPluginField(markdown, "category", category)); }} onOpenActions={(x, y, moving = false) => setNoteMenu({ path: entry.path, x, y, moving })}>
-            {(!isPhone || mobileReordering) && <button type="button" draggable={!isPhone} className="content-plugin-panel__note-handle" aria-label="Dra huskelappen for å endre rekkefølge" title="Dra til en annen huskelapp eller kategori" onPointerDown={(event) => { if (!isPhone) return; pointerDrag.current = entry.path; event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (!pointerDrag.current) return; const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-note-drop-path]"); if (!target || target.dataset.noteDropPath === pointerDrag.current) { setDropTarget(null); return; } const edge = event.clientY < target.getBoundingClientRect().top + target.offsetHeight / 2 ? "before" : "after"; setDropTarget((old) => old?.path === target.dataset.noteDropPath && old?.edge === edge ? old : { path: target.dataset.noteDropPath!, edge }); }} onPointerUp={(event) => {
+            {(!isPhone || mobileReordering) && <button type="button" draggable={!isPhone} className="content-plugin-panel__note-handle" aria-label="Dra huskelappen for å endre rekkefølge" title="Dra til en annen huskelapp eller kategori" onPointerDown={(event) => { if (!isPhone) return; pointerDrag.current = entry.path; event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (!pointerDrag.current) return; const column = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-note-column]"); const target = column ? noteDropAt(column, event.clientY, pointerDrag.current) : null; setDropTarget((old) => old?.path === target?.path && old?.edge === target?.edge ? old : target); }} onPointerUp={(event) => {
               const source = pointerDrag.current;
-              const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-note-drop-path], [data-quick-category]");
+              const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-note-column], [data-quick-category]");
               pointerDrag.current = null;
               setDropTarget(null);
               if (!source || !target) return;
-              if (target.dataset.noteDropPath) { const edge = event.clientY < target.getBoundingClientRect().top + target.offsetHeight / 2 ? "before" : "after"; void moveNote(target.dataset.noteDropPath, source, edge); }
+              if (target.dataset.noteColumn) { const placement = noteDropAt(target, event.clientY, source); if (placement) void moveNote(placement.path, source, placement.edge); }
               else if (target.dataset.quickCategory) { const item = entries.find((row) => row.path === source); if (item) void change(item, (markdown) => setPluginField(markdown, "category", target.dataset.quickCategory!)); }
             }} onPointerCancel={() => { pointerDrag.current = null; setDropTarget(null); }}><GripVertical size={17} /></button>}
             <button aria-label={entry.metadata.pinned === "true" ? "Løsne huskelapp" : "Fest huskelapp"} title={entry.metadata.pinned === "true" ? "Løsne" : "Fest"} aria-pressed={entry.metadata.pinned === "true"} onClick={() => void change(entry, (markdown) => setPluginField(markdown, "pinned", pluginMetadata(markdown).pinned !== "true"))}><Pin size={16} /></button>
@@ -527,7 +541,7 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
       {groupView && !filter ? <div className="content-plugin-panel__grid content-plugin-panel__groups">{[...new Set(entries.map((entry) => entry.metadata[groupView]).filter(Boolean))].sort((a, b) => a.localeCompare(b, "no")).map((value) => {
         const members = entries.filter((entry) => entry.metadata[groupView] === value);
         return <button className="content-plugin-panel__group-card" key={value} onClick={() => selectFilter(JSON.stringify([groupView, value]), groupView)}><span className={`content-plugin-panel__mosaic${id === "quick-notes" ? " content-plugin-panel__mosaic--notes" : ""}`}>{id === "quick-notes" ? members.slice(0, 4).map((entry) => <span key={entry.path}>{noteBody(entry.markdown) || "Huskelapp"}</span>) : members.filter((entry) => entry.metadata.cover).slice(0, 4).map((entry) => <PluginCover key={entry.path} id={id} vaultPath={folderPath} documentPath={entry.path} reference={entry.metadata.cover} alt="" />)}</span><strong>{value}</strong><small>{members.length} {members.length === 1 ? "oppføring" : "oppføringer"}</small></button>;
-      })}</div> : <div ref={noteGridRef} className={`content-plugin-panel__grid content-plugin-panel__grid--${id}`} style={id === "quick-notes" ? { gridTemplateColumns: `repeat(${noteColumns}, minmax(0, 1fr))` } : undefined}>{id === "quick-notes" ? partitionNotes(visible, noteColumns).map((column, index) => <div className="content-plugin-panel__note-column" key={index}>{column.map(renderEntry)}</div>) : visible.map(renderEntry)}</div>}
+      })}</div> : <div ref={noteGridRef} className={`content-plugin-panel__grid content-plugin-panel__grid--${id}`} style={id === "quick-notes" ? { gridTemplateColumns: `repeat(${noteColumns}, minmax(0, 1fr))` } : undefined}>{id === "quick-notes" ? visibleColumns.map((column, index) => <div className={`content-plugin-panel__note-column${dropTarget && column.some((entry) => entry.path === dropTarget.path) ? " content-plugin-panel__note-column--target" : ""}`} data-note-column={index} key={index} onDragOver={(event) => { const source = draggedPath || event.dataTransfer.getData("text/plain"); if (!source) return; event.preventDefault(); event.dataTransfer.dropEffect = "move"; const placement = noteDropAt(event.currentTarget, event.clientY, source); setDropTarget((old) => old?.path === placement?.path && old?.edge === placement?.edge ? old : placement); }} onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setDropTarget(null); }} onDrop={(event) => { const source = draggedPath || event.dataTransfer.getData("text/plain"); if (!source) return; event.preventDefault(); const placement = noteDropAt(event.currentTarget, event.clientY, source); if (placement) void moveNote(placement.path, source, placement.edge); setDropTarget(null); }}>{column.map(renderEntry)}</div>) : visible.map(renderEntry)}</div>}
       {visible.length === 0 && scanRemaining === 0 ? <p>Ingen oppføringer her ennå.</p> : null}
       </>}
       </>}
@@ -541,8 +555,8 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
       </> : <>
         {isPhone && <button type="button" role="menuitem" className="file-tree-context-menu__item" onClick={() => { setMobileReordering(true); setQuickSort("manual"); setNoteMenu(null); }}><GripVertical aria-hidden="true" /> Dra for å flytte</button>}
         <button type="button" role="menuitem" className="file-tree-context-menu__item" onClick={() => { setNoteMenu({ ...noteMenu, moving: true }); }}><FolderInput aria-hidden="true" /> Flytt til kategori</button>
-        <button type="button" role="menuitem" className="file-tree-context-menu__item" onClick={() => { const first = visible[0]; setNoteMenu(null); if (first) void moveNote(first.path, menuEntry.path, "before"); }}>Flytt øverst</button>
-        <button type="button" role="menuitem" className="file-tree-context-menu__item" onClick={() => { const last = visible[visible.length - 1]; setNoteMenu(null); if (last) void moveNote(last.path, menuEntry.path, "after"); }}>Flytt nederst</button>
+        <button type="button" role="menuitem" className="file-tree-context-menu__item" onClick={() => { const first = visibleColumns.find((column) => column.some((item) => item.path === menuEntry.path))?.[0]; setNoteMenu(null); if (first) void moveNote(first.path, menuEntry.path, "before"); }}>Flytt øverst</button>
+        <button type="button" role="menuitem" className="file-tree-context-menu__item" onClick={() => { const column = visibleColumns.find((items) => items.some((item) => item.path === menuEntry.path)); const last = column?.[column.length - 1]; setNoteMenu(null); if (last) void moveNote(last.path, menuEntry.path, "after"); }}>Flytt nederst</button>
         <button type="button" role="menuitem" className="file-tree-context-menu__item" onClick={() => { void change(menuEntry, (markdown) => setPluginField(markdown, "pinned", pluginMetadata(markdown).pinned !== "true")); setNoteMenu(null); }}><Pin aria-hidden="true" /> {menuEntry.metadata.pinned === "true" ? "Løsne" : "Fest"}</button>
         <button type="button" role="menuitem" className="file-tree-context-menu__item" onClick={() => { void change(menuEntry, (markdown) => setPluginField(markdown, "archived", pluginMetadata(markdown).archived !== "true")); setNoteMenu(null); }}><Archive aria-hidden="true" /> {menuEntry.metadata.archived === "true" ? "Gjenopprett" : "Arkiver"}</button>
         <button type="button" role="menuitem" className="file-tree-context-menu__item file-tree-context-menu__item--danger" onClick={() => { setDialog({ kind: "delete", path: menuEntry.path, label: "huskelappen" }); setNoteMenu(null); }}><Trash2 aria-hidden="true" /> Slett</button>

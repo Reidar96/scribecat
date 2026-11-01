@@ -15,6 +15,7 @@ import { readFile, writeFile } from "@/platform/vaultFs";
 import { getRelativeDisplayPath } from "@/lib/fileSystem";
 import { listFileVersions, readVersionContent, type FileVersion } from "@/lib/fileVersions";
 import { readingFields, readingSections } from "../../../server/src/public/readingModel";
+import { parseReceiptReferences, receiptDisplayName, receiptReferencesMarkdown } from "../../../server/src/public/receiptModel";
 
 export type PluginEntry = { path: string; markdown: string; metadata: Record<string, string>; title: string };
 const previewMarkdown = new MarkdownIt({ html: false, linkify: false }).disable(["image", "link"]);
@@ -153,6 +154,8 @@ function LineItemsEditor({ entry, heading, placeholder, onChange }: { entry: Plu
 
 export function ContentPluginDetail({ id, entry, vaultPath, publicView, isNew, dirty, saving, onSave, onBack, onCancelEdit, onChange, onDelete }: Props) {
   const receiptPicker = useRef<HTMLInputElement>(null);
+  const [receiptRename, setReceiptRename] = useState<{ path: string; name: string } | null>(null);
+  const [receiptError, setReceiptError] = useState("");
   const [editing, setEditing] = useState(isNew || dirty);
   const [servings, setServings] = useState<number | null>(null);
   const [versions, setVersions] = useState<FileVersion[] | null>(null);
@@ -174,7 +177,7 @@ export function ContentPluginDetail({ id, entry, vaultPath, publicView, isNew, d
   const contentSection = (heading: string, placeholder?: string) => <Section title={heading} value={pluginSection(entry.markdown, heading)} placeholder={placeholder} onSave={(value) => section(heading, value)} />;
   const published = entry.metadata.published === "true";
   useEffect(() => { if (!isNew && !dirty && !saving) setEditing(false); }, [isNew, dirty, saving]);
-  const receipts = [...new Set([entry.metadata.receipt, ...pluginSection(entry.markdown, "Kvitteringer").split("\n").map((line) => /^- (_attachments\/[^\r\n]+)$/.exec(line)?.[1])].filter((value): value is string => !!value && /^_attachments\/[^/\\]+$/.test(value)))];
+  const receipts = parseReceiptReferences(pluginSection(entry.markdown, "Kvitteringer"), entry.metadata.receipt);
   const uploadReceipts = async (files: FileList | null) => {
     if (!files?.length || isNew) return;
     const next = [...receipts];
@@ -182,20 +185,21 @@ export function ContentPluginDetail({ id, entry, vaultPath, publicView, isNew, d
       if (file.size > 12 * 1024 * 1024 || !/^(application\/pdf|image\/(?:png|jpeg|webp))$/.test(file.type)) continue;
       const filename = `kvittering-${Date.now()}-${index}.${file.type === "application/pdf" ? "pdf" : file.type.split("/")[1] === "jpeg" ? "jpg" : file.type.split("/")[1]}`;
       await writeFile(await join(await dirname(entry.path), "_attachments", filename), new Uint8Array(await file.arrayBuffer()));
-      next.push(`_attachments/${filename}`);
+      next.push({ path: `_attachments/${filename}`, name: filename });
     }
-    if (next.length !== receipts.length) await onChange(setPluginSection(entry.markdown, "Kvitteringer", next.map((path) => `- ${path}`).join("\n")));
+    if (next.length !== receipts.length) await onChange(setPluginSection(entry.markdown, "Kvitteringer", receiptReferencesMarkdown(next)));
   };
-  const downloadReceipt = async (relative: string) => {
-    const bytes = await readFile(await join(await dirname(entry.path), "_attachments", relative.split("/").pop()!));
-    const blob = new Blob([new Uint8Array(bytes)], { type: relative.toLowerCase().endsWith(".pdf") ? "application/pdf" : "application/octet-stream" });
+  const downloadReceipt = async ({ path, name }: { path: string; name: string }) => {
+    const bytes = await readFile(await join(await dirname(entry.path), "_attachments", path.split("/").pop()!));
+    const blob = new Blob([new Uint8Array(bytes)], { type: path.toLowerCase().endsWith(".pdf") ? "application/pdf" : "application/octet-stream" });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
-    anchor.href = url; anchor.download = relative.split("/").pop()!; anchor.click();
+    anchor.href = url; anchor.download = name; anchor.click();
     window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
   };
   const receiptLinks = <div className="plugin-detail__receipts">{receipts.map((receipt) =>
-    <button key={receipt} type="button" onClick={() => void downloadReceipt(receipt)} title="Last ned kvittering"><Download size={16} /><span>{receipt.split("/").pop()}</span></button>)}</div>;
+    <div className="plugin-detail__receipt-row" key={receipt.path}><button type="button" onClick={() => void downloadReceipt(receipt)} title={`Last ned ${receipt.name}`}><Download size={16} /><span>{receipt.name}</span></button>
+      {editing && <button type="button" className="plugin-detail__receipt-rename" aria-label={`Endre navn på ${receipt.name}`} title="Endre navn" onClick={() => { setReceiptError(""); setReceiptRename(receipt); }}><Pencil size={15} /></button>}</div>)}</div>;
   const showVersions = async () => {
     if (isNew) return;
     setVersions(await listFileVersions(vaultPath, getRelativeDisplayPath(vaultPath, entry.path)).catch(() => []));
@@ -253,7 +257,13 @@ export function ContentPluginDetail({ id, entry, vaultPath, publicView, isNew, d
         <section className="plugin-detail__section"><h3>Kvitteringer</h3><input ref={receiptPicker} type="file" multiple accept="application/pdf,image/png,image/jpeg,image/webp" hidden onChange={(event) => { void uploadReceipts(event.currentTarget.files); event.currentTarget.value = ""; }} />
           <Button type="button" variant="outline" disabled={isNew} onClick={() => receiptPicker.current?.click()}><Plus size={16} /> Legg til kvitteringer</Button>
           {isNew && <p>Lagre gjenstanden før du legger til kvitteringer.</p>}
-          {receiptLinks}</section></>}
+          {receiptLinks}{receiptError && <p role="alert">{receiptError}</p>}</section></>}
     </>}
+    {receiptRename && <PluginDialog title="Endre navn på kvittering" label="Navn" initialValue={receiptRename.name} confirmLabel="Lagre navn" onCancel={() => { setReceiptRename(null); setReceiptError(""); }} onConfirm={(value) => {
+      const name = receiptDisplayName(value, receiptRename.path);
+      if (!name) { setReceiptError("Bruk et filnavn uten skråstrek eller spesialtegn."); return; }
+      const next = receipts.map((receipt) => receipt.path === receiptRename.path ? { ...receipt, name } : receipt);
+      void onChange(setPluginSection(entry.markdown, "Kvitteringer", receiptReferencesMarkdown(next))).then(() => { setReceiptRename(null); setReceiptError(""); });
+    }} />}
   </div>;
 }

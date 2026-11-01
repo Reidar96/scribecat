@@ -206,12 +206,14 @@
 .content-plugin-panel__mosaic--notes { gap:.4rem;padding:.75rem; }
 .content-plugin-panel__mosaic--notes > span { overflow:hidden;min-width:0;min-height:0;border:1px solid var(--border);border-radius:.45rem;background:var(--card);padding:.45rem;color:var(--foreground);font-size:.7rem;line-height:1.4;text-align:left;white-space:pre-wrap;overflow-wrap:anywhere; }
 .content-plugin-panel__grid--quick-notes { display:grid;gap:1rem;align-items:start; }
-.content-plugin-panel__note-column { display:flex;flex-direction:column;gap:1rem;min-width:0; }
+.content-plugin-panel__note-column { display:flex;flex-direction:column;gap:1rem;min-width:0;min-height:3rem;border-radius:1rem; }
+.content-plugin-panel__note-column--target { background:rgba(var(--accent-rgb),.035); }
 .content-plugin-panel__grid--quick-notes .content-plugin-panel__card { width:100%;margin:0;position:relative;overflow:visible; }
 .content-plugin-panel__grid--quick-notes .content-plugin-panel__card:hover { transform:none; }
-.content-plugin-panel__card--drop-before::before,.content-plugin-panel__card--drop-after::after { content:"";position:absolute;left:0;right:0;height:3px;border-radius:3px;background:var(--primary);z-index:2;pointer-events:none; }
+.content-plugin-panel__card--drop-before::before,.content-plugin-panel__card--drop-after::after { content:"";position:absolute;left:0;right:0;height:4px;border-radius:3px;background:var(--primary);z-index:5;pointer-events:none; }
 .content-plugin-panel__card--drop-before::before { top:-.55rem; }
 .content-plugin-panel__card--drop-after::after { bottom:-.55rem; }
+.content-plugin-panel__card--drop-before,.content-plugin-panel__card--drop-after { outline:1px solid var(--primary);outline-offset:2px; }
 .content-plugin-panel__note-links { display:flex;flex-wrap:wrap;gap:.3rem;padding:.25rem .6rem .5rem; }
 .content-plugin-panel__note-links a { max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.75rem;color:var(--primary);text-decoration:underline; }
 .content-plugin-panel__note-handle { flex:none;display:grid;place-items:center;width:2rem;min-height:2rem;color:var(--muted-foreground);cursor:grab;touch-action:none; }
@@ -224,14 +226,14 @@
 .content-plugin-panel__grid--quick-notes .content-plugin-panel__card { cursor:grab; }
 .content-plugin-panel__grid--quick-notes .content-plugin-panel__card:active { cursor:grabbing; }
 .content-plugin-panel__grid--quick-notes textarea,.content-plugin-panel__grid--quick-notes input { cursor:text; }
-.global-context-menu { position:fixed;z-index:9999;min-width:11rem;display:grid;gap:.15rem;padding:.35rem;border:1px solid var(--border);border-radius:.65rem;background:var(--card);color:var(--foreground);box-shadow:0 12px 38px rgba(var(--overlay-rgb),.18); }
-.global-context-menu button,.global-context-menu span { padding:.45rem .7rem;text-align:left;border-radius:.4rem; }
-.global-context-menu button:hover { background:rgba(var(--accent-rgb),.14); }
-.global-context-menu span { color:var(--muted-foreground); }
+.app-context-menu { z-index:10000;background:rgb(var(--surface-strong-rgb));box-shadow:0 12px 32px rgba(0,0,0,.28); }
+.app-context-menu__backdrop { z-index:9998; }
 .plugin-detail__receipts { display:flex;flex-direction:column;align-items:flex-start;gap:.45rem;margin-top:.65rem; }
+.plugin-detail__receipt-row { display:flex;align-items:center;gap:.4rem;max-width:100%; }
 .plugin-detail__receipts button { display:inline-flex;align-items:center;gap:.55rem;max-width:100%;padding:.55rem .75rem;border:1px solid rgba(var(--accent-rgb),.24);border-radius:.55rem;background:rgba(var(--accent-rgb),.08);color:var(--primary);text-align:left;text-decoration:underline;text-underline-offset:2px; }
 .plugin-detail__receipts button:hover { background:rgba(var(--accent-rgb),.16); }
 .plugin-detail__receipts button span { overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.plugin-detail__receipts .plugin-detail__receipt-rename { flex:none;padding:.55rem;text-decoration:none;color:var(--muted-foreground);background:var(--card);border-color:var(--border); }
 .plugin-settings__packages { margin-top:1.25rem;padding:1rem;border:1px solid var(--border);border-radius:.85rem;background:var(--card); }
 .plugin-settings__packages-actions { display:flex;flex-wrap:wrap;gap:.65rem;margin:.85rem 0 1rem; }
 .plugin-settings__packages-actions button { display:inline-flex;align-items:center;gap:.45rem; }
