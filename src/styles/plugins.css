@@ -214,8 +214,11 @@
 .content-plugin-panel__card--drop-after::after { bottom:-.55rem; }
 .content-plugin-panel__note-links { display:flex;flex-wrap:wrap;gap:.3rem;padding:.25rem .6rem .5rem; }
 .content-plugin-panel__note-links a { max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.75rem;color:var(--primary);text-decoration:underline; }
-.content-plugin-panel__note-handle { width:100%;display:grid;place-items:center;min-height:1.9rem;color:var(--muted-foreground);cursor:grab;touch-action:none; }
+.content-plugin-panel__note-handle { flex:none;display:grid;place-items:center;width:2rem;min-height:2rem;color:var(--muted-foreground);cursor:grab;touch-action:none; }
 .content-plugin-panel__note-handle:active { cursor:grabbing; }
+.content-plugin-panel__grid--quick-notes .content-plugin-panel__card { cursor:grab; }
+.content-plugin-panel__grid--quick-notes .content-plugin-panel__card:active { cursor:grabbing; }
+.content-plugin-panel__grid--quick-notes textarea,.content-plugin-panel__grid--quick-notes input { cursor:text; }
 .global-context-menu { position:fixed;z-index:9999;min-width:11rem;display:grid;gap:.15rem;padding:.35rem;border:1px solid var(--border);border-radius:.65rem;background:var(--card);color:var(--foreground);box-shadow:0 12px 38px rgba(var(--overlay-rgb),.18); }
 .global-context-menu button,.global-context-menu span { padding:.45rem .7rem;text-align:left;border-radius:.4rem; }
 .global-context-menu button:hover { background:rgba(var(--accent-rgb),.14); }
@@ -228,6 +231,7 @@
 .plugin-settings__packages-actions { display:flex;flex-wrap:wrap;gap:.65rem;margin:.85rem 0 1rem; }
 .plugin-settings__packages-actions button { display:inline-flex;align-items:center;gap:.45rem; }
 @media (max-width:38rem) { .content-plugin-panel__grid--quick-notes,.content-plugin-panel__note-column { gap:.55rem; } }
+@media (max-width:48rem) { .content-plugin-panel__note-status { display:none; } }
 .content-plugin-panel__grid--quick-notes .content-plugin-panel__card { padding:.85rem;border-radius:1rem;box-shadow:0 2px 14px rgba(var(--overlay-rgb),.035); }
 .content-plugin-panel__note { min-height:0; }
 .content-plugin-panel__note textarea { min-height:2.75rem;resize:vertical;line-height:1.55;padding:.5rem .7rem;border:0;background:transparent;outline:none; }

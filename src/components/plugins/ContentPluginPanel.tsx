@@ -1,5 +1,5 @@
 import { useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Plus, Search, ChartNoAxesCombined, Trash2, BookOpen, CookingPot, Package, ShoppingBasket, Pin, ArchiveRestore, Archive, GripVertical } from "lucide-react";
+import { Plus, Search, ChartNoAxesCombined, Trash2, BookOpen, CookingPot, Package, ShoppingBasket, Pin, ArchiveRestore, Archive, GripVertical, MoreHorizontal, FolderInput, ArrowLeft } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { splitFrontmatter } from "@/lib/documentFrontmatter";
@@ -16,6 +16,9 @@ import { PluginStatistics } from "@/components/plugins/PluginStatistics";
 import { PluginDialog } from "@/components/plugins/PluginDialog";
 import { useAppStore } from "@/store/useAppStore";
 import { PluginTopbar } from "@/components/plugins/PluginTopbar";
+import { ContextMenuSurface } from "@/components/fileTree/ContextMenuSurface";
+import { useContextMenuState } from "@/components/fileTree/useContextMenuState";
+import { useLongPressContextMenu } from "@/hooks/useLongPressContextMenu";
 import { quickNoteBody, retainCollectionEntries, updateQuickNoteBody } from "@/plugins/collectionState";
 import { insertNote, noteColumns as partitionNotes, noteCreatedAt, noteManualPosition } from "@/plugins/quickNoteLayout";
 import { readingCardSummary } from "../../../server/src/public/readingModel";
@@ -99,8 +102,9 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
   const [filter, setFilter] = useState("");
   const [quickSort, setQuickSort] = useState<"pinned" | "newest" | "oldest" | "title" | "manual">("pinned");
   const quickSortChosen = useRef(false);
-  const [reordering, setReordering] = useState(false);
   const [draggedPath, setDraggedPath] = useState<string | null>(null);
+  const { contextMenu: noteMenu, setContextMenu: setNoteMenu } = useContextMenuState<{ path: string; x: number; y: number; moving?: boolean }>();
+  const { getLongPressProps: getNoteLongPress } = useLongPressContextMenu<string>((path, x, y) => setNoteMenu({ path, x, y }));
   const [dropTarget, setDropTarget] = useState<{ path: string; edge: "before" | "after" } | null>(null);
   const [noteColumns, setNoteColumns] = useState(2);
   const noteGridRef = useRef<HTMLDivElement>(null);
@@ -119,7 +123,7 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
   const [secondaryOpen, setSecondaryOpen] = useState(false);
   const [scanRemaining, setScanRemaining] = useState(0);
   const [error, setError] = useState("");
-  const [dialog, setDialog] = useState<{ kind: "delete" | "category" | "discard"; path?: string; label?: string; field?: string } | null>(null);
+  const [dialog, setDialog] = useState<{ kind: "delete" | "category" | "discard" | "move-note"; path?: string; label?: string; field?: string } | null>(null);
   const pendingWrites = useRef(new Map<string, Promise<void>>());
   const quickNoteSavedBodies = useRef(new Map<string, string>());
   const pendingNavigation = useRef<(() => void) | null>(null);
@@ -417,8 +421,19 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
   } : null;
 
   const selectFilter = (value: string, group: string | null = null) => navigate(() => { setFilter(value); setGroupView(group); setShowStats(false); setSelectedPath(null); setCreating(false); updateDraft(null); setSecondaryOpen(false); });
+  const menuEntry = noteMenu ? entries.find((item) => item.path === noteMenu.path) : null;
+  const noteCategories = [...new Set(entries.map((item) => item.metadata.category).filter(Boolean))].sort((a, b) => a.localeCompare(b, "no"));
   const renderEntry = (entry: Entry) => {
-        return <article key={entry.path} data-note-drop-path={id === "quick-notes" ? entry.path : undefined} className={`content-plugin-panel__card${dropTarget?.path === entry.path ? ` content-plugin-panel__card--drop-${dropTarget.edge}` : ""}`} draggable={id === "quick-notes" && !isPhone && reordering} onContextMenu={(event) => { if (id === "quick-notes" && !(event.target instanceof Element && event.target.closest("textarea,input,a"))) { event.preventDefault(); setReordering(true); setQuickSort("manual"); if (isPhone) setSecondaryOpen(true); } }} onDragStart={(event) => { if (id !== "quick-notes") return; setDraggedPath(entry.path); event.dataTransfer.setData("text/plain", entry.path); }} onDragOver={(event) => { if (id !== "quick-notes" || !draggedPath || draggedPath === entry.path) return; event.preventDefault(); const edge = event.clientY < event.currentTarget.getBoundingClientRect().top + event.currentTarget.offsetHeight / 2 ? "before" : "after"; setDropTarget((old) => old?.path === entry.path && old.edge === edge ? old : { path: entry.path, edge }); }} onDrop={(event) => { event.preventDefault(); const edge = event.clientY < event.currentTarget.getBoundingClientRect().top + event.currentTarget.offsetHeight / 2 ? "before" : "after"; void moveNote(entry.path, draggedPath, edge); setDropTarget(null); }} onDragEnd={() => { setDraggedPath(null); setDropTarget(null); }}>
+    const longPress = getNoteLongPress(entry.path);
+    return <article key={entry.path} data-note-drop-path={id === "quick-notes" ? entry.path : undefined} data-scribecat-long-press={id === "quick-notes" ? "true" : undefined} className={`content-plugin-panel__card${dropTarget?.path === entry.path ? ` content-plugin-panel__card--drop-${dropTarget.edge}` : ""}`} draggable={id === "quick-notes" && !isPhone}
+          onPointerDown={(event) => { if (id === "quick-notes" && !(event.target instanceof Element && event.target.closest("textarea,input,button,a"))) longPress.onPointerDown(event); }}
+          onPointerMove={id === "quick-notes" ? longPress.onPointerMove : undefined}
+          onPointerUp={id === "quick-notes" ? longPress.onPointerUp : undefined}
+          onPointerCancel={id === "quick-notes" ? longPress.onPointerCancel : undefined}
+          onClickCapture={id === "quick-notes" ? longPress.onClickCapture : undefined}
+          onContextMenuCapture={id === "quick-notes" ? longPress.onContextMenuCapture : undefined}
+          onContextMenu={(event) => { if (id !== "quick-notes") return; if (event.target instanceof Element && event.target.closest("textarea,input,a")) return; event.preventDefault(); event.stopPropagation(); setNoteMenu({ path: entry.path, x: event.clientX, y: event.clientY }); }}
+          onDragStart={(event) => { if (id !== "quick-notes") return; if (event.target instanceof Element && event.target.closest("textarea,input,a,button:not(.content-plugin-panel__note-handle)")) { event.preventDefault(); return; } setDraggedPath(entry.path); event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", entry.path); }} onDragOver={(event) => { if (id !== "quick-notes" || !draggedPath || draggedPath === entry.path) return; event.preventDefault(); const edge = event.clientY < event.currentTarget.getBoundingClientRect().top + event.currentTarget.offsetHeight / 2 ? "before" : "after"; setDropTarget((old) => old?.path === entry.path && old.edge === edge ? old : { path: entry.path, edge }); }} onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setDropTarget((old) => old?.path === entry.path ? null : old); }} onDrop={(event) => { event.preventDefault(); const edge = event.clientY < event.currentTarget.getBoundingClientRect().top + event.currentTarget.offsetHeight / 2 ? "before" : "after"; void moveNote(entry.path, draggedPath, edge); setDropTarget(null); }} onDragEnd={() => { setDraggedPath(null); setDropTarget(null); }}>
           {id !== "quick-notes" && <button className="content-plugin-panel__tile" onClick={() => openEntry(entry)}>
             {entry.metadata.cover && (id === "books" || id === "recipes" || id === "inventory")
               ? <PluginCover id={id} vaultPath={folderPath} documentPath={entry.path} reference={entry.metadata.cover} alt={entry.title} />
@@ -428,15 +443,6 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
             {(id === "recipes" || id === "books" || id === "inventory") && readingCardSummary(id, entry.markdown) && <p className="content-plugin-panel__tile-description">{readingCardSummary(id, entry.markdown)}</p>}
           </button>}
           {id === "quick-notes" ? <>
-            {reordering && <button className="content-plugin-panel__note-handle" aria-label="Dra huskelappen for å endre rekkefølge" title="Dra til en annen huskelapp eller kategori" onPointerDown={(event) => { if (!isPhone) return; pointerDrag.current = entry.path; event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (!pointerDrag.current) return; const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-note-drop-path]"); if (!target || target.dataset.noteDropPath === pointerDrag.current) { setDropTarget(null); return; } const edge = event.clientY < target.getBoundingClientRect().top + target.offsetHeight / 2 ? "before" : "after"; setDropTarget((old) => old?.path === target.dataset.noteDropPath && old?.edge === edge ? old : { path: target.dataset.noteDropPath!, edge }); }} onPointerUp={(event) => {
-              const source = pointerDrag.current;
-              const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-note-drop-path], [data-quick-category]");
-              pointerDrag.current = null;
-              setDropTarget(null);
-              if (!source || !target) return;
-              if (target.dataset.noteDropPath) { const edge = event.clientY < target.getBoundingClientRect().top + target.offsetHeight / 2 ? "before" : "after"; void moveNote(target.dataset.noteDropPath, source, edge); }
-              else if (target.dataset.quickCategory) { const item = entries.find((row) => row.path === source); if (item) void change(item, (markdown) => setPluginField(markdown, "category", target.dataset.quickCategory!)); }
-            }} onPointerCancel={() => { pointerDrag.current = null; setDropTarget(null); }}><GripVertical size={17} /></button>}
             <QuickNoteCard entry={entry} initialEdit={!isPhone && newNotePath === entry.path} onSave={async (text, expected) => {
               const saved = await change(entry, (current) => {
                 const currentBody = noteBody(current);
@@ -448,9 +454,19 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
               if (saved) { quickNoteSavedBodies.current.set(entry.path, text); setNewNotePath(null); }
               return saved;
             }} onCategoryChange={(category) => { void change(entry, (markdown) => setPluginField(markdown, "category", category)); }}>
+            <button type="button" draggable={!isPhone} className="content-plugin-panel__note-handle" aria-label="Dra huskelappen for å endre rekkefølge" title="Dra til en annen huskelapp eller kategori" onPointerDown={(event) => { if (!isPhone) return; pointerDrag.current = entry.path; event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (!pointerDrag.current) return; const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-note-drop-path]"); if (!target || target.dataset.noteDropPath === pointerDrag.current) { setDropTarget(null); return; } const edge = event.clientY < target.getBoundingClientRect().top + target.offsetHeight / 2 ? "before" : "after"; setDropTarget((old) => old?.path === target.dataset.noteDropPath && old?.edge === edge ? old : { path: target.dataset.noteDropPath!, edge }); }} onPointerUp={(event) => {
+              const source = pointerDrag.current;
+              const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-note-drop-path], [data-quick-category]");
+              pointerDrag.current = null;
+              setDropTarget(null);
+              if (!source || !target) return;
+              if (target.dataset.noteDropPath) { const edge = event.clientY < target.getBoundingClientRect().top + target.offsetHeight / 2 ? "before" : "after"; void moveNote(target.dataset.noteDropPath, source, edge); }
+              else if (target.dataset.quickCategory) { const item = entries.find((row) => row.path === source); if (item) void change(item, (markdown) => setPluginField(markdown, "category", target.dataset.quickCategory!)); }
+            }} onPointerCancel={() => { pointerDrag.current = null; setDropTarget(null); }}><GripVertical size={17} /></button>
             <button aria-label={entry.metadata.pinned === "true" ? "Løsne huskelapp" : "Fest huskelapp"} title={entry.metadata.pinned === "true" ? "Løsne" : "Fest"} aria-pressed={entry.metadata.pinned === "true"} onClick={() => void change(entry, (markdown) => setPluginField(markdown, "pinned", pluginMetadata(markdown).pinned !== "true"))}><Pin size={16} /></button>
             <button aria-label={entry.metadata.archived === "true" ? "Gjenopprett huskelapp" : "Arkiver huskelapp"} title={entry.metadata.archived === "true" ? "Gjenopprett" : "Arkiver"} onClick={() => void change(entry, (markdown) => setPluginField(markdown, "archived", pluginMetadata(markdown).archived !== "true"))}>{entry.metadata.archived === "true" ? <ArchiveRestore size={16} /> : <Archive size={16} />}</button>
             <button className="content-plugin-panel__note-delete" aria-label="Slett huskelapp" title="Slett" onClick={() => setDialog({ kind: "delete", path: entry.path, label: "huskelappen" })}><Trash2 size={16} /></button>
+            <button type="button" className="content-plugin-panel__note-more" aria-label="Flere valg for huskelapp" title="Flere valg" onClick={(event) => { event.stopPropagation(); const rect = event.currentTarget.getBoundingClientRect(); setNoteMenu({ path: entry.path, x: rect.right, y: rect.bottom }); }}><MoreHorizontal size={16} /></button>
             </QuickNoteCard>
           </> : null}
         </article>;
@@ -488,7 +504,7 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
       <div className="content-plugin-panel__overview"><div><span className="content-plugin-panel__eyebrow">SAMLING</span><h2>{selectedFilter?.[1] || (groupView ? groupNames[groupView] : manifest.name)}</h2><p>{scanRemaining > 0 ? `Laster … ${visible.length} vist` : `${visible.length} ${visible.length === 1 ? "oppføring" : "oppføringer"}`}</p></div></div>
       <div className="content-plugin-panel__controls"><label className="content-plugin-panel__search"><Search size={16} /><input type="search" value={query} placeholder={`Søk i ${manifest.name.toLocaleLowerCase()}`} onChange={(event) => setQuery(event.target.value)} /></label>
       {!groupView && options.length && id !== "shopping" ? <label className="content-plugin-panel__select"><span>Vis</span><select aria-label="Filtrer oppføringer" value={filter} onChange={(event) => { setGroupView(null); setFilter(event.target.value); }}><option value="">Alle</option>{options.map(([field, value, label]) => <option value={JSON.stringify([field, value])} key={`${field}:${value}`}>{label}</option>)}</select></label> : null}
-      {id === "quick-notes" && <><label className="content-plugin-panel__select"><span>Sorter</span><select aria-label="Sorter huskelapper" value={quickSort} onChange={(event) => { quickSortChosen.current = true; setQuickSort(event.target.value as typeof quickSort); }}><option value="pinned">Festede først</option><option value="newest">Nyeste først</option><option value="oldest">Eldste først</option><option value="title">Alfabetisk</option><option value="manual">Egen rekkefølge</option></select></label><button type="button" onClick={() => { setReordering((value) => !value); setQuickSort("manual"); }}>{reordering ? "Ferdig" : "Endre rekkefølge"}</button></>}
+      {id === "quick-notes" && <label className="content-plugin-panel__select"><span>Sorter</span><select aria-label="Sorter huskelapper" value={quickSort} onChange={(event) => { quickSortChosen.current = true; setQuickSort(event.target.value as typeof quickSort); }}><option value="pinned">Festede først</option><option value="newest">Nyeste først</option><option value="oldest">Eldste først</option><option value="title">Alfabetisk</option><option value="manual">Egen rekkefølge</option></select></label>}
       {selectedFilter && fields.includes(selectedFilter[0]) && <button className="content-plugin-panel__delete-filter" onClick={() => setDialog({ kind: "category", field: selectedFilter[0], label: selectedFilter[1] })}>Slett {groupLabels[selectedFilter[0]].toLocaleLowerCase()}</button>}</div>
       {id === "quick-notes" && <datalist id="quick-note-categories">{[...new Set(entries.map((entry) => entry.metadata.category).filter(Boolean))].sort((a, b) => a.localeCompare(b, "no")).map((name) => <option key={name} value={name} />)}</datalist>}
       {groupView && !filter ? <div className="content-plugin-panel__grid content-plugin-panel__groups">{[...new Set(entries.map((entry) => entry.metadata[groupView]).filter(Boolean))].sort((a, b) => a.localeCompare(b, "no")).map((value) => {
@@ -499,11 +515,28 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
       </>}
       </>}
     </div></div>
-    {dialog && <PluginDialog key={`${dialog.kind}-${dialog.path ?? dialog.label ?? ""}`} title={dialog.kind === "discard" ? "Forkaste endringer som ikke er lagret?" : dialog.kind === "category" ? `Slette ${groupLabels[dialog.field ?? "category"]?.toLocaleLowerCase() ?? "verdien"} «${dialog.label}»?` : `Flytte «${dialog.label}» til papirkurven?`}
-      confirmLabel={dialog.kind === "discard" ? "Forkast" : "Slett"} destructive
-      onCancel={() => { pendingNavigation.current = null; setDialog(null); }} onConfirm={() => {
+    {noteMenu && menuEntry && <ContextMenuSurface x={noteMenu.x} y={noteMenu.y} title="Huskelapp" onClick={(event) => event.stopPropagation()}>
+      {noteMenu.moving ? <>
+        <button type="button" role="menuitem" className="file-tree-context-menu__item" onClick={() => setNoteMenu({ ...noteMenu, moving: false })}><ArrowLeft aria-hidden="true" /> Tilbake</button>
+        <button type="button" role="menuitem" className="file-tree-context-menu__item" onClick={() => { void change(menuEntry, (markdown) => setPluginField(markdown, "category", "")); setNoteMenu(null); }}>Uten kategori</button>
+        {noteCategories.map((category) => <button key={category} type="button" role="menuitem" className="file-tree-context-menu__item" onClick={() => { void change(menuEntry, (markdown) => setPluginField(markdown, "category", category)); setNoteMenu(null); }}>{category}</button>)}
+        <button type="button" role="menuitem" className="file-tree-context-menu__item" onClick={() => { setDialog({ kind: "move-note", path: menuEntry.path, label: menuEntry.title }); setNoteMenu(null); }}><Plus aria-hidden="true" /> Ny kategori …</button>
+      </> : <>
+        <button type="button" role="menuitem" className="file-tree-context-menu__item" onClick={() => { setNoteMenu({ ...noteMenu, moving: true }); }}><FolderInput aria-hidden="true" /> Flytt til kategori</button>
+        <button type="button" role="menuitem" className="file-tree-context-menu__item" onClick={() => { const first = visible[0]; setNoteMenu(null); if (first) void moveNote(first.path, menuEntry.path, "before"); }}>Flytt øverst</button>
+        <button type="button" role="menuitem" className="file-tree-context-menu__item" onClick={() => { const last = visible[visible.length - 1]; setNoteMenu(null); if (last) void moveNote(last.path, menuEntry.path, "after"); }}>Flytt nederst</button>
+        <button type="button" role="menuitem" className="file-tree-context-menu__item" onClick={() => { void change(menuEntry, (markdown) => setPluginField(markdown, "pinned", pluginMetadata(markdown).pinned !== "true")); setNoteMenu(null); }}><Pin aria-hidden="true" /> {menuEntry.metadata.pinned === "true" ? "Løsne" : "Fest"}</button>
+        <button type="button" role="menuitem" className="file-tree-context-menu__item" onClick={() => { void change(menuEntry, (markdown) => setPluginField(markdown, "archived", pluginMetadata(markdown).archived !== "true")); setNoteMenu(null); }}><Archive aria-hidden="true" /> {menuEntry.metadata.archived === "true" ? "Gjenopprett" : "Arkiver"}</button>
+        <button type="button" role="menuitem" className="file-tree-context-menu__item file-tree-context-menu__item--danger" onClick={() => { setDialog({ kind: "delete", path: menuEntry.path, label: "huskelappen" }); setNoteMenu(null); }}><Trash2 aria-hidden="true" /> Slett</button>
+      </>}
+    </ContextMenuSurface>}
+    {dialog && <PluginDialog key={`${dialog.kind}-${dialog.path ?? dialog.label ?? ""}`} title={dialog.kind === "move-note" ? "Flytt huskelapp til ny kategori" : dialog.kind === "discard" ? "Forkaste endringer som ikke er lagret?" : dialog.kind === "category" ? `Slette ${groupLabels[dialog.field ?? "category"]?.toLocaleLowerCase() ?? "verdien"} «${dialog.label}»?` : `Flytte «${dialog.label}» til papirkurven?`}
+      label={dialog.kind === "move-note" ? "Kategorinavn" : undefined}
+      confirmLabel={dialog.kind === "move-note" ? "Flytt" : dialog.kind === "discard" ? "Forkast" : "Slett"} destructive={dialog.kind !== "move-note"}
+      onCancel={() => { pendingNavigation.current = null; setDialog(null); }} onConfirm={(value) => {
         const action = dialog;
         setDialog(null);
+        if (action.kind === "move-note" && action.path) { const entry = entries.find((item) => item.path === action.path); if (entry) void change(entry, (markdown) => setPluginField(markdown, "category", value)); return; }
         if (action.kind === "discard") { const next = pendingNavigation.current; pendingNavigation.current = null; discard(); next?.(); return; }
         if (action.kind === "delete" && action.path) {
           if (pendingWrites.current.has(action.path)) { setError("Vent til endringen er lagret før du sletter."); return; }

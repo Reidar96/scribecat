@@ -1,3 +1,8 @@
+## [1.3.3] - 2026-11-01
+
+- Allow direct Quick Notes drag and drop without enabling a special mode. Keep a compact drag grip in the bottom toolbar for touch.
+- Replace the right-click reorder switch with ScribeCat’s context menu for moving notes to categories or to the top/bottom, pinning, archiving and deleting.
+
 ## [1.3.2] - 2026-11-01
 
 - Keep Quick Notes in at most two stable columns and remove extra vertical gaps on the right.
