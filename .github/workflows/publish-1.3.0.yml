@@ -1,7 +1,8 @@
 name: Publish ScribeCat 1.3.0
 
 # One-time bootstrap for this release. The existing packaging workflows do
-# the actual builds; this job only creates the tag and dispatches those jobs.
+# the actual builds; this job also retries packaging after a corrected source
+# commit, keeping the tag and all assets tied to the same commit.
 on:
   push:
     branches: [main]

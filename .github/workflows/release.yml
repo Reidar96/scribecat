@@ -51,6 +51,12 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
+      # The checked-in lock pins cc 1.2.86, which the current crates index
+      # no longer offers to fresh runners. Update only that build dependency
+      # in the runner checkout; the source manifest stays unchanged.
+      - name: Resolve available C build dependency
+        run: cargo update --manifest-path src-tauri/Cargo.toml -p cc --precise 1.10.0
+
       - name: Install Linux dependencies
         if: matrix.platform == 'ubuntu-latest'
         run: |
