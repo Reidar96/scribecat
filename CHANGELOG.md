@@ -1,3 +1,8 @@
+## [1.3.6] - 2026-11-01
+
+- Include the shared inventory receipt model in the Docker web build so the release has a complete server image and Portainer archive.
+- Carry forward the Quick Notes top insertion, visible before/after drag target in the destination column, consistent context menus, and renameable inventory receipts from 1.3.5.
+
 ## [1.3.5] - 2026-11-01
 
 - Put newly created Quick Notes first and preserve their position while editing.
