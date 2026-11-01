@@ -1,3 +1,9 @@
+## [1.3.7] - 2026-11-01
+
+- Fill both Quick Notes columns when older saved notes all point to one column, and keep the manual layout stable while autosaving.
+- Align the Quick Notes view and sort controls with the search field; put both controls on one row on phones.
+- Keep focused Quick Notes and document editor text visible when the mobile on-screen keyboard opens.
+
 ## [1.3.6] - 2026-11-01
 
 - Include the shared inventory receipt model in the Docker web build so the release has a complete server image and Portainer archive.

@@ -8,6 +8,16 @@ export function noteColumns<T>(items: readonly T[], count: number, columnOf?: (i
   return columns;
 }
 
+/** Preserve assignments, but recover old collections that ended up entirely in one column. */
+export function balancedNoteColumns<T>(items: readonly T[], count: number, columnOf: (item: T, index: number) => number): T[][] {
+  if (count < 2 || items.length < 2) return noteColumns(items, count, columnOf);
+  const assignments = items.map(columnOf);
+  if (assignments.every((column) => column === assignments[0])) {
+    return noteColumns(items, count);
+  }
+  return noteColumns(items, count, (_, index) => assignments[index]);
+}
+
 export function insertNote(paths: readonly string[], source: string, target: string, edge: "before" | "after"): string[] {
   if (source === target || !paths.includes(source) || !paths.includes(target)) return [...paths];
   const ordered = paths.filter((path) => path !== source);

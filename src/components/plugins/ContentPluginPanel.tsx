@@ -21,7 +21,7 @@ import { useContextMenuState } from "@/components/fileTree/useContextMenuState";
 import { useLongPressContextMenu } from "@/hooks/useLongPressContextMenu";
 import { readClipboardText, writeClipboardText } from "@/platform/clipboardText";
 import { quickNoteBody, retainCollectionEntries, updateQuickNoteBody } from "@/plugins/collectionState";
-import { moveNoteColumns, nextNoteTopOrder, noteColumns as partitionNotes, noteCreatedAt, noteDropPlacement, noteManualPosition } from "@/plugins/quickNoteLayout";
+import { balancedNoteColumns, moveNoteColumns, nextNoteTopOrder, noteCreatedAt, noteDropPlacement, noteManualPosition } from "@/plugins/quickNoteLayout";
 import { readingCardSummary } from "../../../server/src/public/readingModel";
 
 type Entry = { path: string; markdown: string; metadata: Record<string, string>; title: string };
@@ -115,14 +115,14 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query);
   const [filter, setFilter] = useState("");
-  const [quickSort, setQuickSort] = useState<"pinned" | "newest" | "oldest" | "title" | "manual">("pinned");
+  const [quickSort, setQuickSort] = useState<"pinned" | "newest" | "oldest" | "title" | "manual">("manual");
   const quickSortChosen = useRef(false);
   const [draggedPath, setDraggedPath] = useState<string | null>(null);
   const [mobileReordering, setMobileReordering] = useState(false);
   const { contextMenu: noteMenu, setContextMenu: setNoteMenu } = useContextMenuState<{ path: string; x: number; y: number; moving?: boolean }>();
   const { getLongPressProps: getNoteLongPress } = useLongPressContextMenu<string>((path, x, y) => setNoteMenu({ path, x, y }));
   const [dropTarget, setDropTarget] = useState<{ path: string; edge: "before" | "after" } | null>(null);
-  const [noteColumns, setNoteColumns] = useState(2);
+  const [noteColumns, setNoteColumns] = useState(() => window.matchMedia("(max-width: 640px)").matches ? 1 : 2);
   const noteGridRef = useRef<HTMLDivElement>(null);
   const noteColumnAssignments = useRef(new Map<string, number>());
   const pointerDrag = useRef<string | null>(null);
@@ -263,7 +263,7 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
     noteColumnAssignments.current.set(entry.path, initial);
     return initial;
   };
-  const visibleColumns = id === "quick-notes" ? partitionNotes(visible, noteColumns, columnOf) : [];
+  const visibleColumns = id === "quick-notes" ? balancedNoteColumns(visible, noteColumns, columnOf) : [];
   const options: Array<[string, string, string]> = id === "books" ? [["status", "want-to-read", "Vil lese"], ["status", "reading", "Leser"], ["status", "finished", "Lest"]]
     : id === "quick-notes" ? [["pinned", "true", "Festet"], ["archived", "true", "Arkiv"]]
     : id === "inventory" ? [["warranty-until", "active", "Garanti"]]
@@ -532,7 +532,7 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
         onBack={back} onCancelEdit={cancelEdit} onChange={async (next) => { updateDraft(next); }} onDelete={() => selected && setDialog({ kind: "delete", path: selected.path, label: selected.title })} /> : <>
       {showStats ? <PluginStatistics id={id} entries={entries} onBack={() => setShowStats(false)} onOpen={(path) => { const entry = entries.find((item) => item.path === path); if (entry) openEntry(entry); }} /> : <>
       <div className="content-plugin-panel__overview"><div><span className="content-plugin-panel__eyebrow">SAMLING</span><h2>{selectedFilter?.[1] || (groupView ? groupNames[groupView] : manifest.name)}</h2><p>{scanRemaining > 0 ? `Laster … ${visible.length} vist` : `${visible.length} ${visible.length === 1 ? "oppføring" : "oppføringer"}`}</p></div></div>
-      <div className="content-plugin-panel__controls"><label className="content-plugin-panel__search"><Search size={16} /><input type="search" value={query} placeholder={`Søk i ${manifest.name.toLocaleLowerCase()}`} onChange={(event) => setQuery(event.target.value)} /></label>
+      <div className={`content-plugin-panel__controls${id === "quick-notes" ? " content-plugin-panel__controls--quick-notes" : ""}`}><label className="content-plugin-panel__search"><Search size={16} /><input type="search" value={query} placeholder={`Søk i ${manifest.name.toLocaleLowerCase()}`} onChange={(event) => setQuery(event.target.value)} /></label>
       {!groupView && options.length && id !== "shopping" ? <label className="content-plugin-panel__select"><span>Vis</span><select aria-label="Filtrer oppføringer" value={filter} onChange={(event) => { setGroupView(null); setFilter(event.target.value); }}><option value="">Alle</option>{options.map(([field, value, label]) => <option value={JSON.stringify([field, value])} key={`${field}:${value}`}>{label}</option>)}</select></label> : null}
       {id === "quick-notes" && <label className="content-plugin-panel__select"><span>Sorter</span><select aria-label="Sorter huskelapper" value={quickSort} onChange={(event) => { quickSortChosen.current = true; setQuickSort(event.target.value as typeof quickSort); }}><option value="pinned">Festede først</option><option value="newest">Nyeste først</option><option value="oldest">Eldste først</option><option value="title">Alfabetisk</option><option value="manual">Egen rekkefølge</option></select></label>}
       {selectedFilter && fields.includes(selectedFilter[0]) && <button className="content-plugin-panel__delete-filter" onClick={() => setDialog({ kind: "category", field: selectedFilter[0], label: selectedFilter[1] })}>Slett {groupLabels[selectedFilter[0]].toLocaleLowerCase()}</button>}</div>

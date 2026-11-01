@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { insertNote, moveNoteColumns, nextNoteTopOrder, noteColumns, noteCreatedAt, noteDropPlacement, noteManualPosition } from "./quickNoteLayout";
+import { balancedNoteColumns, insertNote, moveNoteColumns, nextNoteTopOrder, noteColumns, noteCreatedAt, noteDropPlacement, noteManualPosition } from "./quickNoteLayout";
 
 describe("Quick Notes layout", () => {
   it("keeps existing cards in their columns as one grows or a new card is appended", () => {
@@ -30,6 +30,12 @@ describe("Quick Notes layout", () => {
     expect(noteColumns(rows, 2, (path) => columns.get(path)!)).toEqual([["a", "c"], ["b", "d"]]);
     columns.set("a", 1);
     expect(noteColumns(["b", "c", "a", "d"], 2, (path) => columns.get(path)!)).toEqual([["c"], ["b", "a", "d"]]);
+  });
+  it("fills both columns when older saved notes all say column zero", () => {
+    const rows = ["a", "b", "c"];
+    expect(balancedNoteColumns(rows, 2, () => 0)).toEqual([["a", "c"], ["b"]]);
+    expect(balancedNoteColumns(rows, 2, (_, index) => index === 0 ? 1 : 0)).toEqual([["b", "c"], ["a"]]);
+    expect(balancedNoteColumns(rows, 1, () => 0)).toEqual([rows]);
   });
   it("indicates and saves the same position in either column, including the gap", () => {
     const left = [{ path: "a", midpoint: 100 }, { path: "c", midpoint: 400 }];
