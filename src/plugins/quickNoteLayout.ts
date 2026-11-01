@@ -11,3 +11,13 @@ export function insertNote(paths: readonly string[], source: string, target: str
   ordered.splice(ordered.indexOf(target) + (edge === "after" ? 1 : 0), 0, source);
   return ordered;
 }
+
+/** A note's edit time and body never participate in its display position. */
+export function noteCreatedAt(metadata: Record<string, string>): number {
+  return Date.parse(metadata.created ?? "") || 0;
+}
+
+export function noteManualPosition(metadata: Record<string, string>): number {
+  const explicit = Number(metadata.order);
+  return metadata.order && Number.isFinite(explicit) ? explicit : -noteCreatedAt(metadata);
+}

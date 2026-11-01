@@ -1,3 +1,9 @@
+## [1.3.2] - 2026-11-01
+
+- Keep Quick Notes in at most two stable columns and remove extra vertical gaps on the right.
+- Keep note positions fixed while typing and autosaving, and size the editor before the browser paints.
+- Make drop placement deterministic on desktop and mobile; apply the whole reordered list in one render before saving.
+
 ## [1.3.1] - 2026-11-01
 
 - Stabilize Quick Notes columns, ordering and editing: show before/after drop indicators, avoid rebalancing cards while typing, and add new notes at the end without moving the mobile viewport.

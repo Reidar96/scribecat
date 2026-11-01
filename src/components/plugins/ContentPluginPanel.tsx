@@ -17,7 +17,7 @@ import { PluginDialog } from "@/components/plugins/PluginDialog";
 import { useAppStore } from "@/store/useAppStore";
 import { PluginTopbar } from "@/components/plugins/PluginTopbar";
 import { quickNoteBody, retainCollectionEntries, updateQuickNoteBody } from "@/plugins/collectionState";
-import { insertNote, noteColumns as partitionNotes } from "@/plugins/quickNoteLayout";
+import { insertNote, noteColumns as partitionNotes, noteCreatedAt, noteManualPosition } from "@/plugins/quickNoteLayout";
 import { readingCardSummary } from "../../../server/src/public/readingModel";
 
 type Entry = { path: string; markdown: string; metadata: Record<string, string>; title: string };
@@ -40,7 +40,7 @@ function QuickNoteCard({ entry, initialEdit, onSave, onCategoryChange, children 
   const saved = noteBody(entry.markdown);
   useEffect(() => { setCategory(entry.metadata.category ?? ""); }, [entry.metadata.category]);
   useEffect(() => { if (draft === saved) { baseline.current = entry.markdown; setDraft(saved); } }, [saved, entry.markdown]);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const field = textarea.current;
     if (!field) return;
     field.style.height = "auto";
@@ -133,7 +133,10 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
     const grid = noteGridRef.current;
     const update = () => {
       const width = grid.clientWidth;
-      setNoteColumns(width < 560 ? 1 : Math.max(2, Math.floor((width + 16) / 288)));
+      // Keep the same two card columns as the rest of the collection UI.
+      // A scrollbar changing the available width must not repeatedly move
+      // notes between columns while someone is typing.
+      setNoteColumns((previous) => width < 640 ? 1 : width > 720 ? 2 : previous);
     };
     const observer = new ResizeObserver(update);
     observer.observe(grid);
@@ -216,15 +219,16 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
   }).sort((a, b) => {
     if (id !== "quick-notes") return 0;
     if (quickSort === "manual") {
-      const order = (entry: Entry) => entry.metadata.order ? Number(entry.metadata.order) : -(Date.parse(entry.metadata.created ?? "") || fileMtimeMs[entry.path] || 0);
-      return order(a) - order(b) || a.path.localeCompare(b.path);
+      return noteManualPosition(a.metadata) - noteManualPosition(b.metadata) || a.path.localeCompare(b.path);
     }
     if (quickSort === "title") return noteBody(a.markdown).localeCompare(noteBody(b.markdown), "no") || a.path.localeCompare(b.path);
     if (quickSort === "pinned" && a.metadata.pinned !== b.metadata.pinned) return a.metadata.pinned === "true" ? -1 : 1;
-    const aTime = Date.parse(a.metadata.created ?? "") || fileMtimeMs[a.path] || 0;
-    const bTime = Date.parse(b.metadata.created ?? "") || fileMtimeMs[b.path] || 0;
+    // Modification time changes on every autosave. It must never change the
+    // visible card position when editing an older note.
+    const aTime = noteCreatedAt(a.metadata);
+    const bTime = noteCreatedAt(b.metadata);
     return (quickSort === "oldest" ? aTime - bTime : bTime - aTime) || a.path.localeCompare(b.path);
-  }), [entries, filter, deferredQuery, id, quickSort, fileMtimeMs]);
+  }), [entries, filter, deferredQuery, id, quickSort]);
   const options: Array<[string, string, string]> = id === "books" ? [["status", "want-to-read", "Vil lese"], ["status", "reading", "Leser"], ["status", "finished", "Lest"]]
     : id === "quick-notes" ? [["pinned", "true", "Festet"], ["archived", "true", "Arkiv"]]
     : id === "inventory" ? [["warranty-until", "active", "Garanti"]]
@@ -388,6 +392,14 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
       await change(moved, (markdown) => setPluginField(markdown, "order", String(nextOrder)));
     } else {
       // Initialize old notes without an order, or renumber a crowded gap.
+      // Apply the complete visual order in one render. Saving each card may
+      // take several round trips, but must not shuffle the other column after
+      // each individual response.
+      const newOrders = new Map(ordered.map((path, index) => [path, String((index + 1) * 1024)]));
+      setEntries((items) => items.map((item) => {
+        const order = newOrders.get(item.path);
+        return order === undefined ? item : { ...item, metadata: { ...item.metadata, order } };
+      }));
       for (let at = 0; at < ordered.length; at += 8) {
         await Promise.all(ordered.slice(at, at + 8).map((path, offset) => {
           const entry = entries.find((item) => item.path === path);
@@ -406,7 +418,7 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
 
   const selectFilter = (value: string, group: string | null = null) => navigate(() => { setFilter(value); setGroupView(group); setShowStats(false); setSelectedPath(null); setCreating(false); updateDraft(null); setSecondaryOpen(false); });
   const renderEntry = (entry: Entry) => {
-        return <article key={entry.path} data-note-drop-path={id === "quick-notes" ? entry.path : undefined} className={`content-plugin-panel__card${dropTarget?.path === entry.path ? ` content-plugin-panel__card--drop-${dropTarget.edge}` : ""}`} draggable={id === "quick-notes" && !isPhone && reordering} onContextMenu={(event) => { if (id === "quick-notes" && !(event.target instanceof Element && event.target.closest("textarea,input,a"))) { event.preventDefault(); setReordering(true); setQuickSort("manual"); if (isPhone) setSecondaryOpen(true); } }} onDragStart={(event) => { if (id !== "quick-notes") return; setDraggedPath(entry.path); event.dataTransfer.setData("text/plain", entry.path); }} onDragOver={(event) => { if (id !== "quick-notes" || !draggedPath || draggedPath === entry.path) return; event.preventDefault(); const edge = event.clientY < event.currentTarget.getBoundingClientRect().top + event.currentTarget.offsetHeight / 2 ? "before" : "after"; setDropTarget((old) => old?.path === entry.path && old.edge === edge ? old : { path: entry.path, edge }); }} onDrop={(event) => { event.preventDefault(); void moveNote(entry.path, draggedPath, dropTarget?.path === entry.path ? dropTarget.edge : "before"); setDropTarget(null); }} onDragEnd={() => { setDraggedPath(null); setDropTarget(null); }}>
+        return <article key={entry.path} data-note-drop-path={id === "quick-notes" ? entry.path : undefined} className={`content-plugin-panel__card${dropTarget?.path === entry.path ? ` content-plugin-panel__card--drop-${dropTarget.edge}` : ""}`} draggable={id === "quick-notes" && !isPhone && reordering} onContextMenu={(event) => { if (id === "quick-notes" && !(event.target instanceof Element && event.target.closest("textarea,input,a"))) { event.preventDefault(); setReordering(true); setQuickSort("manual"); if (isPhone) setSecondaryOpen(true); } }} onDragStart={(event) => { if (id !== "quick-notes") return; setDraggedPath(entry.path); event.dataTransfer.setData("text/plain", entry.path); }} onDragOver={(event) => { if (id !== "quick-notes" || !draggedPath || draggedPath === entry.path) return; event.preventDefault(); const edge = event.clientY < event.currentTarget.getBoundingClientRect().top + event.currentTarget.offsetHeight / 2 ? "before" : "after"; setDropTarget((old) => old?.path === entry.path && old.edge === edge ? old : { path: entry.path, edge }); }} onDrop={(event) => { event.preventDefault(); const edge = event.clientY < event.currentTarget.getBoundingClientRect().top + event.currentTarget.offsetHeight / 2 ? "before" : "after"; void moveNote(entry.path, draggedPath, edge); setDropTarget(null); }} onDragEnd={() => { setDraggedPath(null); setDropTarget(null); }}>
           {id !== "quick-notes" && <button className="content-plugin-panel__tile" onClick={() => openEntry(entry)}>
             {entry.metadata.cover && (id === "books" || id === "recipes" || id === "inventory")
               ? <PluginCover id={id} vaultPath={folderPath} documentPath={entry.path} reference={entry.metadata.cover} alt={entry.title} />
@@ -416,13 +428,13 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
             {(id === "recipes" || id === "books" || id === "inventory") && readingCardSummary(id, entry.markdown) && <p className="content-plugin-panel__tile-description">{readingCardSummary(id, entry.markdown)}</p>}
           </button>}
           {id === "quick-notes" ? <>
-            {reordering && <button className="content-plugin-panel__note-handle" aria-label="Dra huskelappen for å endre rekkefølge" title="Dra til en annen huskelapp eller kategori" onPointerDown={(event) => { pointerDrag.current = entry.path; event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (!pointerDrag.current) return; const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-note-drop-path]"); if (!target || target.dataset.noteDropPath === pointerDrag.current) { setDropTarget(null); return; } const edge = event.clientY < target.getBoundingClientRect().top + target.offsetHeight / 2 ? "before" : "after"; setDropTarget((old) => old?.path === target.dataset.noteDropPath && old?.edge === edge ? old : { path: target.dataset.noteDropPath!, edge }); }} onPointerUp={(event) => {
+            {reordering && <button className="content-plugin-panel__note-handle" aria-label="Dra huskelappen for å endre rekkefølge" title="Dra til en annen huskelapp eller kategori" onPointerDown={(event) => { if (!isPhone) return; pointerDrag.current = entry.path; event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (!pointerDrag.current) return; const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-note-drop-path]"); if (!target || target.dataset.noteDropPath === pointerDrag.current) { setDropTarget(null); return; } const edge = event.clientY < target.getBoundingClientRect().top + target.offsetHeight / 2 ? "before" : "after"; setDropTarget((old) => old?.path === target.dataset.noteDropPath && old?.edge === edge ? old : { path: target.dataset.noteDropPath!, edge }); }} onPointerUp={(event) => {
               const source = pointerDrag.current;
               const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-note-drop-path], [data-quick-category]");
               pointerDrag.current = null;
               setDropTarget(null);
               if (!source || !target) return;
-              if (target.dataset.noteDropPath) void moveNote(target.dataset.noteDropPath, source, dropTarget?.path === target.dataset.noteDropPath ? dropTarget.edge : "before");
+              if (target.dataset.noteDropPath) { const edge = event.clientY < target.getBoundingClientRect().top + target.offsetHeight / 2 ? "before" : "after"; void moveNote(target.dataset.noteDropPath, source, edge); }
               else if (target.dataset.quickCategory) { const item = entries.find((row) => row.path === source); if (item) void change(item, (markdown) => setPluginField(markdown, "category", target.dataset.quickCategory!)); }
             }} onPointerCancel={() => { pointerDrag.current = null; setDropTarget(null); }}><GripVertical size={17} /></button>}
             <QuickNoteCard entry={entry} initialEdit={!isPhone && newNotePath === entry.path} onSave={async (text, expected) => {
