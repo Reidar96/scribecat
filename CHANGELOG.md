@@ -1,3 +1,9 @@
+## [1.3.4] - 2026-11-01
+
+- Give Quick Notes text a ScribeCat context menu with copy, cut, paste, select all and note actions.
+- Keep Quick Notes menus opaque and above the cards; remove the colored glow from the drop indicator.
+- Add an explicit mobile “Dra for å flytte” action with a visible finish button and drag handles.
+
 ## [1.3.3] - 2026-11-01
 
 - Allow direct Quick Notes drag and drop without enabling a special mode. Keep a compact drag grip in the bottom toolbar for touch.

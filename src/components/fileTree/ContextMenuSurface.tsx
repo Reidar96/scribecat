@@ -60,7 +60,7 @@ export function ContextMenuSurface({ x, y, className, title, onClick, onMouseDow
     <>
       {/* The tree's own window listener closes the menu on the tap; this only
           dims what is behind the sheet. */}
-      {isSheet ? <div className="file-tree-context-menu__backdrop" aria-hidden="true" /> : null}
+      {isSheet ? <div className={["file-tree-context-menu__backdrop", className && `${className}__backdrop`].filter(Boolean).join(" ")} aria-hidden="true" /> : null}
       <div
         ref={menuRef}
         className={["file-tree-context-menu", isSheet && "file-tree-context-menu--sheet", className].filter(Boolean).join(" ")}

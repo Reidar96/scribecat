@@ -209,13 +209,18 @@
 .content-plugin-panel__note-column { display:flex;flex-direction:column;gap:1rem;min-width:0; }
 .content-plugin-panel__grid--quick-notes .content-plugin-panel__card { width:100%;margin:0;position:relative;overflow:visible; }
 .content-plugin-panel__grid--quick-notes .content-plugin-panel__card:hover { transform:none; }
-.content-plugin-panel__card--drop-before::before,.content-plugin-panel__card--drop-after::after { content:"";position:absolute;left:0;right:0;height:3px;border-radius:3px;background:var(--primary);z-index:2;pointer-events:none;box-shadow:0 0 10px rgba(var(--accent-rgb),.5); }
+.content-plugin-panel__card--drop-before::before,.content-plugin-panel__card--drop-after::after { content:"";position:absolute;left:0;right:0;height:3px;border-radius:3px;background:var(--primary);z-index:2;pointer-events:none; }
 .content-plugin-panel__card--drop-before::before { top:-.55rem; }
 .content-plugin-panel__card--drop-after::after { bottom:-.55rem; }
 .content-plugin-panel__note-links { display:flex;flex-wrap:wrap;gap:.3rem;padding:.25rem .6rem .5rem; }
 .content-plugin-panel__note-links a { max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.75rem;color:var(--primary);text-decoration:underline; }
 .content-plugin-panel__note-handle { flex:none;display:grid;place-items:center;width:2rem;min-height:2rem;color:var(--muted-foreground);cursor:grab;touch-action:none; }
 .content-plugin-panel__note-handle:active { cursor:grabbing; }
+.quick-note-context-menu { z-index:10000;background:rgb(var(--surface-strong-rgb));box-shadow:0 12px 32px rgba(0,0,0,.28); }
+.quick-note-context-menu__backdrop { z-index:9998; }
+.content-plugin-panel__reorder-banner { display:flex;align-items:center;gap:.55rem;margin:.5rem 0;padding:.6rem .75rem;border:1px solid var(--border);border-radius:.65rem;background:var(--card);font-size:.85rem; }
+.content-plugin-panel__reorder-banner span { flex:1; }
+.content-plugin-panel__reorder-banner button { color:var(--primary);font-weight:600; }
 .content-plugin-panel__grid--quick-notes .content-plugin-panel__card { cursor:grab; }
 .content-plugin-panel__grid--quick-notes .content-plugin-panel__card:active { cursor:grabbing; }
 .content-plugin-panel__grid--quick-notes textarea,.content-plugin-panel__grid--quick-notes input { cursor:text; }
