@@ -1,0 +1,20 @@
+services:
+  scribecat:
+    image: ghcr.io/reidar96/scribecat-server:latest
+    pull_policy: always
+    container_name: ScribeCat
+    ports:
+      - "8117:3000"
+    volumes:
+      - /volume1/notes:/data:rw
+    environment:
+      TZ: Europe/Oslo
+      PUID: 0
+      PGID: 0
+      SCRIBECAT_INIT_PASSWORD: ${SCRIBECAT_INIT_PASSWORD:-}
+      SCRIBECAT_VAULT_PATH: /data
+      SCRIBECAT_HOST: 0.0.0.0
+      SCRIBECAT_PORT: 3000
+      SCRIBECAT_COOKIE_SECURE: "false"
+      SCRIBECAT_TRUST_PROXY: "false"
+    restart: unless-stopped

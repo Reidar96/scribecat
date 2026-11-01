@@ -21,7 +21,7 @@ import { useContextMenuState } from "@/components/fileTree/useContextMenuState";
 import { useLongPressContextMenu } from "@/hooks/useLongPressContextMenu";
 import { readClipboardText, writeClipboardText } from "@/platform/clipboardText";
 import { quickNoteBody, retainCollectionEntries, updateQuickNoteBody } from "@/plugins/collectionState";
-import { balancedNoteColumns, moveNoteColumns, nextNoteTopOrder, noteCreatedAt, noteDropPlacement, noteManualPosition } from "@/plugins/quickNoteLayout";
+import { balancedNoteColumns, moveNoteColumns, nextNoteTopOrder, noteColumns as partitionNotes, noteCreatedAt, noteDropPlacement, noteManualPosition } from "@/plugins/quickNoteLayout";
 import { readingCardSummary } from "../../../server/src/public/readingModel";
 
 type Entry = { path: string; markdown: string; metadata: Record<string, string>; title: string };
@@ -125,6 +125,7 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
   const [noteColumns, setNoteColumns] = useState(() => window.matchMedia("(max-width: 640px)").matches ? 1 : 2);
   const noteGridRef = useRef<HTMLDivElement>(null);
   const noteColumnAssignments = useRef(new Map<string, number>());
+  const notePositions = useRef(new Map<string, number>());
   const pointerDrag = useRef<string | null>(null);
   const [groupView, setGroupView] = useState<string | null>(null);
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
@@ -231,6 +232,14 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
   }, [draftMarkdown, savedMarkdown, creating, selectedPath, folderPath, id]);
 
   const selectedFilter = filter ? JSON.parse(filter) as [string, string] : null;
+  const stableNotePosition = (entry: Entry) => {
+    let position = notePositions.current.get(entry.path);
+    if (position === undefined) {
+      position = noteManualPosition(entry.metadata);
+      notePositions.current.set(entry.path, position);
+    }
+    return position;
+  };
   const visible = useMemo(() => entries.filter((entry) => {
     const [field, value] = selectedFilter ?? ["", ""];
     if (id === "quick-notes" && field !== "archived" && entry.metadata.archived === "true") return false;
@@ -240,7 +249,7 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
   }).sort((a, b) => {
     if (id !== "quick-notes") return 0;
     if (quickSort === "manual") {
-      return noteManualPosition(a.metadata) - noteManualPosition(b.metadata) || a.path.localeCompare(b.path);
+      return stableNotePosition(a) - stableNotePosition(b) || a.path.localeCompare(b.path);
     }
     if (quickSort === "title") return noteBody(a.markdown).localeCompare(noteBody(b.markdown), "no") || a.path.localeCompare(b.path);
     if (quickSort === "pinned" && a.metadata.pinned !== b.metadata.pinned) return a.metadata.pinned === "true" ? -1 : 1;
@@ -252,18 +261,20 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
   }), [entries, filter, deferredQuery, id, quickSort]);
   const columnOf = (entry: Entry, index: number) => {
     if (noteColumns === 1) return 0;
+    const remembered = noteColumnAssignments.current.get(entry.path);
+    if (remembered !== undefined) return remembered;
     const stored = Number(entry.metadata["note-column"]);
     if (entry.metadata["note-column"] === "0" || entry.metadata["note-column"] === "1") {
       noteColumnAssignments.current.set(entry.path, stored);
       return stored;
     }
-    const remembered = noteColumnAssignments.current.get(entry.path);
-    if (remembered !== undefined) return remembered;
     const initial = index % noteColumns;
     noteColumnAssignments.current.set(entry.path, initial);
     return initial;
   };
-  const visibleColumns = id === "quick-notes" ? balancedNoteColumns(visible, noteColumns, columnOf) : [];
+  const visibleColumns = id !== "quick-notes" ? [] : filter || deferredQuery
+    ? partitionNotes(visible, noteColumns, columnOf)
+    : balancedNoteColumns(visible, noteColumns, columnOf, (entry, column) => noteColumnAssignments.current.set(entry.path, column));
   const options: Array<[string, string, string]> = id === "books" ? [["status", "want-to-read", "Vil lese"], ["status", "reading", "Leser"], ["status", "finished", "Lest"]]
     : id === "quick-notes" ? [["pinned", "true", "Festet"], ["archived", "true", "Arkiv"]]
     : id === "inventory" ? [["warranty-until", "active", "Garanti"]]
@@ -426,6 +437,7 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
     if (noteColumns > 1) noteColumnAssignments.current.set(sourcePath, targetColumn);
     setQuickSort("manual");
     const placements = new Map(columns.flatMap((column, col) => column.map((path, index) => [path, { order: String((index + 1) * 1024), column: String(col) }] as const)));
+    for (const [path, placement] of placements) notePositions.current.set(path, Number(placement.order));
     setEntries((items) => items.map((item) => {
       const placement = placements.get(item.path);
       return placement ? { ...item, metadata: { ...item.metadata, order: placement.order, ...(noteColumns > 1 ? { "note-column": placement.column } : {}) } } : item;

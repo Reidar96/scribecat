@@ -1,3 +1,8 @@
+## [1.3.8] - 2026-11-01
+
+- Keep each Quick Notes card's visual column and manual position stable while its Markdown autosave echoes back; reserve the same footer width and height for every save state.
+- Publish the multi-architecture Docker image under both the exact version and `latest`, and provide a Portainer Compose file that pulls `latest` while preserving the existing data mount.
+
 ## [1.3.7] - 2026-11-01
 
 - Fill both Quick Notes columns when older saved notes all point to one column, and keep the manual layout stable while autosaving.

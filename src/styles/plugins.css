@@ -253,7 +253,7 @@
 .content-plugin-panel__note textarea { min-height:2.75rem;resize:vertical;line-height:1.55;padding:.5rem .7rem;border:0;background:transparent;outline:none; }
 .content-plugin-panel__note textarea:focus-visible { box-shadow:inset 0 0 0 1px var(--primary); }
 .content-plugin-panel__note-actions { border-top:0;min-height:2.8rem; }
-.content-plugin-panel__note-controls { display:flex;align-items:center;gap:.15rem;border-top:1px solid var(--border);padding:.35rem 0 0;min-width:0; }
+.content-plugin-panel__note-controls { display:flex;align-items:center;gap:.15rem;border-top:1px solid var(--border);padding:.35rem 0 0;min-width:0;min-height:2.4rem;box-sizing:border-box; }
 .content-plugin-panel__note-controls button { display:grid;place-items:center;width:2rem;height:2rem;border-radius:.5rem;color:var(--muted-foreground); }
 .content-plugin-panel__note-controls button:hover,.content-plugin-panel__note-controls button[aria-pressed=true] { background:rgba(var(--accent-rgb),.1);color:var(--primary); }
 .plugin-detail__quotes .plugin-detail__prose ul { list-style:none;padding:0;display:grid;gap:.7rem; }
@@ -261,7 +261,8 @@
 .plugin-detail__recipe-grid:empty { display:none; }
 
 .content-plugin-panel__note textarea { display:block;width:100%;height:auto;min-height:2.75rem;max-height:none;overflow:hidden;resize:none;box-sizing:border-box;white-space:pre-wrap;overflow-wrap:anywhere; }
-.content-plugin-panel__note-status { flex:0 1 auto;min-width:0;max-width:5rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted-foreground);font-size:.68rem; }
+.content-plugin-panel__note-status { flex:0 0 5rem;width:5rem;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted-foreground);font-size:.68rem; }
+.content-plugin-panel__grid--quick-notes { overflow-anchor:none; }
 .content-plugin-panel__note-category { flex:1 1 5rem;width:0;min-width:3rem;border:1px solid transparent;border-radius:.45rem;background:transparent;color:var(--muted-foreground);font-size:.75rem;padding:.25rem .35rem;outline:none; }
 .content-plugin-panel__note-category:hover,.content-plugin-panel__note-category:focus { border-color:var(--border);color:var(--foreground); }
 .content-plugin-panel__note-controls .content-plugin-panel__note-delete { margin-left:auto; }

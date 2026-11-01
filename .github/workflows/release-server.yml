@@ -4,10 +4,9 @@ name: Release server image
 # it carries the same version as the app (the web client is the app's own
 # frontend), so it rides on the same tag as the desktop release.
 #
-# Only exact versions are published: no "latest", no moving major/minor tags.
-# An operator pins one version, and an upgrade is a deliberate edit of the
-# compose file, which is also what makes the data-version downgrade check in
-# the server meaningful.
+# Publish the exact version and a moving "latest" alias from the same build.
+# The Portainer archive stays pinned to the exact version, while installations
+# that pull from GHCR may opt into automatic upgrades via "latest".
 on:
   workflow_dispatch:
     inputs:
@@ -90,8 +89,10 @@ jobs:
           {
             echo "value<<EOF"
             echo "ghcr.io/reidar96/scribecat-server:$VERSION"
+            echo "ghcr.io/reidar96/scribecat-server:latest"
             if [ -n "$DOCKERHUB_USERNAME" ] && [ -n "$DOCKERHUB_TOKEN" ]; then
               echo "$DOCKERHUB_USERNAME/scribedog-server:$VERSION"
+              echo "$DOCKERHUB_USERNAME/scribedog-server:latest"
             fi
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
@@ -162,8 +163,11 @@ jobs:
           docker save "$tag" | gzip -1 > "ScribeCat_server_${VERSION}_linux-amd64.tar.gz"
           cp server/docker-compose.portainer.yml "ScribeCat_${VERSION}_portainer.yml"
           grep -Fqx "    image: $tag" "ScribeCat_${VERSION}_portainer.yml"
-          sha256sum "ScribeCat_server_${VERSION}_linux-amd64.tar.gz" "ScribeCat_${VERSION}_portainer.yml" > "ScribeCat_${VERSION}_SHA256SUMS.txt"
+          cp server/docker-compose.portainer-latest.yml "ScribeCat_${VERSION}_portainer-latest.yml"
+          grep -Fqx "    image: ghcr.io/reidar96/scribecat-server:latest" "ScribeCat_${VERSION}_portainer-latest.yml"
+          grep -Fqx "    pull_policy: always" "ScribeCat_${VERSION}_portainer-latest.yml"
+          sha256sum "ScribeCat_server_${VERSION}_linux-amd64.tar.gz" "ScribeCat_${VERSION}_portainer.yml" "ScribeCat_${VERSION}_portainer-latest.yml" > "ScribeCat_${VERSION}_SHA256SUMS.txt"
           if ! gh release view "v${VERSION}" >/dev/null 2>&1; then
             gh release create "v${VERSION}" --target "${GITHUB_SHA}" --title "ScribeCat v${VERSION}" --notes "Installers and Docker image for ScribeCat v${VERSION}."
           fi
-          gh release upload "v${VERSION}" "ScribeCat_server_${VERSION}_linux-amd64.tar.gz" "ScribeCat_${VERSION}_portainer.yml" "ScribeCat_${VERSION}_SHA256SUMS.txt" --clobber
+          gh release upload "v${VERSION}" "ScribeCat_server_${VERSION}_linux-amd64.tar.gz" "ScribeCat_${VERSION}_portainer.yml" "ScribeCat_${VERSION}_portainer-latest.yml" "ScribeCat_${VERSION}_SHA256SUMS.txt" --clobber

@@ -6,13 +6,13 @@ As with any update, back up the data folder first (see
 [Backups](data-and-backups.md#backups)), so a bad update is a restore, not a
 loss.
 
-Images are published per version and also keep a moving `latest` tag for
-convenience. The Compose file defaults to the current published version, so a
-plain pull gets the same release as the desktop app. To pin another version,
-put it in `.env`:
+Images are published with both a numbered tag and a moving `latest` tag from
+the same multi-architecture build. The repository Compose file defaults to
+the current numbered release. To follow new releases automatically, set this
+in `.env`:
 
 ```dotenv
-SCRIBECAT_IMAGE=ghcr.io/reidar96/scribecat-server:0.25.12
+SCRIBECAT_IMAGE=ghcr.io/reidar96/scribecat-server:latest
 ```
 
 Then update with:
@@ -29,9 +29,12 @@ git pull
 docker compose up -d --build
 ```
 
-When you use a versioned image, `docker compose pull` fetches that exact
-server/frontend build; it does not depend on whatever image happens to be
-left locally from an older release.
+For Portainer, use `docker-compose.portainer-latest.yml` from the release if
+you want to pull the registry image on each redeploy. It keeps the existing
+`/volume1/notes:/data:rw` bind mount. The versioned Portainer Compose and
+Docker archive remain available for local image import with `pull_policy: never`.
+With a numbered image tag, `docker compose pull` fetches that exact server
+and frontend build instead of following new releases.
 
 Sessions and the desktop apps' access keys survive restarts and updates;
 nobody has to sign in again.

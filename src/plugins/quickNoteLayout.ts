@@ -9,10 +9,11 @@ export function noteColumns<T>(items: readonly T[], count: number, columnOf?: (i
 }
 
 /** Preserve assignments, but recover old collections that ended up entirely in one column. */
-export function balancedNoteColumns<T>(items: readonly T[], count: number, columnOf: (item: T, index: number) => number): T[][] {
+export function balancedNoteColumns<T>(items: readonly T[], count: number, columnOf: (item: T, index: number) => number, remember?: (item: T, column: number) => void): T[][] {
   if (count < 2 || items.length < 2) return noteColumns(items, count, columnOf);
   const assignments = items.map(columnOf);
   if (assignments.every((column) => column === assignments[0])) {
+    items.forEach((item, index) => remember?.(item, index % count));
     return noteColumns(items, count);
   }
   return noteColumns(items, count, (_, index) => assignments[index]);

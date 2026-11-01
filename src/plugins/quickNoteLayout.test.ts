@@ -33,7 +33,11 @@ describe("Quick Notes layout", () => {
   });
   it("fills both columns when older saved notes all say column zero", () => {
     const rows = ["a", "b", "c"];
-    expect(balancedNoteColumns(rows, 2, () => 0)).toEqual([["a", "c"], ["b"]]);
+    const remembered = new Map<string, number>();
+    expect(balancedNoteColumns(rows, 2, (path) => remembered.get(path) ?? 0, (path, column) => remembered.set(path, column))).toEqual([["a", "c"], ["b"]]);
+    expect(remembered.get("b")).toBe(1);
+    // An autosave can echo the old column value; the visual assignment wins.
+    expect(balancedNoteColumns(rows, 2, (path) => remembered.get(path) ?? 0)).toEqual([["a", "c"], ["b"]]);
     expect(balancedNoteColumns(rows, 2, (_, index) => index === 0 ? 1 : 0)).toEqual([["b", "c"], ["a"]]);
     expect(balancedNoteColumns(rows, 1, () => 0)).toEqual([rows]);
   });

@@ -47,11 +47,10 @@ Open `.env` and set three things:
   the box's LAN IP or host name here instead, e.g. `192.168.1.50`, or Caddy
   will not answer that request at all.
 
-`SCRIBECAT_IMAGE` is already set to the current version, so there is nothing
-to change there for the latest release. Two reasons you might still touch it:
-you would rather pull from Docker Hub than GHCR (same image, set it to
-`snooky234/scribecat-server:0.15.1`, no registry host needed in the name), or
-you want an older version on purpose (pin that tag instead).
+`SCRIBECAT_IMAGE` is already set to the current numbered release. Set it to
+`ghcr.io/reidar96/scribecat-server:latest` if you want every pull to get the
+newest release. You can also pin an older numbered tag or use the Docker Hub
+image if it is configured for this release.
 
 Then start it:
 
