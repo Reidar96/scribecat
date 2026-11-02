@@ -1,3 +1,9 @@
+## [1.3.15] - 2026-11-02
+
+- Show every full-size image in an inventory item’s `_attachments` folder as a gallery, with click-to-enlarge, arrows, keyboard navigation, swipe, thumbnails and conventional close controls in private and public views.
+- Clamp recipe descriptions to exactly three lines in internal and public overview cards on desktop and mobile.
+- Move collection headers below the iOS top compositing band with a fixed clearance in addition to the safe-area inset, removing the persistent blur when the sidebar is closed.
+
 ## [1.3.14] - 2026-11-02
 
 - Place collection app headers below the iOS safe-area compositing region so their text and icons render sharply.

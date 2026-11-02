@@ -13,7 +13,8 @@ const imagePattern = /\.(?:png|jpe?g|webp|gif)$/i;
 const mime: Record<string, string> = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".gif": "image/gif", ".pdf": "application/pdf" };
 const escape = (text: string) => text.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]!);
 type Receipt = { path: string; token: string; name: string };
-type Item = { path: string; slug: string; title: string; category: string; location: string; description: string; notes: string; fields: Record<string, string>; markdown: string; cover: string | null; token: string | null; receipts: Receipt[] };
+type InventoryImage = { path: string; token: string; alt: string };
+type Item = { path: string; slug: string; title: string; category: string; location: string; description: string; notes: string; fields: Record<string, string>; markdown: string; cover: string | null; token: string | null; images: InventoryImage[]; receipts: Receipt[] };
 const facets: Record<string, string> = { kategori: "category", plassering: "location" };
 const labels: Record<string, string> = { kategori: "Kategorier", plassering: "Plasseringer" };
 
@@ -46,7 +47,7 @@ export const publicInventoryRoutes: FastifyPluginAsync<{ vault: Vault }> = async
   const renderPage = (title: string, content: string) => page(title, content, webAppHead);
   app.addHook("onRequest", async (_request, reply) => {
     reply.header("Cache-Control", "no-store").header("X-Content-Type-Options", "nosniff").header("Referrer-Policy", "no-referrer")
-      .header("Content-Security-Policy", "default-src 'none'; manifest-src 'self'; img-src 'self'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'");
+      .header("Content-Security-Policy", "default-src 'none'; manifest-src 'self'; img-src 'self'; style-src 'unsafe-inline'; script-src 'self'; base-uri 'none'; frame-ancestors 'none'");
   });
   async function published(): Promise<Item[]> {
     let folder: string;
@@ -73,6 +74,18 @@ export const publicInventoryRoutes: FastifyPluginAsync<{ vault: Vault }> = async
           const candidate = path.posix.normalize(path.posix.join(base, fields.cover));
           if (candidate.startsWith(`${base}/`) && imagePattern.test(candidate)) cover = candidate;
         }
+        const imagePaths: string[] = [];
+        if (cover) imagePaths.push(cover);
+        try {
+          const attachmentFolder = path.posix.join(base, "_attachments");
+          const entries = await vault.readDir(attachmentFolder);
+          for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name, "no", { numeric: true }))) {
+            if (!entry.isFile || entry.isSymlink || !imagePattern.test(entry.name) || /^miniatyr[-_.]/i.test(entry.name)) continue;
+            const candidate = path.posix.join(attachmentFolder, entry.name);
+            if (!imagePaths.includes(candidate)) imagePaths.push(candidate);
+          }
+        } catch { /* an attachment folder is optional */ }
+        const images = imagePaths.map((imagePath) => ({ path: imagePath, alt: path.posix.basename(imagePath, path.posix.extname(imagePath)).replace(/[-_]+/g, " "), token: createHash("sha256").update(`${record.relativePath}\0${imagePath}`).digest("hex").slice(0, 32) }));
         const receiptLines = /^## Kvitteringer\s*\n([\s\S]*?)(?=^## |$(?![\s\S]))/m.exec(markdown)?.[1] ?? "";
         const receipts: Receipt[] = parseReceiptReferences(receiptLines, fields.receipt).flatMap(({ path: relative, name }) => {
           if (!relative || !/^_attachments\/[^/\\?#]+$/.test(relative)) return [];
@@ -81,8 +94,8 @@ export const publicInventoryRoutes: FastifyPluginAsync<{ vault: Vault }> = async
             ? [{ path: candidate, name, token: createHash("sha256").update(`${record.relativePath}\0${candidate}`).digest("hex").slice(0, 32) }] : [];
         });
         result.push({ path: record.relativePath, slug: fields.slug, title: fields.name || fields.slug,
-          category: fields.category || "", location: fields.location || "", description, notes, fields, markdown, cover, receipts,
-          token: cover ? createHash("sha256").update(`${record.relativePath}\0${cover}`).digest("hex").slice(0, 32) : null });
+          category: fields.category || "", location: fields.location || "", description, notes, fields, markdown, cover: images[0]?.path ?? null, images, receipts,
+          token: images[0]?.token ?? null });
       } catch { /* skip entries removed while listing */ }
     }
     return result.filter((item) => counts.get(item.slug) === 1);
@@ -124,8 +137,10 @@ export const publicInventoryRoutes: FastifyPluginAsync<{ vault: Vault }> = async
     const extras = Object.entries(item.fields).filter(([key, value]) => !internalFields.has(key) && !knownKeys.has(key) && !!value)
       .map(([key, value]) => ({ label: key.replace(/[-_]/g, " ").replace(/\b\w/g, (letter) => letter.toLocaleUpperCase("no")), value }));
     const details = [...known, ...extras].map(({ label, value }) => `<div><dt>${escape(label)}</dt><dd>${escape(value)}</dd></div>`).join("");
-    const sections = readingSections("inventory", item.markdown).filter(({ heading }) => heading !== "Kvitteringer").map(({ heading, content }) => `<section class="public-section"><h2>${escape(heading)}</h2><div class="public-prose">${publicProse(content)}</div></section>`).join("");
-    return reply.type("text/html; charset=utf-8").send(renderPage(item.title, `<a class="back" href="../inventar">← Tilbake</a><article class="public-detail public-detail--inventory"><div class="public-hero">${item.token ? `<img src="${item.slug}/media/${item.token}" alt="">` : `<div class="public-inventory-placeholder" aria-hidden="true">▧</div>`}<div class="public-inventory-copy"><h1>${escape(item.title)}</h1>${details ? `<dl class="public-facts">${details}</dl>` : ""}</div></div>${sections}${item.receipts.length ? `<section class="public-section"><h2>Kvitteringer</h2>${item.receipts.map((receipt) => `<p><a download="${escape(receipt.name)}" href="${item.slug}/kvittering/${receipt.token}">↓ ${escape(receipt.name)}</a></p>`).join("")}</section>` : ""}</article>`));
+    const sections = readingSections("inventory", item.markdown).filter(({ heading }) => heading !== "Kvitteringer" && heading !== "Bilder").map(({ heading, content }) => `<section class="public-section"><h2>${escape(heading)}</h2><div class="public-prose">${publicProse(content)}</div></section>`).join("");
+    const gallery = item.images.length ? `<div class="public-inventory-gallery" data-gallery>${item.images.map((image, index) => `<button type="button" data-gallery-image="${item.slug}/media/${image.token}" data-gallery-alt="${escape(image.alt)}" aria-label="Åpne bilde ${index + 1}"><img src="${item.slug}/media/${image.token}" alt="${escape(image.alt)}"></button>`).join("")}</div>` : `<div class="public-inventory-placeholder" aria-hidden="true">▧</div>`;
+    const dialog = item.images.length ? `<dialog class="public-gallery"><button class="public-gallery-close" aria-label="Lukk">×</button><button class="public-gallery-prev" aria-label="Forrige bilde">‹</button><img alt=""><button class="public-gallery-next" aria-label="Neste bilde">›</button><span class="public-gallery-count"></span></dialog><script defer src="../inventar/gallery.js"></script>` : "";
+    return reply.type("text/html; charset=utf-8").send(renderPage(item.title, `<a class="back" href="../inventar">← Tilbake</a><article class="public-detail public-detail--inventory"><div class="public-hero">${gallery}<div class="public-inventory-copy"><h1>${escape(item.title)}</h1>${details ? `<dl class="public-facts">${details}</dl>` : ""}</div></div>${sections}${item.receipts.length ? `<section class="public-section"><h2>Kvitteringer</h2>${item.receipts.map((receipt) => `<p><a download="${escape(receipt.name)}" href="${item.slug}/kvittering/${receipt.token}">↓ ${escape(receipt.name)}</a></p>`).join("")}</section>` : ""}</article>${dialog}`));
   });
   app.get<{ Params: { slug: string; token: string } }>("/inventar/:slug/kvittering/:token", async (request, reply) => {
     const item = slugPattern.test(request.params.slug) ? (await published()).find((entry) => entry.slug === request.params.slug) : null;
@@ -140,11 +155,14 @@ export const publicInventoryRoutes: FastifyPluginAsync<{ vault: Vault }> = async
   });
   app.get<{ Params: { slug: string; token: string } }>("/inventar/:slug/media/:token", async (request, reply) => {
     const item = slugPattern.test(request.params.slug) ? (await published()).find((entry) => entry.slug === request.params.slug) : null;
-    if (!item?.cover || item.token !== request.params.token) return reply.code(404).send();
+    const image = item?.images.find((entry) => entry.token === request.params.token);
+    if (!image) return reply.code(404).send();
     try {
-      const info = await vault.stat(item.cover);
+      const info = await vault.stat(image.path);
       if (!info.isFile || info.isSymlink || info.size > 8 * 1024 * 1024) return reply.code(404).send();
-      return reply.type(mime[path.posix.extname(item.cover).toLowerCase()] ?? "application/octet-stream").send(await vault.readBytes(item.cover));
+      return reply.type(mime[path.posix.extname(image.path).toLowerCase()] ?? "application/octet-stream").send(await vault.readBytes(image.path));
     } catch { return reply.code(404).send(); }
   });
+  app.get("/inventar/gallery.js", async (_request, reply) => reply.type("application/javascript; charset=utf-8").send(`(()=>{const g=document.querySelector('[data-gallery]'),d=document.querySelector('.public-gallery');if(!g||!d)return;const b=[...g.querySelectorAll('[data-gallery-image]')],im=d.querySelector('img'),c=d.querySelector('.public-gallery-count');let i=0,x=0;const show=n=>{i=(n+b.length)%b.length;im.src=b[i].dataset.galleryImage;im.alt=b[i].dataset.galleryAlt||'';c.textContent=(i+1)+' / '+b.length};b.forEach((e,n)=>e.addEventListener('click',()=>{show(n);d.showModal()}));d.querySelector('.public-gallery-close').onclick=()=>d.close();d.querySelector('.public-gallery-prev').onclick=()=>show(i-1);d.querySelector('.public-gallery-next').onclick=()=>show(i+1);d.addEventListener('click',e=>{if(e.target===d)d.close()});d.addEventListener('keydown',e=>{if(e.key==='ArrowLeft')show(i-1);if(e.key==='ArrowRight')show(i+1)});d.addEventListener('touchstart',e=>x=e.changedTouches[0].clientX,{passive:true});d.addEventListener('touchend',e=>{const q=e.changedTouches[0].clientX-x;if(Math.abs(q)>45)show(i+(q<0?1:-1))},{passive:true})})();`));
+
 };

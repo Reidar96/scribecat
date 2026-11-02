@@ -4,9 +4,7 @@ import { createPluginApi } from "@/plugins/api";
 import type { PluginId } from "@/plugins/registry";
 import { dirname, join } from "@/platform/paths";
 
-export function PluginCover({ id, vaultPath, documentPath, reference, alt }: {
-  id: PluginId; vaultPath: string; documentPath: string; reference: string; alt: string;
-}) {
+export function usePluginImageUrl(id: PluginId, vaultPath: string, documentPath: string, reference: string) {
   const [url, setUrl] = useState<string | null>(null);
   useEffect(() => {
     if (!/^\.?(?:\/|[^:/\\])/.test(reference) || !/\.(?:png|jpe?g|webp|gif)$/i.test(reference)) return;
@@ -24,5 +22,12 @@ export function PluginCover({ id, vaultPath, documentPath, reference, alt }: {
     })();
     return () => { active = false; if (objectUrl) URL.revokeObjectURL(objectUrl); };
   }, [id, vaultPath, documentPath, reference]);
+  return url;
+}
+
+export function PluginCover({ id, vaultPath, documentPath, reference, alt }: {
+  id: PluginId; vaultPath: string; documentPath: string; reference: string; alt: string;
+}) {
+  const url = usePluginImageUrl(id, vaultPath, documentPath, reference);
   return url ? <img className="content-plugin-panel__cover" src={url} alt={alt} /> : null;
 }

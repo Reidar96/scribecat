@@ -47,6 +47,18 @@ describe("public inventory", () => {
     expect(page).toContain("public-inventory-copy");
     expect(page).not.toContain("<dl class=\"public-facts\"></dl>");
   });
+  it("discovers full-size attachment images and exposes a browsable gallery", async () => {
+    await configure();
+    const attachments = path.join(context.vaultPath, "Inventar", "_attachments");
+    await writeFile(path.join(attachments, "bilde-002.jpg"), Buffer.from([0xff, 0xd8, 0xff, 0xd9]));
+    await writeFile(path.join(attachments, "miniatyr-002.webp"), Buffer.from([0x52, 0x49, 0x46, 0x46]));
+    const detail = await context.app.inject({ method: "GET", url: "/anna/inventar/sykkel" });
+    expect(detail.body.match(/data-gallery-image=/g)).toHaveLength(2);
+    expect(detail.body).not.toContain("miniatyr-002");
+    expect(detail.body).toContain("public-gallery-next");
+    expect(detail.headers["content-security-policy"]).toContain("script-src 'self'");
+    expect((await context.app.inject({ method: "GET", url: "/anna/inventar/gallery.js" })).statusCode).toBe(200);
+  });
   it("offers every published receipt as a validated download", async () => {
     await configure();
     const folder = path.join(context.vaultPath, "Inventar");

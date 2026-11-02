@@ -3,10 +3,12 @@ import MarkdownIt from "markdown-it";
 import { ArrowLeft, Download, History, ImagePlus, Pencil, Plus, Save, Trash2, X, BookOpen, CookingPot, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PluginCover } from "@/components/plugins/PluginCover";
+import { InventoryGallery } from "@/components/plugins/InventoryGallery";
 import { splitFrontmatter } from "@/lib/documentFrontmatter";
 import { getRelativeImageMarkdownPath, saveImageToFolder } from "@/lib/fileSystem";
-import { moveMarkdownSection, pluginSection, removeMarkdownSection, setPluginField, setPluginSection, setPluginTitle } from "@/plugins/markdown";
+import { moveMarkdownSection, pluginMetadata, pluginSection, removeMarkdownSection, setPluginField, setPluginSection, setPluginTitle } from "@/plugins/markdown";
 import { ingredientMarkdown, parseIngredients, parseSteps, scaledAmount, stepsMarkdown, type Ingredient } from "@/plugins/recipe";
+import { inventoryImagesMarkdown, parseInventoryImages } from "@/plugins/inventory";
 import { PluginDialog } from "@/components/plugins/PluginDialog";
 import type { PluginId } from "@/plugins/registry";
 import { platform } from "@/platform";
@@ -163,6 +165,7 @@ export function ContentPluginDetail({ id, entry, vaultPath, publicView, isNew, d
   const section = (heading: string, value: string) => void onChange(setPluginSection(entry.markdown, heading, value));
   const title = entry.metadata.title || entry.metadata.name || entry.title;
   const cover = entry.metadata.cover;
+  const inventoryImages = id === "inventory" ? parseInventoryImages(entry.markdown, cover) : [];
   const uploadCover = async () => {
     if (isNew) return;
     const files = await platform.imagePicker.pickImages({ title: "Velg bilde", filterName: "Bilder", extensions: ["jpg", "jpeg", "png", "webp", "gif"] });
@@ -172,6 +175,25 @@ export function ContentPluginDetail({ id, entry, vaultPath, publicView, isNew, d
     if (!mimeType.startsWith("image/") || data.length > 8 * 1024 * 1024) throw new Error("Bildet må være under 8 MB.");
     const relative = await saveImageToFolder(vaultPath, entry.path, picked.fileName, mimeType, data);
     field("cover", await getRelativeImageMarkdownPath(vaultPath, entry.path, relative));
+  };
+  const uploadInventoryImages = async () => {
+    if (isNew) return;
+    const files = await platform.imagePicker.pickImages({ title: "Velg bilder", filterName: "Bilder", extensions: ["jpg", "jpeg", "png", "webp", "gif"] });
+    if (!files.length) return;
+    let markdown = entry.markdown;
+    let currentCover = pluginMetadata(markdown).cover || "";
+    const additions = [] as Array<{ reference: string; alt: string }>;
+    for (const picked of files) {
+      const { data, mimeType } = await picked.read();
+      if (!mimeType.startsWith("image/") || data.length > 8 * 1024 * 1024) continue;
+      const relative = await saveImageToFolder(vaultPath, entry.path, picked.fileName, mimeType, data);
+      const reference = await getRelativeImageMarkdownPath(vaultPath, entry.path, relative);
+      if (!currentCover) { markdown = setPluginField(markdown, "cover", reference); currentCover = reference; }
+      else additions.push({ reference, alt: picked.fileName.replace(/\.[^.]+$/, "") });
+    }
+    const existing = parseInventoryImages(markdown, currentCover).filter((image) => image.reference !== currentCover);
+    if (additions.length) markdown = setPluginSection(markdown, "Bilder", inventoryImagesMarkdown([...existing, ...additions]));
+    if (markdown !== entry.markdown) await onChange(markdown);
   };
   const metadataField = (label: string, key: string, type?: string) => <Field label={label} value={entry.metadata[key] ?? ""} type={type} onSave={(value) => field(key, value)} />;
   const contentSection = (heading: string, placeholder?: string) => <Section title={heading} value={pluginSection(entry.markdown, heading)} placeholder={placeholder} onSave={(value) => section(heading, value)} />;
@@ -208,7 +230,7 @@ export function ContentPluginDetail({ id, entry, vaultPath, publicView, isNew, d
   const readingKind = id === "books" || id === "recipes" || id === "inventory" ? id : null;
   const previewFields = readingKind ? readingFields(readingKind, entry.metadata) : [];
   const previewSections = readingKind ? readingSections(readingKind, entry.markdown).filter(({ heading }) =>
-    heading !== "Kvitteringer" && (id !== "recipes" || (heading !== "Ingredienser" && heading !== "Fremgangsmåte"))) : [];
+    heading !== "Kvitteringer" && heading !== "Bilder" && (id !== "recipes" || (heading !== "Ingredienser" && heading !== "Fremgangsmåte"))) : [];
 
   return <div className="plugin-detail"><div className="plugin-detail__actions"><Button variant="ghost" onClick={onBack}><ArrowLeft size={17} /> Tilbake</Button><div className="plugin-detail__action-group">
     {!isNew && <Button variant="outline" onClick={() => void showVersions()}><History size={16} /> Versjoner</Button>}
@@ -222,7 +244,7 @@ export function ContentPluginDetail({ id, entry, vaultPath, publicView, isNew, d
     {versions && <section className="plugin-detail__section"><div className="plugin-detail__section-heading"><h3>Versjonshistorikk</h3><button onClick={() => setVersions(null)}>Lukk</button></div>
       {versions.length ? versions.map((version) => <div key={version.id} className="plugin-detail__version"><time>{new Date(version.createdAt).toLocaleString("no-NO")}</time><button onClick={() => void readVersionContent(vaultPath, version.id).then((markdown) => { void onChange(markdown); setEditing(true); setVersions(null); })}>Bruk som utkast</button></div>) : <p>Ingen lagrede versjoner ennå.</p>}</section>}
     {!editing ? <div className="plugin-detail__preview"><div className="plugin-detail__preview-main"><div className="plugin-detail__hero">
-      {id !== "shopping" && <div className="plugin-detail__image">{cover ? <PluginCover id={id} vaultPath={vaultPath} documentPath={entry.path} reference={cover} alt={title} /> : <span aria-hidden="true">{id === "books" ? <BookOpen /> : id === "recipes" ? <CookingPot /> : <Package />}</span>}</div>}
+      {id !== "shopping" && (id === "inventory" && inventoryImages.length ? <InventoryGallery images={inventoryImages} vaultPath={vaultPath} documentPath={entry.path} title={title} /> : <div className="plugin-detail__image">{cover ? <PluginCover id={id} vaultPath={vaultPath} documentPath={entry.path} reference={cover} alt={title} /> : <span aria-hidden="true">{id === "books" ? <BookOpen /> : id === "recipes" ? <CookingPot /> : <Package />}</span>}</div>)}
       <div><h2>{title}</h2>{entry.metadata.favorite === "true" && <p className="plugin-detail__badges"><span>★ Favoritt</span></p>}
         {previewFields.length > 0 && <dl className="plugin-detail__summary">{previewFields.map(({ key, label, value }) => <div key={key}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>}</div></div>
       {previewSections.filter(({ heading }) => id !== "recipes" || heading !== "Notater").map(({ heading, content }) => <section className={`plugin-detail__section${heading === "Høydepunkter" || heading === "Utdrag" ? " plugin-detail__quotes" : ""}`} id={`plugin-section-${heading}`} key={heading}><h3>{heading === "Høydepunkter" ? "Utdrag" : heading}</h3><div className="plugin-detail__prose" dangerouslySetInnerHTML={{ __html: previewMarkdown.render(content) }} /></section>)}
@@ -233,8 +255,8 @@ export function ContentPluginDetail({ id, entry, vaultPath, publicView, isNew, d
     </div></div> : id === "shopping" ? <><h2>{title || "Ny handleliste"}</h2><Field label="Navn" value={title} autoFocus={isNew} onSave={(value) => void onChange(setPluginTitle(entry.markdown, "title", value))} />
       <label className="plugin-detail__field"><span>Offentlig handleliste</span><input type="checkbox" checked={published} disabled={!publicView && !published} onChange={() => void onChange(setPluginField(entry.markdown, "published", !published))} /></label>
       {published && publicView && <p>Adresse: /handleliste/{entry.metadata.slug}</p>}<ShoppingItems entry={entry} onChange={onChange} /></> : <>
-      <div className="plugin-detail__hero"><div className="plugin-detail__image">{cover ? <PluginCover id={id} vaultPath={vaultPath} documentPath={entry.path} reference={cover} alt={title} /> : <span aria-hidden="true">{id === "books" ? <BookOpen /> : id === "recipes" ? <CookingPot /> : <Package />}</span>}
-        <button disabled={isNew} onClick={() => void uploadCover()}><ImagePlus size={16} /> {cover ? "Bytt bilde" : "Legg til bilde"}</button></div>
+      <div className="plugin-detail__hero"><div className="plugin-detail__image">{id === "inventory" && inventoryImages.length ? <InventoryGallery images={inventoryImages} vaultPath={vaultPath} documentPath={entry.path} title={title} /> : cover ? <PluginCover id={id} vaultPath={vaultPath} documentPath={entry.path} reference={cover} alt={title} /> : <span aria-hidden="true">{id === "books" ? <BookOpen /> : id === "recipes" ? <CookingPot /> : <Package />}</span>}
+        <button disabled={isNew} onClick={() => void (id === "inventory" ? uploadInventoryImages() : uploadCover())}><ImagePlus size={16} /> {id === "inventory" ? "Legg til bilder" : cover ? "Bytt bilde" : "Legg til bilde"}</button></div>
         <div className="plugin-detail__hero-fields"><h2>{title || `Ny ${id === "books" ? "bok" : id === "recipes" ? "oppskrift" : "gjenstand"}`}</h2><Field label={id === "inventory" ? "Navn" : "Tittel"} value={title} autoFocus={isNew}
           onSave={(value) => void onChange(setPluginTitle(entry.markdown, id === "inventory" ? "name" : "title", value))} />
           {id === "books" && <>{metadataField("Forfatter", "author")}

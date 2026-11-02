@@ -165,7 +165,8 @@
 .plugin-detail__image > span svg { width:3.4rem; height:3.4rem; stroke-width:1.3; }
 .content-plugin-panel__tile strong { padding:.35rem .2rem 0; }
 .content-plugin-panel__tile span:last-child { padding:0 .2rem .35rem; }
-.content-plugin-panel__tile-description { margin:0;padding:0 .2rem .35rem;color:var(--muted-foreground);font-size:.86rem;line-height:1.45;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden; }
+.content-plugin-panel__tile-description { margin:0;padding:0 .2rem;color:var(--muted-foreground);font-size:.86rem;line-height:1.45;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;line-clamp:3;overflow:hidden;max-height:calc(3 * 1.45em); }
+.plugin-detail__gallery{display:grid;grid-template-columns:minmax(0,1fr) repeat(3,minmax(3rem,.28fr));gap:.45rem;width:100%}.plugin-detail__gallery-thumb{min-width:0;padding:0;border:1px solid var(--border);border-radius:.6rem;overflow:hidden;background:var(--surface);cursor:zoom-in}.plugin-detail__gallery-thumb:first-child{grid-row:span 3}.plugin-detail__gallery-thumb img{display:block;width:100%;height:100%;min-height:4rem;object-fit:cover}.plugin-detail__gallery-thumb:first-child img{min-height:13rem}.plugin-detail__image>.plugin-detail__gallery{height:100%}.plugin-detail__image>.plugin-detail__gallery .plugin-detail__gallery-thumb:first-child img{min-height:100%}
 .plugin-detail { max-width:68rem; }
 .plugin-detail__preview { display:block; }
 .plugin-detail__preview-main { max-width:68rem; }
@@ -191,7 +192,7 @@
 .content-plugin-panel__rail-toggle { display:none; }
 @media (max-width:38rem) { .content-plugin-panel__header h2 { font-size:1rem; } .content-plugin-panel__header { padding-inline:.6rem; } .content-plugin-panel__body { padding:1rem .7rem; } .content-plugin-panel__grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:.55rem; } .content-plugin-panel__tile .content-plugin-panel__cover,.content-plugin-panel__placeholder { height:7rem; } .plugin-detail__action-group { gap:.3rem; } .plugin-detail__actions button { font-size:.82rem; } }
 @media (max-width:48rem) {
-  .content-plugin-panel__header { position:relative;z-index:2;isolation:isolate;box-sizing:border-box;min-height:calc(3.5rem + env(safe-area-inset-top));padding-top:max(.55rem,env(safe-area-inset-top));background:rgb(var(--surface-rgb));-webkit-backdrop-filter:none;backdrop-filter:none;filter:none;opacity:1; }
+  .content-plugin-panel__header { position:relative;z-index:2;isolation:isolate;box-sizing:border-box;min-height:calc(4.75rem + env(safe-area-inset-top));padding-top:calc(1.8rem + env(safe-area-inset-top));background:rgb(var(--surface-rgb));-webkit-backdrop-filter:none;backdrop-filter:none;filter:none;opacity:1;transform:none; }
   .content-plugin-panel__header-leading,.content-plugin-panel__header-title,.content-plugin-panel__header button { -webkit-backdrop-filter:none;backdrop-filter:none;filter:none;opacity:1; }
   .content-plugin-panel__layout { display:block;overflow-y:auto; }
   .content-plugin-panel__rail,.content-plugin-panel__rail--open { display:flex;align-items:stretch;gap:.5rem;max-height:none;overflow-x:auto;overflow-y:hidden;border-right:0;border-bottom:1px solid var(--border);padding:.55rem .65rem;background:var(--surface);scrollbar-width:none; }
@@ -207,6 +208,7 @@
   .content-plugin-panel__layout .content-plugin-panel__body { overflow:visible; }
   .content-plugin-panel > .content-plugin-panel__body { overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch; }
 }
+@media(max-width:38rem){.plugin-detail__gallery{grid-template-columns:repeat(3,minmax(0,1fr))}.plugin-detail__gallery-thumb:first-child{grid-column:1/-1;grid-row:auto}.plugin-detail__gallery-thumb:first-child img{height:14rem}}
 @media (max-width:48rem) {
   .content-plugin-panel__quick-add { position:fixed;z-index:20;right:max(1rem,env(safe-area-inset-right));bottom:max(1rem,env(safe-area-inset-bottom));display:grid;place-items:center;width:3.4rem;height:3.4rem;border:0;border-radius:50%;background:var(--primary);color:var(--primary-foreground);box-shadow:0 5px 18px rgba(0,0,0,.22); }
   .content-plugin-panel__quick-add svg { width:1.45rem;height:1.45rem; }
