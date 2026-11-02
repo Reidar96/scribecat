@@ -50,13 +50,13 @@ export function AppsOverview({ onOpen, onClose, onOpenSidebar, sidebarVisible, o
   const [over, setOver] = useState<PluginId | null>(null);
   return <main className="content-plugin-panel">
     <PluginTopbar title="Apper" icon="apps" isPhone={isPhone} sidebarVisible={sidebarVisible} onSidebarVisibilityToggle={onSidebarVisibilityToggle} onOpenSidebar={onOpenSidebar} onClose={onClose} />
-    <div className="content-plugin-panel__body">{custom && vault ? <CustomPackagePanel manifest={custom} vault={vault} onBack={() => setCustom(null)} /> : <><p>Dra håndtaket for å endre rekkefølgen.</p><div className="apps-overview__grid">
+    <div className="content-plugin-panel__body">{custom && vault ? <CustomPackagePanel manifest={custom} vault={vault} onBack={() => setCustom(null)} /> : <div className="apps-overview__grid">
       {available.map((item) => {
         const Icon = pluginIcons[item.id];
         return <div key={item.id} data-plugin-id={item.id} className={`apps-overview__card${over === item.id ? " apps-overview__card--over" : ""}`}>
           <button className="apps-overview__open" onClick={() => onOpen(item.id)}><Icon size={24} aria-hidden="true" /><strong>{item.name}</strong></button>
           <button className="apps-overview__drag" aria-label={`Flytt ${item.name}`} title="Dra for å endre rekkefølge"
-            onPointerDown={(event) => { dragging.current = item.id; event.currentTarget.setPointerCapture(event.pointerId); }}
+            onPointerDown={(event) => { event.preventDefault(); dragging.current = item.id; event.currentTarget.setPointerCapture(event.pointerId); }}
             onPointerMove={(event) => {
               if (!dragging.current) return;
               const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-plugin-id]");
@@ -75,6 +75,6 @@ export function AppsOverview({ onOpen, onClose, onOpenSidebar, sidebarVisible, o
         </div>;
       })}
       {packages.map((item) => <div className="apps-overview__card" key={item.id}><button className="apps-overview__open" onClick={() => setCustom(item)}><Puzzle size={24} aria-hidden="true" /><strong>{item.name}</strong></button></div>)}
-    </div></>}</div>
+    </div>}</div>
   </main>;
 }

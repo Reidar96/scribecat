@@ -1,3 +1,8 @@
+## [1.3.14] - 2026-11-02
+
+- Place collection app headers below the iOS safe-area compositing region so their text and icons render sharply.
+- Remove the app-overview drag instruction and prevent text selection or the iOS callout while reordering app cards.
+
 ## [1.3.13] - 2026-11-02
 
 - Remove the remaining WebKit backdrop blur from mobile collection headers and their parent surface.
