@@ -1,3 +1,9 @@
+## [1.3.16] - 2026-11-02
+
+- Restore Books, Recipes, Inventory and Shopping List public pages by keeping gallery CSS inside the stylesheet instead of emitting it into navigation and page content.
+- Show one large square inventory image above a four-column square thumbnail grid in private and public detail views; open the selected original in the full viewer.
+- Give Journal, Tasks, Graph and collection headers the same iOS top clearance that fixed the newer apps, using the page background instead of a gray header band.
+
 ## [1.3.15] - 2026-11-02
 
 - Show every full-size image in an inventory item’s `_attachments` folder as a gallery, with click-to-enlarge, arrows, keyboard navigation, swipe, thumbnails and conventional close controls in private and public views.

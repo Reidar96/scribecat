@@ -29,6 +29,9 @@ describe("public inventory", () => {
     expect(detail.body).toContain("HEMMELIG");
     expect(detail.body).toContain("Privat notat");
     expect(detail.headers["content-security-policy"]).toContain("default-src 'none'");
+    expect(detail.body.match(/\.public-inventory-gallery\{/g)).toHaveLength(1);
+    expect(detail.body.indexOf(".public-inventory-gallery{")).toBeLessThan(detail.body.indexOf("</style>"));
+    expect(detail.body.slice(detail.body.indexOf("</style>") + 8)).not.toContain(".public-inventory-gallery{");
     const token = /sykkel\/media\/([a-f0-9]{32})/.exec(detail.body)?.[1];
     expect(token).toBeTruthy();
     expect((await context.app.inject({ method: "GET", url: `/anna/inventar/sykkel/media/${token}` })).statusCode).toBe(200);
@@ -54,6 +57,8 @@ describe("public inventory", () => {
     await writeFile(path.join(attachments, "miniatyr-002.webp"), Buffer.from([0x52, 0x49, 0x46, 0x46]));
     const detail = await context.app.inject({ method: "GET", url: "/anna/inventar/sykkel" });
     expect(detail.body.match(/data-gallery-image=/g)).toHaveLength(2);
+    expect(detail.body).toContain("public-inventory-gallery__main");
+    expect(detail.body).toContain("public-inventory-gallery__thumbs");
     expect(detail.body).not.toContain("miniatyr-002");
     expect(detail.body).toContain("public-gallery-next");
     expect(detail.headers["content-security-policy"]).toContain("script-src 'self'");

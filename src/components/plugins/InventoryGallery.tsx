@@ -5,9 +5,9 @@ import type { InventoryImage } from "@/plugins/inventory";
 import { readDir } from "@/platform/vaultFs";
 import { dirname, join } from "@/platform/paths";
 
-function GalleryThumb({ image, vaultPath, documentPath, onOpen }: { image: InventoryImage; vaultPath: string; documentPath: string; onOpen: () => void }) {
+function GalleryThumb({ image, vaultPath, documentPath, className, selected, onOpen }: { image: InventoryImage; vaultPath: string; documentPath: string; className?: string; selected?: boolean; onOpen: () => void }) {
   const url = usePluginImageUrl("inventory", vaultPath, documentPath, image.reference);
-  return url ? <button type="button" className="plugin-detail__gallery-thumb" onClick={onOpen}><img src={url} alt={image.alt} loading="lazy" decoding="async" /></button> : null;
+  return url ? <button type="button" className={`plugin-detail__gallery-thumb${className ? ` ${className}` : ""}${selected ? " is-selected" : ""}`} aria-current={selected ? "true" : undefined} onClick={onOpen}><img src={url} alt={image.alt} loading="lazy" decoding="async" /></button> : null;
 }
 
 function GalleryLightbox({ images, index, vaultPath, documentPath, onIndex, onClose }: { images: InventoryImage[]; index: number; vaultPath: string; documentPath: string; onIndex: (index: number) => void; onClose: () => void }) {
@@ -21,6 +21,7 @@ function GalleryLightbox({ images, index, vaultPath, documentPath, onIndex, onCl
 
 export function InventoryGallery({ images, vaultPath, documentPath, title }: { images: InventoryImage[]; vaultPath: string; documentPath: string; title: string }) {
   const [open, setOpen] = useState<number | null>(null);
+  const [selected, setSelected] = useState(0);
   const [folderImages, setFolderImages] = useState<InventoryImage[]>([]);
   useEffect(() => {
     let cancelled = false;
@@ -42,8 +43,13 @@ export function InventoryGallery({ images, vaultPath, documentPath, title }: { i
     return result;
   }, [folderImages, images]);
   if (!allImages.length) return null;
+  const normalized = allImages.map((image, index) => ({ ...image, alt: image.alt || `${title}, bilde ${index + 1}` }));
+  const selectedIndex = Math.min(selected, normalized.length - 1);
   return <div className="plugin-detail__gallery" aria-label={`Bilder av ${title}`}>
-    {allImages.map((image, index) => <GalleryThumb key={`${image.reference}:${index}`} image={{ ...image, alt: image.alt || `${title}, bilde ${index + 1}` }} vaultPath={vaultPath} documentPath={documentPath} onOpen={() => setOpen(index)} />)}
-    {open !== null && <GalleryLightbox images={allImages.map((image, index) => ({ ...image, alt: image.alt || `${title}, bilde ${index + 1}` }))} index={open} vaultPath={vaultPath} documentPath={documentPath} onIndex={setOpen} onClose={() => setOpen(null)} />}
+    <GalleryThumb image={normalized[selectedIndex]} vaultPath={vaultPath} documentPath={documentPath} className="plugin-detail__gallery-main" onOpen={() => setOpen(selectedIndex)} />
+    {normalized.length > 1 ? <div className="plugin-detail__gallery-thumbnails">
+      {normalized.map((image, index) => <GalleryThumb key={`${image.reference}:${index}`} image={image} vaultPath={vaultPath} documentPath={documentPath} selected={index === selectedIndex} onOpen={() => setSelected(index)} />)}
+    </div> : null}
+    {open !== null && <GalleryLightbox images={normalized} index={open} vaultPath={vaultPath} documentPath={documentPath} onIndex={(index) => { setOpen(index); setSelected(index); }} onClose={() => setOpen(null)} />}
   </div>;
 }

@@ -584,6 +584,53 @@
   }
 }
 
+/* iOS can composite the status-bar material over the first app row when the
+   sidebar is closed. Reserve the same clear top strip for every app header.
+   The page background is opaque without introducing a separate gray band. */
+@media (max-width: 48rem) {
+  .journal-view,
+  .tasks-view,
+  .collection-panel__card,
+  .graph-view__card,
+  .content-plugin-panel {
+    --mobile-app-header-height: calc(4.75rem + env(safe-area-inset-top));
+  }
+
+  .journal-view__header,
+  .tasks-view__header,
+  .collection-panel__header,
+  .graph-view__header,
+  .content-plugin-panel__header {
+    position: relative;
+    z-index: 2;
+    isolation: isolate;
+    box-sizing: border-box;
+    height: var(--mobile-app-header-height);
+    min-height: var(--mobile-app-header-height);
+    padding-top: calc(1.8rem + env(safe-area-inset-top));
+    background: var(--body-bg-end);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    filter: none;
+  }
+
+  .journal-view__header-leading,
+  .tasks-view__header-leading,
+  .collection-panel__header-leading,
+  .graph-view__header-leading,
+  .content-plugin-panel__header-leading,
+  .content-plugin-panel__header-title {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    filter: none;
+  }
+
+  .journal-view__layout,
+  .tasks-view__layout {
+    height: calc(100% - var(--mobile-app-header-height));
+  }
+}
+
 /* The row's "more" button; shown only for a coarse pointer (below). */
 /* Anchored to the row's top, not its middle: a folder's list item also holds
    the expanded children, so its middle is not the row's. */
