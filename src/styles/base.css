@@ -142,8 +142,9 @@ body.is-resizing-details-panel {
 
 .dark .sidebar-panel::before,
 .dark .detail-panel__card::before {
-  background: rgba(var(--surface-strong-rgb),0.82);
-  backdrop-filter: blur(18px);
+  background: rgb(var(--surface-strong-rgb));
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
   clip-path: inset(0 round 1.5rem);
 }
 
@@ -153,6 +154,7 @@ body.is-resizing-details-panel {
   .dark .detail-panel__card::before,
   .dark .sidebar-panel::before {
     background: rgb(var(--surface-strong-rgb));
+    -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }
 }

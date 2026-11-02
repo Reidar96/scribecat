@@ -1,3 +1,8 @@
+## [1.3.13] - 2026-11-02
+
+- Remove the remaining WebKit backdrop blur from mobile collection headers and their parent surface.
+- Resolve Quick Notes autosave echoes against the latest Markdown instead of showing an external-change warning above the collection.
+
 ## [1.3.12] - 2026-11-02
 
 - Keep mobile editor text comfortably above the keyboard without moving it on every keystroke.

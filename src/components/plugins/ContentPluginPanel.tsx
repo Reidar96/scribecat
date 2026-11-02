@@ -433,7 +433,7 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
       setEntries((items) => items.map((item) => item.path === entry.path
         ? { ...item, markdown, metadata, title: metadata.title || metadata.name || item.title } : item));
       setError("");
-    }).catch((cause) => { succeeded = false; setError(cause instanceof Error && (cause.message === "Dokumentet ble endret utenfor denne visningen." || cause.message.startsWith("Huskelappen er endret")) ? cause.message : "Kunne ikke lagre endringen."); });
+    }).catch((cause) => { succeeded = false; setError(cause instanceof Error && cause.message === "Dokumentet ble endret utenfor denne visningen." ? cause.message : "Kunne ikke lagre endringen."); });
     pendingWrites.current.set(entry.path, next);
     await next;
     if (pendingWrites.current.get(entry.path) === next) pendingWrites.current.delete(entry.path);
@@ -515,10 +515,10 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
           {id === "quick-notes" ? <>
             <QuickNoteCard entry={entry} initialEdit={!isPhone && newNotePath === entry.path} onSave={async (text, expected) => {
               const saved = await change(entry, (current) => {
-                const currentBody = noteBody(current);
-                if (currentBody !== noteBody(expected) && currentBody !== quickNoteSavedBodies.current.get(entry.path)) {
-                  throw new Error("Huskelappen er endret utenfor denne visningen. Teksten din er beholdt i skrivefeltet.");
-                }
+                // Indexing and autosave echoes can change the file between
+                // keystrokes. Preserve its latest metadata and treat the text
+                // currently visible in the editor as authoritative.
+                void expected;
                 return updateQuickNoteBody(current, text);
               });
               if (saved) { quickNoteSavedBodies.current.set(entry.path, text); setNewNotePath(null); }
