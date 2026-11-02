@@ -36,6 +36,10 @@ describe("public inventory", () => {
     expect(token).toBeTruthy();
     expect((await context.app.inject({ method: "GET", url: `/anna/inventar/sykkel/media/${token}` })).statusCode).toBe(200);
     expect((await context.app.inject({ method: "GET", url: `/anna/inventar/sykkel/media/${"0".repeat(32)}` })).statusCode).toBe(404);
+    const categoryOverview = await context.app.inject({ method: "GET", url: "/anna/inventar/oversikt/kategori" });
+    const overviewMedia = /src="\.\.\/(sykkel\/media\/[a-f0-9]{32})"/.exec(categoryOverview.body)?.[1];
+    expect(overviewMedia).toBeTruthy();
+    expect((await context.app.inject({ method: "GET", url: `/anna/inventar/${overviewMedia}` })).statusCode).toBe(200);
     expect((await context.app.inject({ method: "GET", url: "/anna/inventar/oversikt/kategori/Sport" })).body).toContain("Sykkel");
     expect((await context.app.inject({ method: "GET", url: "/anna/inventar/statistikk" })).body).toContain("<span>Gjenstander</span><strong>1</strong>");
     expect(index.body).toContain('href="inventar/oversikt/plassering"');

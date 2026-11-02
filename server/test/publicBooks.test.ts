@@ -33,7 +33,8 @@ describe("public books", () => {
     const author = await context.app.inject({ method: "GET", url: "/anna/boker/oversikt/forfatter/Forfatter" });
     const groups = await context.app.inject({ method: "GET", url: "/anna/boker/oversikt/forfatter" });
     expect(groups.body).toContain('class="public-cover-mosaic"');
-    expect(groups.body).toContain(`../../eksempel/media/${token}`);
+    expect(groups.body).toContain(`../eksempel/media/${token}`);
+    expect((await context.app.inject({ method: "GET", url: `/anna/boker/eksempel/media/${token}` })).statusCode).toBe(200);
     expect(author.statusCode).toBe(200);
     expect(author.body).toContain('href="../../eksempel"');
     expect((await context.app.inject({ method: "GET", url: "/anna/boker/statistikk" })).body).toContain("<span>Bøker</span><strong>1</strong>");

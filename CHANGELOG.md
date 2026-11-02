@@ -1,3 +1,7 @@
+## [1.3.17] - 2026-11-02
+
+- Fix public Inventory category and location mosaics by resolving their media URLs inside the Inventory route. Apply the same correction to Book overview mosaics.
+
 ## [1.3.16] - 2026-11-02
 
 - Restore Books, Recipes, Inventory and Shopping List public pages by keeping gallery CSS inside the stylesheet instead of emitting it into navigation and page content.
