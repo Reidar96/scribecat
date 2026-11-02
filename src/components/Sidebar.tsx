@@ -49,6 +49,7 @@ import { TagsOverview } from "@/components/sidebar/TagsOverview";
 import { SidebarSearchResults } from "@/components/sidebar/SidebarSearchResults";
 import { useTagIndex } from "@/hooks/useTagIndex";
 import { useVaultSearch } from "@/hooks/useVaultSearch";
+import { openSidebarSearchResult } from "@/lib/openSidebarSearchResult";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useStoredCollapsed, useWorkingSetHeight } from "@/hooks/useWorkingSetHeight";
 import { canDownloadFolderArchive } from "@/lib/export/markdownDownload";
@@ -760,8 +761,8 @@ export function Sidebar({
           <SidebarSearchResults
             results={vaultSearch.results}
             loading={vaultSearch.loading}
-            onOpen={(filePath) => {
-              void onSelectFilePath(filePath);
+            onOpen={(result) => {
+              void openSidebarSearchResult(result.filePath, searchQuery, onSelectFilePath);
             }}
           />
         </ScrollArea>

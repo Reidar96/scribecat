@@ -6,7 +6,7 @@ import type { VaultSearchResult } from "@/hooks/useVaultSearch";
 type SidebarSearchResultsProps = {
   results: VaultSearchResult[];
   loading: boolean;
-  onOpen: (filePath: string) => void;
+  onOpen: (result: VaultSearchResult) => void;
 };
 
 export function SidebarSearchResults({
@@ -31,7 +31,7 @@ export function SidebarSearchResults({
           key={result.filePath}
           type="button"
           className="sidebar-search-result"
-          onClick={() => onOpen(result.filePath)}
+          onClick={() => onOpen(result)}
         >
           <FileText aria-hidden="true" />
           <span className="sidebar-search-result__body">

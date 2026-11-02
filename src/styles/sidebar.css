@@ -389,6 +389,9 @@
   font-size: var(--font-ui-md);
 }
 
+/* The sidebar already provides its own clear button. */
+.sidebar-search input::-webkit-search-cancel-button { display: none; }
+
 .sidebar-search input::placeholder {
   color: rgba(var(--muted-rgb),0.72);
 }

@@ -1,3 +1,9 @@
+## [1.3.11] - 2026-11-02
+
+- Keep the collection heading in place while Quick Notes scans Markdown by removing a duplicate loading paragraph above it.
+- Reuse the Tasks navigation classes for collection sidebar buttons, counts, section headings and spacing without changing Tasks. Match its header icon styling.
+- Open the editor find panel at the first in-document match when a sidebar search result is opened; honor canceled document switches. Hide Safari’s native search clear button beside the app’s own button.
+
 ## [1.3.10] - 2026-11-02
 
 - Show one consistent search clear button in collection apps instead of duplicate native browser controls.
