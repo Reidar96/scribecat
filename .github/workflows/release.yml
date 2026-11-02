@@ -6,6 +6,9 @@ on:
       version:
         description: 'Version to publish, e.g. 0.22.14'
         required: true
+      source_ref:
+        description: 'Optional source ref for a packaging-only rebuild'
+        required: false
 
 # A manually requested tag pushed twice would otherwise start a second run that
 # writes into the very same GitHub release as the first one, from four jobs at
@@ -36,7 +39,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
-          ref: ${{ inputs.version && format('v{0}', inputs.version) || github.ref }}
+          ref: ${{ inputs.source_ref || (inputs.version && format('v{0}', inputs.version) || github.ref) }}
 
       - name: Set macOS minimum version
         if: startsWith(matrix.platform, 'macos-')
