@@ -4,6 +4,8 @@
 .content-plugin-panel__body { flex: 1; min-height: 0; overflow: auto; padding: 1rem; }
 .content-plugin-panel__search { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; border: 1px solid var(--border); border-radius: 0.5rem; max-width: 28rem; }
 .content-plugin-panel__search input { width: 100%; min-width: 0; background: transparent; outline: none; }
+.content-plugin-panel__search > button { display:grid;place-items:center;flex:none;width:1.75rem;height:1.75rem;border-radius:.4rem;color:var(--muted-foreground);font-size:1.3rem;line-height:1; }
+.content-plugin-panel__search > button:hover { color:var(--foreground);background:rgba(var(--overlay-rgb),.08); }
 .content-plugin-panel__filters, .plugin-settings__list { display: flex; gap: 0.4rem; flex-wrap: wrap; margin: 0.8rem 0; }
 .content-plugin-panel__filters button, .plugin-settings__list button { padding: 0.35rem 0.7rem; border: 1px solid var(--border); border-radius: 0.5rem; }
 .content-plugin-panel__filters button.active, .plugin-settings__list button.active { background: rgba(var(--overlay-rgb), 0.1); border-color: var(--primary); }

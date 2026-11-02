@@ -1,3 +1,7 @@
+## [1.3.10] - 2026-11-02
+
+- Show one consistent search clear button in collection apps instead of duplicate native browser controls.
+
 ## [1.3.9] - 2026-11-02
 
 - Align collection sidebars with the Tasks navigation plane. Make Quick Notes filters equal height and fill the available row on smaller screens.
