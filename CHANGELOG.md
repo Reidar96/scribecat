@@ -1,3 +1,9 @@
+## [1.3.9] - 2026-11-02
+
+- Align collection sidebars with the Tasks navigation plane. Make Quick Notes filters equal height and fill the available row on smaller screens.
+- Let text selection work inside Quick Notes while dragging from the card rim or handle. Preserve a newly created note during asynchronous file indexing and keep autosave from shifting the collection.
+- Scroll the active caret toward the top of the mobile viewport and reserve space below editors while the keyboard is open.
+
 ## [1.3.8] - 2026-11-01
 
 - Keep each Quick Notes card's visual column and manual position stable while its Markdown autosave echoes back; reserve the same footer width and height for every save state.

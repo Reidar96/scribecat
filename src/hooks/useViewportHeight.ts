@@ -39,10 +39,14 @@ function keepFocusedFieldVisible(viewport: VisualViewport) {
   if (!(active instanceof HTMLElement) || !active.matches("input:not([type='checkbox']):not([type='radio']),textarea,[contenteditable='true']")) return;
   const top = viewport.offsetTop + 16;
   const bottom = viewport.offsetTop + viewport.height - 24;
-  const bounds = active.getBoundingClientRect();
-  if (bounds.top >= top && bounds.bottom <= bottom) return;
   const rect = focusedCaretRect(active);
-  const delta = rect.bottom > bottom ? rect.bottom - bottom : rect.top < top ? rect.top - top : 0;
+  const keyboardOpen = viewport.height < window.innerHeight - 100;
+  // Keep the insertion point near the top while typing. Checking the whole
+  // textarea made long notes impossible to reveal reliably on iOS.
+  const preferredTop = top + Math.min(96, viewport.height * .2);
+  const delta = rect.top < top ? rect.top - top
+    : keyboardOpen && rect.top > preferredTop ? rect.top - preferredTop
+    : rect.bottom > bottom ? rect.bottom - bottom : 0;
   if (!delta) return;
   for (let parent = active.parentElement; parent; parent = parent.parentElement) {
     const overflow = getComputedStyle(parent).overflowY;
@@ -86,6 +90,7 @@ export function useViewportHeight() {
 
     const apply = () => {
       root.style.setProperty("--viewport-height", `${Math.round(viewport.height)}px`);
+      root.style.setProperty("--keyboard-edit-space", viewport.height < window.innerHeight - 100 ? `${Math.max(0, Math.round(viewport.height - 140))}px` : "0px");
 
       // Safari pans the document to keep the focused field visible even
       // though the shell is fixed. The shell has already been resized to the
@@ -112,6 +117,7 @@ export function useViewportHeight() {
       cancelAnimationFrame(frame);
       window.clearTimeout(settle);
       root.style.removeProperty("--viewport-height");
+      root.style.removeProperty("--keyboard-edit-space");
     };
   }, []);
 }

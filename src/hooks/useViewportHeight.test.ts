@@ -30,8 +30,9 @@ it("scrolls a focused mobile text field above the on-screen keyboard", async () 
   try {
     await act(async () => root.render(createElement(Harness)));
     await act(async () => { input.focus(); viewport.dispatchEvent(new Event("resize")); });
-    expect(scroll.scrollTop).toBeGreaterThan(100);
+    expect(scroll.scrollTop).toBeGreaterThan(200);
     expect(document.documentElement.style.getPropertyValue("--viewport-height")).toBe("300px");
+    expect(document.documentElement.style.getPropertyValue("--keyboard-edit-space")).toBe("160px");
   } finally {
     await act(async () => root.unmount());
     scroll.remove(); host.remove();

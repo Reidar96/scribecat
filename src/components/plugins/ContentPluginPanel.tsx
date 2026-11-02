@@ -48,8 +48,13 @@ function QuickNoteCard({ entry, initialEdit, onSave, onCategoryChange, onOpenAct
   useLayoutEffect(() => {
     const field = textarea.current;
     if (!field) return;
-    field.style.height = "auto";
+    const scroller = field.closest<HTMLElement>(".content-plugin-panel__body");
+    const scrollTop = scroller?.scrollTop;
+    field.style.height = "0px";
     field.style.height = `${Math.max(field.scrollHeight, 44)}px`;
+    // Safari scroll anchoring may pan the whole collection by a few pixels
+    // when the focused card grows or receives its saved Markdown echo.
+    if (scroller && scrollTop !== undefined) scroller.scrollTop = scrollTop;
   }, [draft]);
   useEffect(() => {
     try {
@@ -134,6 +139,9 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
   const updateDraft = (markdown: string | null) => { draftRef.current = markdown; setDraftMarkdown(markdown); };
   const [savedMarkdown, setSavedMarkdown] = useState<string | null>(null);
   const [newNotePath, setNewNotePath] = useState<string | null>(null);
+  // Keep a newly created card in the collection until the vault file index
+  // catches up. Otherwise an autosave can briefly remove and reinsert it.
+  const [pendingNewPath, setPendingNewPath] = useState<string | null>(null);
   const focusedNewNote = useRef<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [savingNew, setSavingNew] = useState(false);
@@ -145,11 +153,17 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
   const pendingWrites = useRef(new Map<string, Promise<void>>());
   const quickNoteSavedBodies = useRef(new Map<string, string>());
   const pendingNavigation = useRef<(() => void) | null>(null);
-  const paths = useMemo(() => filePaths.filter((path) => {
+  const paths = useMemo(() => {
+    const indexed = filePaths.filter((path) => {
     const relative = path.replace(/\\/g, "/");
     const root = folderPath.replace(/\\/g, "/").replace(/\/$/, "");
     return relative.startsWith(`${root}/${folder}/`);
-  }), [filePaths, folderPath, folder]);
+    });
+    return pendingNewPath && !indexed.includes(pendingNewPath) ? [pendingNewPath, ...indexed] : indexed;
+  }, [filePaths, folderPath, folder, pendingNewPath]);
+  useEffect(() => {
+    if (pendingNewPath && filePaths.includes(pendingNewPath)) setPendingNewPath(null);
+  }, [filePaths, pendingNewPath]);
   useLayoutEffect(() => {
     if (id !== "quick-notes" || !noteGridRef.current) return;
     const grid = noteGridRef.current;
@@ -306,6 +320,14 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
       if (await api.saveMarkdown(path, uniqueMarkdown)) {
         if (manifest.capabilities.includes("attachments")) await mkdir(await join(entryFolder, "_attachments"), { recursive: true });
         if (id === "quick-notes") {
+          const optimistic = { path, markdown: uniqueMarkdown, metadata: pluginMetadata(uniqueMarkdown), title };
+          notePositions.current.set(path, noteManualPosition(optimistic.metadata));
+          // Existing columns must not be redistributed when the new file
+          // arrives through the async file index or autosave echo.
+          noteColumnAssignments.current.set(path, 0);
+          entryCache.set(path, { mtime: fileMtimeMs[path], entry: optimistic });
+          setPendingNewPath(path);
+          setEntries((items) => [optimistic, ...items.filter((item) => item.path !== path)]);
           setNewNotePath(path);
           setSelectedPath(null);
           updateDraft(null);
@@ -467,15 +489,21 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
   const noteCategories = [...new Set(entries.map((item) => item.metadata.category).filter(Boolean))].sort((a, b) => a.localeCompare(b, "no"));
   const renderEntry = (entry: Entry) => {
     const longPress = getNoteLongPress(entry.path);
-    return <article key={entry.path} data-note-drop-path={id === "quick-notes" ? entry.path : undefined} data-scribecat-long-press={id === "quick-notes" ? "true" : undefined} className={`content-plugin-panel__card${dropTarget?.path === entry.path ? ` content-plugin-panel__card--drop-${dropTarget.edge}` : ""}`} draggable={id === "quick-notes" && !isPhone}
-          onPointerDown={(event) => { if (id === "quick-notes" && !(event.target instanceof Element && event.target.closest("textarea,input,button,a"))) longPress.onPointerDown(event); }}
-          onPointerMove={id === "quick-notes" ? longPress.onPointerMove : undefined}
-          onPointerUp={id === "quick-notes" ? longPress.onPointerUp : undefined}
-          onPointerCancel={id === "quick-notes" ? longPress.onPointerCancel : undefined}
+    return <article key={entry.path} data-note-drop-path={id === "quick-notes" ? entry.path : undefined} data-scribecat-long-press={id === "quick-notes" ? "true" : undefined} className={`content-plugin-panel__card${dropTarget?.path === entry.path ? ` content-plugin-panel__card--drop-${dropTarget.edge}` : ""}`}
+          onPointerDown={(event) => {
+            if (id !== "quick-notes" || event.target instanceof Element && event.target.closest("textarea,input,button,a")) return;
+            const box = event.currentTarget.getBoundingClientRect();
+            const onRim = Math.min(event.clientX - box.left, box.right - event.clientX, event.clientY - box.top, box.bottom - event.clientY) <= 12;
+            if (!isPhone && onRim && event.button === 0) { pointerDrag.current = entry.path; event.currentTarget.setPointerCapture(event.pointerId); event.preventDefault(); }
+            else longPress.onPointerDown(event);
+          }}
+          onPointerMove={(event) => { if (!pointerDrag.current) { longPress.onPointerMove(event); return; } const column = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-note-column]"); const target = column ? noteDropAt(column, event.clientY, pointerDrag.current) : null; setDropTarget((old) => old?.path === target?.path && old?.edge === target?.edge ? old : target); }}
+          onPointerUp={(event) => { if (!pointerDrag.current) { longPress.onPointerUp(event); return; } const source = pointerDrag.current; pointerDrag.current = null; const column = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-note-column]"); const target = column ? noteDropAt(column, event.clientY, source) : null; setDropTarget(null); if (target) void moveNote(target.path, source, target.edge); }}
+          onPointerCancel={(event) => { pointerDrag.current = null; setDropTarget(null); longPress.onPointerCancel(event); }}
           onClickCapture={id === "quick-notes" ? longPress.onClickCapture : undefined}
           onContextMenuCapture={(event) => { if (id === "quick-notes" && !(event.target instanceof Element && event.target.closest("textarea,input,a"))) longPress.onContextMenuCapture(event); }}
           onContextMenu={(event) => { if (id !== "quick-notes") return; if (event.target instanceof Element && event.target.closest("textarea,input,a")) return; event.preventDefault(); event.stopPropagation(); setNoteMenu({ path: entry.path, x: event.clientX, y: event.clientY }); }}
-          onDragStart={(event) => { if (id !== "quick-notes") return; if (event.target instanceof Element && event.target.closest("textarea,input,a,button:not(.content-plugin-panel__note-handle)")) { event.preventDefault(); return; } setDraggedPath(entry.path); event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", entry.path); }} onDragEnd={() => { setDraggedPath(null); setDropTarget(null); }}>
+          onDragStart={(event) => { if (id !== "quick-notes" || !(event.target instanceof Element && event.target.closest(".content-plugin-panel__note-handle"))) { event.preventDefault(); return; } setDraggedPath(entry.path); event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", entry.path); }} onDragEnd={() => { setDraggedPath(null); setDropTarget(null); }}>
           {id !== "quick-notes" && <button className="content-plugin-panel__tile" onClick={() => openEntry(entry)}>
             {entry.metadata.cover && (id === "books" || id === "recipes" || id === "inventory")
               ? <PluginCover id={id} vaultPath={folderPath} documentPath={entry.path} reference={entry.metadata.cover} alt={entry.title} />

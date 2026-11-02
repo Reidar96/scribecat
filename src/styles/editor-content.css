@@ -11,6 +11,12 @@
   min-height: 100%;
 }
 
+@media (max-width: 920px) {
+  /* Leave enough scroll range to place the caret near the top above iOS and
+     Android keyboards, including at the very end of a long document. */
+  .editor-view__content { padding-bottom:var(--keyboard-edit-space,0px); }
+}
+
 .editor-view--compact .editor-view__content {
   width: min(100%, 900px);
   margin-inline: auto;

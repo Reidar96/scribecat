@@ -266,6 +266,31 @@
 .content-plugin-panel__note-category { flex:1 1 5rem;width:0;min-width:3rem;border:1px solid transparent;border-radius:.45rem;background:transparent;color:var(--muted-foreground);font-size:.75rem;padding:.25rem .35rem;outline:none; }
 .content-plugin-panel__note-category:hover,.content-plugin-panel__note-category:focus { border-color:var(--border);color:var(--foreground); }
 .content-plugin-panel__note-controls .content-plugin-panel__note-delete { margin-left:auto; }
+
+/* Use the same navigation plane and dimensions as the task sidebar. */
+.content-plugin-panel__layout { grid-template-columns:minmax(13rem,18rem) minmax(0,1fr); }
+.content-plugin-panel__rail { border-right-color:rgba(var(--overlay-rgb),.09);background:rgba(var(--surface-raised-rgb),.26); }
+.content-plugin-panel__rail-group + .content-plugin-panel__rail-group { border-top-color:rgba(var(--overlay-rgb),.08); }
+.content-plugin-panel__rail-group > strong { color:rgba(var(--muted-rgb),.74);font-size:var(--font-ui-xs);font-weight:650;letter-spacing:.02em; }
+
+/* The text surface is for selection and editing; the handle and rim move a card. */
+.content-plugin-panel__grid--quick-notes .content-plugin-panel__card,
+.content-plugin-panel__grid--quick-notes .content-plugin-panel__card:active { cursor:default; }
+.content-plugin-panel__note textarea { touch-action:pan-y;user-select:text;-webkit-user-select:text; }
+.content-plugin-panel__layout:has(.content-plugin-panel__grid--quick-notes) { overflow-anchor:none; }
+.content-plugin-panel__controls--quick-notes .content-plugin-panel__select { height:3rem;min-width:0; }
+.content-plugin-panel__controls--quick-notes .content-plugin-panel__select select { height:3rem;min-height:3rem;box-sizing:border-box; }
+
+@media (max-width:72rem) {
+  .content-plugin-panel__controls--quick-notes { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.55rem; }
+  .content-plugin-panel__controls--quick-notes .content-plugin-panel__search { grid-column:1/-1;width:100%;max-width:none; }
+  .content-plugin-panel__controls--quick-notes .content-plugin-panel__select { display:flex;min-width:0;gap:.35rem; }
+  .content-plugin-panel__controls--quick-notes .content-plugin-panel__select select { flex:1;min-width:0;width:0;padding-inline:.5rem 1.5rem; }
+}
+@media (max-width:48rem) {
+  .content-plugin-panel__rail { background:rgba(var(--surface-raised-rgb),.26); }
+  .content-plugin-panel__body { padding-bottom:calc(1rem + var(--keyboard-edit-space,0px)); }
+}
 .plugin-detail__item { gap:.45rem; }
 .plugin-detail__item input[type="checkbox"] { margin-right:0; }
 .content-plugin-panel__quick-add { display:none; }

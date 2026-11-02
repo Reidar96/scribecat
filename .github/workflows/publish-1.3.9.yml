@@ -1,0 +1,25 @@
+name: Publish ScribeCat 1.3.9
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/publish-1.3.9.yml]
+permissions:
+  contents: write
+  actions: write
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create release and start native and container builds
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          version="$(node -p "require('./package.json').version")"
+          test "$version" = "1.3.9"
+          tag="v$version"
+          if gh release view "$tag" >/dev/null 2>&1; then exit 0; fi
+          gh release create "$tag" --target "$GITHUB_SHA" --title "ScribeCat $tag" --notes-file <(sed -n '/^## \[1.3.9\]/,/^## \[1.3.7\]/{/^## \[1.3.7\]/d;p;}' CHANGELOG.md) --latest
+          gh workflow run release.yml --ref main -f version="$version"
+          gh workflow run release-server.yml --ref main -f version="$version"
