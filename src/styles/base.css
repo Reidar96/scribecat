@@ -147,6 +147,16 @@ body.is-resizing-details-panel {
   clip-path: inset(0 round 1.5rem);
 }
 
+@media (max-width: 920px) {
+  /* Safari composites the blurred card backdrop over the fixed mobile
+     header, softening its icons and title. The opaque surface avoids that. */
+  .dark .detail-panel__card::before,
+  .dark .sidebar-panel::before {
+    background: rgb(var(--surface-strong-rgb));
+    backdrop-filter: none;
+  }
+}
+
 
 /* Surfaces with a ScribeCat long-press menu must not also raise the browser/
    OS touch callout. Keep scrolling intact; only the callout/selection gesture

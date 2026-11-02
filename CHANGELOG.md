@@ -1,3 +1,9 @@
+## [1.3.12] - 2026-11-02
+
+- Keep mobile editor text comfortably above the keyboard without moving it on every keystroke.
+- Give collection navigation buttons their full text width on phones and let the app overview scroll to its last entry.
+- Remove the mobile card backdrop blur that softens the top bar in Safari.
+
 ## [1.3.11] - 2026-11-02
 
 - Keep the collection heading in place while Quick Notes scans Markdown by removing a duplicate loading paragraph above it.

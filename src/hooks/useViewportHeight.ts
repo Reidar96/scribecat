@@ -38,14 +38,13 @@ function keepFocusedFieldVisible(viewport: VisualViewport) {
   const active = document.activeElement;
   if (!(active instanceof HTMLElement) || !active.matches("input:not([type='checkbox']):not([type='radio']),textarea,[contenteditable='true']")) return;
   const top = viewport.offsetTop + 16;
-  const bottom = viewport.offsetTop + viewport.height - 24;
-  const rect = focusedCaretRect(active);
   const keyboardOpen = viewport.height < window.innerHeight - 100;
-  // Keep the insertion point near the top while typing. Checking the whole
-  // textarea made long notes impossible to reveal reliably on iOS.
-  const preferredTop = top + Math.min(96, viewport.height * .2);
+  // Leave a comfortable strip above the keyboard, but keep the caret where
+  // the user put it while it remains visible. Recentring on every input or
+  // selectionchange made the editor jump with each typed character.
+  const bottom = viewport.offsetTop + viewport.height - (keyboardOpen ? Math.min(80, viewport.height * .15) : 24);
+  const rect = focusedCaretRect(active);
   const delta = rect.top < top ? rect.top - top
-    : keyboardOpen && rect.top > preferredTop ? rect.top - preferredTop
     : rect.bottom > bottom ? rect.bottom - bottom : 0;
   if (!delta) return;
   for (let parent = active.parentElement; parent; parent = parent.parentElement) {
@@ -78,14 +77,16 @@ export function useViewportHeight() {
     let frame = 0;
     let settle = 0;
 
-    const reveal = () => {
+    const reveal = (settleKeyboard = false) => {
       if (!window.matchMedia("(max-width: 920px)").matches) return;
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => keepFocusedFieldVisible(viewport));
-      window.clearTimeout(settle);
-      // iOS animates the keyboard after focus; make a final adjustment once
-      // the viewport and the app's scroll container have reached their size.
-      settle = window.setTimeout(() => keepFocusedFieldVisible(viewport), 280);
+      if (settleKeyboard) {
+        window.clearTimeout(settle);
+        // iOS animates the keyboard after focus. Settle once after it opens,
+        // without scheduling another scroll for each keystroke.
+        settle = window.setTimeout(() => keepFocusedFieldVisible(viewport), 280);
+      }
     };
 
     const apply = () => {
@@ -98,22 +99,24 @@ export function useViewportHeight() {
       if (window.scrollY !== 0 || viewport.offsetTop !== 0) {
         window.scrollTo(0, 0);
       }
-      reveal();
+      reveal(true);
     };
 
     apply();
     viewport.addEventListener("resize", apply);
     viewport.addEventListener("scroll", apply);
-    document.addEventListener("focusin", reveal);
-    document.addEventListener("input", reveal);
-    document.addEventListener("selectionchange", reveal);
+    const focus = () => reveal(true);
+    const edit = () => reveal();
+    document.addEventListener("focusin", focus);
+    document.addEventListener("input", edit);
+    document.addEventListener("selectionchange", edit);
 
     return () => {
       viewport.removeEventListener("resize", apply);
       viewport.removeEventListener("scroll", apply);
-      document.removeEventListener("focusin", reveal);
-      document.removeEventListener("input", reveal);
-      document.removeEventListener("selectionchange", reveal);
+      document.removeEventListener("focusin", focus);
+      document.removeEventListener("input", edit);
+      document.removeEventListener("selectionchange", edit);
       cancelAnimationFrame(frame);
       window.clearTimeout(settle);
       root.style.removeProperty("--viewport-height");
