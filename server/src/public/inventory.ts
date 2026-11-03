@@ -69,23 +69,20 @@ export const publicInventoryRoutes: FastifyPluginAsync<{ vault: Vault }> = async
         const description = /^## Beskrivelse\s*\n([\s\S]*?)(?=^## |$(?![\s\S]))/m.exec(markdown)?.[1].trim() ?? "";
         const notes = /^## Notater\s*\n([\s\S]*?)(?=^## |$(?![\s\S]))/m.exec(markdown)?.[1].trim() ?? "";
         const base = path.posix.dirname(record.relativePath);
-        let cover: string | null = null;
-        if (fields.cover && !fields.cover.startsWith("/") && !fields.cover.includes("\\") && !fields.cover.includes("?") && !fields.cover.includes("#")) {
-          const candidate = path.posix.normalize(path.posix.join(base, fields.cover));
-          if (candidate.startsWith(`${base}/`) && imagePattern.test(candidate)) cover = candidate;
+        const imagesSection = /^## Bilder\s*\n([\s\S]*?)(?=^## |$(?![\s\S]))/m.exec(markdown)?.[1] ?? "";
+        const listedImages: Array<{ path: string; alt: string; reference: string }> = [];
+        const seenImages = new Set<string>();
+        for (const match of imagesSection.matchAll(/!\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g)) {
+          const reference = match[2].replace(/^<|>$/g, "");
+          if (!reference || reference.startsWith("/") || reference.includes("\\") || reference.includes("?") || reference.includes("#")) continue;
+          const candidate = path.posix.normalize(path.posix.join(base, reference));
+          if (!candidate.startsWith(`${base}/`) || !imagePattern.test(candidate) || seenImages.has(candidate)) continue;
+          seenImages.add(candidate);
+          listedImages.push({ path: candidate, reference, alt: match[1].trim() || path.posix.basename(candidate, path.posix.extname(candidate)).replace(/[-_]+/g, " ") });
         }
-        const imagePaths: string[] = [];
-        if (cover) imagePaths.push(cover);
-        try {
-          const attachmentFolder = path.posix.join(base, "_attachments");
-          const entries = await vault.readDir(attachmentFolder);
-          for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name, "no", { numeric: true }))) {
-            if (!entry.isFile || entry.isSymlink || !imagePattern.test(entry.name) || /^miniatyr[-_.]/i.test(entry.name)) continue;
-            const candidate = path.posix.join(attachmentFolder, entry.name);
-            if (!imagePaths.includes(candidate)) imagePaths.push(candidate);
-          }
-        } catch { /* an attachment folder is optional */ }
-        const images = imagePaths.map((imagePath) => ({ path: imagePath, alt: path.posix.basename(imagePath, path.posix.extname(imagePath)).replace(/[-_]+/g, " "), token: createHash("sha256").update(`${record.relativePath}\0${imagePath}`).digest("hex").slice(0, 32) }));
+        const coverIndex = listedImages.findIndex((image) => image.reference === fields.cover);
+        if (coverIndex > 0) listedImages.unshift(...listedImages.splice(coverIndex, 1));
+        const images = listedImages.map((image) => ({ path: image.path, alt: image.alt, token: createHash("sha256").update(`${record.relativePath}\0${image.path}`).digest("hex").slice(0, 32) }));
         const receiptLines = /^## Kvitteringer\s*\n([\s\S]*?)(?=^## |$(?![\s\S]))/m.exec(markdown)?.[1] ?? "";
         const receipts: Receipt[] = parseReceiptReferences(receiptLines, fields.receipt).flatMap(({ path: relative, name }) => {
           if (!relative || !/^_attachments\/[^/\\?#]+$/.test(relative)) return [];

@@ -1,3 +1,8 @@
+## [1.3.18] - 2026-11-03
+
+- Make `## Bilder` in Inventory Markdown the only source for item and public gallery images; unlisted attachment files are no longer exposed.
+- Write every newly uploaded Inventory image into `## Bilder`, and allow images to be removed from the item directly in edit mode.
+
 ## [1.3.17] - 2026-11-02
 
 - Fix public Inventory category and location mosaics by resolving their media URLs inside the Inventory route. Apply the same correction to Book overview mosaics.

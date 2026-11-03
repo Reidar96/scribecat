@@ -2,12 +2,13 @@ import { describe, expect, it } from "vitest";
 import { inventoryImagesMarkdown, parseInventoryImages } from "./inventory";
 
 describe("inventory images", () => {
-  it("keeps the cover first and deduplicates gallery references", () => {
+  it("uses the Bilder section as the authoritative ordered list", () => {
     const markdown = `## Bilder\n\n![Forside](_attachments/bilde-001.jpg)\n\n![Bakside](_attachments/bilde-002.jpg)\n`;
-    expect(parseInventoryImages(markdown, "_attachments/bilde-001.jpg")).toEqual([
-      { reference: "_attachments/bilde-001.jpg", alt: "" },
+    expect(parseInventoryImages(markdown)).toEqual([
+      { reference: "_attachments/bilde-001.jpg", alt: "Forside" },
       { reference: "_attachments/bilde-002.jpg", alt: "Bakside" }
     ]);
+    expect(parseInventoryImages("---\ncover: _attachments/bilde-001.jpg\n---\n")).toEqual([]);
   });
 
   it("writes portable Markdown image entries", () => {

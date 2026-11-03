@@ -11,7 +11,7 @@ describe("public inventory", () => {
   async function configure(publicView = true) {
     await mkdir(path.join(context.vaultPath, "Inventar", "_attachments"), { recursive: true });
     await writeFile(path.join(context.vaultPath, ".scribecat", "plugins.json"), JSON.stringify({ plugins: { inventory: { enabled: true, publicView, folder: "Inventar" } } }));
-    await writeFile(path.join(context.vaultPath, "Inventar", "Sykkel.md"), `---\nscribecat-plugin: inventory\ntype: item\nname: Sykkel\nslug: sykkel\ncategory: Sport\nlocation: Bod\nserial-number: HEMMELIG\npublished: true\ncover: _attachments/sykkel.jpg\n---\n\n# Sykkel\n\n## Beskrivelse\n\nEn fin sykkel.\n\n## Notater\n\nPrivat notat.\n`);
+    await writeFile(path.join(context.vaultPath, "Inventar", "Sykkel.md"), `---\nscribecat-plugin: inventory\ntype: item\nname: Sykkel\nslug: sykkel\ncategory: Sport\nlocation: Bod\nserial-number: HEMMELIG\npublished: true\ncover: _attachments/sykkel.jpg\n---\n\n# Sykkel\n\n## Bilder\n\n![Sykkel](_attachments/sykkel.jpg)\n\n## Beskrivelse\n\nEn fin sykkel.\n\n## Notater\n\nPrivat notat.\n`);
     await writeFile(path.join(context.vaultPath, "Inventar", "Skjult.md"), `---\nscribecat-plugin: inventory\ntype: item\nname: Skjult\nslug: skjult\npublished: false\n---\n`);
     await writeFile(path.join(context.vaultPath, "Inventar", "_attachments", "sykkel.jpg"), Buffer.from([0xff, 0xd8, 0xff, 0xd9]));
   }
@@ -47,18 +47,20 @@ describe("public inventory", () => {
   it("uses a balanced inventory cover placeholder when no image exists", async () => {
     await configure();
     const file = path.join(context.vaultPath, "Inventar", "Sykkel.md");
-    await writeFile(file, (await readFile(file, "utf8")).replace("cover: _attachments/sykkel.jpg\n", ""));
+    await writeFile(file, (await readFile(file, "utf8")).replace("cover: _attachments/sykkel.jpg\n", "").replace(/\n## Bilder[\s\S]*?(?=\n## Beskrivelse)/, ""));
     const page = (await context.app.inject({ method: "GET", url: "/anna/inventar/sykkel" })).body;
     expect(page).toContain("public-detail--inventory");
     expect(page).toContain("public-inventory-placeholder");
     expect(page).toContain("public-inventory-copy");
     expect(page).not.toContain("<dl class=\"public-facts\"></dl>");
   });
-  it("discovers full-size attachment images and exposes a browsable gallery", async () => {
+  it("uses only Markdown-listed images and exposes a browsable gallery", async () => {
     await configure();
     const attachments = path.join(context.vaultPath, "Inventar", "_attachments");
     await writeFile(path.join(attachments, "bilde-002.jpg"), Buffer.from([0xff, 0xd8, 0xff, 0xd9]));
     await writeFile(path.join(attachments, "miniatyr-002.webp"), Buffer.from([0x52, 0x49, 0x46, 0x46]));
+    const file = path.join(context.vaultPath, "Inventar", "Sykkel.md");
+    await writeFile(file, (await readFile(file, "utf8")).replace("![Sykkel](_attachments/sykkel.jpg)", "![Sykkel](_attachments/sykkel.jpg)\n\n![Bilde 2](_attachments/bilde-002.jpg)"));
     const detail = await context.app.inject({ method: "GET", url: "/anna/inventar/sykkel" });
     expect(detail.body.match(/data-gallery-image=/g)).toHaveLength(2);
     expect(detail.body).toContain("public-inventory-gallery__main");

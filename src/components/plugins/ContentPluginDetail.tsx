@@ -165,7 +165,7 @@ export function ContentPluginDetail({ id, entry, vaultPath, publicView, isNew, d
   const section = (heading: string, value: string) => void onChange(setPluginSection(entry.markdown, heading, value));
   const title = entry.metadata.title || entry.metadata.name || entry.title;
   const cover = entry.metadata.cover;
-  const inventoryImages = id === "inventory" ? parseInventoryImages(entry.markdown, cover) : [];
+  const inventoryImages = id === "inventory" ? parseInventoryImages(entry.markdown) : [];
   const uploadCover = async () => {
     if (isNew) return;
     const files = await platform.imagePicker.pickImages({ title: "Velg bilde", filterName: "Bilder", extensions: ["jpg", "jpeg", "png", "webp", "gif"] });
@@ -188,12 +188,18 @@ export function ContentPluginDetail({ id, entry, vaultPath, publicView, isNew, d
       if (!mimeType.startsWith("image/") || data.length > 8 * 1024 * 1024) continue;
       const relative = await saveImageToFolder(vaultPath, entry.path, picked.fileName, mimeType, data);
       const reference = await getRelativeImageMarkdownPath(vaultPath, entry.path, relative);
+      additions.push({ reference, alt: picked.fileName.replace(/\.[^.]+$/, "") });
       if (!currentCover) { markdown = setPluginField(markdown, "cover", reference); currentCover = reference; }
-      else additions.push({ reference, alt: picked.fileName.replace(/\.[^.]+$/, "") });
     }
-    const existing = parseInventoryImages(markdown, currentCover).filter((image) => image.reference !== currentCover);
+    const existing = parseInventoryImages(markdown);
     if (additions.length) markdown = setPluginSection(markdown, "Bilder", inventoryImagesMarkdown([...existing, ...additions]));
     if (markdown !== entry.markdown) await onChange(markdown);
+  };
+  const deleteInventoryImage = async (image: { reference: string; alt: string }) => {
+    const remaining = inventoryImages.filter((item) => item.reference !== image.reference);
+    let markdown = setPluginSection(entry.markdown, "Bilder", inventoryImagesMarkdown(remaining));
+    if (cover === image.reference) markdown = setPluginField(markdown, "cover", remaining[0]?.reference ?? "");
+    await onChange(markdown);
   };
   const metadataField = (label: string, key: string, type?: string) => <Field label={label} value={entry.metadata[key] ?? ""} type={type} onSave={(value) => field(key, value)} />;
   const contentSection = (heading: string, placeholder?: string) => <Section title={heading} value={pluginSection(entry.markdown, heading)} placeholder={placeholder} onSave={(value) => section(heading, value)} />;
@@ -255,7 +261,7 @@ export function ContentPluginDetail({ id, entry, vaultPath, publicView, isNew, d
     </div></div> : id === "shopping" ? <><h2>{title || "Ny handleliste"}</h2><Field label="Navn" value={title} autoFocus={isNew} onSave={(value) => void onChange(setPluginTitle(entry.markdown, "title", value))} />
       <label className="plugin-detail__field"><span>Offentlig handleliste</span><input type="checkbox" checked={published} disabled={!publicView && !published} onChange={() => void onChange(setPluginField(entry.markdown, "published", !published))} /></label>
       {published && publicView && <p>Adresse: /handleliste/{entry.metadata.slug}</p>}<ShoppingItems entry={entry} onChange={onChange} /></> : <>
-      <div className="plugin-detail__hero"><div className="plugin-detail__image">{id === "inventory" && inventoryImages.length ? <InventoryGallery images={inventoryImages} vaultPath={vaultPath} documentPath={entry.path} title={title} /> : cover ? <PluginCover id={id} vaultPath={vaultPath} documentPath={entry.path} reference={cover} alt={title} /> : <span aria-hidden="true">{id === "books" ? <BookOpen /> : id === "recipes" ? <CookingPot /> : <Package />}</span>}
+      <div className="plugin-detail__hero"><div className="plugin-detail__image">{id === "inventory" && inventoryImages.length ? <InventoryGallery images={inventoryImages} vaultPath={vaultPath} documentPath={entry.path} title={title} onDelete={(image) => void deleteInventoryImage(image)} /> : cover ? <PluginCover id={id} vaultPath={vaultPath} documentPath={entry.path} reference={cover} alt={title} /> : <span aria-hidden="true">{id === "books" ? <BookOpen /> : id === "recipes" ? <CookingPot /> : <Package />}</span>}
         <button disabled={isNew} onClick={() => void (id === "inventory" ? uploadInventoryImages() : uploadCover())}><ImagePlus size={16} /> {id === "inventory" ? "Legg til bilder" : cover ? "Bytt bilde" : "Legg til bilde"}</button></div>
         <div className="plugin-detail__hero-fields"><h2>{title || `Ny ${id === "books" ? "bok" : id === "recipes" ? "oppskrift" : "gjenstand"}`}</h2><Field label={id === "inventory" ? "Navn" : "Tittel"} value={title} autoFocus={isNew}
           onSave={(value) => void onChange(setPluginTitle(entry.markdown, id === "inventory" ? "name" : "title", value))} />
