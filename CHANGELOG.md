@@ -1,3 +1,8 @@
+## [1.3.23] - 2026-11-03
+
+- Add clear upload and delete controls below images in Inventory, Books and Recipes, including deletion of the selected Inventory gallery image.
+- Make existing Shopping Lists directly editable and save checkbox, item, category, title and sharing changes immediately without a separate edit mode.
+
 ## [1.3.22] - 2026-11-03
 
 - Align the mobile note-writing sidebar control to the exact horizontal coordinate used by the Start header.

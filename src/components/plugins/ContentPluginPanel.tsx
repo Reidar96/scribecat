@@ -568,7 +568,13 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
       {error ? <p role="alert">{error}</p> : null}
       {editingEntry && id !== "quick-notes" ? <ContentPluginDetail id={id} entry={editingEntry} vaultPath={folderPath} publicView={publicView}
         isNew={creating} dirty={draftMarkdown !== savedMarkdown} saving={savingNew} onSave={() => void saveDraft()}
-        onBack={back} onCancelEdit={cancelEdit} onChange={async (next) => { updateDraft(next); }} onDelete={() => selected && setDialog({ kind: "delete", path: selected.path, label: selected.title })} /> : <>
+        onBack={back} onCancelEdit={cancelEdit} onChange={async (next) => { updateDraft(next); }} onDirectChange={async (next) => {
+          if (!selected) { updateDraft(next); return; }
+          if (await change(selected, next)) {
+            updateDraft(next); setSavedMarkdown(next);
+            try { localStorage.removeItem(draftKey(selected.path)); } catch { /* unavailable storage */ }
+          }
+        }} onDelete={() => selected && setDialog({ kind: "delete", path: selected.path, label: selected.title })} /> : <>
       {showStats ? <PluginStatistics id={id} entries={entries} onBack={() => setShowStats(false)} onOpen={(path) => { const entry = entries.find((item) => item.path === path); if (entry) openEntry(entry); }} /> : <>
       <div className="content-plugin-panel__overview"><div><span className="content-plugin-panel__eyebrow">SAMLING</span><h2>{selectedFilter?.[1] || (groupView ? groupNames[groupView] : manifest.name)}</h2><p>{scanRemaining > 0 ? `Laster … ${visible.length} vist` : `${visible.length} ${visible.length === 1 ? "oppføring" : "oppføringer"}`}</p></div></div>
       <div className={`content-plugin-panel__controls${id === "quick-notes" ? " content-plugin-panel__controls--quick-notes" : ""}`}><div className="content-plugin-panel__search"><Search size={16} aria-hidden="true" /><input type="text" inputMode="search" aria-label={`Søk i ${manifest.name.toLocaleLowerCase()}`} value={query} placeholder={`Søk i ${manifest.name.toLocaleLowerCase()}`} onChange={(event) => setQuery(event.target.value)} />{query && <button type="button" aria-label="Tøm søk" onClick={() => setQuery("")}><span aria-hidden="true">×</span></button>}</div>

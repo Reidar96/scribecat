@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Trash2 } from "lucide-react";
+import { ImagePlus, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { ImageLightbox } from "@/components/ImageLightbox";
 import { usePluginImageUrl } from "@/components/plugins/PluginCover";
 import type { InventoryImage } from "@/plugins/inventory";
@@ -18,7 +19,7 @@ function GalleryLightbox({ images, index, vaultPath, documentPath, onIndex, onCl
     positionLabel={images.length > 1 ? `${index + 1} / ${images.length}` : undefined} /> : null;
 }
 
-export function InventoryGallery({ images, vaultPath, documentPath, title, onDelete }: { images: InventoryImage[]; vaultPath: string; documentPath: string; title: string; onDelete?: (image: InventoryImage) => void }) {
+export function InventoryGallery({ images, vaultPath, documentPath, title, onDelete, onUpload, uploadDisabled = false }: { images: InventoryImage[]; vaultPath: string; documentPath: string; title: string; onDelete?: (image: InventoryImage) => void; onUpload?: () => void; uploadDisabled?: boolean }) {
   const [open, setOpen] = useState<number | null>(null);
   const [selected, setSelected] = useState(0);
   if (!images.length) return null;
@@ -26,9 +27,13 @@ export function InventoryGallery({ images, vaultPath, documentPath, title, onDel
   const selectedIndex = Math.min(selected, normalized.length - 1);
   return <div className="plugin-detail__gallery" aria-label={`Bilder av ${title}`}>
     <GalleryThumb image={normalized[selectedIndex]} vaultPath={vaultPath} documentPath={documentPath} className="plugin-detail__gallery-main" onOpen={() => setOpen(selectedIndex)} />
-    {normalized.length > 1 || onDelete ? <div className="plugin-detail__gallery-thumbnails">
-      {normalized.map((image, index) => <div className="plugin-detail__gallery-item" key={`${image.reference}:${index}`}><GalleryThumb image={image} vaultPath={vaultPath} documentPath={documentPath} selected={index === selectedIndex} onOpen={() => setSelected(index)} />{onDelete ? <button type="button" className="plugin-detail__gallery-delete" aria-label={`Slett ${image.alt}`} title="Slett bilde" onClick={() => onDelete(image)}><Trash2 aria-hidden="true" /></button> : null}</div>)}
+    {normalized.length > 1 ? <div className="plugin-detail__gallery-thumbnails">
+      {normalized.map((image, index) => <div className="plugin-detail__gallery-item" key={`${image.reference}:${index}`}><GalleryThumb image={image} vaultPath={vaultPath} documentPath={documentPath} selected={index === selectedIndex} onOpen={() => setSelected(index)} /></div>)}
     </div> : null}
+    {(onUpload || onDelete) && <div className="plugin-detail__image-actions">
+      {onUpload && <Button type="button" variant="outline" disabled={uploadDisabled} onClick={onUpload}><ImagePlus size={16} /> Legg til bilder</Button>}
+      {onDelete && <Button type="button" variant="outline" className="plugin-detail__image-delete" onClick={() => onDelete(normalized[selectedIndex])}><Trash2 size={16} /> Slett bilde</Button>}
+    </div>}
     {open !== null && <GalleryLightbox images={normalized} index={open} vaultPath={vaultPath} documentPath={documentPath} onIndex={(index) => { setOpen(index); setSelected(index); }} onClose={() => setOpen(null)} />}
   </div>;
 }
