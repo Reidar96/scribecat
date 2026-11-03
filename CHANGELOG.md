@@ -1,3 +1,7 @@
+## [1.3.19] - 2026-11-03
+
+- Align the mobile header inset for the app overview and collection apps exactly with Journal, Tasks and the other established app headers.
+
 ## [1.3.18] - 2026-11-03
 
 - Make `## Bilder` in Inventory Markdown the only source for item and public gallery images; unlisted attachment files are no longer exposed.
