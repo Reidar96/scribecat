@@ -103,6 +103,9 @@
 @media (max-width: 30rem) { .plugin-detail__ingredient { grid-template-columns: 1.4rem 3rem 3rem minmax(0, 1fr) 1.5rem; gap: .2rem; } .plugin-detail__add-row { grid-template-columns: 3rem 3rem minmax(0, 1fr) auto; } }
 .plugin-detail__action-group,.plugin-detail__checks { display:flex; flex-wrap:wrap; gap:.55rem; align-items:center; }
 .plugin-detail__action-group { justify-content:flex-end; }
+.plugin-detail__public-toggle[data-active] { border-color:var(--primary);background:rgba(var(--accent-rgb),.12);color:var(--foreground); }
+.plugin-detail__public-toggle-icon { display:grid;place-items:center;width:1.25rem;height:1.25rem;border:1px solid currentColor;border-radius:.35rem; }
+.plugin-detail__public-toggle[data-active] .plugin-detail__public-toggle-icon { background:var(--foreground);color:var(--surface);border-color:var(--foreground); }
 .plugin-detail__unsaved { color:var(--muted-foreground); font-size:.88rem; margin:0; }
 .plugin-detail__check-tile { display:flex; align-items:center; gap:.65rem; min-height:2.6rem; flex:1; padding:.55rem .8rem; border:1px solid var(--border); background:var(--card); border-radius:.5rem; cursor:pointer; }
 .plugin-detail__check-tile input { width:1.25rem; height:1.25rem; accent-color:var(--primary); }

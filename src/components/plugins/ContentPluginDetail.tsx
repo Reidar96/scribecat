@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import MarkdownIt from "markdown-it";
-import { ArrowLeft, Download, History, ImagePlus, Pencil, Plus, Save, Trash2, X, BookOpen, CookingPot, Package } from "lucide-react";
+import { ArrowLeft, Check, Download, History, ImagePlus, Pencil, Plus, Save, Trash2, X, BookOpen, CookingPot, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PluginCover } from "@/components/plugins/PluginCover";
 import { InventoryGallery } from "@/components/plugins/InventoryGallery";
@@ -243,6 +243,7 @@ export function ContentPluginDetail({ id, entry, vaultPath, publicView, isNew, d
 
   return <div className="plugin-detail"><div className="plugin-detail__actions"><Button variant="ghost" onClick={onBack}><ArrowLeft size={17} /> Tilbake</Button><div className="plugin-detail__action-group">
     {!isNew && <Button variant="outline" onClick={() => void showVersions()}><History size={16} /> Versjoner</Button>}
+    {id === "shopping" && <Button type="button" variant="outline" className="plugin-detail__public-toggle" data-active={published || undefined} aria-pressed={published} onClick={() => void shoppingChange(setPluginField(entry.markdown, "published", !published))}><span className="plugin-detail__public-toggle-icon" aria-hidden="true">{published && <Check size={15} />}</span> Offentlig</Button>}
     {id === "shopping" && !isNew ? null : editing ? <><Button variant="outline" onClick={() => { onCancelEdit(); if (!dirty && !isNew) setEditing(false); }} disabled={saving}><X size={16} /> Avbryt</Button><Button onPointerDown={() => {
       const active = document.activeElement;
       if (active instanceof HTMLElement && active.closest(".plugin-detail")) active.blur();
@@ -253,8 +254,7 @@ export function ContentPluginDetail({ id, entry, vaultPath, publicView, isNew, d
     {versions && <section className="plugin-detail__section"><div className="plugin-detail__section-heading"><h3>Versjonshistorikk</h3><button onClick={() => setVersions(null)}>Lukk</button></div>
       {versions.length ? versions.map((version) => <div key={version.id} className="plugin-detail__version"><time>{new Date(version.createdAt).toLocaleString("no-NO")}</time><button onClick={() => void readVersionContent(vaultPath, version.id).then((markdown) => { void onChange(markdown); setEditing(true); setVersions(null); })}>Bruk som utkast</button></div>) : <p>Ingen lagrede versjoner ennå.</p>}</section>}
     {id === "shopping" ? <><h2>{title || "Ny handleliste"}</h2><Field label="Navn" value={title} autoFocus={isNew} onSave={(value) => void shoppingChange(setPluginTitle(entry.markdown, "title", value))} />
-      <label className="plugin-detail__field"><span>Offentlig handleliste</span><input type="checkbox" checked={published} disabled={!publicView && !published} onChange={() => void shoppingChange(setPluginField(entry.markdown, "published", !published))} /></label>
-      {published && publicView && <p>Adresse: /handleliste/{entry.metadata.slug}</p>}<ShoppingItems entry={entry} onChange={shoppingChange} /></> : !editing ? <div className="plugin-detail__preview"><div className="plugin-detail__preview-main"><div className="plugin-detail__hero">
+      <ShoppingItems entry={entry} onChange={shoppingChange} /></> : !editing ? <div className="plugin-detail__preview"><div className="plugin-detail__preview-main"><div className="plugin-detail__hero">
       {id === "inventory" && inventoryImages.length ? <InventoryGallery images={inventoryImages} vaultPath={vaultPath} documentPath={entry.path} title={title} /> : <div className="plugin-detail__image">{cover ? <PluginCover id={id} vaultPath={vaultPath} documentPath={entry.path} reference={cover} alt={title} /> : <span aria-hidden="true">{id === "books" ? <BookOpen /> : id === "recipes" ? <CookingPot /> : <Package />}</span>}</div>}
       <div><h2>{title}</h2>{entry.metadata.favorite === "true" && <p className="plugin-detail__badges"><span>★ Favoritt</span></p>}
         {previewFields.length > 0 && <dl className="plugin-detail__summary">{previewFields.map(({ key, label, value }) => <div key={key}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>}</div></div>

@@ -1,3 +1,7 @@
+## [1.3.24] - 2026-11-03
+
+- Move the Shopping List public toggle into the action row beside version history and remove the public URL from the list content.
+
 ## [1.3.23] - 2026-11-03
 
 - Add clear upload and delete controls below images in Inventory, Books and Recipes, including deletion of the selected Inventory gallery image.
