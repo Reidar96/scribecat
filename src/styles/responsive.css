@@ -575,6 +575,12 @@
     padding: 0.75rem;
   }
 
+  .note-trash {
+    box-sizing: border-box;
+    width: calc(100vw - 1.5rem);
+    max-width: calc(100vw - 1.5rem);
+  }
+
   .move-dialog__list {
     max-height: 45vh;
   }

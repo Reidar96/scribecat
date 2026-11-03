@@ -1,3 +1,7 @@
+## [1.3.26] - 2026-11-03
+
+- Keep the trash dialog fully inside the mobile viewport so its actions are not clipped.
+
 ## [1.3.25] - 2026-11-03
 
 - Shorten the Inventory gallery upload action from “Legg til bilder” to “Legg til”.
