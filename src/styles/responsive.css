@@ -716,12 +716,20 @@
   }
 
   .detail-panel__status-group button,
-  .detail-panel__sidebar-button,
   .editor-toolbar button,
   .chat-panel__header-button,
   .details-sidebar__header button,
   .zen-exit {
     min-width: 2.75rem;
+    min-height: 2.75rem;
+  }
+
+  /* Match the collection header's 1.75rem icon column exactly. The editor
+     keeps the 2.75rem touch height, but a wider button shifts the icon 8px
+     to the right even though both headers have identical outer padding. */
+  .detail-panel__sidebar-button {
+    width: 1.75rem;
+    min-width: 1.75rem;
     min-height: 2.75rem;
   }
 

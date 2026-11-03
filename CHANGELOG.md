@@ -1,3 +1,7 @@
+## [1.3.22] - 2026-11-03
+
+- Align the mobile note-writing sidebar control to the exact horizontal coordinate used by the Start header.
+
 ## [1.3.21] - 2026-11-03
 
 - Align the mobile note-writing header exactly with the other app headers and remove its remaining iOS compositing blur.
