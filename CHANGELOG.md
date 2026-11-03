@@ -1,3 +1,7 @@
+## [1.3.25] - 2026-11-03
+
+- Shorten the Inventory gallery upload action from “Legg til bilder” to “Legg til”.
+
 ## [1.3.24] - 2026-11-03
 
 - Move the Shopping List public toggle into the action row beside version history and remove the public URL from the list content.

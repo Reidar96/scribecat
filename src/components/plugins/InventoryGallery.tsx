@@ -31,7 +31,7 @@ export function InventoryGallery({ images, vaultPath, documentPath, title, onDel
       {normalized.map((image, index) => <div className="plugin-detail__gallery-item" key={`${image.reference}:${index}`}><GalleryThumb image={image} vaultPath={vaultPath} documentPath={documentPath} selected={index === selectedIndex} onOpen={() => setSelected(index)} /></div>)}
     </div> : null}
     {(onUpload || onDelete) && <div className="plugin-detail__image-actions">
-      {onUpload && <Button type="button" variant="outline" disabled={uploadDisabled} onClick={onUpload}><ImagePlus size={16} /> Legg til bilder</Button>}
+      {onUpload && <Button type="button" variant="outline" disabled={uploadDisabled} onClick={onUpload}><ImagePlus size={16} /> Legg til</Button>}
       {onDelete && <Button type="button" variant="outline" className="plugin-detail__image-delete" onClick={() => onDelete(normalized[selectedIndex])}><Trash2 size={16} /> Slett bilde</Button>}
     </div>}
     {open !== null && <GalleryLightbox images={normalized} index={open} vaultPath={vaultPath} documentPath={documentPath} onIndex={(index) => { setOpen(index); setSelected(index); }} onClose={() => setOpen(null)} />}
