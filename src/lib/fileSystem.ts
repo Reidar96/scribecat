@@ -377,9 +377,19 @@ export async function getRelativeImageMarkdownPath(
 }
 
 const IMAGE_MARKDOWN_PATTERN = /!\[[^\]]*\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g;
+const LINK_MARKDOWN_PATTERN = /(?<!!)\[[^\]]*\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g;
 
 function extractImageReferences(markdown: string): string[] {
-  return Array.from(markdown.matchAll(IMAGE_MARKDOWN_PATTERN), (match) => match[1]);
+  const references = new Set(Array.from(markdown.matchAll(IMAGE_MARKDOWN_PATTERN), (match) => match[1]));
+  for (const match of markdown.matchAll(LINK_MARKDOWN_PATTERN)) {
+    if (match[1].replace(/\\/g, "/").split("/").includes(ATTACHMENTS_FOLDER_NAME)) references.add(match[1]);
+  }
+  for (const match of markdown.matchAll(/(?:^|[\s(])(_attachments\/[^\s)\r\n]+)/gm)) references.add(match[1]);
+  for (const key of ["cover", "receipt"]) {
+    const value = new RegExp(`^${key}:\\s*["']?([^"'\\r\\n]+)["']?\\s*$`, "mi").exec(markdown)?.[1]?.trim();
+    if (value && value.replace(/\\/g, "/").split("/").includes(ATTACHMENTS_FOLDER_NAME)) references.add(value);
+  }
+  return [...references];
 }
 
 type ResolvedImageRefs = {
@@ -513,8 +523,9 @@ export async function rewriteRelativeImagePaths(
 }
 
 /**
- * Deletes local image files that were removed from the markdown by saving this
- * file — but only if no other document in the vault still references them.
+ * Deletes local images and managed attachments that were removed from the
+ * markdown by saving this file — but only if no other document in the vault
+ * still references them.
  * Runs deliberately on save so undo before saving still finds the file on disk.
  */
 export async function cleanupOrphanedImages(

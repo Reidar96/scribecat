@@ -69,7 +69,7 @@ cp .env.example .env
 docker compose up -d
 ```
 
-Follow the [server setup guide](server/docs/getting-started.md) for hostname, certificate and first-sign-in instructions. Docker releases publish both the pinned `ghcr.io/reidar96/scribecat-server:1.3.19` image and the moving `ghcr.io/reidar96/scribecat-server:latest` tag. Portainer can pull `latest` with [this Compose file](server/docker-compose.portainer-latest.yml); the versioned archive keeps its exact tag for local imports.
+Follow the [server setup guide](server/docs/getting-started.md) for hostname, certificate and first-sign-in instructions. Docker releases publish both the pinned `ghcr.io/reidar96/scribecat-server:1.3.20` image and the moving `ghcr.io/reidar96/scribecat-server:latest` tag. Portainer can pull `latest` with [this Compose file](server/docker-compose.portainer-latest.yml); the versioned archive keeps its exact tag for local imports.
 
 **Desktop and web share the same core workspace.** The web edition uses your server's storage; local offline dictation is a desktop feature. Phone and tablet access is through the responsive web app, not a separate native mobile release.
 

@@ -201,6 +201,7 @@ export function ContentPluginDetail({ id, entry, vaultPath, publicView, isNew, d
     if (cover === image.reference) markdown = setPluginField(markdown, "cover", remaining[0]?.reference ?? "");
     await onChange(markdown);
   };
+  const deleteCover = () => void onChange(setPluginField(entry.markdown, "cover", ""));
   const metadataField = (label: string, key: string, type?: string) => <Field label={label} value={entry.metadata[key] ?? ""} type={type} onSave={(value) => field(key, value)} />;
   const contentSection = (heading: string, placeholder?: string) => <Section title={heading} value={pluginSection(entry.markdown, heading)} placeholder={placeholder} onSave={(value) => section(heading, value)} />;
   const published = entry.metadata.published === "true";
@@ -225,9 +226,10 @@ export function ContentPluginDetail({ id, entry, vaultPath, publicView, isNew, d
     anchor.href = url; anchor.download = name; anchor.click();
     window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
   };
+  const deleteReceipt = (path: string) => void onChange(setPluginSection(entry.markdown, "Kvitteringer", receiptReferencesMarkdown(receipts.filter((receipt) => receipt.path !== path))));
   const receiptLinks = <div className="plugin-detail__receipts">{receipts.map((receipt) =>
     <div className="plugin-detail__receipt-row" key={receipt.path}><button type="button" onClick={() => void downloadReceipt(receipt)} title={`Last ned ${receipt.name}`}><Download size={16} /><span>{receipt.name}</span></button>
-      {editing && <button type="button" className="plugin-detail__receipt-rename" aria-label={`Endre navn på ${receipt.name}`} title="Endre navn" onClick={() => { setReceiptError(""); setReceiptRename(receipt); }}><Pencil size={15} /></button>}</div>)}</div>;
+      {editing && <><button type="button" className="plugin-detail__receipt-rename" aria-label={`Endre navn på ${receipt.name}`} title="Endre navn" onClick={() => { setReceiptError(""); setReceiptRename(receipt); }}><Pencil size={15} /></button><button type="button" className="plugin-detail__receipt-rename" aria-label={`Slett ${receipt.name}`} title="Slett vedlegg" onClick={() => deleteReceipt(receipt.path)}><Trash2 size={15} /></button></>}</div>)}</div>;
   const showVersions = async () => {
     if (isNew) return;
     setVersions(await listFileVersions(vaultPath, getRelativeDisplayPath(vaultPath, entry.path)).catch(() => []));
@@ -262,7 +264,7 @@ export function ContentPluginDetail({ id, entry, vaultPath, publicView, isNew, d
       <label className="plugin-detail__field"><span>Offentlig handleliste</span><input type="checkbox" checked={published} disabled={!publicView && !published} onChange={() => void onChange(setPluginField(entry.markdown, "published", !published))} /></label>
       {published && publicView && <p>Adresse: /handleliste/{entry.metadata.slug}</p>}<ShoppingItems entry={entry} onChange={onChange} /></> : <>
       <div className="plugin-detail__hero"><div className="plugin-detail__image">{id === "inventory" && inventoryImages.length ? <InventoryGallery images={inventoryImages} vaultPath={vaultPath} documentPath={entry.path} title={title} onDelete={(image) => void deleteInventoryImage(image)} /> : cover ? <PluginCover id={id} vaultPath={vaultPath} documentPath={entry.path} reference={cover} alt={title} /> : <span aria-hidden="true">{id === "books" ? <BookOpen /> : id === "recipes" ? <CookingPot /> : <Package />}</span>}
-        <button disabled={isNew} onClick={() => void (id === "inventory" ? uploadInventoryImages() : uploadCover())}><ImagePlus size={16} /> {id === "inventory" ? "Legg til bilder" : cover ? "Bytt bilde" : "Legg til bilde"}</button></div>
+        <button disabled={isNew} onClick={() => void (id === "inventory" ? uploadInventoryImages() : uploadCover())}><ImagePlus size={16} /> {id === "inventory" ? "Legg til bilder" : cover ? "Bytt bilde" : "Legg til bilde"}</button>{id !== "inventory" && cover && <button type="button" onClick={deleteCover}><Trash2 size={16} /> Slett bilde</button>}</div>
         <div className="plugin-detail__hero-fields"><h2>{title || `Ny ${id === "books" ? "bok" : id === "recipes" ? "oppskrift" : "gjenstand"}`}</h2><Field label={id === "inventory" ? "Navn" : "Tittel"} value={title} autoFocus={isNew}
           onSave={(value) => void onChange(setPluginTitle(entry.markdown, id === "inventory" ? "name" : "title", value))} />
           {id === "books" && <>{metadataField("Forfatter", "author")}

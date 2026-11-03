@@ -1,3 +1,8 @@
+## [1.3.20] - 2026-11-03
+
+- Add explicit cover-image deletion for Books and Recipes and receipt deletion for Inventory.
+- Remove deleted covers, Inventory gallery images, receipts and other managed `_attachments` files from disk after the Markdown change is saved, while retaining files still referenced by another document.
+
 ## [1.3.19] - 2026-11-03
 
 - Align the mobile header inset for the app overview and collection apps exactly with Journal, Tasks and the other established app headers.

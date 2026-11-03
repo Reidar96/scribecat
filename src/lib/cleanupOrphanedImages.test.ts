@@ -158,4 +158,31 @@ describe("cleanupOrphanedImages", () => {
 
     expect(removed).toEqual(["/vault/images/a.png"]);
   });
+
+  it("deletes a removed frontmatter cover from the attachments folder", async () => {
+    files["/vault/Bøker/bok.md"] = "---\ntitle: Bok\n---\n";
+
+    await cleanupOrphanedImages(
+      VAULT,
+      "/vault/Bøker/bok.md",
+      "---\ncover: _attachments/omslag.jpg\n---\n",
+      "---\ntitle: Bok\n---\n"
+    );
+
+    expect(removed).toEqual(["/vault/Bøker/_attachments/omslag.jpg"]);
+  });
+
+  it("deletes a removed receipt link but keeps a receipt referenced elsewhere", async () => {
+    files["/vault/Inventar/sykkel.md"] = "# Sykkel\n";
+    files["/vault/Inventar/garanti.md"] = "[Garanti](_attachments/behold.pdf)";
+
+    await cleanupOrphanedImages(
+      VAULT,
+      "/vault/Inventar/sykkel.md",
+      "- _attachments/slett.pdf\n[Garanti](_attachments/behold.pdf)",
+      "# Sykkel\n"
+    );
+
+    expect(removed).toEqual(["/vault/Inventar/_attachments/slett.pdf"]);
+  });
 });
