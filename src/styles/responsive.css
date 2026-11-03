@@ -592,7 +592,8 @@
   .tasks-view,
   .collection-panel__card,
   .graph-view__card,
-  .content-plugin-panel {
+  .content-plugin-panel,
+  .detail-panel__card--document {
     --mobile-app-header-height: calc(4.75rem + env(safe-area-inset-top));
   }
 
@@ -600,7 +601,8 @@
   .tasks-view__header,
   .collection-panel__header,
   .graph-view__header,
-  .content-plugin-panel__header {
+  .content-plugin-panel__header,
+  .detail-panel__card--document > .detail-panel__header {
     position: relative;
     z-index: 2;
     isolation: isolate;
@@ -609,6 +611,13 @@
     min-height: var(--mobile-app-header-height);
     padding-top: calc(1.8rem + env(safe-area-inset-top));
     background: var(--body-bg-end);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    filter: none;
+  }
+
+  .detail-panel__card--document > .detail-panel__header,
+  .detail-panel__card--document > .detail-panel__header * {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
     filter: none;

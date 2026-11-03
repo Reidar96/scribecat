@@ -1,3 +1,7 @@
+## [1.3.21] - 2026-11-03
+
+- Align the mobile note-writing header exactly with the other app headers and remove its remaining iOS compositing blur.
+
 ## [1.3.20] - 2026-11-03
 
 - Add explicit cover-image deletion for Books and Recipes and receipt deletion for Inventory.
