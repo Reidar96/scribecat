@@ -32,9 +32,11 @@ it("scrolls a focused mobile text field above the on-screen keyboard", async () 
     await act(async () => { input.focus(); viewport.dispatchEvent(new Event("resize")); });
     expect(scroll.scrollTop).toBeGreaterThan(100);
     const position = scroll.scrollTop;
-    input.getBoundingClientRect = () => new DOMRect(10, 180, 100, 30);
+    input.getBoundingClientRect = () => new DOMRect(10, 350, 100, 30);
     await act(async () => { input.dispatchEvent(new Event("input", { bubbles: true })); document.dispatchEvent(new Event("selectionchange")); });
     expect(scroll.scrollTop).toBe(position);
+    await act(async () => { viewport.dispatchEvent(new Event("resize")); });
+    expect(scroll.scrollTop).toBeGreaterThan(position);
     expect(document.documentElement.style.getPropertyValue("--viewport-height")).toBe("300px");
     expect(document.documentElement.style.getPropertyValue("--keyboard-edit-space")).toBe("160px");
   } finally {

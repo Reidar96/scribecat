@@ -1,3 +1,10 @@
+## [1.3.27] - 2026-11-06
+
+- Keep very long Quick Notes URLs inside their cards while preserving the complete editable and clickable address.
+- Stabilize mobile editing by limiting automatic caret scrolling to focus and visual viewport changes instead of every keystroke.
+- Open a focused optimistic Quick Note immediately from the mobile add button and preserve text while the file is created.
+- Restyle the shopping list public control as a clear, aligned checkbox-style toggle in light and dark themes.
+
 ## [1.3.26] - 2026-11-03
 
 - Keep the trash dialog fully inside the mobile viewport so its actions are not clipped.

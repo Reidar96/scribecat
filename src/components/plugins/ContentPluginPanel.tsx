@@ -1,4 +1,5 @@
 import { useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { flushSync } from "react-dom";
 import { Plus, Search, ChartNoAxesCombined, Trash2, BookOpen, CookingPot, Package, ShoppingBasket, Pin, ArchiveRestore, Archive, GripVertical, MoreHorizontal, FolderInput, ArrowLeft } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -50,11 +51,12 @@ function QuickNoteCard({ entry, initialEdit, onSave, onCategoryChange, onOpenAct
     if (!field) return;
     const scroller = field.closest<HTMLElement>(".content-plugin-panel__body");
     const scrollTop = scroller?.scrollTop;
+    const activelyEditing = document.activeElement === field;
     field.style.height = "0px";
     field.style.height = `${Math.max(field.scrollHeight, 44)}px`;
     // Safari scroll anchoring may pan the whole collection by a few pixels
     // when the focused card grows or receives its saved Markdown echo.
-    if (scroller && scrollTop !== undefined) scroller.scrollTop = scrollTop;
+    if (scroller && scrollTop !== undefined && !activelyEditing) scroller.scrollTop = scrollTop;
   }, [draft]);
   useEffect(() => {
     try {
@@ -139,6 +141,10 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
   const updateDraft = (markdown: string | null) => { draftRef.current = markdown; setDraftMarkdown(markdown); };
   const [savedMarkdown, setSavedMarkdown] = useState<string | null>(null);
   const [newNotePath, setNewNotePath] = useState<string | null>(null);
+  const [quickAddPending, setQuickAddPending] = useState(false);
+  const [quickAddDraft, setQuickAddDraft] = useState("");
+  const quickAddDraftRef = useRef("");
+  const quickAddField = useRef<HTMLTextAreaElement>(null);
   // Keep a newly created card in the collection until the vault file index
   // catches up. Otherwise an autosave can briefly remove and reinsert it.
   const [pendingNewPath, setPendingNewPath] = useState<string | null>(null);
@@ -218,11 +224,10 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
 
   useEffect(() => {
     if (!newNotePath) { focusedNewNote.current = null; return; }
-    if (isPhone) return;
     if (focusedNewNote.current === newNotePath) return;
     const field = document.querySelector<HTMLTextAreaElement>(`[data-note-path="${CSS.escape(newNotePath)}"]`);
-    if (field) { field.focus(); focusedNewNote.current = newNotePath; }
-  }, [newNotePath, entries, isPhone]);
+    if (field) { field.focus({ preventScroll: true }); field.scrollIntoView({ block: "nearest" }); focusedNewNote.current = newNotePath; }
+  }, [newNotePath, entries]);
   useEffect(() => {
     if (id === "quick-notes" && !quickSortChosen.current && entries.some((entry) => entry.metadata.order)) setQuickSort("manual");
   }, [id, entries]);
@@ -320,6 +325,10 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
       if (await api.saveMarkdown(path, uniqueMarkdown)) {
         if (manifest.capabilities.includes("attachments")) await mkdir(await join(entryFolder, "_attachments"), { recursive: true });
         if (id === "quick-notes") {
+          const pendingDraft = quickAddDraftRef.current;
+          if (pendingDraft) {
+            try { localStorage.setItem(`scribecat:quick-note-draft:${path}`, pendingDraft); } catch { /* unavailable storage */ }
+          }
           const optimistic = { path, markdown: uniqueMarkdown, metadata: pluginMetadata(uniqueMarkdown), title };
           notePositions.current.set(path, noteManualPosition(optimistic.metadata));
           // Existing columns must not be redistributed when the new file
@@ -329,6 +338,9 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
           setPendingNewPath(path);
           setEntries((items) => [optimistic, ...items.filter((item) => item.path !== path)]);
           setNewNotePath(path);
+          setQuickAddPending(false);
+          setQuickAddDraft("");
+          quickAddDraftRef.current = "";
           setSelectedPath(null);
           updateDraft(null);
           setSavedMarkdown(null);
@@ -342,14 +354,21 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
         setError("");
         return path;
       }
-      else setError("Kunne ikke opprette dokumentet.");
-    } catch { setError("Kunne ikke opprette dokumentet."); }
+      else { setQuickAddPending(false); setError("Kunne ikke opprette dokumentet. Teksten er beholdt."); }
+    } catch { setQuickAddPending(false); setError("Kunne ikke opprette dokumentet. Teksten er beholdt."); }
     finally { setSavingNew(false); }
     return null;
   };
 
   const requestAdd = () => navigate(() => {
-    if (id === "quick-notes") void add(`Huskelapp ${new Date().toLocaleString("sv-SE").replace(/[ :]/g, "-")}`);
+    if (id === "quick-notes") {
+      if (quickAddPending || savingNew) return;
+      quickAddDraftRef.current = quickAddDraft;
+      flushSync(() => setQuickAddPending(true));
+      quickAddField.current?.focus({ preventScroll: true });
+      quickAddField.current?.scrollIntoView({ block: "center" });
+      void add(`Huskelapp ${new Date().toLocaleString("sv-SE").replace(/[ :]/g, "-")}`);
+    }
     else {
       setSelectedPath(null);
       setCreating(true);
@@ -513,7 +532,7 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
             {(id === "recipes" || id === "books" || id === "inventory") && readingCardSummary(id, entry.markdown) && <p className="content-plugin-panel__tile-description">{readingCardSummary(id, entry.markdown)}</p>}
           </button>}
           {id === "quick-notes" ? <>
-            <QuickNoteCard entry={entry} initialEdit={!isPhone && newNotePath === entry.path} onSave={async (text, expected) => {
+            <QuickNoteCard entry={entry} initialEdit={newNotePath === entry.path} onSave={async (text, expected) => {
               const saved = await change(entry, (current) => {
                 // Indexing and autosave echoes can change the file between
                 // keystrokes. Preserve its latest metadata and treat the text
@@ -586,7 +605,7 @@ export function ContentPluginPanel({ id, folderPath, filePaths, sidebarVisible, 
       {groupView && !filter ? <div className="content-plugin-panel__grid content-plugin-panel__groups">{[...new Set(entries.map((entry) => entry.metadata[groupView]).filter(Boolean))].sort((a, b) => a.localeCompare(b, "no")).map((value) => {
         const members = entries.filter((entry) => entry.metadata[groupView] === value);
         return <button className="content-plugin-panel__group-card" key={value} onClick={() => selectFilter(JSON.stringify([groupView, value]), groupView)}><span className={`content-plugin-panel__mosaic${id === "quick-notes" ? " content-plugin-panel__mosaic--notes" : ""}`}>{id === "quick-notes" ? members.slice(0, 4).map((entry) => <span key={entry.path}>{noteBody(entry.markdown) || "Huskelapp"}</span>) : members.filter((entry) => entry.metadata.cover).slice(0, 4).map((entry) => <PluginCover key={entry.path} id={id} vaultPath={folderPath} documentPath={entry.path} reference={entry.metadata.cover} alt="" />)}</span><strong>{value}</strong><small>{members.length} {members.length === 1 ? "oppføring" : "oppføringer"}</small></button>;
-      })}</div> : <div ref={noteGridRef} className={`content-plugin-panel__grid content-plugin-panel__grid--${id}`} style={id === "quick-notes" ? { gridTemplateColumns: `repeat(${noteColumns}, minmax(0, 1fr))` } : undefined}>{id === "quick-notes" ? visibleColumns.map((column, index) => <div className={`content-plugin-panel__note-column${dropTarget && column.some((entry) => entry.path === dropTarget.path) ? " content-plugin-panel__note-column--target" : ""}`} data-note-column={index} key={index} onDragOver={(event) => { const source = draggedPath || event.dataTransfer.getData("text/plain"); if (!source) return; event.preventDefault(); event.dataTransfer.dropEffect = "move"; const placement = noteDropAt(event.currentTarget, event.clientY, source); setDropTarget((old) => old?.path === placement?.path && old?.edge === placement?.edge ? old : placement); }} onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setDropTarget(null); }} onDrop={(event) => { const source = draggedPath || event.dataTransfer.getData("text/plain"); if (!source) return; event.preventDefault(); const placement = noteDropAt(event.currentTarget, event.clientY, source); if (placement) void moveNote(placement.path, source, placement.edge); setDropTarget(null); }}>{column.map(renderEntry)}</div>) : visible.map(renderEntry)}</div>}
+      })}</div> : <div ref={noteGridRef} className={`content-plugin-panel__grid content-plugin-panel__grid--${id}`} style={id === "quick-notes" ? { gridTemplateColumns: `repeat(${noteColumns}, minmax(0, 1fr))` } : undefined}>{id === "quick-notes" ? visibleColumns.map((column, index) => <div className={`content-plugin-panel__note-column${dropTarget && column.some((entry) => entry.path === dropTarget.path) ? " content-plugin-panel__note-column--target" : ""}`} data-note-column={index} key={index} onDragOver={(event) => { const source = draggedPath || event.dataTransfer.getData("text/plain"); if (!source) return; event.preventDefault(); event.dataTransfer.dropEffect = "move"; const placement = noteDropAt(event.currentTarget, event.clientY, source); setDropTarget((old) => old?.path === placement?.path && old?.edge === placement?.edge ? old : placement); }} onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setDropTarget(null); }} onDrop={(event) => { const source = draggedPath || event.dataTransfer.getData("text/plain"); if (!source) return; event.preventDefault(); const placement = noteDropAt(event.currentTarget, event.clientY, source); if (placement) void moveNote(placement.path, source, placement.edge); setDropTarget(null); }}>{index === 0 && quickAddPending && <article className="content-plugin-panel__card content-plugin-panel__card--quick-pending"><div className="content-plugin-panel__note"><textarea ref={quickAddField} aria-label="Ny huskelapp" value={quickAddDraft} placeholder="Skriv noe …" onChange={(event) => { quickAddDraftRef.current = event.target.value; setQuickAddDraft(event.target.value); }} /></div><div className="content-plugin-panel__note-controls"><span className="content-plugin-panel__note-status">Oppretter …</span></div></article>}{column.map(renderEntry)}</div>) : visible.map(renderEntry)}</div>}
       {visible.length === 0 && scanRemaining === 0 ? <p>Ingen oppføringer her ennå.</p> : null}
       </>}
       </>}

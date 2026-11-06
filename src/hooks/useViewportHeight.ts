@@ -106,17 +106,12 @@ export function useViewportHeight() {
     viewport.addEventListener("resize", apply);
     viewport.addEventListener("scroll", apply);
     const focus = () => reveal(true);
-    const edit = () => reveal();
     document.addEventListener("focusin", focus);
-    document.addEventListener("input", edit);
-    document.addEventListener("selectionchange", edit);
 
     return () => {
       viewport.removeEventListener("resize", apply);
       viewport.removeEventListener("scroll", apply);
       document.removeEventListener("focusin", focus);
-      document.removeEventListener("input", edit);
-      document.removeEventListener("selectionchange", edit);
       cancelAnimationFrame(frame);
       window.clearTimeout(settle);
       root.style.removeProperty("--viewport-height");
